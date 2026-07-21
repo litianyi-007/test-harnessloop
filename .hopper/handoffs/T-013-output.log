@@ -1,0 +1,2102 @@
+Reading additional input from stdin...
+OpenAI Codex v0.144.5
+--------
+workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019f84df-f381-7e91-9f78-71ae6f304181
+--------
+user
+# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+
+You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+on your role — it overrides anything you may read locally.
+
+1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+   specialist." Nothing is listening downstream — if you delegate, the task fails.
+3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+   complete, closed loop.
+5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+   output, and proceed. The loop is closed — begin now and finish.
+
+---
+
+# Task-type: code-review-acceptance
+
+Anchor: `.hopper/tasks/code-review-acceptance.md::root`
+
+## Purpose
+
+Verify a change against its stated acceptance criteria. Review only — no edits.
+
+## Input shape
+
+- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+- Positive scope (files allowed) and negative scope (files that must not change)
+- Budget: time and vendor-cost ceiling
+
+## Output shape (output.md)
+
+The output should contain, in this order:
+
+- **Summary**: what was delivered, in two to four sentences
+- **Files touched**: paths with a one-line rationale each (or "none")
+- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+- **Decisions / deviations**: judgment calls or scope changes (or "none")
+- **Open questions**: list, or "none"
+- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+- **Next recommendation**: what should happen next
+
+## Notes
+
+This frame describes the SHAPE of the work and the expected output, not an
+identity to adopt. The vendor CLI brings its own behavior; the frame only states
+what the protocol expects back.
+
+---
+
+## Task spec
+
+## T-013
+
+**Task-type**: `code-review-acceptance`（v3.4 最终 confirm-readiness gate，**接续 T-012，只验 3 处残留闭合**）· **Vendor**: codex（刻意选择：3 处残留是你 T-012 提出的，由你终验最有效；非随机，记录偏离）· 只读
+
+**评审对象（绝对路径，本仓库之外）**：`/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md`（784 行，D1 KernelPort **v3.4 收尾**）。
+对照：`kernel/d1-kernelport-spec-v3-3.md`（被修订基线）、`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-012-output.md`（3 处残留原文）、`kernel/kernel-ecosystem-facts.md`。
+
+**背景**：你在 T-012 判 v3.3 为 MUST-FIX——M2/M3/M4 已闭合，只剩 3 处机械残留：①M1↔M4（M4 锁规则把 soft steer 终态写成三态，与 §6.1(a) 二态冲突）②M5（`queryBilling` 返 Promise 却把远端拒绝归入同步 `KernelPortRejectionCode`）③§3 事件计数"九类"笔误。v3.4 是**只针对这 3 处的收尾修订**。
+
+**只验两件事（严格限定这 3 处，不重开其他范围、不提 nice-to-have）**：
+1. **3 处残留是否真闭合**：
+   - ①M1↔M4：soft `interrupt(mode:'steer')` 的 `OperationOutcome` 是否**全文**严格二态 `submitted`/`rejected`？§9.3 的 stop 等待超时是否已明确归为 **stop() 自身**的 `timed_out`、不再作为 steer 的第三终态？（§9.3 行661 + §6.1(a)）
+   - ②M5：`billing_query_subject_unresolved` 是否已移出同步 `KernelPortRejectionCode`、改为 `queryBilling` 的异步 Promise rejection？同步（纯本地配置缺失，`aggregate_billing_requires_deployment_token`）与异步（远端凭证/接口拒绝）是否分层清晰、给了调用方唯一确定的失败模型？（§7 行580-585 + §9.1 行608-627）
+   - ③§3：行268 是否已由"九类"改为"十类"、与 INV-2/§6.1a/§9.2/§16 的 11 类口径一致？
+2. **这 3 处修改有无引入新矛盾**：§9.3 的二态收敛与 §2.5 stop 的 `timed_out` 是否自洽？M5 的异步码归类与 §629 三阶段错误模型是否自洽？§3 计数是否全文再无残留不一致？
+
+**Verdict**：`CONFIRMABLE`（3 处全闭合、无新矛盾 → **D1 v3.4 可定稿**）或 `MUST-FIX`（仅列 3 处中仍未闭合的、或新引入的真矛盾）。
+
+**产出**：3 处逐项闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-013-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是 v3.4 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。
+
+codex
+我会严格限定在 T-013 指定的三处残留，读取 v3.4、v3.3、T-012 结论与事实基线，逐项做可复核的行号/grep 验证；只写交付文件 `.hopper/handoffs/T-013-output.md`，不改评审对象或其他文件。
+exec
+/bin/zsh -lc "wc -l /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md .hopper/handoffs/T-012-output.md /Users/litianyi/.llm-wiki/agent-app-design/kernel/kernel-ecosystem-facts.md && git status --short && sed -n '1,240p' .hopper/handoffs/T-012-output.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 142ms:
+?? .hopper/handoffs/T-013-output.log
+?? .hopper/handoffs/T-013-output.md
+?? .hopper/handoffs/T-013-progress.log
+---
+phase: done
+last_progress_at: "2026-07-21T13:14:45.863Z"
+last_progress: Task completed successfully.
+progress_seq: 2
+terminal_event_emitted: true
+status: done
+end_time: "2026-07-21T13:14:45.861Z"
+exit_code: 0
+signal: null
+timed_out: null
+duration_ms: 306499
+adapter_status: success
+---
+# T-012 — D1 KernelPort v3.3 M1-M5 confirm-readiness gate
+
+## Summary
+
+v3.3 已实质关闭 M2、M3，并补齐 M4 的 soft steer/cancel 遇 stop 仲裁；M1 的 `queued:false` 重叠分支也已从主判定规则删除，M5 的 aggregate 条件必填与两个拒绝码均已写入。可是，本轮新增文字仍产生三处范围内真矛盾：soft steer 被 §9.3 重新写成三终态、KernelEvent 旧结构数量写错、`queryBilling` 的异步凭证拒绝被归入同步/立即拒绝通道，因此尚不能确认 v3.3 定稿。
+
+## Files touched
+
+- `.hopper/handoffs/T-012-output.md`：按任务要求落盘本次只读 acceptance review。
+- 其余：none；未修改 `/Users/litianyi/.llm-wiki/` 下的 v3.3 评审对象、v3.2 基线或任何对照材料。
+
+## Acceptance verification (3/6)
+
+### 1. M1 — 未完全闭合
+
+原始重叠分支已删除：§6.1(a) 明定响应体字段一律不参与判断，成功 ack → `submitted`、RPC 失败 → `rejected`（v3.3:420-425），`queued:false` 只在解释“为何不得参与判定”时出现，不再是分支条件。
+
+但 M4 的新增锁规则又把 soft steer 正常终态写成 `submitted` / `rejected` / `timed_out`（v3.3:659）。这与 §6.1(a) 的“二态、只由 RPC 成功/失败分流”直接冲突；尤其 §6.1(a) 已把网络/连接层失败归入 `rejected`（v3.3:423），§9.3 却使同类等待超时可另报 `timed_out`。因此 M1 在与本轮其他新编辑合并后仍不是唯一可实现的二态契约。
+
+```bash
+rg -n "结果只由该 RPC|响应体内任何字段|outcome:'submitted'|outcome:'rejected'|submitted.*rejected.*timed_out" \
+  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md
+# 420: 只由 RPC 是否成功返回分流，响应体字段不参与
+# 422: 成功 ack -> submitted
+# 423: RPC/网络/连接层失败 -> rejected
+# 659: soft steer 正常终态却列 submitted/rejected/timed_out
+```
+
+### 2. M2 — 通过
+
+`OperationOutcome` 已新增 `aborted_effect_unknown`，并把 `rejected` 限定为 abort 确认从未生效（v3.3:175-197）；hard 结果规则把 C-4 信号不足统一导向 unknown，而非借道 `rejected`（v3.3:442-450），C-4 降级表也同步更新（v3.3:709）。调用方义务明确：不得推断旧 run 仍运行或已中止，须按“可能已中止”保守处理并在需要时重新查询状态（v3.3:189-193,448）。
+
+```bash
+rg -n "aborted_effect_unknown|严格限定为. abort 从未生效|不得.*推断旧 run|C-4" \
+  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md
+# 189-196: 类型定义、调用方义务、rejected 收窄
+# 448-449: hard 路径 unknown/rejected 互斥规则
+# 709: C-4 否定降级改报 aborted_effect_unknown
+```
+
+### 3. M3 — 行为闭合，通过
+
+FSM 已补 `FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY`，并明确让位于内核权威终态、同一 reqId 不产生双终态（v3.3:493-499）。缓冲请求一旦超时立即终态化、移出队列且不得再提升，只有仍未终态化的请求可浮现（v3.3:516-517）。新增的 `ApprovalBufferResolvedEvent` 已进入 11 成员判别联合，携 `reqId`、`reason`、基类 `ts`；缓冲超时/溢出不再计入 `forceResolvedApprovals`（v3.3:274-314,519）。
+
+```bash
+rg -n "FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY|一旦超时即终态化|不得.*再提升|ApprovalBufferResolvedEvent|不计入.*forceResolvedApprovals" \
+  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md
+# 285/305-310: 第 11 个联合成员及事件字段
+# 493-499: 缺失转移已补
+# 516-519: 超时不可提升、独立事件上报
+```
+
+### 4. M4 — 锁行为闭合，通过
+
+soft steer 与 cancel 都已定义 stop 到达后的 wait/no-preempt、原 operation 终态化、锁转为 `stop_in_progress`、随后执行 stop 的规则（v3.3:659,661）；openclaw 单 RPC hard 路径也保留“只能等待整体返回”的限定（v3.3:663-665）。因此 acquire/wait/preempt/release 的状态转移覆盖已补齐，v3.3:666 的“完整”声称就锁行为本身成立。soft outcome 词汇与 M1 的冲突另计于第 1、6 项，不否定这里已补齐的锁仲裁路径。
+
+```bash
+rg -n "mode:'steer'.*遇.*stop|mode:'cancel'.*遇.*stop|等待，不抢占|设计是完整的" \
+  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md
+# 659: soft steer wait -> stop_in_progress
+# 661: cancel wait -> stop_in_progress
+# 666: 完整性声称及适用范围
+```
+
+### 5. M5 — 部分闭合，未通过
+
+`deploymentTokenRef` 已正确建模为 aggregate 条件必填；缺失时 `createSession` 在步骤 1-3 前以 `aggregate_billing_requires_deployment_token` 拒绝（v3.3:113-121,132-140,619-621）。`queryBilling` 也新增 `billing_query_subject_unresolved`，并禁止返回虚构零用量快照（v3.3:574-583,622-624）。
+
+剩余矛盾在失败通道：`queryBilling` 的签名返回 `Promise`（v3.3:574-577），凭证“在调用 newapi 用量接口时被拒”只能在异步 I/O 返回后得知（v3.3:583），正文却要求“同步拒绝”，并把该码放进定义为“同步/立即拒绝”的 `KernelPortRejectionCode`（v3.3:606,622-627）。调用方究竟接同步 throw/前置 rejected Promise，还是等待远端调用后的结构化 Promise rejection，仍没有唯一答案，故“失败形状”尚未完全闭合。
+
+```bash
+rg -n "function queryBilling|调用 newapi 用量接口时被拒|必须同步拒绝|KernelPortRejectionCode.*同步/立即|billing_query_subject_unresolved" \
+  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md
+# 574-577: Promise<SessionBillingSnapshot>
+# 583: 远端凭证拒绝却要求同步拒绝
+# 606/622-627: 该码归入同步/立即拒绝阶段
+```
+
+### 6. 新编辑自洽性与数字核验 — 未通过
+
+除上面的 M1↔M4、M5 失败通道冲突外，还有一处 M3 新增事件的机械数字矛盾：§3 说 `MessageDeltaEvent` 到 `OperationCompletedEvent` 是“九类结构”，但该范围实际有 10 个既有联合成员，随后新增 `ApprovalBufferResolvedEvent` 才得到 11 个（v3.3:271,274-285）。`INV-2` 的“8 类内核事件 + 3 类扩展 = 11”、事件联合本身、`ApprovalBufferResolvedEvent` 的“其余 10 类”以及 §6.1a 的“OperationCompletedEvent 之外其余 10 类”均为正确口径（v3.3:59,274-285,314,462），只有 v3.3:271 的“九类”错误，且与 §16“全文同步勘正”的声称冲突（v3.3:760）。
+
+§10 的 F/S 分桶本身未引入新矛盾：最终为完全消解 8、部分化解 4、仍开放 4、SDK 延后 3，`8+4+4+3=19`（v3.3:695-698）。
+
+```bash
+rg -n "九类结构|判别联合由 10 类扩为 11 类|其余 10 类|8\+4\+4\+3=19|全文出现处均已同步" \
+  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md
+# 271: 既有成员误写为九类，同时又正确写 10 -> 11
+# 314/462: “其余 10 类”正确
+# 698: §10 合计 19 正确
+# 760: 声称全文数字已同步，与 271 不符
+```
+
+## Decisions / deviations
+
+- 将“read-only”解释为不改评审对象及任何业务/知识库文件；仅写入任务明确要求的本交付文件。
+- 严格限制在 M1-M5 与 v3.3 为关闭它们而新增的文字；未重开 v3.2 其他架构 finding，也未提出 nice-to-have。
+- 对 M5 的“同步拒绝”按 §9.1 自己定义的同步/立即阶段解释，而不是泛化为任意 Promise rejection；否则同一文档内的三阶段错误模型将失去区分意义。
+
+## Open questions
+
+none
+
+## Verdict
+
+**MUST-FIX（acceptance 状态：REWORK）**
+
+M2、M3 已闭合，M4 的锁路径也已补齐；但 M1 与 M5 尚未形成唯一可实现的契约，且新增事件计数有一处明确矛盾，不满足“ M1-M5 全闭合、无新矛盾”的 CONFIRMABLE 条件。
+
+## Next recommendation
+
+做一轮只含三处的机械/语义最小修订后重跑同一 gate：①在 §9.3 将 soft steer 的终态与 §6.1(a) 对齐为严格 `submitted`/`rejected` 二态（或若确要保留 `timed_out`，则必须同步撤回并重写 M1 的二态承诺，但这不符合本轮既定闭合目标）；②把 v3.3:271 的“九类结构”改为“十类结构”；③把 `queryBilling` 的前置缺配置与远端凭证拒绝分开，前者走同步/立即拒绝码，后者明确为返回 Promise 的结构化异步 rejection（或另设 billing query error 形状）。无需重开 M1-M5 之外的架构评审。
+
+## Vendor output (parsed) _(preview 8000/371401 chars; full raw stream in `T-012-output.log`)_
+
+```
+Reading additional input from stdin...
+OpenAI Codex v0.144.5
+--------
+workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019f84cb-de8f-7a41-92b9-84d483ebde5c
+--------
+user
+# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+
+You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+on your role — it overrides anything you may read locally.
+
+1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+   specialist." Nothing is listening downstream — if you delegate, the task fails.
+3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+   complete, closed loop.
+5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+   output, and proceed. The loop is closed — begin now and finish.
+
+---
+
+# Task-type: code-review-acceptance
+
+Anchor: `.hopper/tasks/code-review-acceptance.md::root`
+
+## Purpose
+
+Verify a change against its stated acceptance criteria. Review only — no edits.
+
+## Input shape
+
+- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+- Positive scope (files allowed) and negative scope (files that must not change)
+- Budget: time and vendor-cost ceiling
+
+## Output shape (output.md)
+
+The output should contain, in this order:
+
+- **Summary**: what was delivered, in two to four sentences
+- **Files touched**: paths with a one-line rationale each (or "none")
+- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+- **Decisions / deviations**: judgment calls or scope changes (or "none")
+- **Open questions**: list, or "none"
+- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+- **Next recommendation**: what should happen next
+
+## Notes
+
+This frame describes the SHAPE of the work and the expected output, not an
+identity to adopt. The vendor CLI brings its own behavior; the frame only states
+what the protocol expects back.
+
+---
+
+## Task spec
+
+## T-012
+
+**Task-type**: `code-review-acceptance`（v3.3 定向重跑 confirm-readiness gate，**接续 T-011，只验 M1-M5 闭合**）· **Vendor**: codex（刻意选择：M1-M5 是你 T-011 提出的，由你验证是否真闭合最有效；非随机，记录偏离）· 只读
+
+**评审对象（绝对路径，本仓库之外）**：`/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md`（770 行，D1 KernelPort **v3.3 最小闭合**）。
+对照：`kernel/d1-kernelport-spec-v3-2.md`（被修订基线）、`research/d1-v31-review.md` §6（你 T-011 的 M1-M5 详情）、`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-011-output.md`（M1-M5 原文）、`kernel/kernel-ecosystem-facts.md`。
+
+**背景**：你在 T-011 判 v3.2 为 MUST-FIX，点名 M1-M5 五处"设计文本内即可关闭"的契约自洽缺口。v3.3 是**只针对 M1-M5 的最小闭合**修订，未动其他。你的 T-011 Next 明确"仅针对 M1-M5 重跑同一 gate，无需重新开放全量架构评审"——本任务即执行这一步。
+
+**只验两件事（严格限定 M1-M5，不重开其他范围、不提 nice-to-have）**：
+1. **M1-M5 是否真闭合**：
+   - M1（soft 二态去重叠）：`queued:false→rejected` 分支是否真删除？结果是否只由 RPC 成败分流、响应体字段不再参与？（§6.1(a) 行420-425）
+   - M2（unknown 终态）：`aborted_effect_unknown` 是否真承接"abort 生效性不明"、`rejected` 是否真收窄为严格"abort 从未生效"、C-4 降级是否不再借道 rejected、调用方处理是否明确？（§6.1(b) 行442-449 + §2.4/§9.1/§8）
+   - M3（审批 FSM + 缓冲）：`FORCE_DENY_PENDING_KERNEL_ACK→TIMED_OUT_DENY` 转移是否补上？缓冲请求超时是否立即终态化不可再提升？缓冲可见性是否改用新的 `ApprovalBufferResolvedEvent`（第11类）而非复用 `forceResolvedApprovals`？（§6.2 行493/516/519 + §3 事件定义）
+   - M4（锁矩阵）：soft steer / cancel 在途遇 stop 是否都有 acquire/wait/preempt/release 规则？"覆盖所有状态转移"声称是否已名副其实或诚实限定？（§9.3 行659/661/666）
+   - M5（aggregate 前置）：`deploymentTokenRef` 是否条件必填、缺失时 `createSession` 是否同步拒绝（`aggregate_billing_requires_deployment_token`）？`queryBilling` 失败形状是否定义？（§2.1 行134 + §7 行583 + §9.1）
+2. **闭合 M1-M5 的新编辑有无引入新矛盾**：新增 `aborted_effect_unknown`/`ApprovalBufferResolvedEvent`（判别联合 10→11）/两个新拒绝码/soft-cancel 遇 stop 锁规则——彼此自洽吗？与 v3.3 保留的正文冲突吗？§10 统计有无新数字矛盾？
+
+**Verdict**：`CONFIRMABLE`（M1-M5 全闭合、无新矛盾 → D1 v3.3 可定稿）或 `MUST-FIX`（仅列 M1-M5 中仍未闭合的、或新编辑引入的真矛盾）。
+
+**产出**：M1-M5 逐项闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-012-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是 v3.3 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。
+
+codex
+我会严格按 T-012 的窄范围执行：只核验 M1–M5 及这些修订彼此/与保留正文的自洽性，不重开架构评审；除规定的评审报告 `.hopper/handoffs/T-012-output.md` 外不改动任何文件。先读取 v3.3、v3.2、T-011 原结论及指定事实基线，再逐项用行号与检索证据确认。
+exec
+/bin/zsh -lc 'diff -u /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-2.md /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ exited 1 in 0ms:
+--- /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-2.md	2026-07-21 21:03:11
++++ /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md	2026-07-21 21:00:21
+@@ -1,5 +1,5 @@
+ ---
+-title: "D1 KernelPort 内核窄腰 v3.2 诚实收窄修订 Spec（scope=openclaw+hermes；据 codex T-010 聚焦复核收窄 soft steer 结果态 + §7 sessionId 时序/attribution 权威化 + 边角终态/五态审批/锁矩阵补全 + 实现阶段 conformance 清单）"
++title: "D1 KernelPort 内核窄腰 v3.3 最小闭合修订 Spec（scope=openclaw+hermes；据 codex T-011 confirm-readiness gate 最小闭合 M1-M5——soft 二态判定去重叠 + aborted_effect_unknown 诚实终态 + 审批FSM转移/缓冲上报补完 + 锁矩阵补齐 soft/cancel 遇 stop + aggregate 计费前置校验）"
+ type: kernel
+ tags: [p2-kernel, openclaw, hermas, newapi, local-kernel, message-schema, architecture-decision]
+ created: 2026-07-21
+@@ -7,33 +7,35 @@
+
+exec
+/bin/zsh -lc "ls -lT .hopper/handoffs/T-013-output.md .hopper/handoffs/T-013-output.log .hopper/handoffs/T-013-progress.log && sed -n '1,220p' .hopper/handoffs/T-013-output.md && diff -u /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ exited 1 in 0ms:
+-rw-r--r--@ 1 litianyi  staff  23382 Jul 21 21:31:49 2026 .hopper/handoffs/T-013-output.log
+-rw-r--r--@ 1 litianyi  staff    612 Jul 21 21:31:36 2026 .hopper/handoffs/T-013-output.md
+-rw-r--r--@ 1 litianyi  staff    186 Jul 21 21:31:36 2026 .hopper/handoffs/T-013-progress.log
+---
+task_id: T-013
+adapter: codex
+model: gpt-5.6-sol
+status: in-progress
+pid: 3694
+start_time: "2026-07-21T13:31:36.061Z"
+end_time: null
+exit_code: null
+duration_ms: null
+mode: background
+phase: starting
+last_progress_at: "2026-07-21T13:31:36.062Z"
+last_progress: Background task queued.
+progress_seq: 1
+progress_log: ./T-013-progress.log
+raw_log: ./T-013-output.log
+vendor_session_id: null
+terminal_event_emitted: false
+host_native: null
+session_id: null
+log: ./T-013-output.log
+started_by_pid: 3689
+---
+
+# T-013 — codex (background, in-progress)
+
+Output streaming to `T-013-output.log`. Status updates here.
+--- /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md	2026-07-21 21:26:47
++++ /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md	2026-07-21 21:25:48
+@@ -1,5 +1,5 @@
+ ---
+-title: "D1 KernelPort 内核窄腰 v3.3 最小闭合修订 Spec（scope=openclaw+hermes；据 codex T-011 confirm-readiness gate 最小闭合 M1-M5——soft 二态判定去重叠 + aborted_effect_unknown 诚实终态 + 审批FSM转移/缓冲上报补完 + 锁矩阵补齐 soft/cancel 遇 stop + aggregate 计费前置校验）"
++title: "D1 KernelPort 内核窄腰 v3.4 收尾微修 Spec（scope=openclaw+hermes；据 codex T-012 confirm-readiness gate 关闭 v3.3 遗留的 3 处机械级残留——M1↔M4 soft 终态口径统一 + M5 失败通道同步/异步分层 + §3 事件计数笔误勘正；不新增能力）"
+ type: kernel
+ tags: [p2-kernel, openclaw, hermas, newapi, local-kernel, message-schema, architecture-decision]
+ created: 2026-07-21
+@@ -7,37 +7,32 @@
+ published_at: 2026-07-21
+ ingested_at: 2026-07-21
+ sources:
+-  - kernel/d1-kernelport-spec-v3-2.md
++  - kernel/d1-kernelport-spec-v3-3.md
+   - research/d1-v31-review.md
+   - raw/external/T-011-v32-gate-codex.md
+   - /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-011-output.md
++  - /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-012-output.md
+   - kernel/kernel-ecosystem-facts.md
+ component: P2-kernel
+-design_status: superseded
++design_status: draft
+ ---
+ 
+-# D1 KernelPort 内核窄腰 v3.3 最小闭合修订 Spec（scope=openclaw+hermes；据 codex T-011 confirm-readiness gate 最小闭合 M1-M5——soft 二态判定去重叠 + aborted_effect_unknown 诚实终态 + 审批FSM转移/缓冲上报补完 + 锁矩阵补齐 soft/cancel 遇 stop + aggregate 计费前置校验）
++# D1 KernelPort 内核窄腰 v3.4 收尾微修 Spec（scope=openclaw+hermes；据 codex T-012 confirm-readiness gate 关闭 v3.3 遗留的 3 处机械级残留——M1↔M4 soft 终态口径统一 + M5 失败通道同步/异步分层 + §3 事件计数笔误勘正；不新增能力）
+ 
+-> **经 codex T-012 confirm-readiness gate MUST-FIX，待 v3.4（2026-07-21）**：v3.3 新增文字里的 3 处机械级残留（M1↔M4 soft 终态口径不一致 / M5 失败通道同步-异步分层不清 / §3 事件计数笔误）详见 `.hopper/handoffs/T-012-output.md`。**v3.4 已发布**，见 [[d1-kernelport-spec-v3-4]]。
++## Changelog（v3.3 → v3.4：codex T-012 confirm-readiness gate 的收尾闭合修订）
+ 
+-## Changelog（v3.2 → v3.3：codex T-011 confirm-readiness gate 的最小闭合修订）
+-
+-> **诚实记录**：[[d1-kernelport-spec-v3-2]] 发布后经 codex **T-011 confirm-readiness gate**（定稿前专用核验，非开放重审，只核验三件事：v3.2 声称的收窄是否诚实、5 个 C-item 是否真属实现阶段、v3.2 新编辑有无引入内部矛盾）核验，Verdict **MUST-FIX**——gate 明确认可 v3.2 已落实的诚实收窄（soft 二态方向、`billingAttribution` 权威化、operation 仅在线订阅、F-08 范围校正等均判定为真收窄，非藏起来的模糊措辞），但同时指出 v3.2 在落地这些收窄时**新引入或未收干净**了 5 处**设计文本内部自洽缺口**（M1-M5，详见 [[d1-v31-review]] 追加小节「v3.2 confirm-readiness gate（T-011）」，原文见 `raw/external/T-011-v32-gate-codex.md`）：
+-> 1. **M1**：soft 二态判定仍留有重叠分支——"成功 ack，无论字段取值"与"成功响应若透出未确认的 `queued:false` 判 rejected"同时命中同一次调用的两个终态，C-1 待验信号并未真正被隔离出契约。
+-> 2. **M2**：`aborted_resend_failed` 的 C-4 否定降级要求笼统报 `rejected`，而 `rejected` 的公开语义又被定义为"abort 从未生效"——这让"abort 是否生效不明"被误读成"abort 确未生效"，不是诚实保守的降级。
+-> 3. **M3**：审批 FSM 遗漏内核权威超时信号与本地强制 deny 并发时的转移；缓冲请求"已超时"后又被写成可提升为 active pending，自相矛盾；缓冲超时/队列溢出的可见性还错误复用了语义受限于 stop/cancel 强制 deny 的 `forceResolvedApprovals`。
+-> 4. **M4**：session 锁"完整互斥矩阵"只字面覆盖了 hard `abort_and_resend` 遇 `stop()` 的仲裁，未定义 soft steer/cancel 在途遇 `stop()` 的规则，使"覆盖所有状态转移"的声称过度。
+-> 5. **M5**：aggregate 计费模式下 `deploymentTokenRef` 仍是可选字段，却是该模式下唯一的查询主体，没有配套的 `createSession` 前置拒绝规则，也没有 `queryBilling` 的失败形状。
++> **诚实记录**：[[d1-kernelport-spec-v3-3]] 发布后经 codex **T-012 confirm-readiness gate**（接续 T-011，定向重跑，只验 M1-M5 是否真闭合、新编辑有无引入新矛盾，详见 `.hopper/handoffs/T-012-output.md`）核验，Verdict **MUST-FIX**——gate 确认 M2、M3 已实质闭合，M4 的锁规则也已补齐 soft steer/cancel 遇 stop 的仲裁，M1 的 `queued:false` 重叠分支也已从 §6.1(a) 主判定规则删除，M5 的 aggregate 条件必填与两个拒绝码均已写入；但指出 v3.3 本轮新增文字又产生了**三处范围内的机械级新矛盾**：
++> 1. **M1↔M4 不一致**：§9.3 新增的锁规则把 soft steer 的正常终态重新写成 `submitted`/`rejected`/`timed_out` 三态，与 §6.1(a) 刚刚收窄的"严格二态"直接冲突——`timed_out` 实际上是 `stop()` 自身等待超时的终态，被误写成了 steer 的终态。
++> 2. **M5 失败通道分层不清**：`queryBilling` 返回 `Promise`，但正文把"凭证被远端拒绝"这类只能在异步 I/O 返回后才知道的失败，也要求"同步拒绝"并归入定义为"同步/立即拒绝"的 `KernelPortRejectionCode`，给调用方留下一个不唯一的失败模型。
++> 3. **§3 事件计数笔误**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员实际是 10 个，正文误写成"九类"，与 §16"全文数字已同步勘正"的声称冲突。
+ >
+-> codex 判定：这 5 处**均是"设计文本内即可关闭"的契约自洽问题**，不依赖任何新的 live probe/spike（C-1/C-3/C-4 三个 C-item 本身的真实验证性质不变，仍留待实现阶段），也**不是**重开架构或新增能力的理由；C-2/C-5 两项 C-item 被 codex 复判为更适合列为"非阻断的能力研究/可选实现决策"而非严格意义上的 conformance-fact，但本轮任务范围**不**要求据此改写 §11 C-item 分类（该复判已如实记入 [[d1-v31-review]] 追加小节，供后续参考，不在本次 M1-M5 修复范围内）。
+->
+-> 据此，v3.3 是一次**最小闭合修订**：**只**关闭 T-011 点名的 M1-M5 五处，不做任何其他改动、不加锦上添花——继承 v3.2 的全部架构决策（7 个 KernelPort 方法、CapabilityDescriptor 定位、Transport 映射分工、newapi 计费边车定位均不变；KernelEvent 判别联合因 M3 新增 `ApprovalBufferResolvedEvent` 一个变体，由 10 类增至 11 类，这是本轮唯一的判别联合新增，性质是"补完审批缓冲生命周期的可见性缺口"，不是新增能力声称）。§10 收口统计（19 条 F/S must-fix 项的分桶）不受 M1-M5 影响，未引入新的数字矛盾；§11 C-item 清单中 C-1/C-4 的降级路径措辞随 M1/M2 同步更新，C-item 本身的性质（设计阶段无法关闭、需实现阶段验证）不变（详见 §16「v3.2→v3.3 变更记录」）。
++> codex 判定：这三处**均是"设计文本内即可关闭"的机械/语义级残留**，不依赖新的 live probe/spike，也不是重开 M2/M3/M4 已闭合部分或新增能力的理由。据此，v3.4 是一次**收尾微修**：**只**关闭 T-012 点名的这 3 处，不做任何其他改动——继承 v3.3 的全部架构决策与已闭合的 M1-M5 设计（7 个 KernelPort 方法、`aborted_effect_unknown`、五态审批 FSM、`ApprovalBufferResolvedEvent`、锁矩阵、aggregate 前置校验等均不变，KernelEvent 判别联合仍是 11 类，不新增/不删除任何成员）。§10 收口统计不受影响，未引入新的数字矛盾（详见 §17「v3.3→v3.4 变更记录」）。
+ 
+ ## 0. 与既有文档的关系
+ 
+-- **局部修订** [[d1-kernelport-spec-v3-2]] 全部正文——v3.3 不是取代/重写，是在 v3.2 基线上施加 codex **T-011 confirm-readiness gate**（MUST-FIX，指出 M1-M5 五处设计文本内部自洽缺口，详见 [[d1-v31-review]] 追加小节）的一组最小闭合修复（§16 逐条记录），其余章节、接口签名、章节编号沿用 v3.2（新增一个顶层章节：§16 本轮变更记录；§11「实现阶段 conformance 清单」/§12「开放问题」/§13「v2→v3 变更记录」/§14「v3→v3.1 变更记录」/§15「v3.1→v3.2 变更记录」编号不变，§15 由完整表格收拢为历史指针，同既有惯例）。v3.2 页面因 T-011 gate 判定 MUST-FIX 不具备 `confirmed` 条件（`design_status: superseded`）而催生本次修订，v3.2 正文**未删除**，继续作为审计与本次修订的对照基线；本页与其互相交叉引用。
+-- **（以下条目为 v1/v2/v3/v3.1/v3.2 遗留背景，v3.3 原样保留其结论，未重新展开）**：本 spec 仍然取代 [[d1-kernelport-spec]]（v1）、[[d1-kernelport-spec-v2]]（v2）、[[d1-kernelport-spec-v3]]（v3）、[[d1-kernelport-spec-v3-1]]（v3.1）的全部正文——四者均已 `superseded`，正文保留作审计与设计演进对照。本 spec 仍然精确成文 [[d1-v2-design-approach]] 已确认的 v2 设计思路，v3.3 未改变这些设计方向，只在 v3.2 基础上做本轮 M1-M5 最小闭合。
+-- **依赖** [[kernel-ecosystem-facts]] 作为唯一事实基线（`design_status: confirmed`），尤其其 **§1b/§3b/§6b**（T-009 spike 补充确认小节）——本 spec 不新增事实性调研（v3.3 与 v3.2 相同，本轮未派发新的 conformance spike，T-011 是只读 gate 而非 spike），只做设计文本内的自洽修复；该表标注"未能确认"之处本 spec 全部原样保留标注，§11 C-item 清单中 C-1/C-4 的降级措辞因 M1/M2 同步更新，但 C-item 性质不变。
++- **局部修订** [[d1-kernelport-spec-v3-3]] 全部正文——v3.4 不是取代/重写，是在 v3.3 基线上施加 codex **T-012 confirm-readiness gate**（MUST-FIX，指出 v3.3 新增文字里 3 处机械级残留，详见 `.hopper/handoffs/T-012-output.md`）的一组收尾闭合修复（§17 逐条记录），其余章节、接口签名、章节编号沿用 v3.3（新增一个顶层章节：§17 本轮变更记录；§13「v2→v3 变更记录」/§14「v3→v3.1 变更记录」/§15「v3.1→v3.2 变更记录」/§16「v3.2→v3.3 变更记录」编号不变，§16 保持完整表格，仅在其第 5 行追加一处指向本轮更正的旁注，同既有惯例）。v3.3 页面因 T-012 gate 判定 MUST-FIX 不具备 `confirmed` 条件（`design_status: superseded`）而催生本次修订，v3.3 正文**未删除**，继续作为审计与本次修订的对照基线；本页与其互相交叉引用。
++- **（以下条目为 v1/v2/v3/v3.1/v3.2/v3.3 遗留背景，v3.4 原样保留其结论，未重新展开）**：本 spec 仍然取代 [[d1-kernelport-spec]]（v1）、[[d1-kernelport-spec-v2]]（v2）、[[d1-kernelport-spec-v3]]（v3）、[[d1-kernelport-spec-v3-1]]（v3.1）、[[d1-kernelport-spec-v3-2]]（v3.2）的全部正文——五者均已 `superseded`，正文保留作审计与设计演进对照。本 spec 仍然精确成文 [[d1-v2-design-approach]] 已确认的 v2 设计思路，v3.4 未改变这些设计方向，只在 v3.3 基础上做本轮 3 处收尾闭合。
++- **依赖** [[kernel-ecosystem-facts]] 作为唯一事实基线（`design_status: confirmed`），尤其其 **§1b/§3b/§6b**（T-009 spike 补充确认小节）——本 spec 不新增事实性调研（v3.4 与 v3.3 相同，本轮未派发新的 conformance spike，T-012 是只读 gate 而非 spike），只做设计文本内的自洽修复；该表标注"未能确认"之处本 spec 全部原样保留标注，§11 C-item 清单本轮未改写。
+ 
+ ## 1. 目标与不变量
+ 
+@@ -270,7 +265,7 @@
+ 
+ ## 3. KernelEvent Schema
+ 
+-（`MessageDeltaEvent`~`OperationCompletedEvent` 九类结构同 v3.1/v3.2，未受本次修订影响；v3.3 因 M3 新增第 11 类 `ApprovalBufferResolvedEvent`，判别联合由 10 类扩为 11 类）
++（`MessageDeltaEvent`~`OperationCompletedEvent` 十类结构同 v3.1/v3.2，未受本次修订影响；v3.3 因 M3 新增第 11 类 `ApprovalBufferResolvedEvent`，判别联合由 10 类扩为 11 类；v3.4 勘正：此处此前误写为"九类"，是 codex T-012 指出的机械笔误，与 INV-2/§6.1a/§9.2/§16 等处一致口径的"十类既有成员+1 类新增=11 类"对齐，不涉及任何计数变化，仅勘正笔误本身）
+ 
+ ```ts
+ type KernelEvent =
+@@ -582,7 +577,12 @@
+ 
+ **aggregate 模式下 queryBilling 的查询主体（v3.2 新增，消解 codex T-010 新矛盾#6 的一部分）**：当 `attribution:'user_tenant_aggregate'` 时，`queryBilling(session)` **不使用** `session.billing.tokenRef` 作为查询凭证——该 token 未必真正注入了模型调用，用它查询可能返回空结果或产生误导性的"零用量"假象。查询主体改为**部署级凭证**：`CreateSessionConfig.newapiEndpoint.deploymentTokenRef`（§2.1 新增字段，部署/初始化阶段配置的共享 token 引用，是内核该部署实例模型出口实际使用的凭证）。换言之，aggregate 模式下 `queryBilling` 实质查询的是"整个部署实例的用量"，`session` 参数此时只用作报告标签（如同 v3.1 已声明的那样），不是查询过滤条件；`deploymentTokenRef` 才是真正决定"查哪把 key 的日志"的依据。
+ 
+-**queryBilling 在 aggregate 模式下无法解析查询主体时的失败形状（v3.3 新增，消解 codex T-011 M5）**：`deploymentTokenRef` 是部署级静态配置，不随 `SessionHandle` 传递——§2.1 新增的前置校验只保证"部署配置阶段声明了它"（`createSession` 时点存在），不保证它在**查询发生的那一刻**仍然有效（例如该 token 后续被吊销、或部署配置被误改为空）。若 `queryBilling(session)` 在 aggregate 模式下发现自己找不到一个可用的 `deploymentTokenRef`（配置缺失，或凭证本身在调用 newapi 用量接口时被拒），**必须同步拒绝**（reject，拒绝码 `billing_query_subject_unresolved`，见 §9.1），**不得**返回一个字段齐全但数值虚构/为零的 `SessionBillingSnapshot`——"查询成功但用量为 0"的假象与一次诚实的"查询失败"对调用方的意义完全不同（前者可能被误读为"这个部署真的没有产生任何用量"），本 spec 要求严格区分两者。
++**queryBilling 在 aggregate 模式下无法解析查询主体时的失败形状（v3.3 新增，v3.4 按同步/异步分层重写，消解 codex T-012 对 M5 的指正）**：`deploymentTokenRef` 是部署级静态配置，不随 `SessionHandle` 传递——§2.1 新增的前置校验只保证"部署配置阶段声明了它"（`createSession` 时点存在），不保证它在**查询发生的那一刻**仍然有效（例如该 token 后续被吊销、或部署配置被误改为空）。`queryBilling(session)` 返回 `Promise<SessionBillingSnapshot>`（异步），其失败形状按**能否在发起远端调用前判定**分两层，二者不共享同一个失败通道——这是给调用方的**唯一确定**失败模型：
++
++- **发起远端调用前即可判定查询主体不可解析**（纯本地问题：`deploymentTokenRef` 本身缺失，压根不存在一个可用于发起调用的凭证引用）：实现**可选择**在发起 newapi 用量接口调用之前就前置 reject 这个 `Promise`（不实际发起远端 I/O）。
++- **远端凭证/用量接口拒绝**（`queryBilling()` 已真正发起对 newapi 用量接口的调用，凭证被远端拒绝，或查询主体在远端才被判定不可解析）：**一律**是 `queryBilling()` 返回的 `Promise` 的**异步 rejection**——**不得**表述或实现为同步拒绝，不归入定义为"方法调用同步/立即拒绝码"的 `KernelPortRejectionCode`（见 §9.1 v3.4 更正）。
++
++两种情形都携带同一个码 `billing_query_subject_unresolved`（v3.4 起改列 §9.1 的异步失败码，不再是 `KernelPortRejectionCode` 成员），调用方统一按"`await queryBilling()` 可能 reject"处理，无需区分"同步抛出"与"异步 Promise rejection"两套错误处理路径。无论哪种情形，**都不得**返回一个字段齐全但数值虚构/为零的 `SessionBillingSnapshot`——"查询成功但用量为 0"的假象与一次诚实的"查询失败"对调用方的意义完全不同（前者可能被误读为"这个部署真的没有产生任何用量"），本 spec 要求严格区分两者。
+ 
+ **必须如实承认的残留局限**：同 v3.1 四条（非 run 级、非实时、结算 webhook 不存在、归因粒度取决于运行时环境属性），v3.2 第四条改为直接指向 §11 C-3（不再是笼统的"运行时环境属性"措辞，而是明确指向可验证、待验证的具体条目）。
+ 
+@@ -605,7 +605,7 @@
+ 
+ `KernelErrorCode`（异步运行时错误，经 `ErrorEvent` 上报）**保持不变**（同 v3.1）。
+ 
+-`KernelPortRejectionCode`（方法调用同步/立即拒绝码）**v3.2 新增 1 项，v3.3 新增 2 项**：
++`KernelPortRejectionCode`（方法调用同步/立即拒绝码）**v3.2 新增 1 项，v3.3 新增 2 项，v3.4 移出 1 项**（`billing_query_subject_unresolved` 不再属于本枚举，改列为下方新增的 `queryBilling` 异步失败码——理由见下方说明与 §7，消解 codex T-012 对 M5 同步/异步分层的指正）：
+ 
+ ```ts
+ type KernelPortRejectionCode =
+@@ -618,16 +618,16 @@
+   | 'unsupported_approval_decision'  // v3.2 新增：respondApproval 收到
+     // capabilities().approvalDecisionKinds 不支持的 outcome（当前唯一场景是 'allow_session'
+     // 在 openclaw 或 hermes CLI 线路上被使用），见 §2.6。
+-  | 'aggregate_billing_requires_deployment_token'  // v3.3 新增，消解 M5：createSession 发现部署
++  | 'aggregate_billing_requires_deployment_token';  // v3.3 新增，消解 M5：createSession 发现部署
+     // 声明的 billingAttribution 为 'user_tenant_aggregate'，但 config.newapiEndpoint.
+-    // deploymentTokenRef 未提供时同步拒绝，见 §2.1 步骤 0、§7。
+-  | 'billing_query_subject_unresolved';  // v3.3 新增，消解 M5：queryBilling 在 aggregate 模式下
+-    // 找不到可用的 deploymentTokenRef（缺失/已吊销/查询本身被拒）时同步拒绝，不返回虚构的
+-    // SessionBillingSnapshot，见 §7。
++    // deploymentTokenRef 未提供时同步拒绝，见 §2.1 步骤 0、§7。这是 M5 里唯一保留在本同步
++    // 拒绝通道中的码——纯本地配置问题，调用（createSession）前即可判定。
+ ```
+ 
+-`OperationOutcome`（v3.2 更新定义，v3.3 新增 `aborted_effect_unknown` 并收窄 `rejected`，见 §2.4）：`succeeded` / `submitted` / `aborted_no_resend` / `aborted_resend_failed` / `aborted_effect_unknown` / `rejected` / `timed_out`。与前两者的关系同 v3.1，未变：三者是递进的三个阶段（`KernelErrorCode` 描述与特定调用无关的异步运行时状况；`KernelPortRejectionCode` 描述同步立即拒绝，发生在 `operationId` 铸造之前；`OperationOutcome` 描述已铸造 `operationId` 的 operation 的终态）。
++**`billing_query_subject_unresolved`（v3.3 新增，v3.4 重新归类为 `queryBilling` 的异步失败码，消解 codex T-012 M5）**：本码承载的失败——凭证被 newapi 用量接口拒绝，或查询主体在发起远端调用后才被判定不可解析——性质上是"调用已发起、结果由远端 I/O 决定"，不满足 `KernelPortRejectionCode` 自身"方法调用同步/立即拒绝"的定义，故 v3.4 起**移出**上方枚举。其唯一交付形状是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的**异步 rejection**（reject 原因携带该码）——不新增/复用 `ErrorEvent` 通道（`queryBilling` 不产出事件，不经过 `subscribe()` 流），也不是同步 throw。完整的同步/异步分层规则见 §7。
+ 
++`OperationOutcome`（v3.2 更新定义，v3.3 新增 `aborted_effect_unknown` 并收窄 `rejected`，见 §2.4）：`succeeded` / `submitted` / `aborted_no_resend` / `aborted_resend_failed` / `aborted_effect_unknown` / `rejected` / `timed_out`。与前两者的关系同 v3.1，未变：三者是递进的三个阶段（`KernelErrorCode` 描述与特定调用无关的异步运行时状况；`KernelPortRejectionCode` 描述同步立即拒绝，发生在 `operationId` 铸造之前；`OperationOutcome` 描述已铸造 `operationId` 的 operation 的终态）。`billing_query_subject_unresolved`（见上）不属于这三者中的任何一个既有通道，是 `queryBilling()` 自身返回值的 Promise rejection，独立于 `operationId`/`ErrorEvent` 机制。
++
+ ### 9.2 seq 语义与断线恢复责任方
+ 
+ （同 v3.1，未受本次修订影响，原样保留）
+@@ -658,7 +658,7 @@
+ - 若此刻 abort/cancel 已完成、resend 尚未发起——适配器**丢弃尚未发起的 resend**，这次 `interrupt()` operation 终态化为 `outcome:'aborted_no_resend'`，锁状态转为 `stop_in_progress`。
+ - 若 resend 的 `send()` 已经发出但尚未确认返回——适配器等待该 `send()` 返回，返回后立即将新 run 视为"stop 的目标"，对这个新 run 发起强制 cancel；这次 `interrupt()` operation 终态化为 `outcome:'succeeded'`（resend 确实发生了），紧随的 stop 序列立即中止这个新 run。
+ 
+-**`mode:'steer'`（soft，`interrupt_in_progress`）遇 `stop()`（v3.3 新增，消解 codex T-011 M4）**：soft steer 的适配器侧执行是**单个 RPC**（`chat.send`+`queueMode:"steer"`+`deliver:false`，见 §6.1(a)）——不存在类似 hard 路径"abort 已完成、resend 尚未发起"这样可被适配器观察或抢占的中间窗口（结构上与下方 F-08 范围校正描述的 openclaw 单 RPC hard 路径同理）。规则是**等待，不抢占**：`stop()` 到达时若锁状态为 `interrupt_in_progress` 且当前 operation 是 soft steer，适配器**等待该 RPC 返回**（无法从中截断）——RPC 返回后，这次 `interrupt()` operation 按 §6.1(a) 既有规则正常终态化（`submitted`/`rejected`/`timed_out`），锁状态转为 `stop_in_progress`，随后 `stop()` 序列正常针对该 session 当前的 active run 执行（soft steer 不产生 `newRunId`，不存在"哪个 run 才是 stop 目标"的歧义，见 §6.1(a)）。
++**`mode:'steer'`（soft，`interrupt_in_progress`）遇 `stop()`（v3.3 新增，v3.4 校正与 §6.1(a) 的口径冲突，消解 codex T-012 对 M1↔M4 一致性的指正）**：soft steer 的适配器侧执行是**单个 RPC**（`chat.send`+`queueMode:"steer"`+`deliver:false`，见 §6.1(a)）——不存在类似 hard 路径"abort 已完成、resend 尚未发起"这样可被适配器观察或抢占的中间窗口（结构上与下方 F-08 范围校正描述的 openclaw 单 RPC hard 路径同理）。规则是**等待，不抢占**：`stop()` 到达时若锁状态为 `interrupt_in_progress` 且当前 operation 是 soft steer，适配器**等待该 RPC 返回**（无法从中截断）——RPC 返回后，这次 `interrupt()` operation 按 §6.1(a) 既有二态规则收敛（`submitted`/`rejected`——**严格二态，不产生第三个终态**；该 RPC 调用本身失败，含网络/连接层失败，已归入 `rejected`，见 §6.1(a)），锁状态转为 `stop_in_progress`，随后 `stop()` 序列正常针对该 session 当前的 active run 执行（soft steer 不产生 `newRunId`，不存在"哪个 run 才是 stop 目标"的歧义，见 §6.1(a)）。**若等待该 RPC 返回本身超出适配器内部合理上限（v3.4 明确）**：那是 **`stop()` 这次 operation 自身**的 `outcome:'timed_out'`（§2.5 既有的 stop() 可达终态子集本就包含 `timed_out`），**不是** soft steer 的终态——v3.3 曾把这个等待超时误写成 soft steer 可达的第三个终态（`submitted`/`rejected`/`timed_out`），与 §6.1(a) 刚收窄的严格二态直接冲突，codex T-012 已指出；v3.4 予以更正：soft `interrupt(mode:'steer')` 自身的 `OperationOutcome` 全文任何地方都**只有** `submitted`/`rejected` 两态，不因为与 `stop()` 发生锁竞争而多出第三态。
+ 
+ **`mode:'cancel'`（`interrupt_in_progress`）遇 `stop()`（v3.3 新增，消解 codex T-011 M4）**：`interrupt(mode:'cancel')` 同样是单个 RPC（`sessions.abort`/`chat.abort` 或 hermes ACP `cancel`），无可抢占的中间窗口。规则同上：**等待，不抢占**——`stop()` 等待该 cancel RPC 返回，这次 `interrupt()` operation 按既有规则终态化（`succeeded`/`rejected`/`timed_out`），锁转为 `stop_in_progress` 后 `stop()` 序列正常执行。由于 `interrupt(mode:'cancel')` 与 `stop()` 的底层动作高度重叠（都在中止当前 run），`stop()` 序列此时的 cancel/abort 步骤对已经被中止的 run 而言是幂等的空操作，不影响 `stop()` 仍需完成的后续步骤（如 §6.3 的 delete）。
+ 
+@@ -757,9 +757,9 @@
+ | 2 | **新增 `aborted_effect_unknown` 诚实终态**：`OperationOutcome` 新增该值，承接"abort 是否生效无法从可观察信号判定"的场景（典型：openclaw hard 单 RPC 的 error 路径，C-4 待验）；`rejected` 的公开承诺收窄为严格"abort 从未生效"，不再涵盖"生效性不明"；C-4 的否定降级改报 `aborted_effect_unknown`；明确调用方对该终态的处理义务——不得推断旧 run 仍在运行，按"可能已中止"保守处理 | codex T-011 **M2**（`aborted_resend_failed` 的 C-4 降级借道 `rejected`，污染其"abort 从未生效"的语义） | §2.4、§6.1(b)、§11 C-4、§9.1 |
+ | 3 | **审批 FSM 补转移 + pending#2 缓冲上报独立化**：①新增 `FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY` 转移，内核权威超时信号与本地强制 deny 并发时让位于内核权威终态，不产生两个终态；②修正"缓冲请求已超时又可提升"的矛盾——缓冲中的请求一旦超时即终态化、不可再提升，只有仍在有效期内的缓冲请求才能在 #1 解决后浮现；③新增第 11 类 KernelEvent `ApprovalBufferResolvedEvent`（携 `reqId`/`reason`/`ts`）承载缓冲请求超时/溢出的可见性，不再复用语义受限于 stop/cancel 强制 deny 的 `forceResolvedApprovals` | codex T-011 **M3**（审批 FSM + pending#2 未闭包，最大项） | §6.2、§3、INV-2 |
+ | 4 | **锁矩阵补齐 soft steer/cancel 遇 stop**：为 `mode:'steer'`（soft RPC 在途）与 `mode:'cancel'`（在途）遇 `stop()` 补齐"等待，不抢占"规则（两者均为单 RPC，无可抢占中间窗口，结构同 F-08 范围校正描述的 openclaw 单 RPC hard 路径）；据此校正 v3.2:606"覆盖所有状态转移"的声称——v3.3 补齐后该声称才真正名副其实 | codex T-011 **M4**（"完整"锁矩阵只覆盖 hard `abort_and_resend` 遇 stop，未定义 soft steer/cancel 遇 stop） | §9.3 |
+-| 5 | **aggregate 计费前置校验 + 失败形状**：`deploymentTokenRef` 改为条件必填——`billingAttribution == 'user_tenant_aggregate'` 时必须提供，否则 `createSession` 同步拒绝（新增 `aggregate_billing_requires_deployment_token`）；定义 `queryBilling` 在 aggregate 模式下查询主体不可解析时的失败形状（同步拒绝 `billing_query_subject_unresolved`，不返回虚构的零用量快照） | codex T-011 **M5**（aggregate 计费缺配置不变量） | §2.1、§7、§9.1 |
++| 5 | **aggregate 计费前置校验 + 失败形状**：`deploymentTokenRef` 改为条件必填——`billingAttribution == 'user_tenant_aggregate'` 时必须提供，否则 `createSession` 同步拒绝（新增 `aggregate_billing_requires_deployment_token`）；定义 `queryBilling` 在 aggregate 模式下查询主体不可解析时的失败形状（v3.3 时表述为"同步拒绝 `billing_query_subject_unresolved`"，**v3.4 更正**：该表述与 `queryBilling` 返回 `Promise` 的签名冲突——远端凭证/接口拒绝一律是异步 `Promise` rejection，只有纯本地配置缺失可选择同步前置 reject，详见 v3.4 §17 第②项、§7、§9.1） | codex T-011 **M5**（aggregate 计费缺配置不变量） | §2.1、§7、§9.1 |
+ 
+-**§10/§11 机械勘正（随上述修复顺带核对，未引入新数字矛盾）**：§10「v1→v2→v3→v3.1→v3.2 消解对照表」统计的是 19 条 F/S must-fix 项的分桶，M1-M5 不改变任何一行的桶归属，故 §10 数字维持不变；INV-2、§3、§6.1a、§9.2 提到的 KernelEvent 判别联合计数因 M3 新增 `ApprovalBufferResolvedEvent` 由 10 类同步更新为 11 类（全文出现处均已同步勘正，未留下新旧数字并存的矛盾）。C-2（operation ledger）、C-5（hermes soft inject 存在性）两项 C-item，codex T-011 复判"更适合列为非阻断能力研究/optional 实现决策而非 conformance-fact"——该复判已如实记入 [[d1-v31-review]] 追加小节，供后续参考，**不在本次 M1-M5 修复范围内**，§11 对应两行本次不改写。
++**§10/§11 机械勘正（随上述修复顺带核对，未引入新数字矛盾）**：§10「v1→v2→v3→v3.1→v3.2 消解对照表」统计的是 19 条 F/S must-fix 项的分桶，M1-M5 不改变任何一行的桶归属，故 §10 数字维持不变；INV-2、§3、§6.1a、§9.2 提到的 KernelEvent 判别联合计数因 M3 新增 `ApprovalBufferResolvedEvent` 由 10 类同步更新为 11 类（**v3.4 补记**：§3 行 271 当时误写为"九类"，未真正做到全文同步勘正，已在 v3.4 §17 第③项更正）。C-2（operation ledger）、C-5（hermes soft inject 存在性）两项 C-item，codex T-011 复判"更适合列为非阻断能力研究/optional 实现决策而非 conformance-fact"——该复判已如实记入 [[d1-v31-review]] 追加小节，供后续参考，**不在本次 M1-M5 修复范围内**，§11 对应两行本次不改写。
+ 
+ **v3.3 仍延后（明确标注，不在本次 5 处最小闭合范围内，同 v3.2 未变）**：
+ 
+@@ -767,6 +767,18 @@
+ - **newapi 请求级 correlation（§12 第 6 条，DEFER）**：同 v3.2，未进一步收口，非阻塞性，不登记为 C-item。
+ - **hermes 审批超时 UI（§12 第 3 条，DEFER）**：同 v3.2，未变。
+ 
++## 17. v3.3→v3.4 变更记录
++
++本节逐条列出 v3.3→v3.4 的 3 处收尾闭合修复，每条注明其消解的 codex T-012 confirm-readiness gate finding，以及本页对应落地章节。M2/M3/M4 已被 T-012 确认闭合的部分本轮不改动。
++
++| # | 修复内容 | 消解的 T-012 finding | 本页落地章节 |
++|---|---|---|---|
++| 1 | **M1↔M4 soft 终态口径统一**：§9.3 soft `mode:'steer'` 遇 `stop()` 的锁规则不再把 steer 的终态写成 `submitted`/`rejected`/`timed_out` 三态，改为与 §6.1(a) 一致的严格二态（`submitted`/`rejected`，RPC 调用本身失败含网络/连接层失败已归入 `rejected`）；`stop()` 等待该 RPC 返回本身超出上限，明确是 **`stop()` 这次 operation 自身**的 `outcome:'timed_out'`（§2.5 既有子集），不是 soft steer 的终态。全文不再有任何地方给 soft steer 列出第三个终态 | codex T-012 第①项（§9.3 与 §6.1(a) 冲突，M1 未真正在全文收敛为二态） | §9.3 |
++| 2 | **M5 失败通道同步/异步分层**：`queryBilling` 的失败形状按"能否在发起远端调用前判定"拆分两层——纯本地配置缺失（查询主体在发起远端调用前即不可解析）可选择同步前置 reject；远端凭证/用量接口拒绝一律是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的异步 rejection。`billing_query_subject_unresolved` 从 `KernelPortRejectionCode`（同步/立即拒绝码）移出，改列为 `queryBilling` 专属的异步失败码；`aggregate_billing_requires_deployment_token`（`createSession` 阶段，纯本地配置问题）保持同步不变。给调用方一个唯一确定的失败模型 | codex T-012 第⑤项（`queryBilling` 返回 `Promise` 却要求"同步拒绝"，与三阶段错误模型自相矛盾） | §7、§9.1 |
++| 3 | **§3 事件计数笔误勘正**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员由误写的"九类"改正为"十类"（加上 M3 新增的 `ApprovalBufferResolvedEvent` 共 11 类，与 INV-2/§6.1a/§9.2/§16 既有的正确口径对齐） | codex T-012 第⑥项（§3 行 271"九类"与实际 10 个既有成员不符，且与 §16"全文数字已同步勘正"的声称冲突） | §3 |
++
++**本轮未改动**：M2（`aborted_effect_unknown`/`rejected` 收窄）、M3（审批 FSM 转移 + `ApprovalBufferResolvedEvent`）、M4 锁矩阵本身覆盖的状态转移集合（只更正了其中 soft steer 分支的终态措辞，转移规则本身不变）——codex T-012 已确认三者闭合，未提出任何修改要求。§10 收口统计（19 条 F/S must-fix 项分桶）不受本轮 3 处修复影响，未引入新的数字矛盾。§11 C-item 清单本轮不改写。
++
+ ## 交叉引用
+ 
+-[[d1-kernelport-spec-v3-2]]（本页的直接修订基线，v3.2，`design_status: superseded`，正文保留作审计与本次修订的对照）· [[d1-v31-review]]（本次修订依据的复核结论追加小节：codex T-011 confirm-readiness gate MUST-FIX，M1-M5 五项设计文本自洽缺口的来源）· [[kernel-ecosystem-facts]]（唯一事实基线，`confirmed`，本轮未新增调研，M1-M5 全部是设计文本内自洽修复）· [[d1-kernelport-spec-v3-1]]（v3.1，`superseded`，正文保留作审计与设计演进对照）· [[d1-v3-review]]（v3 双轨复核，v3.1 修复清单来源）· [[d1-kernelport-spec-v3]]（v3，`superseded`）· [[d1-v2-review-dual-track]]（v2 双轨复核）· [[d1-kernelport-spec-v2]]（v2，`superseded`）· [[d1-review-dual-track]]（v1→v2 逐条消解的双轨对抗评审 must-fix 清单，§10 对照表的原始基线）· [[d1-kernelport-spec]]（v1，`superseded`）· [[d1-v2-design-approach]]（本 spec 的设计输入，用户已确认的 v2 设计思路）· [[x1-local-kernel-decision]]（本地内核优先决策）· [[x2-newapi-unified-gateway]]（newapi 统一网关决策，本 spec §7 归因方案的架构前提）· [[emergent-skeleton]]（架构骨架）· [[ra-l3-agenda]]（D1 议程条目）· [[p2-narrow-waist-draft]]（D1 的种子草稿）
++[[d1-kernelport-spec-v3-3]]（本页的直接修订基线，v3.3，`design_status: superseded`，正文保留作审计与本次修订的对照）· [[d1-kernelport-spec-v3-2]]（v3.2，`superseded`，正文保留作审计与设计演进对照）· [[d1-v31-review]]（M1-M5 五项设计文本自洽缺口的来源，v3.3 修订依据）· [[kernel-ecosystem-facts]]（唯一事实基线，`confirmed`，本轮未新增调研，3 处修复全部是设计文本内自洽修复）· [[d1-kernelport-spec-v3-1]]（v3.1，`superseded`，正文保留作审计与设计演进对照）· [[d1-v3-review]]（v3 双轨复核，v3.1 修复清单来源）· [[d1-kernelport-spec-v3]]（v3，`superseded`）· [[d1-v2-review-dual-track]]（v2 双轨复核）· [[d1-kernelport-spec-v2]]（v2，`superseded`）· [[d1-review-dual-track]]（v1→v2 逐条消解的双轨对抗评审 must-fix 清单，§10 对照表的原始基线）· [[d1-kernelport-spec]]（v1，`superseded`）· [[d1-v2-design-approach]]（本 spec 的设计输入，用户已确认的 v2 设计思路）· [[x1-local-kernel-decision]]（本地内核优先决策）· [[x2-newapi-unified-gateway]]（newapi 统一网关决策，本 spec §7 归因方案的架构前提）· [[emergent-skeleton]]（架构骨架）· [[ra-l3-agenda]]（D1 议程条目）· [[p2-narrow-waist-draft]]（D1 的种子草稿）
+
+codex
+v3.3→v3.4 的实质差异已核对：正文确实只围绕三处残留及其审计说明展开。下一步我会做全文反向检索，重点排除旧三态措辞、旧同步拒绝归类与“九类”残留，而不只采信变更记录的自述。
+exec
+/bin/zsh -lc "nl -ba /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md | sed -n '45,75p;160,215p;255,325p;400,475p;565,645p;645,690p;745,784p'
+rg -n -i -C 2 \"mode:'steer'|soft steer|soft.*interrupt|submitted.*rejected|rejected.*timed_out|timed_out.*steer|steer.*timed_out|strict.*two|严格二态|二态\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+rg -n -C 2 \"billing_query_subject_unresolved|aggregate_billing_requires_deployment_token|queryBilling|同步拒绝|同步/立即|同步 throw|Promise rejection|异步 rejection\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+rg -n -C 1 \"九类|十类|10 类|11 类|十一类|8 类内核事件|KernelEvent\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+    45	```ts
+    46	type KernelKind = 'openclaw' | 'hermes';
+    47	```
+    48	
+    49	### 目标
+    50	
+    51	（同 v3.1，未受本次修订影响，原样保留）定义一条跨 OpenClaw / Hermes Agent 两个真实本地进程内核的窄腰契约，使 P4 客户端 UI 与 P3 消息屏障对"当前用的是 openclaw 还是 hermes"无感。不声称"无缝跨四内核"，只承诺"无缝跨两个同构的 Daemon/Gateway 型内核"。
+    52	
+    53	### 不变量
+    54	
+    55	- **INV-1（透明性）**：（同 v3.1，未变）UI 与 P3 消息屏障不得对具体内核类型做分支判断；`SessionHandle.kernel` 字段的类型层面缺口（S-08）仍未裁决，见 §12。
+    56	- **INV-2（一套契约两个同构内核）**：（同 v3.1/v3.2，方法与事件骨架未变；v3.3 因 M3 新增 `approval_buffer_resolved` 一个判别联合变体，计数由 10 类更新为 11 类）7 个 KernelPort 方法 + KernelEvent 判别联合（11 类：8 类内核事件 + `capability_changed` + `operation_completed` + `approval_buffer_resolved`，见 §3）+ CapabilityDescriptor 是唯一的语义契约。
+    57	- **INV-3（语义与传输分离）**：（同 v3.1，未变）KernelPort 方法签名与 KernelEvent 字段中不出现任何 Transport 专有名词。v3.2 新增的 `billingAttribution`/`approvalDecisionKinds`（§4.1）同样只通过 `CapabilityDescriptor` 既有机制的自然扩展体现（新增字段而非新增 Transport 名词），不违反本不变量。
+    58	- **INV-4（能力显式声明，不隐式假设）**：（同 v3.1，未变，v3.2 §7 的 attribution 权威化是本不变量的进一步贯彻——见下方 INV-5 之后的说明）能力变更的感知路径仍是内核 RPC 报错（被动发现）+ 我方 Server 能力开关 override（主动决策）。
+    59	- **INV-5（裂缝的执行收敛在适配器内部，体验降级如实告知在 UI/P3；v3.2 三次修订，进一步收窄 soft steer 的可承诺范围）**：
+    60	  v3.1 已经把 openclaw steer 精确拆分为 soft（`chat.send`+`queueMode:"steer"`）与 hard（原生 `sessions.steer`）两条能力，方向正确；但 v3.1 在 soft 的**结果态合成规则**上仍出错——用"是否出现新 runId""内部 `queued` 字段"等**未确认**的信号去区分 `succeeded`/`fallback_to_prompt`/`rejected` 三态，被 codex T-010 判定为"把未确认信号当成契约分支"（头号 BLOCKER，性质是 live-probe-limited，见 [[d1-v31-review]] §5.2）。v3.2 更正：
+    61	  - **openclaw**：`interrupt(mode:'steer')`（soft，默认语义）映射到 `chat.send`+`queueMode:"steer"`——路径本身经 T-009 repo 级源码深挖**确认存在**（kernel-ecosystem-facts §1b F5），但其**精确 ack/结果信号语义**（是否回传 `queued`/`reason`，成功注入与静默降级是否可机器区分）**未经 live probe 确认**（登记为 §11 C-1）。v3.2 不再基于这个未确认信号合成三态结果，**只暴露两态**：`submitted`（RPC 被接受）与 `rejected`（前置校验或 RPC 本身失败）；`interrupt(mode:'abort_and_resend')`（hard，独立操作）映射到原生 RPC `sessions.steer`——这是有损、必产生 `TurnCompleteEvent.degraded` 的路径。
+    62	  - **hermes**：ACP 只有 `cancel(session_id)`（session 级，无 soft 对应），`interrupt(mode:'abort_and_resend')` 走适配器内部 cancel+resend 降级路径（§6.1(b)）；`interrupt(mode:'steer')` 在 hermes 上**不受支持**，必须 reject（同 v3.1，未变）。
+    63	  - **执行收敛（适配器职责）**：不变——两内核的 hard 降级路径、两内核审批超时/interrupt/stop 时的强制 deny，这些裂缝的执行动作必须发生在适配器内部。
+    64	  - **体验降级如实告知（UI/P3 职责，v3.2 收窄措辞）**：`interrupt(mode:'abort_and_resend')` 无论落在哪个内核，都会丢弃当前 run 未产出的部分内容，`TurnCompleteEvent.degraded:{kind:'abort_and_resend'}` 如实标注这一点。`interrupt(mode:'steer')` 只在 openclaw 上可用，其结果态（`submitted`/`rejected`，见 §6.1(a)）由适配器合成并如实上报——**v3.2 明确**：`submitted` **不承诺**"消息确实注入了 active run"，只承诺"底层 RPC 被接受"；messaging `/steer` 内部路径的静默 fallback（降级为普通 prompt 却对外不可见）**归入 `submitted` 的不可观察边界**，这是本 spec 主动声明、而非试图掩盖的盲区——adapter 结构性地无法区分这两种情况，UI/P3 不应被给予一个它拿不到的确定性承诺。
+    65	
+    66	## 2. KernelPort 接口
+    67	
+    68	基础类型（v3.2 修订：`SessionHandle` 新增 `kernelSessionId` 字段，明确 `sessionId` 的时序归属）：
+    69	
+    70	```ts
+    71	type KernelKind = 'openclaw' | 'hermes';
+    72	
+    73	interface SessionHandle {
+    74	  sessionId: string;
+    75	  // v3.2 定死归属：这是 adapter 预分配的 id（客户端生成的 UUID），在 createSession 内部执行序列
+   160	```ts
+   161	interface InterruptOptions {
+   162	  mode: 'steer' | 'cancel' | 'abort_and_resend';
+   163	  // 同 v3.1，未变：三态取代 v1/v2 的二态。
+   164	  // 'steer'（soft inject，interrupt() 的默认转向语义）：v3.2 起仅 openclaw 具备（映射
+   165	  //   chat.send+queueMode:"steer"），hermes 上必然 reject。
+   166	  // 'cancel'：中止（同 v3.1，未变）。
+   167	  // 'abort_and_resend'：独立、非默认的 hard 操作——abort 活跃 run + 新发一次 send，不保留已产出内容。
+   168	  runId?: string;
+   169	  input?: KernelInput;
+   170	}
+   171	
+   172	type OperationOutcome =
+   173	  | 'succeeded'              // hard：abort+resend 均完成；stop()：正常完成
+   174	  | 'submitted'              // 仅 soft steer 可达：底层 chat.send+queueMode:"steer" RPC 被接受。
+   175	                               // **不承诺**消息确实被注入到了 active run——见下方"不可观察边界"。
+   176	                               // v3.3 进一步明确（消解 M1）：只由该 RPC 调用本身是否成功返回这一
+   177	                               // transport 层面事实判定，响应体内任何字段（含 `queued`/`reason`）
+   178	                               // 均不参与判定，见 §6.1(a)。
+   179	  | 'aborted_no_resend'      // 仅 'abort_and_resend'：§9.3 session 级锁仲裁下，stop 抢占导致 resend
+   180	                               // 被丢弃（本终态只适用于存在可抢占中间窗口的路径，见 §9.3 的 F-08 范围说明）
+   181	  | 'aborted_resend_failed'  // 仅 'abort_and_resend'：适配器**可靠观察到** abort 已生效（或本就无
+   182	                               // active run 需要 abort），但新 send 自身失败——区别于 aborted_no_resend
+   183	                               // （resend 从未被适配器发起）、rejected（abort 从未生效）与下方新增的
+   184	                               // aborted_effect_unknown（abort 是否生效本身不明）。见 §6.1(b) 与
+   185	                               // §11 C-4（openclaw 侧该终态能否可靠构造待 live probe）。
+   186	  | 'aborted_effect_unknown' // v3.3 新增，消解 M2：仅 'abort_and_resend'：abort 已发起，但其是否
+   187	                               // 生效**无法从可观察信号判定**（典型：openclaw hard 单 RPC 的 error
+   188	                               // 路径未确认，见 §11 C-4）。调用方**不得**据此推断旧 run 仍在运行，
+   189	                               // 应视旧 run 状态为不确定，按"可能已中止"保守处理——不得自动假设可
+   190	                               // 继续依赖旧 run 的产出，也不得自动重发假设旧 run 仍存活的操作。见 §6.1(b)。
+   191	  | 'rejected'                // v3.3 收窄（消解 M2）：严格限定为"abort 从未生效"——RPC/序列在产生任何
+   192	                               // 效果之前就同步失败，或前置校验不通过。**不再**涵盖"无法区分 abort 是否
+   193	                               // 生效"的场景，那类否定结果一律走上方 aborted_effect_unknown。
+   194	  | 'timed_out';              // 等待内核侧确认信号超过适配器内部合理上限
+   195	
+   196	interface InterruptResult {
+   197	  operationId: string;    // 见 §6.1a：本次 operation 的唯一标识，供旁路消费者判定终态
+   198	  affectedRunId?: string;
+   199	  // v3.2 修订：由必填改为**可选**。仅当确有 active run 被 abort（即 interruptedActiveRun:true）
+   200	  // 时出现；hard abort_and_resend 在无 active run 时（T-009 F4：sessions.steer 不报错、仍新
+   201	  // send）没有"受影响的旧 run"这个概念，本字段省略，不得强行构造一个不存在的值（消解 codex
+   202	  // T-010 新矛盾#1）。soft steer 场景下，若前置校验发现无 active run，直接走 §9.1 同步拒绝，
+   203	  // 不产生 operationId，因而也不涉及本字段。
+   204	  outcome: OperationOutcome;
+   205	  newRunId?: string;             // 仅 mode:'abort_and_resend' 且 outcome:'succeeded' 时有意义
+   206	  interruptedActiveRun?: boolean; // 仅 mode:'abort_and_resend'：是否确实有 active run 被 abort
+   207	  status?: unknown;       // 非稳定字段，透传底层 ack 的 status，仅供调试
+   208	  detail?: string;        // 非稳定字段，outcome 为 rejected/timed_out 时的可读原因
+   209	}
+   210	
+   211	function interrupt(
+   212	  session: SessionHandle,
+   213	  opts: InterruptOptions
+   214	): Promise<InterruptResult>;
+   215	```
+   255	
+   256	审批状态机由四态扩展为**五态**（v3.2 新增 `FORCE_DENY_PENDING_KERNEL_ACK` 中间态），exactly-once 规则的具体转移见 §6.2。
+   257	
+   258	### 2.7 capabilities
+   259	
+   260	（结构同 v3.1，v3.2 因 §4.1 新增字段而扩展返回值，签名不变）
+   261	
+   262	```ts
+   263	function capabilities(session?: SessionHandle): Promise<CapabilityDescriptor>;
+   264	```
+   265	
+   266	## 3. KernelEvent Schema
+   267	
+   268	（`MessageDeltaEvent`~`OperationCompletedEvent` 十类结构同 v3.1/v3.2，未受本次修订影响；v3.3 因 M3 新增第 11 类 `ApprovalBufferResolvedEvent`，判别联合由 10 类扩为 11 类；v3.4 勘正：此处此前误写为"九类"，是 codex T-012 指出的机械笔误，与 INV-2/§6.1a/§9.2/§16 等处一致口径的"十类既有成员+1 类新增=11 类"对齐，不涉及任何计数变化，仅勘正笔误本身）
+   269	
+   270	```ts
+   271	type KernelEvent =
+   272	  | MessageDeltaEvent
+   273	  | ThinkingEvent
+   274	  | ToolCallEvent
+   275	  | ToolResultEvent
+   276	  | ApprovalRequestEvent
+   277	  | ErrorEvent
+   278	  | TurnCompleteEvent
+   279	  | SessionEndEvent
+   280	  | CapabilityChangedEvent
+   281	  | OperationCompletedEvent
+   282	  | ApprovalBufferResolvedEvent;   // v3.3 新增，见下方定义与 §6.2「pending #2 缓冲策略」
+   283	```
+   284	
+   285	`KernelEventBase`（同 v3.1/v3.2，未变，`protocolVersion` 字段本页发布后实际取值应为 `"v3.3"`）：
+   286	
+   287	```ts
+   288	interface KernelEventBase {
+   289	  protocolVersion: string;
+   290	  seq: number;
+   291	  sessionId: string;
+   292	  runId?: string;
+   293	  ts: string;
+   294	}
+   295	```
+   296	
+   297	`MessageDeltaEvent`、`ThinkingEvent`、`ToolCallEvent`、`ToolResultEvent`、`ApprovalRequestEvent`、`ErrorEvent`、`SessionEndEvent`、`CapabilityChangedEvent`、`TurnCompleteEvent` 定义**同 v3.1，未受本次修订影响，原样保留**。
+   298	
+   299	`ApprovalBufferResolvedEvent`（v3.3 新增，消解 codex T-011 M3——缓冲期审批请求的终态可见性不再复用 `forceResolvedApprovals`）：
+   300	
+   301	```ts
+   302	interface ApprovalBufferResolvedEvent extends KernelEventBase {
+   303	  type: 'approval_buffer_resolved';
+   304	  reqId: string;                                  // 缓冲期终态化的那条审批请求的 reqId
+   305	  reason: 'buffered_timeout' | 'queue_overflow';   // 终态化原因：内核侧计时器判定超时 / 本地缓冲队列溢出
+   306	  // 时点即 KernelEventBase.ts；该请求最终落定的具体审批状态（恒为 TIMED_OUT_DENY 或
+   307	  // 因溢出被适配器发起的 deny）由 §6.2「pending #2 缓冲策略」定义，本事件只负责可见性上报。
+   308	}
+   309	```
+   310	
+   311	本事件与其余 10 类 KernelEvent 共享同一套 §9.2「事件不重放」规则——只对当时在线订阅的消费者可见，断线期间发生的缓冲终态化不构成补发承诺（与 §6.1a `OperationCompletedEvent` 可观察性范围收窄同一诚实原则，见 §6.2 详细说明）。
+   312	
+   313	`OperationCompletedEvent`（v3.2 修订：`affectedRunId` 已在 v3.1 就是可选字段，本轮同步 §2.4 的收窄说明；不重放承诺的收窄见 §6.1a）：
+   314	
+   315	```ts
+   316	interface OperationCompletedEvent extends KernelEventBase {
+   317	  type: 'operation_completed';
+   318	  operationId: string;
+   319	  operationKind: 'interrupt' | 'stop';
+   320	  outcome: OperationOutcome;
+   321	  affectedRunId?: string;   // 同 §2.4 InterruptResult 的收窄规则：仅确有 active run 被 abort 时出现
+   322	  newRunId?: string;   // 仅 interrupt mode:'abort_and_resend' 且 outcome:'succeeded' 时有意义
+   323	  detail?: string;     // 非稳定字段，调试用
+   324	}
+   325	```
+   400	### 6.1 INV-5/steer 收敛（v3.2 修订：soft steer 结果态收窄为二态，删除三态合成规则）
+   401	
+   402	**T-009 源码级结论**（[[kernel-ecosystem-facts]] §1b，2026-07-21 repo 级深挖 `openclaw/openclaw`）：RPC `sessions.steer` 与 `sessions.send` 共用同一 handler `handleSessionSend`，仅 `interruptIfActive` 参数不同；有 active run 时行为＝先 abort 该 run（session 级，不支持 `runId` 参数）、再总是发起一次新的 `chat.send`——Control UI 内部注释直接定性为 `/** Hard redirect — aborts the active run and restarts with a new message. */`。响应是 chat.send 风格的 ack（`runId`/`status`/可选 `messageSeq`/可选 `interruptedActiveRun:true`），**没有** `accepted_as_steer`/`queued_as_followup`/`rejected` 三态，返回的 `runId` 是**新发起**的 run，不是原 run 的延续。
+   403	
+   404	真正与产品语义"打断并转向、保留已产出"相符的能力，是另一条独立路径：Control UI `/steer` 命令走 `chat.send`+`queueMode:"steer"`+`deliver:false`（无 active run 时 UI 显式拒绝，不静默降级）；messaging `/steer`/`/tell` 走内部 `queueEmbeddedAgentMessageWithOutcomeAsync`（失败时**静默**改写为普通 prompt，对外 RPC 层不可见）。
+   405	
+   406	v3.2 据此拆分为两条能力，禁止混名（拆分本身同 v3.1，未变；**结果态合成规则本轮收窄**）：
+   407	
+   408	#### (a) Soft inject —— `interrupt(session, {mode:'steer', input})`（v3.2 全文重写结果态判定规则）
+   409	
+   410	这是 `interrupt()` 的默认转向语义。
+   411	
+   412	- **openclaw**：映射到 `chat.send`+`queueMode:"steer"`（Control UI `/steer` 语义），**不是** `sessions.steer` RPC。**路径本身** 是 T-009 确认真实存在的 openclaw 专属能力（kernel-ecosystem-facts §1b F5）——这一点是 confirmed。**但该路径的精确 ack/结果信号语义**（有 active run 时该 RPC 是否回传内部 `queued`/`reason` 字段，soft 成功时 runId 是否恒等于被注入的 active runId）**未经 live probe 确认**（T-009 Open question #1、T-010 Open question #1 两轮独立工作均止步于此，登记为 §11 C-1）。
+   413	- **hermes**：**不支持**——`capabilities().interruptModes` 对 hermes 恒不含 `'steer'`（无论 CLI 还是 ACP 线路，见 §4.2）；调用方传 `mode:'steer'` 一律 reject（`unsupported_interrupt_mode`）。
+   414	
+   415	**前置同步校验（发生在 operationId 铸造之前，走 §9.1 `KernelPortRejectionCode` 通道，不产生 `OperationOutcome`）**：调用前先查本地快照的 `activeRunIds`——若为空，同步 reject（`no_active_run_for_steer`），不发起 RPC，不铸造 `operationId`（openclaw Control UI 官方文档明确了这条前置检查，T-009 F5）。**v3.2 澄清**：这是本 spec 递进三阶段模型（§9.1）里的"同步立即拒绝"，不是 operation 终态——v3.1 曾把这一步的结果表述为"合成 `outcome:'rejected'`"，与 §9.1 的架构描述（拒绝码发生在 operationId 铸造之前）不一致，v3.2 予以统一：本步骤是纯粹的方法调用前置拒绝，与后续的 operation 结果通道无关。
+   416	
+   417	**结果态判定（v3.2 收窄为二态；v3.3 删除残留的 `queued:false` 重叠分支，消解 codex T-011 M1）**：若前置校验通过（确有 active run），适配器铸造 `operationId`，发起 `chat.send`+`queueMode:"steer"`+`deliver:false`。**结果只由该 RPC 调用本身是否成功返回这一 transport 层面事实分流，响应体内任何字段均不参与判定**：
+   418	
+   419	1. 若该 RPC 调用本身返回成功 ack（无论响应体里 `runId`/`messageSeq`/`queued`/`reason` 等字段呈现何种取值）→ `outcome:'submitted'`。**这是唯一的成功态**，且是**唯一**依据——v3.2 已不再用"是否出现新 runId"去区分"确实注入同一 run"与"实际被当成新 followup"；v3.3 进一步明确：即便这次成功 ack 的响应体里出现 `queued:false` 或其他任何拒收类字段，也**不得**据此把它改判为 `rejected`——那等于同一次调用同时命中两个终态，是把尚未隔离的 C-1 待验信号重新掺回契约分流规则（codex T-011 M1 明确点名此矛盾）。
+   420	2. 若该 RPC 调用本身失败（网络错误，或内核在 RPC 层面直接返回错误/拒绝，如非成功 ack、连接层错误）→ `outcome:'rejected'`，reason 写入非稳定的 `detail` 字段。
+   421	
+   422	**`queued`/`reason` 等未确认信号的隔离（v3.3 新增，消解 codex T-011 M1）**：这两个字段——以及其他任何未经 §11 C-1 live probe 确认语义的响应体字段——**不得**出现在本节或任何其他章节对 `OperationOutcome` 的判定分支里，无论是作为"确认成功"的证据还是作为"改判失败"的证据。当前 protocolVersion 下唯一承认的分流依据是上方两条规则描述的"RPC 调用本身是否成功返回"这一二元 transport 事实。若 C-1 live probe 未来证实这些字段具备稳定、可机器判别的语义，对 `OperationOutcome` 的进一步细分**须通过新增 `protocolVersion` 版本升级引入**（如新增一个可辨识的第三态），不得在当前 protocolVersion 下静默改变本节的二态判定规则——这保证依赖当前契约的调用方不会因为内核侧某个未公开字段的行为变化而被动改变可观察结果。
+   423	
+   424	**不可观察边界（v3.2 强化措辞，明确写为"归入 submitted"而非另立一态）**：messaging `/steer`/`/tell` 内部路径失败时**静默**改写为普通 prompt，该内部结果状态是否经由 Gateway RPC 回传给外部 adapter 调用方**未经确认**（kernel-ecosystem-facts §1b F5）。若适配器实际调用路径命中这条 messaging 内部 fallback，RPC 层面看到的仍是"成功 ack"，因而适配器会合成 `outcome:'submitted'`——**这正是 `submitted` 这个措辞被选中的原因**：它字面上只承诺"提交/接受"，不像 v3.1 的 `succeeded` 那样暗示"整个转向意图已经达成"。调用方（UI/P3）读到 `outcome:'submitted'` 时，应理解为"内核接受了这条转向请求"，而不是"这条消息确实被注入了目标 run"——两者的差异在 messaging 内部路径失败时是真实存在但**结构性不可观察**的，实现应优先走 Control UI 风格的 `chat.send`+`queueMode:"steer"` 路径而非 messaging 内部路径以尽量规避此盲区，但这不构成契约保证。
+   425	
+   426	**`opts.runId` 不适用于 soft inject**：同 v3.1，未变。
+   427	
+   428	**不产生 `degraded`**：同 v3.1，未变——`submitted` 不是"打断并丢弃产出"的语义，不触发 `degraded` 标注（即便实际发生了静默 fallback，这也不属于 `abort_and_resend` 族的"丢弃已产出内容"，而是"新增了一条 follow-up"，性质不同，不适合复用同一个 `degraded.kind` 词汇）。
+   429	
+   430	#### (b) Hard abort-and-restart —— `interrupt(session, {mode:'abort_and_resend', input})`（v3.2 新增 `aborted_resend_failed` 终态）
+   431	
+   432	这是一个独立、非默认的操作，调用方必须显式选择该 mode 才会触发（同 v3.1，未变）。
+   433	
+   434	- **openclaw**：直接映射到原生 RPC `sessions.steer`（T-009 F1-F4 确认其真实行为＝abort+resend，一步 RPC 完成）。请求 schema 与 `sessions.send` 相同，不支持 `runId` 参数。响应：`newRunId`=响应体 `runId`；`interruptedActiveRun`=响应体同名字段；`status` 透传响应 `status`。
+   435	- **hermes**：适配器内部序列：① 记录当前 `runId`；② ACP `cancel(session_id)`；③ 等待 `turn_complete(stopReason:'cancelled')`；④ 用同一 `session` 发起新 `send()`。`newRunId`=步骤④ `send()` 返回的 `runId`。
+   436	
+   437	**`opts.runId` 定向**：同 v3.1，未变（不带 runId 直接调 `sessions.steer`；带 runId 时改走 `sessions.abort`/`chat.abort` 精确 abort 后再 `chat.send`）。
+   438	
+   439	**结果态（v3.2 新增 `aborted_resend_failed`；v3.3 新增 `aborted_effect_unknown` 并收窄 `rejected`，消解 codex T-011 M2——C-4 的否定降级不再借道 `rejected`）**：
+   440	- `outcome:'succeeded'`（abort+resend 均完成）。
+   441	- `outcome:'aborted_no_resend'`（§9.3 session 级锁仲裁下，stop 抢先到达、resend 被丢弃——**本终态只适用于存在可抢占中间窗口的路径**，见 §9.3 的范围说明）。
+   442	- **`outcome:'aborted_resend_failed'`**：仅当适配器**可靠观察到 abort 确已生效**（`interruptedActiveRun:true`，或本就无 active run 无需 abort）、但**新 send 本身失败**时才可上报——这与 `aborted_no_resend`（resend 从未被适配器发起，因 stop 抢占而主动放弃）不同，也与下方 `rejected`（abort 从未生效）、`aborted_effect_unknown`（abort 是否生效本身不明）不同：这是"确认执行了 abort（或不需要 abort），resend 却因自身原因（如网络错误、内核侧拒绝新消息）失败"这一独立形状。调用方据此知道**旧 run 已经/本就不存在、且没有新 run 顶替它**。
+   443	  - **hermes**：这一终态可靠构造——适配器的四步序列里，步骤②③（cancel+确认）与步骤④（resend）是两个独立可观察的动作，步骤②③成功而步骤④失败时，适配器直接知道这是 `aborted_resend_failed`，不存在信号缺失问题。
+   444	  - **openclaw**：这一终态**只在** error 响应体确实透出可判读的 `interruptedActiveRun`/等价信号时才可上报（T-009 Open question #2 待验，登记为 §11 C-4）；该信号未确认前，实现不应尝试构造本终态——见下方 `aborted_effect_unknown`。
+   445	- **`outcome:'aborted_effect_unknown'`（v3.3 新增，收窄自 v3.2 曾要求的"笼统降级为 `rejected`"）**：abort 已发起（`sessions.steer`/`chat.abort` 等 RPC 已调用），但其**是否生效**——即旧 active run 是否真的被中止——**无法从当前可观察信号判定**。典型场景：openclaw hard 单 RPC 路径，`sessions.steer` 报错（新 `chat.send` 失败）时，error payload 是否携带 `interruptedActiveRun` 未经确认（§11 C-4）——若不携带，适配器既不能确认 abort 已生效（不能报 `aborted_resend_failed`），也不能确认 abort 从未生效（不能报 `rejected`），唯一诚实的选择是本终态。**调用方对 `aborted_effect_unknown` 的正确处理（v3.3 新增，强制性）**：调用方**不得**推断旧 run 仍在运行，也不得推断旧 run 已被中止；应将旧 run 状态视为**不确定**，按"可能已中止"**保守处理**——不得自动假设可以继续依赖旧 run 的产出，也不得自动重发一个假设旧 run 仍存活的操作；若需要确定性，调用方应主动查询/重新拉取该 session 的当前状态（如重新 `subscribe` 或在发起新操作前先确认无冲突）。
+   446	- **`outcome:'rejected'`（v3.3 收窄公开承诺）**：严格限定为"abort 从未生效"——cancel/abort RPC 调用本身在产生任何效果之前就**同步失败**（网络错误、内核侧直接拒绝、前置校验不通过）。**不再**涵盖"无法区分 abort 是否生效"的场景——那类信号不足的否定结果一律走上方 `aborted_effect_unknown`，不得笼统报 `rejected`（v3.2 曾要求的"无法区分时降级为 `rejected`"规则在此收回：那会让调用方把"旧 run 状态未知"误读为"旧 run 未被中止"，见 codex T-011 M2）。
+   447	- `outcome:'timed_out'`（cancel 已发起但等待 `turn_complete` 超过适配器内部合理上限）。
+   448	
+   449	**openclaw 与 hermes 在 hard 路径上都是 cancel+resend 族**：两者的结果语义相同——都不保留当前 run 已产出的内容，都需要在 `TurnCompleteEvent.degraded:{kind:'abort_and_resend'}` 上如实标注。
+   450	
+   451	**能力声明**：同 v3.1，未变（见 v3.1 §6.1(b) 对应文字）。
+   452	
+   453	### 6.1a operationId 与统一失败通道（v3.2 修订：明确删除"断线重连观察者受益"声称）
+   454	
+   455	**`operationId` 与双通道机制**：同 v3.1，未变——`interrupt()`/`stop()` 每次调用在通过前置同步校验之后，铸造一个全局唯一的 `operationId`；Promise 直接答复 + `OperationCompletedEvent` 旁路镜像，双通道共用同一套 `OperationOutcome` 终态词汇表（v3.2 更新见 §2.4）。
+   456	
+   457	**可观察性范围收窄（v3.2 修订，消解 codex T-010 新矛盾#3）**：v3.1 曾把"断线重连后重新 `subscribe()` 的观察者"列为 `OperationCompletedEvent` 的受益者之一，但这与保留的 §9.2"事件不重放，新迭代器不得假设补发"直接矛盾——没有持久化的 operation 账本，断线期间完成的 operation 终态**在事件通道上永久丢失**，不存在"重连后能看到"这回事。v3.2 更正：
+   458	
+   459	- `OperationCompletedEvent` **仅对在线订阅者**保证——持有该 session 订阅句柄、且在 operation 完成时刻处于连接状态的消费者，能观察到这个事件。这与 §9.2 对其余 10 类 KernelEvent（v3.3 因 M3 新增 `ApprovalBufferResolvedEvent`，计数由 9 类更新为 10 类）的不重放承诺完全一致，不再是例外。
+   460	- **断线重连窗口内完成的 operation，其终态需要持久化的 operation 账本（ledger）才能补——本 spec 不承诺这一能力，也不删除事件本身**。`OperationCompletedEvent` 依然存在、依然是"当前唯一的、贯穿 operation 生命周期的旁路可观察信号"，只是其覆盖范围如实收窄为"在线时段"。是否新增按 `operationId` 查询的持久账本，是实现阶段的能力选择，登记为 **§11 C-2**：为何设计阶段关不掉（持久化涉及存储选型、留存策略、跨进程重启语义等实现细节，不是窄腰契约本身该裁决的）、实现阶段如何验（能否按 `operationId` 查到一条持久记录）、不成立时如何降级（断线重连场景下，调用方只能通过重新 `send()`/查询会话当前状态间接推断，无法精确复原某次 operation 的终态——这是显式承认的能力边界，不是隐藏的缺口）。
+   461	
+   462	此修订影响面：`interrupt(mode:'steer')` 的 soft 判定结果、`interrupt(mode:'abort_and_resend')` 的 hard 序列结果、`stop()` 的多步序列结果，三者继续共用同一套 `OperationOutcome` 词汇表与同一套双通道机制，但双通道的"旁路镜像"通道的覆盖范围如实收窄。
+   463	
+   464	### 6.2 审批状态机（v3.2 修订：四态扩为五态，正式建模 `FORCE_DENY_PENDING_KERNEL_ACK`）
+   465	
+   466	**事实基线**（同 v3，未受本次修订影响，原样保留）：openclaw 审批 approval id 主键+first-answer-wins+timeout→终端 deny（30 分钟默认过期）；hermes ACP `allow_once`/`allow_always`/`allow_session`/`deny` 映射+timeout/bridge 错误→deny（fail-closed）；`updatedInput`/`reqId` 关联 `toolCallId` 等字段定义，详见 kernel-ecosystem-facts §1a/§2a。
+   467	
+   468	**四态状态机（v3 确立，v3.2 正式扩展为五态）**：
+   469	
+   470	```
+   471	PENDING → RESOLVED_ALLOW          （respondApproval 到达，outcome=allow_once/allow_always/allow_session）
+   472	PENDING → RESOLVED_DENY           （respondApproval 到达，outcome=deny）
+   473	PENDING → TIMED_OUT_DENY          （超时终态触发机制：以内核侧 fail-closed deny 信号到达适配器为准，
+   474	                                     非适配器本地计时器到期，同 v3，未变）
+   475	PENDING → FORCE_DENY_PENDING_KERNEL_ACK
+   565	  totalQuota: number;
+   566	  rpm: number; tpm: number;
+   567	  fetchedAt: string;
+   568	  correlatable: false;
+   569	}
+   570	
+   571	function queryBilling(
+   572	  session: SessionHandle,
+   573	  window?: { from: string; to: string }
+   574	): Promise<SessionBillingSnapshot>;
+   575	// 仍不是 KernelPort 第 8 个方法，定位不变。
+   576	```
+   577	
+   578	**aggregate 模式下 queryBilling 的查询主体（v3.2 新增，消解 codex T-010 新矛盾#6 的一部分）**：当 `attribution:'user_tenant_aggregate'` 时，`queryBilling(session)` **不使用** `session.billing.tokenRef` 作为查询凭证——该 token 未必真正注入了模型调用，用它查询可能返回空结果或产生误导性的"零用量"假象。查询主体改为**部署级凭证**：`CreateSessionConfig.newapiEndpoint.deploymentTokenRef`（§2.1 新增字段，部署/初始化阶段配置的共享 token 引用，是内核该部署实例模型出口实际使用的凭证）。换言之，aggregate 模式下 `queryBilling` 实质查询的是"整个部署实例的用量"，`session` 参数此时只用作报告标签（如同 v3.1 已声明的那样），不是查询过滤条件；`deploymentTokenRef` 才是真正决定"查哪把 key 的日志"的依据。
+   579	
+   580	**queryBilling 在 aggregate 模式下无法解析查询主体时的失败形状（v3.3 新增，v3.4 按同步/异步分层重写，消解 codex T-012 对 M5 的指正）**：`deploymentTokenRef` 是部署级静态配置，不随 `SessionHandle` 传递——§2.1 新增的前置校验只保证"部署配置阶段声明了它"（`createSession` 时点存在），不保证它在**查询发生的那一刻**仍然有效（例如该 token 后续被吊销、或部署配置被误改为空）。`queryBilling(session)` 返回 `Promise<SessionBillingSnapshot>`（异步），其失败形状按**能否在发起远端调用前判定**分两层，二者不共享同一个失败通道——这是给调用方的**唯一确定**失败模型：
+   581	
+   582	- **发起远端调用前即可判定查询主体不可解析**（纯本地问题：`deploymentTokenRef` 本身缺失，压根不存在一个可用于发起调用的凭证引用）：实现**可选择**在发起 newapi 用量接口调用之前就前置 reject 这个 `Promise`（不实际发起远端 I/O）。
+   583	- **远端凭证/用量接口拒绝**（`queryBilling()` 已真正发起对 newapi 用量接口的调用，凭证被远端拒绝，或查询主体在远端才被判定不可解析）：**一律**是 `queryBilling()` 返回的 `Promise` 的**异步 rejection**——**不得**表述或实现为同步拒绝，不归入定义为"方法调用同步/立即拒绝码"的 `KernelPortRejectionCode`（见 §9.1 v3.4 更正）。
+   584	
+   585	两种情形都携带同一个码 `billing_query_subject_unresolved`（v3.4 起改列 §9.1 的异步失败码，不再是 `KernelPortRejectionCode` 成员），调用方统一按"`await queryBilling()` 可能 reject"处理，无需区分"同步抛出"与"异步 Promise rejection"两套错误处理路径。无论哪种情形，**都不得**返回一个字段齐全但数值虚构/为零的 `SessionBillingSnapshot`——"查询成功但用量为 0"的假象与一次诚实的"查询失败"对调用方的意义完全不同（前者可能被误读为"这个部署真的没有产生任何用量"），本 spec 要求严格区分两者。
+   586	
+   587	**必须如实承认的残留局限**：同 v3.1 四条（非 run 级、非实时、结算 webhook 不存在、归因粒度取决于运行时环境属性），v3.2 第四条改为直接指向 §11 C-3（不再是笼统的"运行时环境属性"措辞，而是明确指向可验证、待验证的具体条目）。
+   588	
+   589	## 8. 各内核落地对照表
+   590	
+   591	（表格结构与图例同 v3.1；interrupt 支持列更新措辞以反映二态 soft 结果、`interrupt 支持` 列同步，`respondApproval` 列补充 `allow_session`；其余单元格同 v3.1，未变）
+   592	
+   593	图例：✅ 可直接落地（有事实依据）· 🟡 可适配但语义有收窄/需要额外约束才成立 · ❌ 不适用/无原生对应 · ❓ 未能确认
+   594	
+   595	| | createSession | send | subscribe | interrupt | stop | respondApproval | capabilities | interrupt 支持 |
+   596	|---|---|---|---|---|---|---|---|---|
+   597	| **openclaw** | ✅（同 v3.1，sessionId 预分配时序已落地；v3.3 新增 aggregate 计费前置校验，见 §2.1 步骤 0） | ✅（同 v3.1） | ✅（同 v3.1） | ✅ mode:'cancel'→`sessions.abort`/`chat.abort`；🟡 mode:'steer'（soft）→`chat.send`+`queueMode:"steer"`（**路径**存在性 confirmed，精确 ack 语义待 C-1 live probe，结果态收窄为 `submitted`/`rejected` 二态，v3.3 删除残留的 `queued:false` 重叠分支）；✅ mode:'abort_and_resend'（hard）→原生 `sessions.steer`（`aborted_resend_failed` 仅在 abort 生效性可观察时可靠；不可观察时诚实报 v3.3 新增的 `aborted_effect_unknown`，见 §11 C-4） | 🟡（同 v3.1，非原子，靠 §6.3 黑名单+§9.3 session 锁兜底；v3.3 补齐 soft steer/cancel 遇 stop 规则） | ✅（同 v3.1；`allow_session` 门控为不支持，`approvalDecisionKinds` 不含它） | ✅（同 v3.1；新增 `billingAttribution`/`approvalDecisionKinds` 两字段） | **soft 结果态保持可靠二态 `submitted`/`rejected`（v3.3 收紧判定规则，删除残留重叠分支）；hard 结果态在 abort 生效性不可观察时诚实报 `aborted_effect_unknown`（v3.3 新增），不再借道 `rejected`** |
+   598	| **hermes** | ✅（同 v3.1） | ✅（同 v3.1） | ✅（同 v3.1） | ✅ cancel（session 级）；❌ 原生无 steer 对应，恒 reject；🟡 mode:'abort_and_resend'（hard，仅 ACP 线路）经适配器内部 cancel+resend 序列提供，`aborted_resend_failed` 可靠构造（多步序列天然可观察，无需 live probe） | ✅（同 v3.1） | ✅ **仅 ACP 线路**（同 v3.1；ACP 含 `allow_session`，CLI 恒不含） | 🟡（同 v3.1；ACP `initialize` 协商） | **仅 cancel 恒可用；abort_and_resend 仅 ACP 线路可用（该路径 `aborted_resend_failed` 判定可靠，无 C-item 依赖）；steer 恒不支持** |
+   599	
+   600	**并发资源模型补充**：同 v3.1，未受本次修订影响。
+   601	
+   602	## 9. 其余 must-fix 收口
+   603	
+   604	### 9.1 error 封闭枚举（v3.2 更新：`OperationOutcome` 引用最新定义，新增 `unsupported_approval_decision` 拒绝码）
+   605	
+   606	`KernelErrorCode`（异步运行时错误，经 `ErrorEvent` 上报）**保持不变**（同 v3.1）。
+   607	
+   608	`KernelPortRejectionCode`（方法调用同步/立即拒绝码）**v3.2 新增 1 项，v3.3 新增 2 项，v3.4 移出 1 项**（`billing_query_subject_unresolved` 不再属于本枚举，改列为下方新增的 `queryBilling` 异步失败码——理由见下方说明与 §7，消解 codex T-012 对 M5 同步/异步分层的指正）：
+   609	
+   610	```ts
+   611	type KernelPortRejectionCode =
+   612	  | 'session_not_found'
+   613	  | 'session_already_stopped'
+   614	  | 'unsupported_interrupt_mode'
+   615	  | 'approval_not_pending'
+   616	  | 'no_active_run_for_steer'
+   617	  | 'session_locked'
+   618	  | 'unsupported_approval_decision'  // v3.2 新增：respondApproval 收到
+   619	    // capabilities().approvalDecisionKinds 不支持的 outcome（当前唯一场景是 'allow_session'
+   620	    // 在 openclaw 或 hermes CLI 线路上被使用），见 §2.6。
+   621	  | 'aggregate_billing_requires_deployment_token';  // v3.3 新增，消解 M5：createSession 发现部署
+   622	    // 声明的 billingAttribution 为 'user_tenant_aggregate'，但 config.newapiEndpoint.
+   623	    // deploymentTokenRef 未提供时同步拒绝，见 §2.1 步骤 0、§7。这是 M5 里唯一保留在本同步
+   624	    // 拒绝通道中的码——纯本地配置问题，调用（createSession）前即可判定。
+   625	```
+   626	
+   627	**`billing_query_subject_unresolved`（v3.3 新增，v3.4 重新归类为 `queryBilling` 的异步失败码，消解 codex T-012 M5）**：本码承载的失败——凭证被 newapi 用量接口拒绝，或查询主体在发起远端调用后才被判定不可解析——性质上是"调用已发起、结果由远端 I/O 决定"，不满足 `KernelPortRejectionCode` 自身"方法调用同步/立即拒绝"的定义，故 v3.4 起**移出**上方枚举。其唯一交付形状是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的**异步 rejection**（reject 原因携带该码）——不新增/复用 `ErrorEvent` 通道（`queryBilling` 不产出事件，不经过 `subscribe()` 流），也不是同步 throw。完整的同步/异步分层规则见 §7。
+   628	
+   629	`OperationOutcome`（v3.2 更新定义，v3.3 新增 `aborted_effect_unknown` 并收窄 `rejected`，见 §2.4）：`succeeded` / `submitted` / `aborted_no_resend` / `aborted_resend_failed` / `aborted_effect_unknown` / `rejected` / `timed_out`。与前两者的关系同 v3.1，未变：三者是递进的三个阶段（`KernelErrorCode` 描述与特定调用无关的异步运行时状况；`KernelPortRejectionCode` 描述同步立即拒绝，发生在 `operationId` 铸造之前；`OperationOutcome` 描述已铸造 `operationId` 的 operation 的终态）。`billing_query_subject_unresolved`（见上）不属于这三者中的任何一个既有通道，是 `queryBilling()` 自身返回值的 Promise rejection，独立于 `operationId`/`ErrorEvent` 机制。
+   630	
+   631	### 9.2 seq 语义与断线恢复责任方
+   632	
+   633	（同 v3.1，未受本次修订影响，原样保留）
+   634	
+   635	### 9.3 session 级互斥锁（v3.2 修订：补齐完整互斥矩阵，校正 F-08"完整覆盖"的范围声称）
+   636	
+   637	```ts
+   638	type SessionLockState =
+   639	  | 'idle'
+   640	  | 'send_pending'
+   641	  | 'interrupt_in_progress'
+   642	  | 'stop_in_progress';
+   643	```
+   644	
+   645	（枚举本身同 v3.1，未变；v3.2 补齐的是**完整的两两组合规则矩阵**，消解 codex T-010 新矛盾#4"session 锁不是完整互斥矩阵"）
+   645	（枚举本身同 v3.1，未变；v3.2 补齐的是**完整的两两组合规则矩阵**，消解 codex T-010 新矛盾#4"session 锁不是完整互斥矩阵"）
+   646	
+   647	**完整互斥矩阵（v3.2 新增，取代 v3.1 只定义 `send_pending` 状态名却没有配套冲突规则的缺口）**：
+   648	
+   649	| 当前锁状态 \ 到达的调用 | `send()` | `interrupt()` | `stop()` |
+   650	|---|---|---|---|
+   651	| `idle` | 允许，转入 `send_pending`（等待 kernel ack，极短窗口） | 允许，转入 `interrupt_in_progress` | 允许，转入 `stop_in_progress` |
+   652	| `send_pending` | **reject（`session_locked`）**——同一 session 不允许两个 `send()` RPC 同时在途，第二个必须等第一个 ack 返回、锁回到 `idle` 后重试（v3.2 新增规则，窗口极短，正常情况几乎不可观察） | **reject（`session_locked`）**（v3.2 新增规则：不特殊处理，统一按锁状态拒绝，避免为"send ack 途中"这个极窄窗口单独设计穿透逻辑） | **reject（`session_locked`）**（v3.2 新增规则，同上） |
+   653	| `interrupt_in_progress` | reject（`session_locked`，同 v3.1） | reject（`session_locked`，同 v3.1） | **特殊仲裁（见下方"stop 优先仲裁"规则；v3.2 覆盖 hard `abort_and_resend` + F-08 范围说明，v3.3 补齐 soft `steer` 与 `cancel` 两种 mode，规则详见下方）** |
+   654	| `stop_in_progress` | reject（`session_already_stopped`，沿用 §6.3 黑名单机制；若 stop 序列本身仍在执行中尚未进入黑名单，则 reject `session_locked`，二者按"黑名单是否已写入"区分，行为对调用方均是拒绝） | reject（`session_already_stopped`，同 v3.1） | reject（`session_locked`，不支持 stop 重入；调用方应等待第一个 stop 的结果，而非发起第二个 stop） |
+   655	
+   656	**stop 优先仲裁（同 v3.1 结构，v3.2 补充 F-08 范围校正，消解 codex T-010 新矛盾#4 的另一部分）**：`stop()` 调用到达时，若锁状态为 `interrupt_in_progress`，stop 具有更高优先级：
+   657	
+   658	- 若此刻 abort/cancel 已完成、resend 尚未发起——适配器**丢弃尚未发起的 resend**，这次 `interrupt()` operation 终态化为 `outcome:'aborted_no_resend'`，锁状态转为 `stop_in_progress`。
+   659	- 若 resend 的 `send()` 已经发出但尚未确认返回——适配器等待该 `send()` 返回，返回后立即将新 run 视为"stop 的目标"，对这个新 run 发起强制 cancel；这次 `interrupt()` operation 终态化为 `outcome:'succeeded'`（resend 确实发生了），紧随的 stop 序列立即中止这个新 run。
+   660	
+   661	**`mode:'steer'`（soft，`interrupt_in_progress`）遇 `stop()`（v3.3 新增，v3.4 校正与 §6.1(a) 的口径冲突，消解 codex T-012 对 M1↔M4 一致性的指正）**：soft steer 的适配器侧执行是**单个 RPC**（`chat.send`+`queueMode:"steer"`+`deliver:false`，见 §6.1(a)）——不存在类似 hard 路径"abort 已完成、resend 尚未发起"这样可被适配器观察或抢占的中间窗口（结构上与下方 F-08 范围校正描述的 openclaw 单 RPC hard 路径同理）。规则是**等待，不抢占**：`stop()` 到达时若锁状态为 `interrupt_in_progress` 且当前 operation 是 soft steer，适配器**等待该 RPC 返回**（无法从中截断）——RPC 返回后，这次 `interrupt()` operation 按 §6.1(a) 既有二态规则收敛（`submitted`/`rejected`——**严格二态，不产生第三个终态**；该 RPC 调用本身失败，含网络/连接层失败，已归入 `rejected`，见 §6.1(a)），锁状态转为 `stop_in_progress`，随后 `stop()` 序列正常针对该 session 当前的 active run 执行（soft steer 不产生 `newRunId`，不存在"哪个 run 才是 stop 目标"的歧义，见 §6.1(a)）。**若等待该 RPC 返回本身超出适配器内部合理上限（v3.4 明确）**：那是 **`stop()` 这次 operation 自身**的 `outcome:'timed_out'`（§2.5 既有的 stop() 可达终态子集本就包含 `timed_out`），**不是** soft steer 的终态——v3.3 曾把这个等待超时误写成 soft steer 可达的第三个终态（`submitted`/`rejected`/`timed_out`），与 §6.1(a) 刚收窄的严格二态直接冲突，codex T-012 已指出；v3.4 予以更正：soft `interrupt(mode:'steer')` 自身的 `OperationOutcome` 全文任何地方都**只有** `submitted`/`rejected` 两态，不因为与 `stop()` 发生锁竞争而多出第三态。
+   662	
+   663	**`mode:'cancel'`（`interrupt_in_progress`）遇 `stop()`（v3.3 新增，消解 codex T-011 M4）**：`interrupt(mode:'cancel')` 同样是单个 RPC（`sessions.abort`/`chat.abort` 或 hermes ACP `cancel`），无可抢占的中间窗口。规则同上：**等待，不抢占**——`stop()` 等待该 cancel RPC 返回，这次 `interrupt()` operation 按既有规则终态化（`succeeded`/`rejected`/`timed_out`），锁转为 `stop_in_progress` 后 `stop()` 序列正常执行。由于 `interrupt(mode:'cancel')` 与 `stop()` 的底层动作高度重叠（都在中止当前 run），`stop()` 序列此时的 cancel/abort 步骤对已经被中止的 run 而言是幂等的空操作，不影响 `stop()` 仍需完成的后续步骤（如 §6.3 的 delete）。
+   664	
+   665	**F-08 范围校正（v3.2 新增，消解 codex T-010 新矛盾#4"F-08 完整覆盖名不副实"）**：上述"丢弃尚未发起的 resend"这条规则，**前提是存在一个 adapter 可观察、可抢占的中间窗口**——即"abort 已完成"与"resend 已发起"之间存在一段adapter自己的代码在顺序执行的时间。这个前提对**hermes**（适配器自行编排的四步序列①-④）与**openclaw 侧当调用方提供 `opts.runId` 定向、适配器自行拆解为 `sessions.abort`→`chat.send` 两步的路径**（见 §6.1(b)"opts.runId 定向"）成立。但对**openclaw 不带 runId、直接调用原生 `sessions.steer` 的路径**——abort 与 resend 由内核在**同一个 RPC 调用内部**完成，适配器只会在 RPC 整体返回时看到一次性的最终结果，**不存在**"abort 已完成、resend 尚未发起"这个可被适配器观察或抢占的中间态。因此：
+   666	- **v3.2 明确不再泛化声称"完整覆盖所有 OpenClaw hard 调用"**——这个问题域（cancel+resend 竞态的抢占仲裁）对 openclaw 的单 RPC 路径**结构性不适用**，不是"没覆盖到的缺口"，而是"这条路径根本没有可抢占的窗口需要覆盖"。
+   667	- 对 openclaw 单 RPC hard 路径，若 `stop()` 在这个 RPC 仍在途时到达：适配器只能等待 `sessions.steer` RPC 整体返回（无法从中截断），返回后视其结果决定 stop 序列如何收尾——这在结构上等同于上方仲裁规则的**第二个分支**（"resend 已发出但尚未确认返回"），因为从适配器视角，openclaw 单 RPC 路径的整个执行过程就是那个分支所描述的"已在途、只能等待"状态，从不会落入"resend 尚未发起、可丢弃"的第一个分支。
+   668	- 因此，锁机制与仲裁规则本身的**设计是完整的**（覆盖了 send/interrupt/stop 三方法两两组合的所有状态转移——v3.3 补齐上方 `mode:'steer'`/`mode:'cancel'` 遇 `stop()` 的规则后，这一声称才真正名副其实：v3.2 时点"完整覆盖"只字面覆盖了 hard `abort_and_resend` 一种 interrupt mode，被 codex T-011 M4 判定为过度声称），但第一个分支（"丢弃尚未发起的 resend"）的**适用范围**局限于 hermes 与 openclaw 的 runId 定向路径——本条只是把这一点显式写出来，不是新增机制。
+   669	
+   670	**cancel+resend 完成屏障的失败路径**：同 v3.1，未变（见 v3.1 §9.3 对应文字）。
+   671	
+   672	### 9.4 多 session 并发资源模型（简述）
+   673	
+   674	（同 v3.1，未受本次修订影响，原样保留）
+   675	
+   676	### 9.5 resume 显式 reject
+   677	
+   678	（同 v3.1，未受本次修订影响，原样保留）
+   679	
+   680	## 10. v1→v2→v3→v3.1→v3.2 消解对照表（v3.2 修订：F-06/F-08/F-09 三行更新，统计口径重新合并核对）
+   681	
+   682	覆盖范围同 v3.1（[[d1-review-dual-track]] codex 轨全部 15 项 + 内部 Sonnet 轨全部 11 项 must-fix，共 19 条）。**v3.2 更新 F-06/F-08/F-09 三行**（F-05/F-11/S-09 维持"部分化解"标注不改判，同本次任务约束）；F-07 描述小幅补充但不改判。完整历史见 §13「v2→v3 变更记录」、§14「v3→v3.1 变更记录」，本轮变更见 §15「v3.1→v3.2 变更记录」。
+   683	
+   684	| F 编号 | 摘要 | Severity | v3.2 状态 | v3.2 解法 / 未消解原因 |
+   685	|---|---|---|---|---|
+   686	| F-06 | 无 pending approval 状态机/exactly-once | HIGH | **已消解（由 v3.1 的"部分化解"回升）** | v3.1 遗留的两处剩余缺口——`allow_session` 无法在 `ApprovalDecision` 中无损归一、第 2 个 pending approval 的缓冲/超时策略——本轮悉数落地：§2.6 新增 `allow_session` 决策值+能力门控，§6.2 新增完整的缓冲/提升/溢出规则。同时 codex T-010 新发现的"审批第五态未建模"（deny RPC 失败引入的无名中间态）也在本轮通过 `FORCE_DENY_PENDING_KERNEL_ACK` 具名状态+转移规则闭合。三项均为**设计层面可关闭**的缺口（不依赖未确认的内核信号），故回升为完全消解，而非停留在部分化解 |
+   687	| F-07 | INV-5 自相矛盾（"裂缝不下推" vs "cancel+resend 下推 UI/P3"） | BLOCKER | **已消解（维持，本轮进一步收窄不改变消解结论）** | v3.1 在纠正 openclaw steer 精确语义的基础上重新建立矛盾消解；v3.2 进一步把 soft steer 的结果态收窄为二态（`submitted`/`rejected`），使消解基础**更诚实**——不再依赖 v3.1 里那套建立在未确认信号上的三态合成规则，执行收敛在适配器、体验降级如实告知在 UI/P3 的分工本身未受影响 |
+   688	| F-08 | cancel+resend 无 run 级寻址/完成屏障 | HIGH | **已消解（范围校正，桶内不变）** | codex T-010 指出 v3.1"完整覆盖"的表述名不副实——openclaw 单 RPC hard path 根本不存在可被抢占的中间窗口，不应被泛化进"完整覆盖"的声称。v3.2 §9.3 明确校正：`operationId`+`OperationOutcome` 双通道 + session 锁的 stop 优先仲裁，对其原本要解决的问题域（hermes/adapter 自拆多步路径的 cancel+resend 竞态）**依然是完整覆盖**；openclaw 单 RPC 路径不是"未覆盖的缺口"，是"结构性不适用、无需覆盖"。这是表述范围的校正，不是机制本身出现新缺口，故维持已消解，桶内不变 |
+   689	| F-09 | newapi 计费不可归因到 run | BLOCKER | **部分化解（维持，描述更新）** | §7 本轮进一步收口：sessionId 时序落地（§2.1）、attribution 从自诊断改为部署时权威声明（§4.1/§7）、aggregate 模式查询主体明确（deploymentTokenRef）。但"per-session 换 key 在具体部署环境里是否真的可行"仍是一个**真实的、只能靠实现阶段验证的环境依赖**（登记为 §11 C-3），非 spec 设计层面能够单方面裁定，故维持部分化解；请求级 correlation id（run 级归因）仍未能确认，与此前状态一致 |
+   690	
+   745	
+   746	## 15. v3.1→v3.2 变更记录
+   747	
+   748	（同 v3.2 §15，历史记录，未受本次修订影响，原样保留——完整逐条对照表见 [[d1-kernelport-spec-v3-2]] §15，本页不重复展开全文，仅保留交叉引用指针。）
+   749	
+   750	## 16. v3.2→v3.3 变更记录
+   751	
+   752	本节逐条列出 v3.2→v3.3 的 5 处最小闭合修复，每条注明其消解的 codex T-011 confirm-readiness gate finding，以及本页对应落地章节。
+   753	
+   754	| # | 修复内容 | 消解的 T-011 finding | 本页落地章节 |
+   755	|---|---|---|---|
+   756	| 1 | **soft 二态判定去重叠**：删除"成功 ack + `queued:false` → `rejected`"这条残留分支，soft `interrupt(mode:'steer')` 的 outcome 只由底层 RPC 调用本身是否成功返回这一 transport 事实分流，响应体内任何字段（含 `queued`/`reason`）均不参与判定；明确未来若要据这些字段细分终态，须走 `protocolVersion` 版本升级，不在当前契约下静默改变 | codex T-011 **M1**（soft 二态判定仍有重叠分支，C-1 未被真正隔离） | §6.1(a)、§2.4、§11 C-1 |
+   757	| 2 | **新增 `aborted_effect_unknown` 诚实终态**：`OperationOutcome` 新增该值，承接"abort 是否生效无法从可观察信号判定"的场景（典型：openclaw hard 单 RPC 的 error 路径，C-4 待验）；`rejected` 的公开承诺收窄为严格"abort 从未生效"，不再涵盖"生效性不明"；C-4 的否定降级改报 `aborted_effect_unknown`；明确调用方对该终态的处理义务——不得推断旧 run 仍在运行，按"可能已中止"保守处理 | codex T-011 **M2**（`aborted_resend_failed` 的 C-4 降级借道 `rejected`，污染其"abort 从未生效"的语义） | §2.4、§6.1(b)、§11 C-4、§9.1 |
+   758	| 3 | **审批 FSM 补转移 + pending#2 缓冲上报独立化**：①新增 `FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY` 转移，内核权威超时信号与本地强制 deny 并发时让位于内核权威终态，不产生两个终态；②修正"缓冲请求已超时又可提升"的矛盾——缓冲中的请求一旦超时即终态化、不可再提升，只有仍在有效期内的缓冲请求才能在 #1 解决后浮现；③新增第 11 类 KernelEvent `ApprovalBufferResolvedEvent`（携 `reqId`/`reason`/`ts`）承载缓冲请求超时/溢出的可见性，不再复用语义受限于 stop/cancel 强制 deny 的 `forceResolvedApprovals` | codex T-011 **M3**（审批 FSM + pending#2 未闭包，最大项） | §6.2、§3、INV-2 |
+   759	| 4 | **锁矩阵补齐 soft steer/cancel 遇 stop**：为 `mode:'steer'`（soft RPC 在途）与 `mode:'cancel'`（在途）遇 `stop()` 补齐"等待，不抢占"规则（两者均为单 RPC，无可抢占中间窗口，结构同 F-08 范围校正描述的 openclaw 单 RPC hard 路径）；据此校正 v3.2:606"覆盖所有状态转移"的声称——v3.3 补齐后该声称才真正名副其实 | codex T-011 **M4**（"完整"锁矩阵只覆盖 hard `abort_and_resend` 遇 stop，未定义 soft steer/cancel 遇 stop） | §9.3 |
+   760	| 5 | **aggregate 计费前置校验 + 失败形状**：`deploymentTokenRef` 改为条件必填——`billingAttribution == 'user_tenant_aggregate'` 时必须提供，否则 `createSession` 同步拒绝（新增 `aggregate_billing_requires_deployment_token`）；定义 `queryBilling` 在 aggregate 模式下查询主体不可解析时的失败形状（v3.3 时表述为"同步拒绝 `billing_query_subject_unresolved`"，**v3.4 更正**：该表述与 `queryBilling` 返回 `Promise` 的签名冲突——远端凭证/接口拒绝一律是异步 `Promise` rejection，只有纯本地配置缺失可选择同步前置 reject，详见 v3.4 §17 第②项、§7、§9.1） | codex T-011 **M5**（aggregate 计费缺配置不变量） | §2.1、§7、§9.1 |
+   761	
+   762	**§10/§11 机械勘正（随上述修复顺带核对，未引入新数字矛盾）**：§10「v1→v2→v3→v3.1→v3.2 消解对照表」统计的是 19 条 F/S must-fix 项的分桶，M1-M5 不改变任何一行的桶归属，故 §10 数字维持不变；INV-2、§3、§6.1a、§9.2 提到的 KernelEvent 判别联合计数因 M3 新增 `ApprovalBufferResolvedEvent` 由 10 类同步更新为 11 类（**v3.4 补记**：§3 行 271 当时误写为"九类"，未真正做到全文同步勘正，已在 v3.4 §17 第③项更正）。C-2（operation ledger）、C-5（hermes soft inject 存在性）两项 C-item，codex T-011 复判"更适合列为非阻断能力研究/optional 实现决策而非 conformance-fact"——该复判已如实记入 [[d1-v31-review]] 追加小节，供后续参考，**不在本次 M1-M5 修复范围内**，§11 对应两行本次不改写。
+   763	
+   764	**v3.3 仍延后（明确标注，不在本次 5 处最小闭合范围内，同 v3.2 未变）**：
+   765	
+   766	- **SDK 内核（F-01/F-04）**：同 v3.2，未变。
+   767	- **newapi 请求级 correlation（§12 第 6 条，DEFER）**：同 v3.2，未进一步收口，非阻塞性，不登记为 C-item。
+   768	- **hermes 审批超时 UI（§12 第 3 条，DEFER）**：同 v3.2，未变。
+   769	
+   770	## 17. v3.3→v3.4 变更记录
+   771	
+   772	本节逐条列出 v3.3→v3.4 的 3 处收尾闭合修复，每条注明其消解的 codex T-012 confirm-readiness gate finding，以及本页对应落地章节。M2/M3/M4 已被 T-012 确认闭合的部分本轮不改动。
+   773	
+   774	| # | 修复内容 | 消解的 T-012 finding | 本页落地章节 |
+   775	|---|---|---|---|
+   776	| 1 | **M1↔M4 soft 终态口径统一**：§9.3 soft `mode:'steer'` 遇 `stop()` 的锁规则不再把 steer 的终态写成 `submitted`/`rejected`/`timed_out` 三态，改为与 §6.1(a) 一致的严格二态（`submitted`/`rejected`，RPC 调用本身失败含网络/连接层失败已归入 `rejected`）；`stop()` 等待该 RPC 返回本身超出上限，明确是 **`stop()` 这次 operation 自身**的 `outcome:'timed_out'`（§2.5 既有子集），不是 soft steer 的终态。全文不再有任何地方给 soft steer 列出第三个终态 | codex T-012 第①项（§9.3 与 §6.1(a) 冲突，M1 未真正在全文收敛为二态） | §9.3 |
+   777	| 2 | **M5 失败通道同步/异步分层**：`queryBilling` 的失败形状按"能否在发起远端调用前判定"拆分两层——纯本地配置缺失（查询主体在发起远端调用前即不可解析）可选择同步前置 reject；远端凭证/用量接口拒绝一律是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的异步 rejection。`billing_query_subject_unresolved` 从 `KernelPortRejectionCode`（同步/立即拒绝码）移出，改列为 `queryBilling` 专属的异步失败码；`aggregate_billing_requires_deployment_token`（`createSession` 阶段，纯本地配置问题）保持同步不变。给调用方一个唯一确定的失败模型 | codex T-012 第⑤项（`queryBilling` 返回 `Promise` 却要求"同步拒绝"，与三阶段错误模型自相矛盾） | §7、§9.1 |
+   778	| 3 | **§3 事件计数笔误勘正**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员由误写的"九类"改正为"十类"（加上 M3 新增的 `ApprovalBufferResolvedEvent` 共 11 类，与 INV-2/§6.1a/§9.2/§16 既有的正确口径对齐） | codex T-012 第⑥项（§3 行 271"九类"与实际 10 个既有成员不符，且与 §16"全文数字已同步勘正"的声称冲突） | §3 |
+   779	
+   780	**本轮未改动**：M2（`aborted_effect_unknown`/`rejected` 收窄）、M3（审批 FSM 转移 + `ApprovalBufferResolvedEvent`）、M4 锁矩阵本身覆盖的状态转移集合（只更正了其中 soft steer 分支的终态措辞，转移规则本身不变）——codex T-012 已确认三者闭合，未提出任何修改要求。§10 收口统计（19 条 F/S must-fix 项分桶）不受本轮 3 处修复影响，未引入新的数字矛盾。§11 C-item 清单本轮不改写。
+   781	
+   782	## 交叉引用
+   783	
+   784	[[d1-kernelport-spec-v3-3]]（本页的直接修订基线，v3.3，`design_status: superseded`，正文保留作审计与本次修订的对照）· [[d1-kernelport-spec-v3-2]]（v3.2，`superseded`，正文保留作审计与设计演进对照）· [[d1-v31-review]]（M1-M5 五项设计文本自洽缺口的来源，v3.3 修订依据）· [[kernel-ecosystem-facts]]（唯一事实基线，`confirmed`，本轮未新增调研，3 处修复全部是设计文本内自洽修复）· [[d1-kernelport-spec-v3-1]]（v3.1，`superseded`，正文保留作审计与设计演进对照）· [[d1-v3-review]]（v3 双轨复核，v3.1 修复清单来源）· [[d1-kernelport-spec-v3]]（v3，`superseded`）· [[d1-v2-review-dual-track]]（v2 双轨复核）· [[d1-kernelport-spec-v2]]（v2，`superseded`）· [[d1-review-dual-track]]（v1→v2 逐条消解的双轨对抗评审 must-fix 清单，§10 对照表的原始基线）· [[d1-kernelport-spec]]（v1，`superseded`）· [[d1-v2-design-approach]]（本 spec 的设计输入，用户已确认的 v2 设计思路）· [[x1-local-kernel-decision]]（本地内核优先决策）· [[x2-newapi-unified-gateway]]（newapi 统一网关决策，本 spec §7 归因方案的架构前提）· [[emergent-skeleton]]（架构骨架）· [[ra-l3-agenda]]（D1 议程条目）· [[p2-narrow-waist-draft]]（D1 的种子草稿）
+22-## Changelog（v3.3 → v3.4：codex T-012 confirm-readiness gate 的收尾闭合修订）
+23-
+24:> **诚实记录**：[[d1-kernelport-spec-v3-3]] 发布后经 codex **T-012 confirm-readiness gate**（接续 T-011，定向重跑，只验 M1-M5 是否真闭合、新编辑有无引入新矛盾，详见 `.hopper/handoffs/T-012-output.md`）核验，Verdict **MUST-FIX**——gate 确认 M2、M3 已实质闭合，M4 的锁规则也已补齐 soft steer/cancel 遇 stop 的仲裁，M1 的 `queued:false` 重叠分支也已从 §6.1(a) 主判定规则删除，M5 的 aggregate 条件必填与两个拒绝码均已写入；但指出 v3.3 本轮新增文字又产生了**三处范围内的机械级新矛盾**：
+25:> 1. **M1↔M4 不一致**：§9.3 新增的锁规则把 soft steer 的正常终态重新写成 `submitted`/`rejected`/`timed_out` 三态，与 §6.1(a) 刚刚收窄的"严格二态"直接冲突——`timed_out` 实际上是 `stop()` 自身等待超时的终态，被误写成了 steer 的终态。
+26-> 2. **M5 失败通道分层不清**：`queryBilling` 返回 `Promise`，但正文把"凭证被远端拒绝"这类只能在异步 I/O 返回后才知道的失败，也要求"同步拒绝"并归入定义为"同步/立即拒绝"的 `KernelPortRejectionCode`，给调用方留下一个不唯一的失败模型。
+27-> 3. **§3 事件计数笔误**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员实际是 10 个，正文误写成"九类"，与 §16"全文数字已同步勘正"的声称冲突。
+--
+57-- **INV-3（语义与传输分离）**：（同 v3.1，未变）KernelPort 方法签名与 KernelEvent 字段中不出现任何 Transport 专有名词。v3.2 新增的 `billingAttribution`/`approvalDecisionKinds`（§4.1）同样只通过 `CapabilityDescriptor` 既有机制的自然扩展体现（新增字段而非新增 Transport 名词），不违反本不变量。
+58-- **INV-4（能力显式声明，不隐式假设）**：（同 v3.1，未变，v3.2 §7 的 attribution 权威化是本不变量的进一步贯彻——见下方 INV-5 之后的说明）能力变更的感知路径仍是内核 RPC 报错（被动发现）+ 我方 Server 能力开关 override（主动决策）。
+59:- **INV-5（裂缝的执行收敛在适配器内部，体验降级如实告知在 UI/P3；v3.2 三次修订，进一步收窄 soft steer 的可承诺范围）**：
+60-  v3.1 已经把 openclaw steer 精确拆分为 soft（`chat.send`+`queueMode:"steer"`）与 hard（原生 `sessions.steer`）两条能力，方向正确；但 v3.1 在 soft 的**结果态合成规则**上仍出错——用"是否出现新 runId""内部 `queued` 字段"等**未确认**的信号去区分 `succeeded`/`fallback_to_prompt`/`rejected` 三态，被 codex T-010 判定为"把未确认信号当成契约分支"（头号 BLOCKER，性质是 live-probe-limited，见 [[d1-v31-review]] §5.2）。v3.2 更正：
+61:  - **openclaw**：`interrupt(mode:'steer')`（soft，默认语义）映射到 `chat.send`+`queueMode:"steer"`——路径本身经 T-009 repo 级源码深挖**确认存在**（kernel-ecosystem-facts §1b F5），但其**精确 ack/结果信号语义**（是否回传 `queued`/`reason`，成功注入与静默降级是否可机器区分）**未经 live probe 确认**（登记为 §11 C-1）。v3.2 不再基于这个未确认信号合成三态结果，**只暴露两态**：`submitted`（RPC 被接受）与 `rejected`（前置校验或 RPC 本身失败）；`interrupt(mode:'abort_and_resend')`（hard，独立操作）映射到原生 RPC `sessions.steer`——这是有损、必产生 `TurnCompleteEvent.degraded` 的路径。
+62:  - **hermes**：ACP 只有 `cancel(session_id)`（session 级，无 soft 对应），`interrupt(mode:'abort_and_resend')` 走适配器内部 cancel+resend 降级路径（§6.1(b)）；`interrupt(mode:'steer')` 在 hermes 上**不受支持**，必须 reject（同 v3.1，未变）。
+63-  - **执行收敛（适配器职责）**：不变——两内核的 hard 降级路径、两内核审批超时/interrupt/stop 时的强制 deny，这些裂缝的执行动作必须发生在适配器内部。
+64:  - **体验降级如实告知（UI/P3 职责，v3.2 收窄措辞）**：`interrupt(mode:'abort_and_resend')` 无论落在哪个内核，都会丢弃当前 run 未产出的部分内容，`TurnCompleteEvent.degraded:{kind:'abort_and_resend'}` 如实标注这一点。`interrupt(mode:'steer')` 只在 openclaw 上可用，其结果态（`submitted`/`rejected`，见 §6.1(a)）由适配器合成并如实上报——**v3.2 明确**：`submitted` **不承诺**"消息确实注入了 active run"，只承诺"底层 RPC 被接受"；messaging `/steer` 内部路径的静默 fallback（降级为普通 prompt 却对外不可见）**归入 `submitted` 的不可观察边界**，这是本 spec 主动声明、而非试图掩盖的盲区——adapter 结构性地无法区分这两种情况，UI/P3 不应被给予一个它拿不到的确定性承诺。
+65-
+66-## 2. KernelPort 接口
+--
+161-interface InterruptOptions {
+162-  mode: 'steer' | 'cancel' | 'abort_and_resend';
+163:  // 同 v3.1，未变：三态取代 v1/v2 的二态。
+164:  // 'steer'（soft inject，interrupt() 的默认转向语义）：v3.2 起仅 openclaw 具备（映射
+165-  //   chat.send+queueMode:"steer"），hermes 上必然 reject。
+166-  // 'cancel'：中止（同 v3.1，未变）。
+--
+172-type OperationOutcome =
+173-  | 'succeeded'              // hard：abort+resend 均完成；stop()：正常完成
+174:  | 'submitted'              // 仅 soft steer 可达：底层 chat.send+queueMode:"steer" RPC 被接受。
+175-                               // **不承诺**消息确实被注入到了 active run——见下方"不可观察边界"。
+176-                               // v3.3 进一步明确（消解 M1）：只由该 RPC 调用本身是否成功返回这一
+--
+200-  // 时出现；hard abort_and_resend 在无 active run 时（T-009 F4：sessions.steer 不报错、仍新
+201-  // send）没有"受影响的旧 run"这个概念，本字段省略，不得强行构造一个不存在的值（消解 codex
+202:  // T-010 新矛盾#1）。soft steer 场景下，若前置校验发现无 active run，直接走 §9.1 同步拒绝，
+203-  // 不产生 operationId，因而也不涉及本字段。
+204-  outcome: OperationOutcome;
+--
+206-  interruptedActiveRun?: boolean; // 仅 mode:'abort_and_resend'：是否确实有 active run 被 abort
+207-  status?: unknown;       // 非稳定字段，透传底层 ack 的 status，仅供调试
+208:  detail?: string;        // 非稳定字段，outcome 为 rejected/timed_out 时的可读原因
+209-}
+210-
+--
+389-| send | `chat.send`/`sessions.send` | CLI prompt 输入，或 ACP `prompt` 请求 |
+390-| subscribe | WS 服务端 push 事件流；`sessions.subscribe(includeApprovals?)` | CLI 标准输出流；ACP `session/update` notification |
+391:| **interrupt** | mode:`'cancel'`→`sessions.abort`/`chat.abort`（可携 `runId`）；mode:`'steer'`（soft）→`chat.send`+`queueMode:"steer"`+`deliver:false`（路径存在性 T-009 F5 确认，精确 ack 语义见 §11 C-1）；mode:`'abort_and_resend'`（hard）→原生 RPC `sessions.steer`（T-009 F1-F4 确认其真实行为＝abort 活跃 run+新 chat.send，无 runId 参数，返回新 run 的 runId；error 路径下 `interruptedActiveRun` 是否透出见 §11 C-4） | ACP `cancel(session_id)`（session 级，mode:`'cancel'`）；mode:`'abort_and_resend'`（hard，仅 ACP 线路）→适配器内部 cancel+resend 三步序列（§6.1(b)）；mode:`'steer'`（soft）不支持，恒 reject |
+392-| **stop** | `sessions.abort`/`chat.abort`→确认 `turn_complete`/超时→`sessions.delete`。两步非原子，返回值携带 `operationId`+`outcome` | ACP `cancel(session_id)` 中断当前 prompt，不销毁持久会话；持久删除走 CLI `hermes sessions delete`。同上，返回值携带 `operationId`+`outcome` |
+393-| respondApproval | `approval.resolve`/`exec.approval.resolve`；以 approval id 为主键；`allow_session` 不适用（openclaw 无此审批粒度） | **仅 ACP 线路**：ACP permission response 归一为 `ApprovalDecision`，含 `allow_session`（v3.2 新增）；CLI TTY 交互式审批确认无公开可编程协议 |
+--
+398-## 6. 两个硬不对齐点收口
+399-
+400:### 6.1 INV-5/steer 收敛（v3.2 修订：soft steer 结果态收窄为二态，删除三态合成规则）
+401-
+402-**T-009 源码级结论**（[[kernel-ecosystem-facts]] §1b，2026-07-21 repo 级深挖 `openclaw/openclaw`）：RPC `sessions.steer` 与 `sessions.send` 共用同一 handler `handleSessionSend`，仅 `interruptIfActive` 参数不同；有 active run 时行为＝先 abort 该 run（session 级，不支持 `runId` 参数）、再总是发起一次新的 `chat.send`——Control UI 内部注释直接定性为 `/** Hard redirect — aborts the active run and restarts with a new message. */`。响应是 chat.send 风格的 ack（`runId`/`status`/可选 `messageSeq`/可选 `interruptedActiveRun:true`），**没有** `accepted_as_steer`/`queued_as_followup`/`rejected` 三态，返回的 `runId` 是**新发起**的 run，不是原 run 的延续。
+--
+406-v3.2 据此拆分为两条能力，禁止混名（拆分本身同 v3.1，未变；**结果态合成规则本轮收窄**）：
+407-
+408:#### (a) Soft inject —— `interrupt(session, {mode:'steer', input})`（v3.2 全文重写结果态判定规则）
+409-
+410-这是 `interrupt()` 的默认转向语义。
+411-
+412-- **openclaw**：映射到 `chat.send`+`queueMode:"steer"`（Control UI `/steer` 语义），**不是** `sessions.steer` RPC。**路径本身** 是 T-009 确认真实存在的 openclaw 专属能力（kernel-ecosystem-facts §1b F5）——这一点是 confirmed。**但该路径的精确 ack/结果信号语义**（有 active run 时该 RPC 是否回传内部 `queued`/`reason` 字段，soft 成功时 runId 是否恒等于被注入的 active runId）**未经 live probe 确认**（T-009 Open question #1、T-010 Open question #1 两轮独立工作均止步于此，登记为 §11 C-1）。
+413:- **hermes**：**不支持**——`capabilities().interruptModes` 对 hermes 恒不含 `'steer'`（无论 CLI 还是 ACP 线路，见 §4.2）；调用方传 `mode:'steer'` 一律 reject（`unsupported_interrupt_mode`）。
+414-
+415-**前置同步校验（发生在 operationId 铸造之前，走 §9.1 `KernelPortRejectionCode` 通道，不产生 `OperationOutcome`）**：调用前先查本地快照的 `activeRunIds`——若为空，同步 reject（`no_active_run_for_steer`），不发起 RPC，不铸造 `operationId`（openclaw Control UI 官方文档明确了这条前置检查，T-009 F5）。**v3.2 澄清**：这是本 spec 递进三阶段模型（§9.1）里的"同步立即拒绝"，不是 operation 终态——v3.1 曾把这一步的结果表述为"合成 `outcome:'rejected'`"，与 §9.1 的架构描述（拒绝码发生在 operationId 铸造之前）不一致，v3.2 予以统一：本步骤是纯粹的方法调用前置拒绝，与后续的 operation 结果通道无关。
+416-
+417:**结果态判定（v3.2 收窄为二态；v3.3 删除残留的 `queued:false` 重叠分支，消解 codex T-011 M1）**：若前置校验通过（确有 active run），适配器铸造 `operationId`，发起 `chat.send`+`queueMode:"steer"`+`deliver:false`。**结果只由该 RPC 调用本身是否成功返回这一 transport 层面事实分流，响应体内任何字段均不参与判定**：
+418-
+419:1. 若该 RPC 调用本身返回成功 ack（无论响应体里 `runId`/`messageSeq`/`queued`/`reason` 等字段呈现何种取值）→ `outcome:'submitted'`。**这是唯一的成功态**，且是**唯一**依据——v3.2 已不再用"是否出现新 runId"去区分"确实注入同一 run"与"实际被当成新 followup"；v3.3 进一步明确：即便这次成功 ack 的响应体里出现 `queued:false` 或其他任何拒收类字段，也**不得**据此把它改判为 `rejected`——那等于同一次调用同时命中两个终态，是把尚未隔离的 C-1 待验信号重新掺回契约分流规则（codex T-011 M1 明确点名此矛盾）。
+420-2. 若该 RPC 调用本身失败（网络错误，或内核在 RPC 层面直接返回错误/拒绝，如非成功 ack、连接层错误）→ `outcome:'rejected'`，reason 写入非稳定的 `detail` 字段。
+421-
+422:**`queued`/`reason` 等未确认信号的隔离（v3.3 新增，消解 codex T-011 M1）**：这两个字段——以及其他任何未经 §11 C-1 live probe 确认语义的响应体字段——**不得**出现在本节或任何其他章节对 `OperationOutcome` 的判定分支里，无论是作为"确认成功"的证据还是作为"改判失败"的证据。当前 protocolVersion 下唯一承认的分流依据是上方两条规则描述的"RPC 调用本身是否成功返回"这一二元 transport 事实。若 C-1 live probe 未来证实这些字段具备稳定、可机器判别的语义，对 `OperationOutcome` 的进一步细分**须通过新增 `protocolVersion` 版本升级引入**（如新增一个可辨识的第三态），不得在当前 protocolVersion 下静默改变本节的二态判定规则——这保证依赖当前契约的调用方不会因为内核侧某个未公开字段的行为变化而被动改变可观察结果。
+423-
+424-**不可观察边界（v3.2 强化措辞，明确写为"归入 submitted"而非另立一态）**：messaging `/steer`/`/tell` 内部路径失败时**静默**改写为普通 prompt，该内部结果状态是否经由 Gateway RPC 回传给外部 adapter 调用方**未经确认**（kernel-ecosystem-facts §1b F5）。若适配器实际调用路径命中这条 messaging 内部 fallback，RPC 层面看到的仍是"成功 ack"，因而适配器会合成 `outcome:'submitted'`——**这正是 `submitted` 这个措辞被选中的原因**：它字面上只承诺"提交/接受"，不像 v3.1 的 `succeeded` 那样暗示"整个转向意图已经达成"。调用方（UI/P3）读到 `outcome:'submitted'` 时，应理解为"内核接受了这条转向请求"，而不是"这条消息确实被注入了目标 run"——两者的差异在 messaging 内部路径失败时是真实存在但**结构性不可观察**的，实现应优先走 Control UI 风格的 `chat.send`+`queueMode:"steer"` 路径而非 messaging 内部路径以尽量规避此盲区，但这不构成契约保证。
+--
+460-- **断线重连窗口内完成的 operation，其终态需要持久化的 operation 账本（ledger）才能补——本 spec 不承诺这一能力，也不删除事件本身**。`OperationCompletedEvent` 依然存在、依然是"当前唯一的、贯穿 operation 生命周期的旁路可观察信号"，只是其覆盖范围如实收窄为"在线时段"。是否新增按 `operationId` 查询的持久账本，是实现阶段的能力选择，登记为 **§11 C-2**：为何设计阶段关不掉（持久化涉及存储选型、留存策略、跨进程重启语义等实现细节，不是窄腰契约本身该裁决的）、实现阶段如何验（能否按 `operationId` 查到一条持久记录）、不成立时如何降级（断线重连场景下，调用方只能通过重新 `send()`/查询会话当前状态间接推断，无法精确复原某次 operation 的终态——这是显式承认的能力边界，不是隐藏的缺口）。
+461-
+462:此修订影响面：`interrupt(mode:'steer')` 的 soft 判定结果、`interrupt(mode:'abort_and_resend')` 的 hard 序列结果、`stop()` 的多步序列结果，三者继续共用同一套 `OperationOutcome` 词汇表与同一套双通道机制，但双通道的"旁路镜像"通道的覆盖范围如实收窄。
+463-
+464-### 6.2 审批状态机（v3.2 修订：四态扩为五态，正式建模 `FORCE_DENY_PENDING_KERNEL_ACK`）
+--
+589-## 8. 各内核落地对照表
+590-
+591:（表格结构与图例同 v3.1；interrupt 支持列更新措辞以反映二态 soft 结果、`interrupt 支持` 列同步，`respondApproval` 列补充 `allow_session`；其余单元格同 v3.1，未变）
+592-
+593-图例：✅ 可直接落地（有事实依据）· 🟡 可适配但语义有收窄/需要额外约束才成立 · ❌ 不适用/无原生对应 · ❓ 未能确认
+--
+595-| | createSession | send | subscribe | interrupt | stop | respondApproval | capabilities | interrupt 支持 |
+596-|---|---|---|---|---|---|---|---|---|
+597:| **openclaw** | ✅（同 v3.1，sessionId 预分配时序已落地；v3.3 新增 aggregate 计费前置校验，见 §2.1 步骤 0） | ✅（同 v3.1） | ✅（同 v3.1） | ✅ mode:'cancel'→`sessions.abort`/`chat.abort`；🟡 mode:'steer'（soft）→`chat.send`+`queueMode:"steer"`（**路径**存在性 confirmed，精确 ack 语义待 C-1 live probe，结果态收窄为 `submitted`/`rejected` 二态，v3.3 删除残留的 `queued:false` 重叠分支）；✅ mode:'abort_and_resend'（hard）→原生 `sessions.steer`（`aborted_resend_failed` 仅在 abort 生效性可观察时可靠；不可观察时诚实报 v3.3 新增的 `aborted_effect_unknown`，见 §11 C-4） | 🟡（同 v3.1，非原子，靠 §6.3 黑名单+§9.3 session 锁兜底；v3.3 补齐 soft steer/cancel 遇 stop 规则） | ✅（同 v3.1；`allow_session` 门控为不支持，`approvalDecisionKinds` 不含它） | ✅（同 v3.1；新增 `billingAttribution`/`approvalDecisionKinds` 两字段） | **soft 结果态保持可靠二态 `submitted`/`rejected`（v3.3 收紧判定规则，删除残留重叠分支）；hard 结果态在 abort 生效性不可观察时诚实报 `aborted_effect_unknown`（v3.3 新增），不再借道 `rejected`** |
+598-| **hermes** | ✅（同 v3.1） | ✅（同 v3.1） | ✅（同 v3.1） | ✅ cancel（session 级）；❌ 原生无 steer 对应，恒 reject；🟡 mode:'abort_and_resend'（hard，仅 ACP 线路）经适配器内部 cancel+resend 序列提供，`aborted_resend_failed` 可靠构造（多步序列天然可观察，无需 live probe） | ✅（同 v3.1） | ✅ **仅 ACP 线路**（同 v3.1；ACP 含 `allow_session`，CLI 恒不含） | 🟡（同 v3.1；ACP `initialize` 协商） | **仅 cancel 恒可用；abort_and_resend 仅 ACP 线路可用（该路径 `aborted_resend_failed` 判定可靠，无 C-item 依赖）；steer 恒不支持** |
+599-
+--
+627-**`billing_query_subject_unresolved`（v3.3 新增，v3.4 重新归类为 `queryBilling` 的异步失败码，消解 codex T-012 M5）**：本码承载的失败——凭证被 newapi 用量接口拒绝，或查询主体在发起远端调用后才被判定不可解析——性质上是"调用已发起、结果由远端 I/O 决定"，不满足 `KernelPortRejectionCode` 自身"方法调用同步/立即拒绝"的定义，故 v3.4 起**移出**上方枚举。其唯一交付形状是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的**异步 rejection**（reject 原因携带该码）——不新增/复用 `ErrorEvent` 通道（`queryBilling` 不产出事件，不经过 `subscribe()` 流），也不是同步 throw。完整的同步/异步分层规则见 §7。
+628-
+629:`OperationOutcome`（v3.2 更新定义，v3.3 新增 `aborted_effect_unknown` 并收窄 `rejected`，见 §2.4）：`succeeded` / `submitted` / `aborted_no_resend` / `aborted_resend_failed` / `aborted_effect_unknown` / `rejected` / `timed_out`。与前两者的关系同 v3.1，未变：三者是递进的三个阶段（`KernelErrorCode` 描述与特定调用无关的异步运行时状况；`KernelPortRejectionCode` 描述同步立即拒绝，发生在 `operationId` 铸造之前；`OperationOutcome` 描述已铸造 `operationId` 的 operation 的终态）。`billing_query_subject_unresolved`（见上）不属于这三者中的任何一个既有通道，是 `queryBilling()` 自身返回值的 Promise rejection，独立于 `operationId`/`ErrorEvent` 机制。
+630-
+631-### 9.2 seq 语义与断线恢复责任方
+--
+659-- 若 resend 的 `send()` 已经发出但尚未确认返回——适配器等待该 `send()` 返回，返回后立即将新 run 视为"stop 的目标"，对这个新 run 发起强制 cancel；这次 `interrupt()` operation 终态化为 `outcome:'succeeded'`（resend 确实发生了），紧随的 stop 序列立即中止这个新 run。
+660-
+661:**`mode:'steer'`（soft，`interrupt_in_progress`）遇 `stop()`（v3.3 新增，v3.4 校正与 §6.1(a) 的口径冲突，消解 codex T-012 对 M1↔M4 一致性的指正）**：soft steer 的适配器侧执行是**单个 RPC**（`chat.send`+`queueMode:"steer"`+`deliver:false`，见 §6.1(a)）——不存在类似 hard 路径"abort 已完成、resend 尚未发起"这样可被适配器观察或抢占的中间窗口（结构上与下方 F-08 范围校正描述的 openclaw 单 RPC hard 路径同理）。规则是**等待，不抢占**：`stop()` 到达时若锁状态为 `interrupt_in_progress` 且当前 operation 是 soft steer，适配器**等待该 RPC 返回**（无法从中截断）——RPC 返回后，这次 `interrupt()` operation 按 §6.1(a) 既有二态规则收敛（`submitted`/`rejected`——**严格二态，不产生第三个终态**；该 RPC 调用本身失败，含网络/连接层失败，已归入 `rejected`，见 §6.1(a)），锁状态转为 `stop_in_progress`，随后 `stop()` 序列正常针对该 session 当前的 active run 执行（soft steer 不产生 `newRunId`，不存在"哪个 run 才是 stop 目标"的歧义，见 §6.1(a)）。**若等待该 RPC 返回本身超出适配器内部合理上限（v3.4 明确）**：那是 **`stop()` 这次 operation 自身**的 `outcome:'timed_out'`（§2.5 既有的 stop() 可达终态子集本就包含 `timed_out`），**不是** soft steer 的终态——v3.3 曾把这个等待超时误写成 soft steer 可达的第三个终态（`submitted`/`rejected`/`timed_out`），与 §6.1(a) 刚收窄的严格二态直接冲突，codex T-012 已指出；v3.4 予以更正：soft `interrupt(mode:'steer')` 自身的 `OperationOutcome` 全文任何地方都**只有** `submitted`/`rejected` 两态，不因为与 `stop()` 发生锁竞争而多出第三态。
+662-
+663:**`mode:'cancel'`（`interrupt_in_progress`）遇 `stop()`（v3.3 新增，消解 codex T-011 M4）**：`interrupt(mode:'cancel')` 同样是单个 RPC（`sessions.abort`/`chat.abort` 或 hermes ACP `cancel`），无可抢占的中间窗口。规则同上：**等待，不抢占**——`stop()` 等待该 cancel RPC 返回，这次 `interrupt()` operation 按既有规则终态化（`succeeded`/`rejected`/`timed_out`），锁转为 `stop_in_progress` 后 `stop()` 序列正常执行。由于 `interrupt(mode:'cancel')` 与 `stop()` 的底层动作高度重叠（都在中止当前 run），`stop()` 序列此时的 cancel/abort 步骤对已经被中止的 run 而言是幂等的空操作，不影响 `stop()` 仍需完成的后续步骤（如 §6.3 的 delete）。
+664-
+665-**F-08 范围校正（v3.2 新增，消解 codex T-010 新矛盾#4"F-08 完整覆盖名不副实"）**：上述"丢弃尚未发起的 resend"这条规则，**前提是存在一个 adapter 可观察、可抢占的中间窗口**——即"abort 已完成"与"resend 已发起"之间存在一段adapter自己的代码在顺序执行的时间。这个前提对**hermes**（适配器自行编排的四步序列①-④）与**openclaw 侧当调用方提供 `opts.runId` 定向、适配器自行拆解为 `sessions.abort`→`chat.send` 两步的路径**（见 §6.1(b)"opts.runId 定向"）成立。但对**openclaw 不带 runId、直接调用原生 `sessions.steer` 的路径**——abort 与 resend 由内核在**同一个 RPC 调用内部**完成，适配器只会在 RPC 整体返回时看到一次性的最终结果，**不存在**"abort 已完成、resend 尚未发起"这个可被适配器观察或抢占的中间态。因此：
+666-- **v3.2 明确不再泛化声称"完整覆盖所有 OpenClaw hard 调用"**——这个问题域（cancel+resend 竞态的抢占仲裁）对 openclaw 的单 RPC 路径**结构性不适用**，不是"没覆盖到的缺口"，而是"这条路径根本没有可抢占的窗口需要覆盖"。
+667-- 对 openclaw 单 RPC hard 路径，若 `stop()` 在这个 RPC 仍在途时到达：适配器只能等待 `sessions.steer` RPC 整体返回（无法从中截断），返回后视其结果决定 stop 序列如何收尾——这在结构上等同于上方仲裁规则的**第二个分支**（"resend 已发出但尚未确认返回"），因为从适配器视角，openclaw 单 RPC 路径的整个执行过程就是那个分支所描述的"已在途、只能等待"状态，从不会落入"resend 尚未发起、可丢弃"的第一个分支。
+668:- 因此，锁机制与仲裁规则本身的**设计是完整的**（覆盖了 send/interrupt/stop 三方法两两组合的所有状态转移——v3.3 补齐上方 `mode:'steer'`/`mode:'cancel'` 遇 `stop()` 的规则后，这一声称才真正名副其实：v3.2 时点"完整覆盖"只字面覆盖了 hard `abort_and_resend` 一种 interrupt mode，被 codex T-011 M4 判定为过度声称），但第一个分支（"丢弃尚未发起的 resend"）的**适用范围**局限于 hermes 与 openclaw 的 runId 定向路径——本条只是把这一点显式写出来，不是新增机制。
+669-
+670-**cancel+resend 完成屏障的失败路径**：同 v3.1，未变（见 v3.1 §9.3 对应文字）。
+--
+685-|---|---|---|---|---|
+686-| F-06 | 无 pending approval 状态机/exactly-once | HIGH | **已消解（由 v3.1 的"部分化解"回升）** | v3.1 遗留的两处剩余缺口——`allow_session` 无法在 `ApprovalDecision` 中无损归一、第 2 个 pending approval 的缓冲/超时策略——本轮悉数落地：§2.6 新增 `allow_session` 决策值+能力门控，§6.2 新增完整的缓冲/提升/溢出规则。同时 codex T-010 新发现的"审批第五态未建模"（deny RPC 失败引入的无名中间态）也在本轮通过 `FORCE_DENY_PENDING_KERNEL_ACK` 具名状态+转移规则闭合。三项均为**设计层面可关闭**的缺口（不依赖未确认的内核信号），故回升为完全消解，而非停留在部分化解 |
+687:| F-07 | INV-5 自相矛盾（"裂缝不下推" vs "cancel+resend 下推 UI/P3"） | BLOCKER | **已消解（维持，本轮进一步收窄不改变消解结论）** | v3.1 在纠正 openclaw steer 精确语义的基础上重新建立矛盾消解；v3.2 进一步把 soft steer 的结果态收窄为二态（`submitted`/`rejected`），使消解基础**更诚实**——不再依赖 v3.1 里那套建立在未确认信号上的三态合成规则，执行收敛在适配器、体验降级如实告知在 UI/P3 的分工本身未受影响 |
+688-| F-08 | cancel+resend 无 run 级寻址/完成屏障 | HIGH | **已消解（范围校正，桶内不变）** | codex T-010 指出 v3.1"完整覆盖"的表述名不副实——openclaw 单 RPC hard path 根本不存在可被抢占的中间窗口，不应被泛化进"完整覆盖"的声称。v3.2 §9.3 明确校正：`operationId`+`OperationOutcome` 双通道 + session 锁的 stop 优先仲裁，对其原本要解决的问题域（hermes/adapter 自拆多步路径的 cancel+resend 竞态）**依然是完整覆盖**；openclaw 单 RPC 路径不是"未覆盖的缺口"，是"结构性不适用、无需覆盖"。这是表述范围的校正，不是机制本身出现新缺口，故维持已消解，桶内不变 |
+689-| F-09 | newapi 计费不可归因到 run | BLOCKER | **部分化解（维持，描述更新）** | §7 本轮进一步收口：sessionId 时序落地（§2.1）、attribution 从自诊断改为部署时权威声明（§4.1/§7）、aggregate 模式查询主体明确（deploymentTokenRef）。但"per-session 换 key 在具体部署环境里是否真的可行"仍是一个**真实的、只能靠实现阶段验证的环境依赖**（登记为 §11 C-3），非 spec 设计层面能够单方面裁定，故维持部分化解；请求级 correlation id（run 级归因）仍未能确认，与此前状态一致 |
+--
+706-| # | 条目 | 为何设计阶段关不掉 | 实现阶段如何验 | 不成立时的降级 |
+707-|---|---|---|---|---|
+708:| **C-1** | soft `chat.send`+`queueMode:"steer"` 的精确 ack/结果信号语义——是否回传 `queued`/`reason` 字段；成功注入 active run 与静默降级为普通 prompt 是否可机器区分；soft 成功时 runId 是否恒等于被注入的 active runId | T-009（repo 级源码深挖）与 T-010（聚焦复核，xhigh 推理强度）两轮独立工作都止步于"这个响应字段的语义没有在源码/文档里明确写出，只能观察真实运行时行为才能确定"——这不是调研深度不够，是这类"内部实现是否选择透出某个字段"的问题本质上只能靠运行时观察。**v3.3 补记（消解 codex T-011 M1）**：`queued`/`reason` 此前在 §6.1(a) 判定规则里留有残留分支（"成功 ack"与"`queued:false`"同时命中两个终态），并未真正把 C-1 隔离出契约——v3.3 已删除该重叠分支，本条待验范围不变，但契约层面不再有任何分支依赖这两个字段 | 起一个本机 openclaw gateway 实例，构造一个有 active run 的 session，分别在"预期成功注入""预期内核拒收""预期静默 fallback"三种场景下调用 `chat.send`+`queueMode:"steer"`，逐字节比对三种场景的响应体差异 | 若确认三态可机器区分：`OperationOutcome` 可以在后续版本安全地**重新拓宽**（当前二态收窄为 `submitted`/`rejected` 是保守下界，不是终点，须通过新增 `protocolVersion` 引入，见 §6.1(a)）；若确认不可区分（本轮预期的默认假设）：当前的二态设计维持不变，无需进一步降级——本条已经是最保守的形态 |
+709-| **C-2** | operation 是否需要持久化账本（ledger），支撑断线重连/审计场景下按 `operationId` 查询历史终态 | 持久化涉及存储选型、留存期策略、跨进程重启后的可用性等实现细节，这些不是 KernelPort 窄腰契约本身该裁决的架构决策——契约只能规定"若存在这样的能力，接口长什么样"，不能替实现团队做"要不要建这个能力"的决定 | 实现完成后，验证是否存在一个可按 `operationId` 查询的持久化查询接口（不要求是 KernelPort 方法本身，可以是旁路的运维/审计接口），且断线重连后确实能通过它补齐错过的终态 | 若实现选择不建：§6.1a 已经把"`OperationCompletedEvent` 仅对在线订阅者保证"写成显式契约（不是待验证的推测），断线期间完成的 operation 终态在事件通道上永久丢失是**已被接受**的行为，不需要额外降级——本条从"是否要做"的开放决策变成"做与不做都有对应的、已写好的行为定义" |
+710-| **C-3** | openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl（§7 注入链契约步骤④的可行性前提） | T-009 明确标注"本任务未展开"——这是内核配置面的能力（env/config patch/session patch 等具体机制），属于对具体部署版本、具体配置方式的实操验证，不是通用协议文档能回答的问题；不同部署环境的答案可能不同 | 在目标部署环境里，尝试为两个不同 session 配置不同的 newapi baseUrl/key，观察两个 session 的模型调用是否真的分别落到对应的 key 上（可通过各自查询 `/api/log/self?token_name=...` 互相验证隔离性） | 验证不可行：`CapabilityDescriptor.billingAttribution` 在部署阶段声明为 `'user_tenant_aggregate'`，走 §7 已定义的降级路径（`queryBilling` 使用 `deploymentTokenRef` 查询整个部署实例的聚合用量），不再尝试 session 级归因 |
+--
+754-| # | 修复内容 | 消解的 T-011 finding | 本页落地章节 |
+755-|---|---|---|---|
+756:| 1 | **soft 二态判定去重叠**：删除"成功 ack + `queued:false` → `rejected`"这条残留分支，soft `interrupt(mode:'steer')` 的 outcome 只由底层 RPC 调用本身是否成功返回这一 transport 事实分流，响应体内任何字段（含 `queued`/`reason`）均不参与判定；明确未来若要据这些字段细分终态，须走 `protocolVersion` 版本升级，不在当前契约下静默改变 | codex T-011 **M1**（soft 二态判定仍有重叠分支，C-1 未被真正隔离） | §6.1(a)、§2.4、§11 C-1 |
+757-| 2 | **新增 `aborted_effect_unknown` 诚实终态**：`OperationOutcome` 新增该值，承接"abort 是否生效无法从可观察信号判定"的场景（典型：openclaw hard 单 RPC 的 error 路径，C-4 待验）；`rejected` 的公开承诺收窄为严格"abort 从未生效"，不再涵盖"生效性不明"；C-4 的否定降级改报 `aborted_effect_unknown`；明确调用方对该终态的处理义务——不得推断旧 run 仍在运行，按"可能已中止"保守处理 | codex T-011 **M2**（`aborted_resend_failed` 的 C-4 降级借道 `rejected`，污染其"abort 从未生效"的语义） | §2.4、§6.1(b)、§11 C-4、§9.1 |
+758-| 3 | **审批 FSM 补转移 + pending#2 缓冲上报独立化**：①新增 `FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY` 转移，内核权威超时信号与本地强制 deny 并发时让位于内核权威终态，不产生两个终态；②修正"缓冲请求已超时又可提升"的矛盾——缓冲中的请求一旦超时即终态化、不可再提升，只有仍在有效期内的缓冲请求才能在 #1 解决后浮现；③新增第 11 类 KernelEvent `ApprovalBufferResolvedEvent`（携 `reqId`/`reason`/`ts`）承载缓冲请求超时/溢出的可见性，不再复用语义受限于 stop/cancel 强制 deny 的 `forceResolvedApprovals` | codex T-011 **M3**（审批 FSM + pending#2 未闭包，最大项） | §6.2、§3、INV-2 |
+759:| 4 | **锁矩阵补齐 soft steer/cancel 遇 stop**：为 `mode:'steer'`（soft RPC 在途）与 `mode:'cancel'`（在途）遇 `stop()` 补齐"等待，不抢占"规则（两者均为单 RPC，无可抢占中间窗口，结构同 F-08 范围校正描述的 openclaw 单 RPC hard 路径）；据此校正 v3.2:606"覆盖所有状态转移"的声称——v3.3 补齐后该声称才真正名副其实 | codex T-011 **M4**（"完整"锁矩阵只覆盖 hard `abort_and_resend` 遇 stop，未定义 soft steer/cancel 遇 stop） | §9.3 |
+760-| 5 | **aggregate 计费前置校验 + 失败形状**：`deploymentTokenRef` 改为条件必填——`billingAttribution == 'user_tenant_aggregate'` 时必须提供，否则 `createSession` 同步拒绝（新增 `aggregate_billing_requires_deployment_token`）；定义 `queryBilling` 在 aggregate 模式下查询主体不可解析时的失败形状（v3.3 时表述为"同步拒绝 `billing_query_subject_unresolved`"，**v3.4 更正**：该表述与 `queryBilling` 返回 `Promise` 的签名冲突——远端凭证/接口拒绝一律是异步 `Promise` rejection，只有纯本地配置缺失可选择同步前置 reject，详见 v3.4 §17 第②项、§7、§9.1） | codex T-011 **M5**（aggregate 计费缺配置不变量） | §2.1、§7、§9.1 |
+761-
+--
+774-| # | 修复内容 | 消解的 T-012 finding | 本页落地章节 |
+775-|---|---|---|---|
+776:| 1 | **M1↔M4 soft 终态口径统一**：§9.3 soft `mode:'steer'` 遇 `stop()` 的锁规则不再把 steer 的终态写成 `submitted`/`rejected`/`timed_out` 三态，改为与 §6.1(a) 一致的严格二态（`submitted`/`rejected`，RPC 调用本身失败含网络/连接层失败已归入 `rejected`）；`stop()` 等待该 RPC 返回本身超出上限，明确是 **`stop()` 这次 operation 自身**的 `outcome:'timed_out'`（§2.5 既有子集），不是 soft steer 的终态。全文不再有任何地方给 soft steer 列出第三个终态 | codex T-012 第①项（§9.3 与 §6.1(a) 冲突，M1 未真正在全文收敛为二态） | §9.3 |
+777-| 2 | **M5 失败通道同步/异步分层**：`queryBilling` 的失败形状按"能否在发起远端调用前判定"拆分两层——纯本地配置缺失（查询主体在发起远端调用前即不可解析）可选择同步前置 reject；远端凭证/用量接口拒绝一律是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的异步 rejection。`billing_query_subject_unresolved` 从 `KernelPortRejectionCode`（同步/立即拒绝码）移出，改列为 `queryBilling` 专属的异步失败码；`aggregate_billing_requires_deployment_token`（`createSession` 阶段，纯本地配置问题）保持同步不变。给调用方一个唯一确定的失败模型 | codex T-012 第⑤项（`queryBilling` 返回 `Promise` 却要求"同步拒绝"，与三阶段错误模型自相矛盾） | §7、§9.1 |
+778-| 3 | **§3 事件计数笔误勘正**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员由误写的"九类"改正为"十类"（加上 M3 新增的 `ApprovalBufferResolvedEvent` 共 11 类，与 INV-2/§6.1a/§9.2/§16 既有的正确口径对齐） | codex T-012 第⑥项（§3 行 271"九类"与实际 10 个既有成员不符，且与 §16"全文数字已同步勘正"的声称冲突） | §3 |
+779-
+780:**本轮未改动**：M2（`aborted_effect_unknown`/`rejected` 收窄）、M3（审批 FSM 转移 + `ApprovalBufferResolvedEvent`）、M4 锁矩阵本身覆盖的状态转移集合（只更正了其中 soft steer 分支的终态措辞，转移规则本身不变）——codex T-012 已确认三者闭合，未提出任何修改要求。§10 收口统计（19 条 F/S must-fix 项分桶）不受本轮 3 处修复影响，未引入新的数字矛盾。§11 C-item 清单本轮不改写。
+781-
+782-## 交叉引用
+24-> **诚实记录**：[[d1-kernelport-spec-v3-3]] 发布后经 codex **T-012 confirm-readiness gate**（接续 T-011，定向重跑，只验 M1-M5 是否真闭合、新编辑有无引入新矛盾，详见 `.hopper/handoffs/T-012-output.md`）核验，Verdict **MUST-FIX**——gate 确认 M2、M3 已实质闭合，M4 的锁规则也已补齐 soft steer/cancel 遇 stop 的仲裁，M1 的 `queued:false` 重叠分支也已从 §6.1(a) 主判定规则删除，M5 的 aggregate 条件必填与两个拒绝码均已写入；但指出 v3.3 本轮新增文字又产生了**三处范围内的机械级新矛盾**：
+25-> 1. **M1↔M4 不一致**：§9.3 新增的锁规则把 soft steer 的正常终态重新写成 `submitted`/`rejected`/`timed_out` 三态，与 §6.1(a) 刚刚收窄的"严格二态"直接冲突——`timed_out` 实际上是 `stop()` 自身等待超时的终态，被误写成了 steer 的终态。
+26:> 2. **M5 失败通道分层不清**：`queryBilling` 返回 `Promise`，但正文把"凭证被远端拒绝"这类只能在异步 I/O 返回后才知道的失败，也要求"同步拒绝"并归入定义为"同步/立即拒绝"的 `KernelPortRejectionCode`，给调用方留下一个不唯一的失败模型。
+27-> 3. **§3 事件计数笔误**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员实际是 10 个，正文误写成"九类"，与 §16"全文数字已同步勘正"的声称冲突。
+28->
+--
+115-    // 'session'` 的部署下确实不需要它——但当该内核部署实例的 `billingAttribution`（§4.1，部署时
+116-    // 静态声明）为 `'user_tenant_aggregate'` 时，本字段**必须**提供；`createSession` 在这种情况下
+117:    // 若发现本字段缺失，必须**同步拒绝**（`aggregate_billing_requires_deployment_token`，见 §9.1），
+118-    // 不得在没有可查询凭证的情况下静默创建 session，见下方"内部执行序列"新增的前置校验。
+119-  };
+--
+129-**内部执行序列（v3.2 修订：步骤重排+步骤 1 新增，消解 codex T-010 BLOCKER-2 残留"createSession 无预分配 id"时序缺口；v3.3 新增步骤 0 前置校验，消解 codex T-011 M5）**：
+130-
+131:0. **aggregate 计费前置校验（v3.3 新增）**：若该内核部署实例的 `billingAttribution`（部署时静态声明，见 §4.1）为 `'user_tenant_aggregate'`，且 `config.newapiEndpoint.deploymentTokenRef` 未提供，`createSession` **同步拒绝**（`aggregate_billing_requires_deployment_token`，见 §9.1），不进入下方步骤 1-3——aggregate 模式下 `deploymentTokenRef` 是 §7 唯一的计费查询主体，缺失它却仍创建 session，等于承诺了一个将来注定查不到账的 `SessionBillingSnapshot`。`billingAttribution:'session'` 的部署不受本步骤约束（本字段本就不参与该模式下的查询，见上方 §2.1 字段说明）。
+132-1. **预分配 `sessionId`**（v3.2 新增，原步骤 1"resume 校验"下移为步骤 1a）：adapter 本地生成一个 UUID 作为该 session 的 `sessionId`，此时原生内核会话**尚不存在**。若 `config.resume` 提供，则复用该已存在 session 的 `sessionId`（本步骤退化为查找而非新铸）。
+133-   - 1a. resume 校验（同 v3.1，未变，位置下移但内容不变）：`config.resume` 提供时校验目标 session 是否可 resume，不可 resume（如 openclaw resume-after-delete 场景，见 §12 第 4 条）则显式 reject，不静默新建。
+--
+200-  // 时出现；hard abort_and_resend 在无 active run 时（T-009 F4：sessions.steer 不报错、仍新
+201-  // send）没有"受影响的旧 run"这个概念，本字段省略，不得强行构造一个不存在的值（消解 codex
+202:  // T-010 新矛盾#1）。soft steer 场景下，若前置校验发现无 active run，直接走 §9.1 同步拒绝，
+203-  // 不产生 operationId，因而也不涉及本字段。
+204-  outcome: OperationOutcome;
+--
+560-  attribution: 'session' | 'user_tenant_aggregate';
+561-  // v3.2：直接取自 CapabilityDescriptor.billingAttribution（部署时权威声明，见 §4.1），
+562:  // queryBilling() 只是把这个已知的静态事实原样填入，不做任何运行时推断。
+563-  windowStart: string; windowEnd: string;
+564-  requestCount: number;
+--
+569-}
+570-
+571:function queryBilling(
+572-  session: SessionHandle,
+573-  window?: { from: string; to: string }
+--
+576-```
+577-
+578:**aggregate 模式下 queryBilling 的查询主体（v3.2 新增，消解 codex T-010 新矛盾#6 的一部分）**：当 `attribution:'user_tenant_aggregate'` 时，`queryBilling(session)` **不使用** `session.billing.tokenRef` 作为查询凭证——该 token 未必真正注入了模型调用，用它查询可能返回空结果或产生误导性的"零用量"假象。查询主体改为**部署级凭证**：`CreateSessionConfig.newapiEndpoint.deploymentTokenRef`（§2.1 新增字段，部署/初始化阶段配置的共享 token 引用，是内核该部署实例模型出口实际使用的凭证）。换言之，aggregate 模式下 `queryBilling` 实质查询的是"整个部署实例的用量"，`session` 参数此时只用作报告标签（如同 v3.1 已声明的那样），不是查询过滤条件；`deploymentTokenRef` 才是真正决定"查哪把 key 的日志"的依据。
+579-
+580:**queryBilling 在 aggregate 模式下无法解析查询主体时的失败形状（v3.3 新增，v3.4 按同步/异步分层重写，消解 codex T-012 对 M5 的指正）**：`deploymentTokenRef` 是部署级静态配置，不随 `SessionHandle` 传递——§2.1 新增的前置校验只保证"部署配置阶段声明了它"（`createSession` 时点存在），不保证它在**查询发生的那一刻**仍然有效（例如该 token 后续被吊销、或部署配置被误改为空）。`queryBilling(session)` 返回 `Promise<SessionBillingSnapshot>`（异步），其失败形状按**能否在发起远端调用前判定**分两层，二者不共享同一个失败通道——这是给调用方的**唯一确定**失败模型：
+581-
+582-- **发起远端调用前即可判定查询主体不可解析**（纯本地问题：`deploymentTokenRef` 本身缺失，压根不存在一个可用于发起调用的凭证引用）：实现**可选择**在发起 newapi 用量接口调用之前就前置 reject 这个 `Promise`（不实际发起远端 I/O）。
+583:- **远端凭证/用量接口拒绝**（`queryBilling()` 已真正发起对 newapi 用量接口的调用，凭证被远端拒绝，或查询主体在远端才被判定不可解析）：**一律**是 `queryBilling()` 返回的 `Promise` 的**异步 rejection**——**不得**表述或实现为同步拒绝，不归入定义为"方法调用同步/立即拒绝码"的 `KernelPortRejectionCode`（见 §9.1 v3.4 更正）。
+584-
+585:两种情形都携带同一个码 `billing_query_subject_unresolved`（v3.4 起改列 §9.1 的异步失败码，不再是 `KernelPortRejectionCode` 成员），调用方统一按"`await queryBilling()` 可能 reject"处理，无需区分"同步抛出"与"异步 Promise rejection"两套错误处理路径。无论哪种情形，**都不得**返回一个字段齐全但数值虚构/为零的 `SessionBillingSnapshot`——"查询成功但用量为 0"的假象与一次诚实的"查询失败"对调用方的意义完全不同（前者可能被误读为"这个部署真的没有产生任何用量"），本 spec 要求严格区分两者。
+586-
+587-**必须如实承认的残留局限**：同 v3.1 四条（非 run 级、非实时、结算 webhook 不存在、归因粒度取决于运行时环境属性），v3.2 第四条改为直接指向 §11 C-3（不再是笼统的"运行时环境属性"措辞，而是明确指向可验证、待验证的具体条目）。
+--
+606-`KernelErrorCode`（异步运行时错误，经 `ErrorEvent` 上报）**保持不变**（同 v3.1）。
+607-
+608:`KernelPortRejectionCode`（方法调用同步/立即拒绝码）**v3.2 新增 1 项，v3.3 新增 2 项，v3.4 移出 1 项**（`billing_query_subject_unresolved` 不再属于本枚举，改列为下方新增的 `queryBilling` 异步失败码——理由见下方说明与 §7，消解 codex T-012 对 M5 同步/异步分层的指正）：
+609-
+610-```ts
+--
+619-    // capabilities().approvalDecisionKinds 不支持的 outcome（当前唯一场景是 'allow_session'
+620-    // 在 openclaw 或 hermes CLI 线路上被使用），见 §2.6。
+621:  | 'aggregate_billing_requires_deployment_token';  // v3.3 新增，消解 M5：createSession 发现部署
+622-    // 声明的 billingAttribution 为 'user_tenant_aggregate'，但 config.newapiEndpoint.
+623:    // deploymentTokenRef 未提供时同步拒绝，见 §2.1 步骤 0、§7。这是 M5 里唯一保留在本同步
+624-    // 拒绝通道中的码——纯本地配置问题，调用（createSession）前即可判定。
+625-```
+626-
+627:**`billing_query_subject_unresolved`（v3.3 新增，v3.4 重新归类为 `queryBilling` 的异步失败码，消解 codex T-012 M5）**：本码承载的失败——凭证被 newapi 用量接口拒绝，或查询主体在发起远端调用后才被判定不可解析——性质上是"调用已发起、结果由远端 I/O 决定"，不满足 `KernelPortRejectionCode` 自身"方法调用同步/立即拒绝"的定义，故 v3.4 起**移出**上方枚举。其唯一交付形状是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的**异步 rejection**（reject 原因携带该码）——不新增/复用 `ErrorEvent` 通道（`queryBilling` 不产出事件，不经过 `subscribe()` 流），也不是同步 throw。完整的同步/异步分层规则见 §7。
+628-
+629:`OperationOutcome`（v3.2 更新定义，v3.3 新增 `aborted_effect_unknown` 并收窄 `rejected`，见 §2.4）：`succeeded` / `submitted` / `aborted_no_resend` / `aborted_resend_failed` / `aborted_effect_unknown` / `rejected` / `timed_out`。与前两者的关系同 v3.1，未变：三者是递进的三个阶段（`KernelErrorCode` 描述与特定调用无关的异步运行时状况；`KernelPortRejectionCode` 描述同步立即拒绝，发生在 `operationId` 铸造之前；`OperationOutcome` 描述已铸造 `operationId` 的 operation 的终态）。`billing_query_subject_unresolved`（见上）不属于这三者中的任何一个既有通道，是 `queryBilling()` 自身返回值的 Promise rejection，独立于 `operationId`/`ErrorEvent` 机制。
+630-
+631-### 9.2 seq 语义与断线恢复责任方
+--
+708-| **C-1** | soft `chat.send`+`queueMode:"steer"` 的精确 ack/结果信号语义——是否回传 `queued`/`reason` 字段；成功注入 active run 与静默降级为普通 prompt 是否可机器区分；soft 成功时 runId 是否恒等于被注入的 active runId | T-009（repo 级源码深挖）与 T-010（聚焦复核，xhigh 推理强度）两轮独立工作都止步于"这个响应字段的语义没有在源码/文档里明确写出，只能观察真实运行时行为才能确定"——这不是调研深度不够，是这类"内部实现是否选择透出某个字段"的问题本质上只能靠运行时观察。**v3.3 补记（消解 codex T-011 M1）**：`queued`/`reason` 此前在 §6.1(a) 判定规则里留有残留分支（"成功 ack"与"`queued:false`"同时命中两个终态），并未真正把 C-1 隔离出契约——v3.3 已删除该重叠分支，本条待验范围不变，但契约层面不再有任何分支依赖这两个字段 | 起一个本机 openclaw gateway 实例，构造一个有 active run 的 session，分别在"预期成功注入""预期内核拒收""预期静默 fallback"三种场景下调用 `chat.send`+`queueMode:"steer"`，逐字节比对三种场景的响应体差异 | 若确认三态可机器区分：`OperationOutcome` 可以在后续版本安全地**重新拓宽**（当前二态收窄为 `submitted`/`rejected` 是保守下界，不是终点，须通过新增 `protocolVersion` 引入，见 §6.1(a)）；若确认不可区分（本轮预期的默认假设）：当前的二态设计维持不变，无需进一步降级——本条已经是最保守的形态 |
+709-| **C-2** | operation 是否需要持久化账本（ledger），支撑断线重连/审计场景下按 `operationId` 查询历史终态 | 持久化涉及存储选型、留存期策略、跨进程重启后的可用性等实现细节，这些不是 KernelPort 窄腰契约本身该裁决的架构决策——契约只能规定"若存在这样的能力，接口长什么样"，不能替实现团队做"要不要建这个能力"的决定 | 实现完成后，验证是否存在一个可按 `operationId` 查询的持久化查询接口（不要求是 KernelPort 方法本身，可以是旁路的运维/审计接口），且断线重连后确实能通过它补齐错过的终态 | 若实现选择不建：§6.1a 已经把"`OperationCompletedEvent` 仅对在线订阅者保证"写成显式契约（不是待验证的推测），断线期间完成的 operation 终态在事件通道上永久丢失是**已被接受**的行为，不需要额外降级——本条从"是否要做"的开放决策变成"做与不做都有对应的、已写好的行为定义" |
+710:| **C-3** | openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl（§7 注入链契约步骤④的可行性前提） | T-009 明确标注"本任务未展开"——这是内核配置面的能力（env/config patch/session patch 等具体机制），属于对具体部署版本、具体配置方式的实操验证，不是通用协议文档能回答的问题；不同部署环境的答案可能不同 | 在目标部署环境里，尝试为两个不同 session 配置不同的 newapi baseUrl/key，观察两个 session 的模型调用是否真的分别落到对应的 key 上（可通过各自查询 `/api/log/self?token_name=...` 互相验证隔离性） | 验证不可行：`CapabilityDescriptor.billingAttribution` 在部署阶段声明为 `'user_tenant_aggregate'`，走 §7 已定义的降级路径（`queryBilling` 使用 `deploymentTokenRef` 查询整个部署实例的聚合用量），不再尝试 session 级归因 |
+711-| **C-4** | openclaw `sessions.steer` abort 成功但 chat.send 本身失败时，error 响应是否透出 `interruptedActiveRun`（决定 `aborted_resend_failed` 在 openclaw 侧能否被 adapter 可靠构造） | T-009 Open question #2 明确"未能完全确认"——现有源码只展示了成功路径的 payload 结构，失败路径的 error 响应形状在已抓取的代码片段里没有被完整展示，需要真实触发这个具体的失败场景才能看到 | 构造一个能让 abort 成功、但紧随其后的 `chat.send` 失败的场景（如目标进程在 abort 与 send 之间被临时置为不可写状态），观察 `sessions.steer` 的 error 响应体是否携带 `interruptedActiveRun` 或等价信号 | **v3.3 更正（消解 codex T-011 M2）**：若不透出该信号，实现必须把这类无法区分"abort 是否已生效"的错误上报为 `outcome:'aborted_effect_unknown'`（§6.1(b)、§2.4 新增终态）——**不再**笼统降级为 `rejected`（v3.2 曾要求的规则已收回：`rejected` 现严格限定"abort 从未生效"，把"生效性不明"报成 `rejected` 会让调用方误判旧 run 未被中止），不得猜测性上报 `aborted_resend_failed`。`aborted_resend_failed` 在 openclaw 侧退化为"设计上存在、但当前实现观测能力下不可达"的状态，hermes 侧不受影响（多步序列天然可观察，不依赖此项） |
+712-| **C-5** | hermes ACP 是否具备任何形式的同 run 软注入机制 | T-009 scope 仅覆盖 openclaw 与 newapi 的 repo 级源码深挖，未展开针对 hermes 的对应调研；这不是"查不到"，是"这一轮任务的范围本来就没有覆盖到" | 对 `NousResearch/hermes-agent` 做与 T-009 同等深度的 repo 级源码深挖，重点检查 ACP 协议扩展或内部 queue 机制里是否存在类似 openclaw `queueMode:"steer"` 的对应能力 | 若确认存在：`capabilities().interruptModes` 对 hermes 放宽为包含 `'steer'`，不视为对本 spec 的推翻，是能力协商模型天然支持的正常扩展（同 v3.1 既有表述）。若确认不存在（或本条从未被专门验证）：维持现状——`interruptModes` 对 hermes 恒不含 `'steer'`，这是**保守默认值**，不是"卡在待验证状态"的阻塞项，本条属**非阻塞性**验证项，不影响 spec 定稿 |
+--
+758-| 3 | **审批 FSM 补转移 + pending#2 缓冲上报独立化**：①新增 `FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY` 转移，内核权威超时信号与本地强制 deny 并发时让位于内核权威终态，不产生两个终态；②修正"缓冲请求已超时又可提升"的矛盾——缓冲中的请求一旦超时即终态化、不可再提升，只有仍在有效期内的缓冲请求才能在 #1 解决后浮现；③新增第 11 类 KernelEvent `ApprovalBufferResolvedEvent`（携 `reqId`/`reason`/`ts`）承载缓冲请求超时/溢出的可见性，不再复用语义受限于 stop/cancel 强制 deny 的 `forceResolvedApprovals` | codex T-011 **M3**（审批 FSM + pending#2 未闭包，最大项） | §6.2、§3、INV-2 |
+759-| 4 | **锁矩阵补齐 soft steer/cancel 遇 stop**：为 `mode:'steer'`（soft RPC 在途）与 `mode:'cancel'`（在途）遇 `stop()` 补齐"等待，不抢占"规则（两者均为单 RPC，无可抢占中间窗口，结构同 F-08 范围校正描述的 openclaw 单 RPC hard 路径）；据此校正 v3.2:606"覆盖所有状态转移"的声称——v3.3 补齐后该声称才真正名副其实 | codex T-011 **M4**（"完整"锁矩阵只覆盖 hard `abort_and_resend` 遇 stop，未定义 soft steer/cancel 遇 stop） | §9.3 |
+760:| 5 | **aggregate 计费前置校验 + 失败形状**：`deploymentTokenRef` 改为条件必填——`billingAttribution == 'user_tenant_aggregate'` 时必须提供，否则 `createSession` 同步拒绝（新增 `aggregate_billing_requires_deployment_token`）；定义 `queryBilling` 在 aggregate 模式下查询主体不可解析时的失败形状（v3.3 时表述为"同步拒绝 `billing_query_subject_unresolved`"，**v3.4 更正**：该表述与 `queryBilling` 返回 `Promise` 的签名冲突——远端凭证/接口拒绝一律是异步 `Promise` rejection，只有纯本地配置缺失可选择同步前置 reject，详见 v3.4 §17 第②项、§7、§9.1） | codex T-011 **M5**（aggregate 计费缺配置不变量） | §2.1、§7、§9.1 |
+761-
+762-**§10/§11 机械勘正（随上述修复顺带核对，未引入新数字矛盾）**：§10「v1→v2→v3→v3.1→v3.2 消解对照表」统计的是 19 条 F/S must-fix 项的分桶，M1-M5 不改变任何一行的桶归属，故 §10 数字维持不变；INV-2、§3、§6.1a、§9.2 提到的 KernelEvent 判别联合计数因 M3 新增 `ApprovalBufferResolvedEvent` 由 10 类同步更新为 11 类（**v3.4 补记**：§3 行 271 当时误写为"九类"，未真正做到全文同步勘正，已在 v3.4 §17 第③项更正）。C-2（operation ledger）、C-5（hermes soft inject 存在性）两项 C-item，codex T-011 复判"更适合列为非阻断能力研究/optional 实现决策而非 conformance-fact"——该复判已如实记入 [[d1-v31-review]] 追加小节，供后续参考，**不在本次 M1-M5 修复范围内**，§11 对应两行本次不改写。
+--
+775-|---|---|---|---|
+776-| 1 | **M1↔M4 soft 终态口径统一**：§9.3 soft `mode:'steer'` 遇 `stop()` 的锁规则不再把 steer 的终态写成 `submitted`/`rejected`/`timed_out` 三态，改为与 §6.1(a) 一致的严格二态（`submitted`/`rejected`，RPC 调用本身失败含网络/连接层失败已归入 `rejected`）；`stop()` 等待该 RPC 返回本身超出上限，明确是 **`stop()` 这次 operation 自身**的 `outcome:'timed_out'`（§2.5 既有子集），不是 soft steer 的终态。全文不再有任何地方给 soft steer 列出第三个终态 | codex T-012 第①项（§9.3 与 §6.1(a) 冲突，M1 未真正在全文收敛为二态） | §9.3 |
+777:| 2 | **M5 失败通道同步/异步分层**：`queryBilling` 的失败形状按"能否在发起远端调用前判定"拆分两层——纯本地配置缺失（查询主体在发起远端调用前即不可解析）可选择同步前置 reject；远端凭证/用量接口拒绝一律是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的异步 rejection。`billing_query_subject_unresolved` 从 `KernelPortRejectionCode`（同步/立即拒绝码）移出，改列为 `queryBilling` 专属的异步失败码；`aggregate_billing_requires_deployment_token`（`createSession` 阶段，纯本地配置问题）保持同步不变。给调用方一个唯一确定的失败模型 | codex T-012 第⑤项（`queryBilling` 返回 `Promise` 却要求"同步拒绝"，与三阶段错误模型自相矛盾） | §7、§9.1 |
+778-| 3 | **§3 事件计数笔误勘正**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员由误写的"九类"改正为"十类"（加上 M3 新增的 `ApprovalBufferResolvedEvent` 共 11 类，与 INV-2/§6.1a/§9.2/§16 既有的正确口径对齐） | codex T-012 第⑥项（§3 行 271"九类"与实际 10 个既有成员不符，且与 §16"全文数字已同步勘正"的声称冲突） | §3 |
+779-
+26-> 2. **M5 失败通道分层不清**：`queryBilling` 返回 `Promise`，但正文把"凭证被远端拒绝"这类只能在异步 I/O 返回后才知道的失败，也要求"同步拒绝"并归入定义为"同步/立即拒绝"的 `KernelPortRejectionCode`，给调用方留下一个不唯一的失败模型。
+27:> 3. **§3 事件计数笔误**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员实际是 10 个，正文误写成"九类"，与 §16"全文数字已同步勘正"的声称冲突。
+28->
+29:> codex 判定：这三处**均是"设计文本内即可关闭"的机械/语义级残留**，不依赖新的 live probe/spike，也不是重开 M2/M3/M4 已闭合部分或新增能力的理由。据此，v3.4 是一次**收尾微修**：**只**关闭 T-012 点名的这 3 处，不做任何其他改动——继承 v3.3 的全部架构决策与已闭合的 M1-M5 设计（7 个 KernelPort 方法、`aborted_effect_unknown`、五态审批 FSM、`ApprovalBufferResolvedEvent`、锁矩阵、aggregate 前置校验等均不变，KernelEvent 判别联合仍是 11 类，不新增/不删除任何成员）。§10 收口统计不受影响，未引入新的数字矛盾（详见 §17「v3.3→v3.4 变更记录」）。
+30-
+--
+55-- **INV-1（透明性）**：（同 v3.1，未变）UI 与 P3 消息屏障不得对具体内核类型做分支判断；`SessionHandle.kernel` 字段的类型层面缺口（S-08）仍未裁决，见 §12。
+56:- **INV-2（一套契约两个同构内核）**：（同 v3.1/v3.2，方法与事件骨架未变；v3.3 因 M3 新增 `approval_buffer_resolved` 一个判别联合变体，计数由 10 类更新为 11 类）7 个 KernelPort 方法 + KernelEvent 判别联合（11 类：8 类内核事件 + `capability_changed` + `operation_completed` + `approval_buffer_resolved`，见 §3）+ CapabilityDescriptor 是唯一的语义契约。
+57:- **INV-3（语义与传输分离）**：（同 v3.1，未变）KernelPort 方法签名与 KernelEvent 字段中不出现任何 Transport 专有名词。v3.2 新增的 `billingAttribution`/`approvalDecisionKinds`（§4.1）同样只通过 `CapabilityDescriptor` 既有机制的自然扩展体现（新增字段而非新增 Transport 名词），不违反本不变量。
+58-- **INV-4（能力显式声明，不隐式假设）**：（同 v3.1，未变，v3.2 §7 的 attribution 权威化是本不变量的进一步贯彻——见下方 INV-5 之后的说明）能力变更的感知路径仍是内核 RPC 报错（被动发现）+ 我方 Server 能力开关 override（主动决策）。
+--
+154-```ts
+155:function subscribe(session: SessionHandle): AsyncStream<KernelEvent>;
+156-```
+--
+265-
+266:## 3. KernelEvent Schema
+267-
+268:（`MessageDeltaEvent`~`OperationCompletedEvent` 十类结构同 v3.1/v3.2，未受本次修订影响；v3.3 因 M3 新增第 11 类 `ApprovalBufferResolvedEvent`，判别联合由 10 类扩为 11 类；v3.4 勘正：此处此前误写为"九类"，是 codex T-012 指出的机械笔误，与 INV-2/§6.1a/§9.2/§16 等处一致口径的"十类既有成员+1 类新增=11 类"对齐，不涉及任何计数变化，仅勘正笔误本身）
+269-
+270-```ts
+271:type KernelEvent =
+272-  | MessageDeltaEvent
+--
+284-
+285:`KernelEventBase`（同 v3.1/v3.2，未变，`protocolVersion` 字段本页发布后实际取值应为 `"v3.3"`）：
+286-
+287-```ts
+288:interface KernelEventBase {
+289-  protocolVersion: string;
+--
+301-```ts
+302:interface ApprovalBufferResolvedEvent extends KernelEventBase {
+303-  type: 'approval_buffer_resolved';
+--
+305-  reason: 'buffered_timeout' | 'queue_overflow';   // 终态化原因：内核侧计时器判定超时 / 本地缓冲队列溢出
+306:  // 时点即 KernelEventBase.ts；该请求最终落定的具体审批状态（恒为 TIMED_OUT_DENY 或
+307-  // 因溢出被适配器发起的 deny）由 §6.2「pending #2 缓冲策略」定义，本事件只负责可见性上报。
+--
+310-
+311:本事件与其余 10 类 KernelEvent 共享同一套 §9.2「事件不重放」规则——只对当时在线订阅的消费者可见，断线期间发生的缓冲终态化不构成补发承诺（与 §6.1a `OperationCompletedEvent` 可观察性范围收窄同一诚实原则，见 §6.2 详细说明）。
+312-
+--
+315-```ts
+316:interface OperationCompletedEvent extends KernelEventBase {
+317-  type: 'operation_completed';
+--
+458-
+459:- `OperationCompletedEvent` **仅对在线订阅者**保证——持有该 session 订阅句柄、且在 operation 完成时刻处于连接状态的消费者，能观察到这个事件。这与 §9.2 对其余 10 类 KernelEvent（v3.3 因 M3 新增 `ApprovalBufferResolvedEvent`，计数由 9 类更新为 10 类）的不重放承诺完全一致，不再是例外。
+460-- **断线重连窗口内完成的 operation，其终态需要持久化的 operation 账本（ledger）才能补——本 spec 不承诺这一能力，也不删除事件本身**。`OperationCompletedEvent` 依然存在、依然是"当前唯一的、贯穿 operation 生命周期的旁路可观察信号"，只是其覆盖范围如实收窄为"在线时段"。是否新增按 `operationId` 查询的持久账本，是实现阶段的能力选择，登记为 **§11 C-2**：为何设计阶段关不掉（持久化涉及存储选型、留存策略、跨进程重启语义等实现细节，不是窄腰契约本身该裁决的）、实现阶段如何验（能否按 `operationId` 查到一条持久记录）、不成立时如何降级（断线重连场景下，调用方只能通过重新 `send()`/查询会话当前状态间接推断，无法精确复原某次 operation 的终态——这是显式承认的能力边界，不是隐藏的缺口）。
+--
+515-- **缓冲溢出**：缓冲队列深度是**实现定义的有限值**（本 spec 不钉死具体数字，要求实现选定一个有限值并文档化）；超过该深度时，新到达的审批请求**不进入队列**，适配器直接对其发起 `respondApproval(deny)`（reason 标注为一个可读的溢出标识，如 `queue_overflow`，非稳定字段），保持"fail-closed 而非无限增长本地状态"的既有安全取向。
+516:- **缓冲生命周期的独立可见性（v3.3 新增，消解 codex T-011 M3——不再复用 `forceResolvedApprovals`）**：缓冲期内终态化的请求（无论因超时还是因队列溢出被强制 deny）**不计入** `TurnCompleteEvent.forceResolvedApprovals`——该字段语义**严格限定**于 stop/cancel 触发的强制 deny（§6.2 三个失败分支场景）；缓冲请求从未进入 active pending、也从未被 interrupt/stop 强制终态化，性质不同，不应共享同一个上报通道。缓冲请求的终态改为通过新增的 `ApprovalBufferResolvedEvent`（第 11 类 KernelEvent，见 §3）上报：每次一条缓冲期请求因超时或溢出而终态化，适配器 emit 一次该事件，携带 `reqId`、`reason`（`'buffered_timeout' | 'queue_overflow'`）与继承自 `KernelEventBase` 的 `ts` 时点。同其余 KernelEvent，本事件**不重放**（§9.2）——只对当时在线订阅的消费者可见；断线期间发生的缓冲终态化，调用方只能靠之后查询该 reqId 状态间接获知（若实现提供查询接口），不构成本事件的补发承诺，这与 `OperationCompletedEvent` 的可观察性范围收窄（§6.1a）是同一诚实原则的延续。
+517-- 这是**运行时并发分支**，不是 UI 呈现优化——即使调用方从不构建"审批队列"UI，适配器也必须实现上述缓冲/提升/溢出规则，否则第二条审批请求在到达时会因为没有明确的处理路径而产生未定义行为。
+--
+757-| 2 | **新增 `aborted_effect_unknown` 诚实终态**：`OperationOutcome` 新增该值，承接"abort 是否生效无法从可观察信号判定"的场景（典型：openclaw hard 单 RPC 的 error 路径，C-4 待验）；`rejected` 的公开承诺收窄为严格"abort 从未生效"，不再涵盖"生效性不明"；C-4 的否定降级改报 `aborted_effect_unknown`；明确调用方对该终态的处理义务——不得推断旧 run 仍在运行，按"可能已中止"保守处理 | codex T-011 **M2**（`aborted_resend_failed` 的 C-4 降级借道 `rejected`，污染其"abort 从未生效"的语义） | §2.4、§6.1(b)、§11 C-4、§9.1 |
+758:| 3 | **审批 FSM 补转移 + pending#2 缓冲上报独立化**：①新增 `FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY` 转移，内核权威超时信号与本地强制 deny 并发时让位于内核权威终态，不产生两个终态；②修正"缓冲请求已超时又可提升"的矛盾——缓冲中的请求一旦超时即终态化、不可再提升，只有仍在有效期内的缓冲请求才能在 #1 解决后浮现；③新增第 11 类 KernelEvent `ApprovalBufferResolvedEvent`（携 `reqId`/`reason`/`ts`）承载缓冲请求超时/溢出的可见性，不再复用语义受限于 stop/cancel 强制 deny 的 `forceResolvedApprovals` | codex T-011 **M3**（审批 FSM + pending#2 未闭包，最大项） | §6.2、§3、INV-2 |
+759-| 4 | **锁矩阵补齐 soft steer/cancel 遇 stop**：为 `mode:'steer'`（soft RPC 在途）与 `mode:'cancel'`（在途）遇 `stop()` 补齐"等待，不抢占"规则（两者均为单 RPC，无可抢占中间窗口，结构同 F-08 范围校正描述的 openclaw 单 RPC hard 路径）；据此校正 v3.2:606"覆盖所有状态转移"的声称——v3.3 补齐后该声称才真正名副其实 | codex T-011 **M4**（"完整"锁矩阵只覆盖 hard `abort_and_resend` 遇 stop，未定义 soft steer/cancel 遇 stop） | §9.3 |
+--
+761-
+762:**§10/§11 机械勘正（随上述修复顺带核对，未引入新数字矛盾）**：§10「v1→v2→v3→v3.1→v3.2 消解对照表」统计的是 19 条 F/S must-fix 项的分桶，M1-M5 不改变任何一行的桶归属，故 §10 数字维持不变；INV-2、§3、§6.1a、§9.2 提到的 KernelEvent 判别联合计数因 M3 新增 `ApprovalBufferResolvedEvent` 由 10 类同步更新为 11 类（**v3.4 补记**：§3 行 271 当时误写为"九类"，未真正做到全文同步勘正，已在 v3.4 §17 第③项更正）。C-2（operation ledger）、C-5（hermes soft inject 存在性）两项 C-item，codex T-011 复判"更适合列为非阻断能力研究/optional 实现决策而非 conformance-fact"——该复判已如实记入 [[d1-v31-review]] 追加小节，供后续参考，**不在本次 M1-M5 修复范围内**，§11 对应两行本次不改写。
+763-
+--
+777-| 2 | **M5 失败通道同步/异步分层**：`queryBilling` 的失败形状按"能否在发起远端调用前判定"拆分两层——纯本地配置缺失（查询主体在发起远端调用前即不可解析）可选择同步前置 reject；远端凭证/用量接口拒绝一律是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的异步 rejection。`billing_query_subject_unresolved` 从 `KernelPortRejectionCode`（同步/立即拒绝码）移出，改列为 `queryBilling` 专属的异步失败码；`aggregate_billing_requires_deployment_token`（`createSession` 阶段，纯本地配置问题）保持同步不变。给调用方一个唯一确定的失败模型 | codex T-012 第⑤项（`queryBilling` 返回 `Promise` 却要求"同步拒绝"，与三阶段错误模型自相矛盾） | §7、§9.1 |
+778:| 3 | **§3 事件计数笔误勘正**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员由误写的"九类"改正为"十类"（加上 M3 新增的 `ApprovalBufferResolvedEvent` 共 11 类，与 INV-2/§6.1a/§9.2/§16 既有的正确口径对齐） | codex T-012 第⑥项（§3 行 271"九类"与实际 10 个既有成员不符，且与 §16"全文数字已同步勘正"的声称冲突） | §3 |
+779-
+
+exec
+/bin/zsh -lc "nl -ba /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md | sed -n '210,245p;565,640p;645,680p'
+rg -n \"soft steer.*timed_out|steer.*timed_out|timed_out.*soft steer|timed_out.*steer|submitted.?/.?rejected.?/.?timed_out|submitted.*rejected.*timed_out\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+rg -n \"billing_query_subject_unresolved|aggregate_billing_requires_deployment_token|同步拒绝|同步/立即拒绝|同步 throw|异步 rejection|Promise rejection|前置 reject\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+rg -n \"九类|十类|10 类|11 类|由 9 类|由 10 类|其余 10 类|8 类内核事件\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 111ms:
+27:> 3. **§3 事件计数笔误**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员实际是 10 个，正文误写成"九类"，与 §16"全文数字已同步勘正"的声称冲突。
+29:> codex 判定：这三处**均是"设计文本内即可关闭"的机械/语义级残留**，不依赖新的 live probe/spike，也不是重开 M2/M3/M4 已闭合部分或新增能力的理由。据此，v3.4 是一次**收尾微修**：**只**关闭 T-012 点名的这 3 处，不做任何其他改动——继承 v3.3 的全部架构决策与已闭合的 M1-M5 设计（7 个 KernelPort 方法、`aborted_effect_unknown`、五态审批 FSM、`ApprovalBufferResolvedEvent`、锁矩阵、aggregate 前置校验等均不变，KernelEvent 判别联合仍是 11 类，不新增/不删除任何成员）。§10 收口统计不受影响，未引入新的数字矛盾（详见 §17「v3.3→v3.4 变更记录」）。
+56:- **INV-2（一套契约两个同构内核）**：（同 v3.1/v3.2，方法与事件骨架未变；v3.3 因 M3 新增 `approval_buffer_resolved` 一个判别联合变体，计数由 10 类更新为 11 类）7 个 KernelPort 方法 + KernelEvent 判别联合（11 类：8 类内核事件 + `capability_changed` + `operation_completed` + `approval_buffer_resolved`，见 §3）+ CapabilityDescriptor 是唯一的语义契约。
+268:（`MessageDeltaEvent`~`OperationCompletedEvent` 十类结构同 v3.1/v3.2，未受本次修订影响；v3.3 因 M3 新增第 11 类 `ApprovalBufferResolvedEvent`，判别联合由 10 类扩为 11 类；v3.4 勘正：此处此前误写为"九类"，是 codex T-012 指出的机械笔误，与 INV-2/§6.1a/§9.2/§16 等处一致口径的"十类既有成员+1 类新增=11 类"对齐，不涉及任何计数变化，仅勘正笔误本身）
+311:本事件与其余 10 类 KernelEvent 共享同一套 §9.2「事件不重放」规则——只对当时在线订阅的消费者可见，断线期间发生的缓冲终态化不构成补发承诺（与 §6.1a `OperationCompletedEvent` 可观察性范围收窄同一诚实原则，见 §6.2 详细说明）。
+459:- `OperationCompletedEvent` **仅对在线订阅者**保证——持有该 session 订阅句柄、且在 operation 完成时刻处于连接状态的消费者，能观察到这个事件。这与 §9.2 对其余 10 类 KernelEvent（v3.3 因 M3 新增 `ApprovalBufferResolvedEvent`，计数由 9 类更新为 10 类）的不重放承诺完全一致，不再是例外。
+516:- **缓冲生命周期的独立可见性（v3.3 新增，消解 codex T-011 M3——不再复用 `forceResolvedApprovals`）**：缓冲期内终态化的请求（无论因超时还是因队列溢出被强制 deny）**不计入** `TurnCompleteEvent.forceResolvedApprovals`——该字段语义**严格限定**于 stop/cancel 触发的强制 deny（§6.2 三个失败分支场景）；缓冲请求从未进入 active pending、也从未被 interrupt/stop 强制终态化，性质不同，不应共享同一个上报通道。缓冲请求的终态改为通过新增的 `ApprovalBufferResolvedEvent`（第 11 类 KernelEvent，见 §3）上报：每次一条缓冲期请求因超时或溢出而终态化，适配器 emit 一次该事件，携带 `reqId`、`reason`（`'buffered_timeout' | 'queue_overflow'`）与继承自 `KernelEventBase` 的 `ts` 时点。同其余 KernelEvent，本事件**不重放**（§9.2）——只对当时在线订阅的消费者可见；断线期间发生的缓冲终态化，调用方只能靠之后查询该 reqId 状态间接获知（若实现提供查询接口），不构成本事件的补发承诺，这与 `OperationCompletedEvent` 的可观察性范围收窄（§6.1a）是同一诚实原则的延续。
+758:| 3 | **审批 FSM 补转移 + pending#2 缓冲上报独立化**：①新增 `FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY` 转移，内核权威超时信号与本地强制 deny 并发时让位于内核权威终态，不产生两个终态；②修正"缓冲请求已超时又可提升"的矛盾——缓冲中的请求一旦超时即终态化、不可再提升，只有仍在有效期内的缓冲请求才能在 #1 解决后浮现；③新增第 11 类 KernelEvent `ApprovalBufferResolvedEvent`（携 `reqId`/`reason`/`ts`）承载缓冲请求超时/溢出的可见性，不再复用语义受限于 stop/cancel 强制 deny 的 `forceResolvedApprovals` | codex T-011 **M3**（审批 FSM + pending#2 未闭包，最大项） | §6.2、§3、INV-2 |
+762:**§10/§11 机械勘正（随上述修复顺带核对，未引入新数字矛盾）**：§10「v1→v2→v3→v3.1→v3.2 消解对照表」统计的是 19 条 F/S must-fix 项的分桶，M1-M5 不改变任何一行的桶归属，故 §10 数字维持不变；INV-2、§3、§6.1a、§9.2 提到的 KernelEvent 判别联合计数因 M3 新增 `ApprovalBufferResolvedEvent` 由 10 类同步更新为 11 类（**v3.4 补记**：§3 行 271 当时误写为"九类"，未真正做到全文同步勘正，已在 v3.4 §17 第③项更正）。C-2（operation ledger）、C-5（hermes soft inject 存在性）两项 C-item，codex T-011 复判"更适合列为非阻断能力研究/optional 实现决策而非 conformance-fact"——该复判已如实记入 [[d1-v31-review]] 追加小节，供后续参考，**不在本次 M1-M5 修复范围内**，§11 对应两行本次不改写。
+778:| 3 | **§3 事件计数笔误勘正**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员由误写的"九类"改正为"十类"（加上 M3 新增的 `ApprovalBufferResolvedEvent` 共 11 类，与 INV-2/§6.1a/§9.2/§16 既有的正确口径对齐） | codex T-012 第⑥项（§3 行 271"九类"与实际 10 个既有成员不符，且与 §16"全文数字已同步勘正"的声称冲突） | §3 |
+
+exec
+/bin/zsh -lc "rg -n -C 4 \"stop\\(\\)|Stop|stop.*timed_out|timed_out.*stop|STOPPING|stop_in_progress|等待内核侧确认|内部合理上限\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+21-
+22-## Changelog（v3.3 → v3.4：codex T-012 confirm-readiness gate 的收尾闭合修订）
+23-
+24-> **诚实记录**：[[d1-kernelport-spec-v3-3]] 发布后经 codex **T-012 confirm-readiness gate**（接续 T-011，定向重跑，只验 M1-M5 是否真闭合、新编辑有无引入新矛盾，详见 `.hopper/handoffs/T-012-output.md`）核验，Verdict **MUST-FIX**——gate 确认 M2、M3 已实质闭合，M4 的锁规则也已补齐 soft steer/cancel 遇 stop 的仲裁，M1 的 `queued:false` 重叠分支也已从 §6.1(a) 主判定规则删除，M5 的 aggregate 条件必填与两个拒绝码均已写入；但指出 v3.3 本轮新增文字又产生了**三处范围内的机械级新矛盾**：
+25:> 1. **M1↔M4 不一致**：§9.3 新增的锁规则把 soft steer 的正常终态重新写成 `submitted`/`rejected`/`timed_out` 三态，与 §6.1(a) 刚刚收窄的"严格二态"直接冲突——`timed_out` 实际上是 `stop()` 自身等待超时的终态，被误写成了 steer 的终态。
+26-> 2. **M5 失败通道分层不清**：`queryBilling` 返回 `Promise`，但正文把"凭证被远端拒绝"这类只能在异步 I/O 返回后才知道的失败，也要求"同步拒绝"并归入定义为"同步/立即拒绝"的 `KernelPortRejectionCode`，给调用方留下一个不唯一的失败模型。
+27-> 3. **§3 事件计数笔误**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员实际是 10 个，正文误写成"九类"，与 §16"全文数字已同步勘正"的声称冲突。
+28->
+29-> codex 判定：这三处**均是"设计文本内即可关闭"的机械/语义级残留**，不依赖新的 live probe/spike，也不是重开 M2/M3/M4 已闭合部分或新增能力的理由。据此，v3.4 是一次**收尾微修**：**只**关闭 T-012 点名的这 3 处，不做任何其他改动——继承 v3.3 的全部架构决策与已闭合的 M1-M5 设计（7 个 KernelPort 方法、`aborted_effect_unknown`、五态审批 FSM、`ApprovalBufferResolvedEvent`、锁矩阵、aggregate 前置校验等均不变，KernelEvent 判别联合仍是 11 类，不新增/不删除任何成员）。§10 收口统计不受影响，未引入新的数字矛盾（详见 §17「v3.3→v3.4 变更记录」）。
+--
+169-  input?: KernelInput;
+170-}
+171-
+172-type OperationOutcome =
+173:  | 'succeeded'              // hard：abort+resend 均完成；stop()：正常完成
+174-  | 'submitted'              // 仅 soft steer 可达：底层 chat.send+queueMode:"steer" RPC 被接受。
+175-                               // **不承诺**消息确实被注入到了 active run——见下方"不可观察边界"。
+176-                               // v3.3 进一步明确（消解 M1）：只由该 RPC 调用本身是否成功返回这一
+177-                               // transport 层面事实判定，响应体内任何字段（含 `queued`/`reason`）
+--
+190-                               // 继续依赖旧 run 的产出，也不得自动重发假设旧 run 仍存活的操作。见 §6.1(b)。
+191-  | 'rejected'                // v3.3 收窄（消解 M2）：严格限定为"abort 从未生效"——RPC/序列在产生任何
+192-                               // 效果之前就同步失败，或前置校验不通过。**不再**涵盖"无法区分 abort 是否
+193-                               // 生效"的场景，那类否定结果一律走上方 aborted_effect_unknown。
+194:  | 'timed_out';              // 等待内核侧确认信号超过适配器内部合理上限
+195-
+196-interface InterruptResult {
+197-  operationId: string;    // 见 §6.1a：本次 operation 的唯一标识，供旁路消费者判定终态
+198-  affectedRunId?: string;
+--
+221-（同 v3.1，未受本次修订影响，原样保留）
+222-
+223-```ts
+224-function stop(session: SessionHandle): Promise<{ operationId: string; outcome: OperationOutcome }>;
+225:// stop() 可达的 outcome 子集：'succeeded'（正常完成）、'timed_out'（等待内核侧确认超时）、
+226-// 'rejected'（abort/cancel RPC 本身失败）；'aborted_no_resend'/'aborted_resend_failed'/
+227-// 'aborted_effect_unknown'（v3.3 新增，同样排除）/'submitted' 语义上不适用于 stop 自身发起的
+228-// operation，但类型层面复用同一枚举，不为 stop 单开一个子集类型。
+229-```
+230-
+231:`stop()` 在窄腰层仍是单一方法签名，语义仍是"不承诺原子性的多步序列"（同 v3.1）。完整状态机与事件顺序保证见 §6.2、§6.3、§9.3。
+232-
+233-### 2.6 respondApproval（v3.2 修订：`ApprovalDecision` 新增 `allow_session`，由能力声明门控）
+234-
+235-```ts
+--
+443-  - **hermes**：这一终态可靠构造——适配器的四步序列里，步骤②③（cancel+确认）与步骤④（resend）是两个独立可观察的动作，步骤②③成功而步骤④失败时，适配器直接知道这是 `aborted_resend_failed`，不存在信号缺失问题。
+444-  - **openclaw**：这一终态**只在** error 响应体确实透出可判读的 `interruptedActiveRun`/等价信号时才可上报（T-009 Open question #2 待验，登记为 §11 C-4）；该信号未确认前，实现不应尝试构造本终态——见下方 `aborted_effect_unknown`。
+445-- **`outcome:'aborted_effect_unknown'`（v3.3 新增，收窄自 v3.2 曾要求的"笼统降级为 `rejected`"）**：abort 已发起（`sessions.steer`/`chat.abort` 等 RPC 已调用），但其**是否生效**——即旧 active run 是否真的被中止——**无法从当前可观察信号判定**。典型场景：openclaw hard 单 RPC 路径，`sessions.steer` 报错（新 `chat.send` 失败）时，error payload 是否携带 `interruptedActiveRun` 未经确认（§11 C-4）——若不携带，适配器既不能确认 abort 已生效（不能报 `aborted_resend_failed`），也不能确认 abort 从未生效（不能报 `rejected`），唯一诚实的选择是本终态。**调用方对 `aborted_effect_unknown` 的正确处理（v3.3 新增，强制性）**：调用方**不得**推断旧 run 仍在运行，也不得推断旧 run 已被中止；应将旧 run 状态视为**不确定**，按"可能已中止"**保守处理**——不得自动假设可以继续依赖旧 run 的产出，也不得自动重发一个假设旧 run 仍存活的操作；若需要确定性，调用方应主动查询/重新拉取该 session 的当前状态（如重新 `subscribe` 或在发起新操作前先确认无冲突）。
+446-- **`outcome:'rejected'`（v3.3 收窄公开承诺）**：严格限定为"abort 从未生效"——cancel/abort RPC 调用本身在产生任何效果之前就**同步失败**（网络错误、内核侧直接拒绝、前置校验不通过）。**不再**涵盖"无法区分 abort 是否生效"的场景——那类信号不足的否定结果一律走上方 `aborted_effect_unknown`，不得笼统报 `rejected`（v3.2 曾要求的"无法区分时降级为 `rejected`"规则在此收回：那会让调用方把"旧 run 状态未知"误读为"旧 run 未被中止"，见 codex T-011 M2）。
+447:- `outcome:'timed_out'`（cancel 已发起但等待 `turn_complete` 超过适配器内部合理上限）。
+448-
+449-**openclaw 与 hermes 在 hard 路径上都是 cancel+resend 族**：两者的结果语义相同——都不保留当前 run 已产出的内容，都需要在 `TurnCompleteEvent.degraded:{kind:'abort_and_resend'}` 上如实标注。
+450-
+451-**能力声明**：同 v3.1，未变（见 v3.1 §6.1(b) 对应文字）。
+452-
+453-### 6.1a operationId 与统一失败通道（v3.2 修订：明确删除"断线重连观察者受益"声称）
+454-
+455:**`operationId` 与双通道机制**：同 v3.1，未变——`interrupt()`/`stop()` 每次调用在通过前置同步校验之后，铸造一个全局唯一的 `operationId`；Promise 直接答复 + `OperationCompletedEvent` 旁路镜像，双通道共用同一套 `OperationOutcome` 终态词汇表（v3.2 更新见 §2.4）。
+456-
+457-**可观察性范围收窄（v3.2 修订，消解 codex T-010 新矛盾#3）**：v3.1 曾把"断线重连后重新 `subscribe()` 的观察者"列为 `OperationCompletedEvent` 的受益者之一，但这与保留的 §9.2"事件不重放，新迭代器不得假设补发"直接矛盾——没有持久化的 operation 账本，断线期间完成的 operation 终态**在事件通道上永久丢失**，不存在"重连后能看到"这回事。v3.2 更正：
+458-
+459-- `OperationCompletedEvent` **仅对在线订阅者**保证——持有该 session 订阅句柄、且在 operation 完成时刻处于连接状态的消费者，能观察到这个事件。这与 §9.2 对其余 10 类 KernelEvent（v3.3 因 M3 新增 `ApprovalBufferResolvedEvent`，计数由 9 类更新为 10 类）的不重放承诺完全一致，不再是例外。
+460-- **断线重连窗口内完成的 operation，其终态需要持久化的 operation 账本（ledger）才能补——本 spec 不承诺这一能力，也不删除事件本身**。`OperationCompletedEvent` 依然存在、依然是"当前唯一的、贯穿 operation 生命周期的旁路可观察信号"，只是其覆盖范围如实收窄为"在线时段"。是否新增按 `operationId` 查询的持久账本，是实现阶段的能力选择，登记为 **§11 C-2**：为何设计阶段关不掉（持久化涉及存储选型、留存策略、跨进程重启语义等实现细节，不是窄腰契约本身该裁决的）、实现阶段如何验（能否按 `operationId` 查到一条持久记录）、不成立时如何降级（断线重连场景下，调用方只能通过重新 `send()`/查询会话当前状态间接推断，无法精确复原某次 operation 的终态——这是显式承认的能力边界，不是隐藏的缺口）。
+461-
+462:此修订影响面：`interrupt(mode:'steer')` 的 soft 判定结果、`interrupt(mode:'abort_and_resend')` 的 hard 序列结果、`stop()` 的多步序列结果，三者继续共用同一套 `OperationOutcome` 词汇表与同一套双通道机制，但双通道的"旁路镜像"通道的覆盖范围如实收窄。
+463-
+464-### 6.2 审批状态机（v3.2 修订：四态扩为五态，正式建模 `FORCE_DENY_PENDING_KERNEL_ACK`）
+465-
+466-**事实基线**（同 v3，未受本次修订影响，原样保留）：openclaw 审批 approval id 主键+first-answer-wins+timeout→终端 deny（30 分钟默认过期）；hermes ACP `allow_once`/`allow_always`/`allow_session`/`deny` 映射+timeout/bridge 错误→deny（fail-closed）；`updatedInput`/`reqId` 关联 `toolCallId` 等字段定义，详见 kernel-ecosystem-facts §1a/§2a。
+--
+497-```
+498-
+499-**五态命名**：`PENDING`、`RESOLVED_ALLOW`、`RESOLVED_DENY`、`TIMED_OUT_DENY`、`FORCE_DENIED_ON_STOP` 五个具名状态，加上 `FORCE_DENY_PENDING_KERNEL_ACK` 这一个**非终态的中间态**——严格说是"PENDING 的一个特殊子态"（表示"本地已决定要强制 deny，正等待内核确认"），审批的**生命周期**因此从四态扩展为五态，但**合法终态**仍然只有四个（`RESOLVED_ALLOW`/`RESOLVED_DENY`/`TIMED_OUT_DENY`/`FORCE_DENIED_ON_STOP`）——`FORCE_DENY_PENDING_KERNEL_ACK` 不是第五个终态，是消解"本地记账与内核记账短暂不一致"这个真实存在的中间窗口所需的具名状态，之前 v3.1 里这个窗口没有名字、没有定义转移规则、没有重试语义，是 codex T-010 新矛盾#5 指出的具体缺口。
+500-
+501:**与 operation 锁的交互（v3.2 新增）**：`FORCE_DENY_PENDING_KERNEL_ACK` 存在期间，触发它的那次 interrupt/stop operation 的 session 锁状态（§9.3）保持在 `interrupt_in_progress`/`stop_in_progress`——这个具名审批中间态**本身就是**该 operation 内部多步序列的第一步（对应 §6.2 原有"deny→abort→resend 定序"里的步骤①）。若等待内核确认 deny 超过适配器内部合理上限（分支 2，见下），触发它的 operation 终态化为 `outcome:'timed_out'`，session 锁**释放回 `idle`**，但 approval 本身**留在** `FORCE_DENY_PENDING_KERNEL_ACK`（approval 的状态机与 operation 的状态机是两回事，同 v3.1 既有原则，未变）——这意味着一个后续到达的新 interrupt/stop 调用有可能在 approval 仍卡在这个中间态时被发起；此时适配器应先对该 reqId 重试幂等 deny（视为这次新 operation 内部序列步骤①的自然延续），而不是把它当成一个全新的、无关的 pending 请求处理。
+502-
+503-**deny→abort→resend 定序的失败分支（三个分支，同 v3.1 结构，v3.2 用五态模型重新表述使其自洽）**：
+504-
+505-1. **deny 确认失败**（适配器已把 approval 推进到 `FORCE_DENY_PENDING_KERNEL_ACK`，但向内核发起的 deny 决议 RPC 本身报错）：适配器**不得**推进到步骤②（abort/cancel）。这次触发定序的 interrupt/stop operation 终态化为 `outcome:'rejected'`（经统一通道上报）；approval **停留在** `FORCE_DENY_PENDING_KERNEL_ACK`（不是"不属于合法终态的无名中间态"，而是明确定义、允许停留、允许重试的具名状态）；session **未**进入 §6.3 黑名单，调用方可以安全地重试 interrupt/stop——重试时适配器对同一 reqId **幂等重发同一个 deny 决议**（不产生新决议，不改变 decision 内容），直到内核确认或调用方放弃。
+506:2. **超时**（等待内核确认 deny 生效超过适配器内部合理上限）：这次 interrupt/stop operation 终态化为 `outcome:'timed_out'`（经统一通道上报）。approval 停留在 `FORCE_DENY_PENDING_KERNEL_ACK`，不擅自终态化为 `TIMED_OUT_DENY`（那是一个不同的转移，专属"内核侧信号驱动的超时 deny"，不应与"适配器等待自己发起的强制 deny 确认超时"混淆——两者虽然都叫"超时"，触发主体和语义不同；该"内核信号驱动"转移的具体规则见上方 v3.3 新增的 `FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY` 转移）。调用方据 `outcome:'timed_out'` 自行决定重试或升级处理；重试同分支 1，幂等重发。
+507-3. **已终态**（适配器尝试强制 deny 之前，approval 已经被人工 `respondApproval` 抢先进入 `RESOLVED_ALLOW`/`RESOLVED_DENY` 终态）：这是真正的竞态，不是失败。适配器尝试强制终态化时收到 `approval_not_pending`，直接放弃这一步，照常推进到②（abort/cancel）——run 本身仍需按 interrupt/stop 的原始意图被中止。该 reqId **不**出现在 `TurnCompleteEvent.forceResolvedApprovals` 里。
+508-
+509-**pending #2 缓冲策略（v3.2 新增；v3.3 修复缓冲生命周期的两处遗留矛盾——"超时后又可提升"与"错误复用 forceResolvedApprovals"，消解 codex T-011 M3）**：既有基线要求 pending 上限=1、串行呈现给调用方（同一 session 同一时刻只暴露一个"active pending"审批请求）。补齐第二条（及后续）审批请求到达时的行为：
+510-
+--
+638-type SessionLockState =
+639-  | 'idle'
+640-  | 'send_pending'
+641-  | 'interrupt_in_progress'
+642:  | 'stop_in_progress';
+643-```
+644-
+645-（枚举本身同 v3.1，未变；v3.2 补齐的是**完整的两两组合规则矩阵**，消解 codex T-010 新矛盾#4"session 锁不是完整互斥矩阵"）
+646-
+647-**完整互斥矩阵（v3.2 新增，取代 v3.1 只定义 `send_pending` 状态名却没有配套冲突规则的缺口）**：
+648-
+649:| 当前锁状态 \ 到达的调用 | `send()` | `interrupt()` | `stop()` |
+650-|---|---|---|---|
+651:| `idle` | 允许，转入 `send_pending`（等待 kernel ack，极短窗口） | 允许，转入 `interrupt_in_progress` | 允许，转入 `stop_in_progress` |
+652-| `send_pending` | **reject（`session_locked`）**——同一 session 不允许两个 `send()` RPC 同时在途，第二个必须等第一个 ack 返回、锁回到 `idle` 后重试（v3.2 新增规则，窗口极短，正常情况几乎不可观察） | **reject（`session_locked`）**（v3.2 新增规则：不特殊处理，统一按锁状态拒绝，避免为"send ack 途中"这个极窄窗口单独设计穿透逻辑） | **reject（`session_locked`）**（v3.2 新增规则，同上） |
+653-| `interrupt_in_progress` | reject（`session_locked`，同 v3.1） | reject（`session_locked`，同 v3.1） | **特殊仲裁（见下方"stop 优先仲裁"规则；v3.2 覆盖 hard `abort_and_resend` + F-08 范围说明，v3.3 补齐 soft `steer` 与 `cancel` 两种 mode，规则详见下方）** |
+654:| `stop_in_progress` | reject（`session_already_stopped`，沿用 §6.3 黑名单机制；若 stop 序列本身仍在执行中尚未进入黑名单，则 reject `session_locked`，二者按"黑名单是否已写入"区分，行为对调用方均是拒绝） | reject（`session_already_stopped`，同 v3.1） | reject（`session_locked`，不支持 stop 重入；调用方应等待第一个 stop 的结果，而非发起第二个 stop） |
+655-
+656:**stop 优先仲裁（同 v3.1 结构，v3.2 补充 F-08 范围校正，消解 codex T-010 新矛盾#4 的另一部分）**：`stop()` 调用到达时，若锁状态为 `interrupt_in_progress`，stop 具有更高优先级：
+657-
+658:- 若此刻 abort/cancel 已完成、resend 尚未发起——适配器**丢弃尚未发起的 resend**，这次 `interrupt()` operation 终态化为 `outcome:'aborted_no_resend'`，锁状态转为 `stop_in_progress`。
+659-- 若 resend 的 `send()` 已经发出但尚未确认返回——适配器等待该 `send()` 返回，返回后立即将新 run 视为"stop 的目标"，对这个新 run 发起强制 cancel；这次 `interrupt()` operation 终态化为 `outcome:'succeeded'`（resend 确实发生了），紧随的 stop 序列立即中止这个新 run。
+660-
+661:**`mode:'steer'`（soft，`interrupt_in_progress`）遇 `stop()`（v3.3 新增，v3.4 校正与 §6.1(a) 的口径冲突，消解 codex T-012 对 M1↔M4 一致性的指正）**：soft steer 的适配器侧执行是**单个 RPC**（`chat.send`+`queueMode:"steer"`+`deliver:false`，见 §6.1(a)）——不存在类似 hard 路径"abort 已完成、resend 尚未发起"这样可被适配器观察或抢占的中间窗口（结构上与下方 F-08 范围校正描述的 openclaw 单 RPC hard 路径同理）。规则是**等待，不抢占**：`stop()` 到达时若锁状态为 `interrupt_in_progress` 且当前 operation 是 soft steer，适配器**等待该 RPC 返回**（无法从中截断）——RPC 返回后，这次 `interrupt()` operation 按 §6.1(a) 既有二态规则收敛（`submitted`/`rejected`——**严格二态，不产生第三个终态**；该 RPC 调用本身失败，含网络/连接层失败，已归入 `rejected`，见 §6.1(a)），锁状态转为 `stop_in_progress`，随后 `stop()` 序列正常针对该 session 当前的 active run 执行（soft steer 不产生 `newRunId`，不存在"哪个 run 才是 stop 目标"的歧义，见 §6.1(a)）。**若等待该 RPC 返回本身超出适配器内部合理上限（v3.4 明确）**：那是 **`stop()` 这次 operation 自身**的 `outcome:'timed_out'`（§2.5 既有的 stop() 可达终态子集本就包含 `timed_out`），**不是** soft steer 的终态——v3.3 曾把这个等待超时误写成 soft steer 可达的第三个终态（`submitted`/`rejected`/`timed_out`），与 §6.1(a) 刚收窄的严格二态直接冲突，codex T-012 已指出；v3.4 予以更正：soft `interrupt(mode:'steer')` 自身的 `OperationOutcome` 全文任何地方都**只有** `submitted`/`rejected` 两态，不因为与 `stop()` 发生锁竞争而多出第三态。
+662-
+663:**`mode:'cancel'`（`interrupt_in_progress`）遇 `stop()`（v3.3 新增，消解 codex T-011 M4）**：`interrupt(mode:'cancel')` 同样是单个 RPC（`sessions.abort`/`chat.abort` 或 hermes ACP `cancel`），无可抢占的中间窗口。规则同上：**等待，不抢占**——`stop()` 等待该 cancel RPC 返回，这次 `interrupt()` operation 按既有规则终态化（`succeeded`/`rejected`/`timed_out`），锁转为 `stop_in_progress` 后 `stop()` 序列正常执行。由于 `interrupt(mode:'cancel')` 与 `stop()` 的底层动作高度重叠（都在中止当前 run），`stop()` 序列此时的 cancel/abort 步骤对已经被中止的 run 而言是幂等的空操作，不影响 `stop()` 仍需完成的后续步骤（如 §6.3 的 delete）。
+664-
+665-**F-08 范围校正（v3.2 新增，消解 codex T-010 新矛盾#4"F-08 完整覆盖名不副实"）**：上述"丢弃尚未发起的 resend"这条规则，**前提是存在一个 adapter 可观察、可抢占的中间窗口**——即"abort 已完成"与"resend 已发起"之间存在一段adapter自己的代码在顺序执行的时间。这个前提对**hermes**（适配器自行编排的四步序列①-④）与**openclaw 侧当调用方提供 `opts.runId` 定向、适配器自行拆解为 `sessions.abort`→`chat.send` 两步的路径**（见 §6.1(b)"opts.runId 定向"）成立。但对**openclaw 不带 runId、直接调用原生 `sessions.steer` 的路径**——abort 与 resend 由内核在**同一个 RPC 调用内部**完成，适配器只会在 RPC 整体返回时看到一次性的最终结果，**不存在**"abort 已完成、resend 尚未发起"这个可被适配器观察或抢占的中间态。因此：
+666-- **v3.2 明确不再泛化声称"完整覆盖所有 OpenClaw hard 调用"**——这个问题域（cancel+resend 竞态的抢占仲裁）对 openclaw 的单 RPC 路径**结构性不适用**，不是"没覆盖到的缺口"，而是"这条路径根本没有可抢占的窗口需要覆盖"。
+667:- 对 openclaw 单 RPC hard 路径，若 `stop()` 在这个 RPC 仍在途时到达：适配器只能等待 `sessions.steer` RPC 整体返回（无法从中截断），返回后视其结果决定 stop 序列如何收尾——这在结构上等同于上方仲裁规则的**第二个分支**（"resend 已发出但尚未确认返回"），因为从适配器视角，openclaw 单 RPC 路径的整个执行过程就是那个分支所描述的"已在途、只能等待"状态，从不会落入"resend 尚未发起、可丢弃"的第一个分支。
+668:- 因此，锁机制与仲裁规则本身的**设计是完整的**（覆盖了 send/interrupt/stop 三方法两两组合的所有状态转移——v3.3 补齐上方 `mode:'steer'`/`mode:'cancel'` 遇 `stop()` 的规则后，这一声称才真正名副其实：v3.2 时点"完整覆盖"只字面覆盖了 hard `abort_and_resend` 一种 interrupt mode，被 codex T-011 M4 判定为过度声称），但第一个分支（"丢弃尚未发起的 resend"）的**适用范围**局限于 hermes 与 openclaw 的 runId 定向路径——本条只是把这一点显式写出来，不是新增机制。
+669-
+670-**cancel+resend 完成屏障的失败路径**：同 v3.1，未变（见 v3.1 §9.3 对应文字）。
+671-
+672-### 9.4 多 session 并发资源模型（简述）
+--
+755-|---|---|---|---|
+756-| 1 | **soft 二态判定去重叠**：删除"成功 ack + `queued:false` → `rejected`"这条残留分支，soft `interrupt(mode:'steer')` 的 outcome 只由底层 RPC 调用本身是否成功返回这一 transport 事实分流，响应体内任何字段（含 `queued`/`reason`）均不参与判定；明确未来若要据这些字段细分终态，须走 `protocolVersion` 版本升级，不在当前契约下静默改变 | codex T-011 **M1**（soft 二态判定仍有重叠分支，C-1 未被真正隔离） | §6.1(a)、§2.4、§11 C-1 |
+757-| 2 | **新增 `aborted_effect_unknown` 诚实终态**：`OperationOutcome` 新增该值，承接"abort 是否生效无法从可观察信号判定"的场景（典型：openclaw hard 单 RPC 的 error 路径，C-4 待验）；`rejected` 的公开承诺收窄为严格"abort 从未生效"，不再涵盖"生效性不明"；C-4 的否定降级改报 `aborted_effect_unknown`；明确调用方对该终态的处理义务——不得推断旧 run 仍在运行，按"可能已中止"保守处理 | codex T-011 **M2**（`aborted_resend_failed` 的 C-4 降级借道 `rejected`，污染其"abort 从未生效"的语义） | §2.4、§6.1(b)、§11 C-4、§9.1 |
+758-| 3 | **审批 FSM 补转移 + pending#2 缓冲上报独立化**：①新增 `FORCE_DENY_PENDING_KERNEL_ACK → TIMED_OUT_DENY` 转移，内核权威超时信号与本地强制 deny 并发时让位于内核权威终态，不产生两个终态；②修正"缓冲请求已超时又可提升"的矛盾——缓冲中的请求一旦超时即终态化、不可再提升，只有仍在有效期内的缓冲请求才能在 #1 解决后浮现；③新增第 11 类 KernelEvent `ApprovalBufferResolvedEvent`（携 `reqId`/`reason`/`ts`）承载缓冲请求超时/溢出的可见性，不再复用语义受限于 stop/cancel 强制 deny 的 `forceResolvedApprovals` | codex T-011 **M3**（审批 FSM + pending#2 未闭包，最大项） | §6.2、§3、INV-2 |
+759:| 4 | **锁矩阵补齐 soft steer/cancel 遇 stop**：为 `mode:'steer'`（soft RPC 在途）与 `mode:'cancel'`（在途）遇 `stop()` 补齐"等待，不抢占"规则（两者均为单 RPC，无可抢占中间窗口，结构同 F-08 范围校正描述的 openclaw 单 RPC hard 路径）；据此校正 v3.2:606"覆盖所有状态转移"的声称——v3.3 补齐后该声称才真正名副其实 | codex T-011 **M4**（"完整"锁矩阵只覆盖 hard `abort_and_resend` 遇 stop，未定义 soft steer/cancel 遇 stop） | §9.3 |
+760-| 5 | **aggregate 计费前置校验 + 失败形状**：`deploymentTokenRef` 改为条件必填——`billingAttribution == 'user_tenant_aggregate'` 时必须提供，否则 `createSession` 同步拒绝（新增 `aggregate_billing_requires_deployment_token`）；定义 `queryBilling` 在 aggregate 模式下查询主体不可解析时的失败形状（v3.3 时表述为"同步拒绝 `billing_query_subject_unresolved`"，**v3.4 更正**：该表述与 `queryBilling` 返回 `Promise` 的签名冲突——远端凭证/接口拒绝一律是异步 `Promise` rejection，只有纯本地配置缺失可选择同步前置 reject，详见 v3.4 §17 第②项、§7、§9.1） | codex T-011 **M5**（aggregate 计费缺配置不变量） | §2.1、§7、§9.1 |
+761-
+762-**§10/§11 机械勘正（随上述修复顺带核对，未引入新数字矛盾）**：§10「v1→v2→v3→v3.1→v3.2 消解对照表」统计的是 19 条 F/S must-fix 项的分桶，M1-M5 不改变任何一行的桶归属，故 §10 数字维持不变；INV-2、§3、§6.1a、§9.2 提到的 KernelEvent 判别联合计数因 M3 新增 `ApprovalBufferResolvedEvent` 由 10 类同步更新为 11 类（**v3.4 补记**：§3 行 271 当时误写为"九类"，未真正做到全文同步勘正，已在 v3.4 §17 第③项更正）。C-2（operation ledger）、C-5（hermes soft inject 存在性）两项 C-item，codex T-011 复判"更适合列为非阻断能力研究/optional 实现决策而非 conformance-fact"——该复判已如实记入 [[d1-v31-review]] 追加小节，供后续参考，**不在本次 M1-M5 修复范围内**，§11 对应两行本次不改写。
+763-
+--
+772-本节逐条列出 v3.3→v3.4 的 3 处收尾闭合修复，每条注明其消解的 codex T-012 confirm-readiness gate finding，以及本页对应落地章节。M2/M3/M4 已被 T-012 确认闭合的部分本轮不改动。
+773-
+774-| # | 修复内容 | 消解的 T-012 finding | 本页落地章节 |
+775-|---|---|---|---|
+776:| 1 | **M1↔M4 soft 终态口径统一**：§9.3 soft `mode:'steer'` 遇 `stop()` 的锁规则不再把 steer 的终态写成 `submitted`/`rejected`/`timed_out` 三态，改为与 §6.1(a) 一致的严格二态（`submitted`/`rejected`，RPC 调用本身失败含网络/连接层失败已归入 `rejected`）；`stop()` 等待该 RPC 返回本身超出上限，明确是 **`stop()` 这次 operation 自身**的 `outcome:'timed_out'`（§2.5 既有子集），不是 soft steer 的终态。全文不再有任何地方给 soft steer 列出第三个终态 | codex T-012 第①项（§9.3 与 §6.1(a) 冲突，M1 未真正在全文收敛为二态） | §9.3 |
+777-| 2 | **M5 失败通道同步/异步分层**：`queryBilling` 的失败形状按"能否在发起远端调用前判定"拆分两层——纯本地配置缺失（查询主体在发起远端调用前即不可解析）可选择同步前置 reject；远端凭证/用量接口拒绝一律是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的异步 rejection。`billing_query_subject_unresolved` 从 `KernelPortRejectionCode`（同步/立即拒绝码）移出，改列为 `queryBilling` 专属的异步失败码；`aggregate_billing_requires_deployment_token`（`createSession` 阶段，纯本地配置问题）保持同步不变。给调用方一个唯一确定的失败模型 | codex T-012 第⑤项（`queryBilling` 返回 `Promise` 却要求"同步拒绝"，与三阶段错误模型自相矛盾） | §7、§9.1 |
+778-| 3 | **§3 事件计数笔误勘正**：`MessageDeltaEvent`~`OperationCompletedEvent` 既有成员由误写的"九类"改正为"十类"（加上 M3 新增的 `ApprovalBufferResolvedEvent` 共 11 类，与 INV-2/§6.1a/§9.2/§16 既有的正确口径对齐） | codex T-012 第⑥项（§3 行 271"九类"与实际 10 个既有成员不符，且与 §16"全文数字已同步勘正"的声称冲突） | §3 |
+779-
+780-**本轮未改动**：M2（`aborted_effect_unknown`/`rejected` 收窄）、M3（审批 FSM 转移 + `ApprovalBufferResolvedEvent`）、M4 锁矩阵本身覆盖的状态转移集合（只更正了其中 soft steer 分支的终态措辞，转移规则本身不变）——codex T-012 已确认三者闭合，未提出任何修改要求。§10 收口统计（19 条 F/S must-fix 项分桶）不受本轮 3 处修复影响，未引入新的数字矛盾。§11 C-item 清单本轮不改写。
+
+exec
+/bin/zsh -lc "shasum -a 256 /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md /Users/litianyi/.llm-wiki/agent-app-design/kernel/kernel-ecosystem-facts.md
+awk 'NR>=271 && NR<=282 && /"'^  '"\\| / {n++; print NR \":\" "'$0} END {print "KernelEvent_union_members=" n}'"' /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+rg -n \"九类\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+rg -n \"submitted.?/.?rejected.?/.?timed_out|steer.*timed_out|timed_out.*steer\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+sed -n '608,629p' /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md | rg -n \"billing_query_subject_unresolved|aggregate_billing_requires_deployment_token|异步 rejection|同步 throw|KernelPortRejectionCode|三者是递进\"
+rg -n \"queryBilling|newapi|billingAttribution|deploymentTokenRef\" /Users/litianyi/.llm-wiki/agent-app-design/kernel/kernel-ecosystem-facts.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 125ms:
+1:`KernelPortRejectionCode`（方法调用同步/立即拒绝码）**v3.2 新增 1 项，v3.3 新增 2 项，v3.4 移出 1 项**（`billing_query_subject_unresolved` 不再属于本枚举，改列为下方新增的 `queryBilling` 异步失败码——理由见下方说明与 §7，消解 codex T-012 对 M5 同步/异步分层的指正）：
+4:type KernelPortRejectionCode =
+14:  | 'aggregate_billing_requires_deployment_token';  // v3.3 新增，消解 M5：createSession 发现部署
+20:**`billing_query_subject_unresolved`（v3.3 新增，v3.4 重新归类为 `queryBilling` 的异步失败码，消解 codex T-012 M5）**：本码承载的失败——凭证被 newapi 用量接口拒绝，或查询主体在发起远端调用后才被判定不可解析——性质上是"调用已发起、结果由远端 I/O 决定"，不满足 `KernelPortRejectionCode` 自身"方法调用同步/立即拒绝"的定义，故 v3.4 起**移出**上方枚举。其唯一交付形状是 `queryBilling()` 返回的 `Promise<SessionBillingSnapshot>` 的**异步 rejection**（reject 原因携带该码）——不新增/复用 `ErrorEvent` 通道（`queryBilling` 不产出事件，不经过 `subscribe()` 流），也不是同步 throw。完整的同步/异步分层规则见 §7。
+22:`OperationOutcome`（v3.2 更新定义，v3.3 新增 `aborted_effect_unknown` 并收窄 `rejected`，见 §2.4）：`succeeded` / `submitted` / `aborted_no_resend` / `aborted_resend_failed` / `aborted_effect_unknown` / `rejected` / `timed_out`。与前两者的关系同 v3.1，未变：三者是递进的三个阶段（`KernelErrorCode` 描述与特定调用无关的异步运行时状况；`KernelPortRejectionCode` 描述同步立即拒绝，发生在 `operationId` 铸造之前；`OperationOutcome` 描述已铸造 `operationId` 的 operation 的终态）。`billing_query_subject_unresolved`（见上）不属于这三者中的任何一个既有通道，是 `queryBilling()` 自身返回值的 Promise rejection，独立于 `operationId`/`ErrorEvent` 机制。
+4:tags: [p2-kernel, openclaw, hermas, newapi, codex-sdk, claude-code-sdk, local-kernel]
+21:> **状态标注**：本页基线来自 hopper 派发 grok（`prd-research` 任务 T-003，2026-07-18）的只读研究结论；2026-07-21 经 T-005 conformance spike（hopper 派发 grok，针对 D1 双轨对抗评审 [[d1-review-dual-track]] 中点名的 must-fix 事实缺口做定向官方文档核查）补充确认，`design_status` 由 `draft` 升级为 `confirmed`——本页现作为 D1 v2 重设计（见 [[d1-v2-design-approach]]）的**硬事实基线**，而非探索性研究结论。对应 RA-L3 议程 D1（内核抽象接口规格，见 [[ra-l3-agenda]]）。研究方法：只读 web 调研，信息稀缺处明确标「未能确认」，未臆造接口；T-005 对每条结论均给出官方文档 URL。**同日（2026-07-21）另经 T-009 conformance spike（hopper 派发 grok，针对 [[d1-v3-review]] codex T-008 点名的 2 处 BLOCKER 做 repo 级源码深挖，非 web-search 层面）补充第 42 行 openclaw `sessions.steer` 的精确契约（§1b）与 newapi session 级归因的因果链条件（§3b），本页 `design_status` 维持 `confirmed` 不变，属既有确认事实基线之上的精度加强，不是推翻。**
+79:**T-009 残留未确认（openclaw）**：soft inject 成功时 `chat.send` 返回的 `runId` 是否恒等于被注入的 active runId（部分，需 live probe）；`sessions.steer` abort 成功但 `chat.send` 失败时 `interruptedActiveRun` 是否仍出现在 error 路径（未能完全确认）；OpenClaw 内核如何配置 per-session newapi baseUrl/key（env/config patch/session patch，属 adapter 注入路径，本任务未展开）。
+105:## §3 new-api / newapi
+109:**已确认的能力面**：推理入口（OpenAI 兼容及 Claude/Gemini 格式支持）；令牌/Key 创建管理（额度、模型限制）；用量/计费（按请求/用量/缓存命中核算，支持充值与企业配额）；模型管理（渠道模型列表、定价、上游价格同步）；管理自动化（官方提及 newapi skill，`newapi-admin` skill 标注 **Coming Soon**，说明 admin 机器接口仍在产品化中）。
+113:**未能确认**：new-api 完整 admin REST 路径表与鉴权头（公开 API 索引页未能在本轮稳定展开为可引用清单）；是否提供 WebSocket 流式管理事件或计费 webhook；与"newapi"商品名/镜像名变体是否完全同一代码线（默认按 QuantumNous/new-api）。
+117:- **Token 粒度确认为「用户下多 token」，不是 per-request**：Token 归属当前登录用户，用户可创建多个 API Token（`POST /api/token/`），字段含 `name`（≤30）、`expired_time`、`remain_quota`、`unlimited_quota`、`model_limits*`、`allow_ips`、`group`。**确认不是**"每个 HTTP 请求自动签发临时 token"的模型。Realtime 特例（`POST /v1/realtime/sessions` 1 分钟单连接 ephemeral token）**仅覆盖 Realtime，不推广到通用 chat completions**。来源：`doc.newapi.pro/en/api/fei-token-management/`、`docs.newapi.pro/en/docs/skills/newapi`、`doc.newapi.pro/en/api/openai-realtime/`。
+118:- **用量/计费查询面确认存在**：`GET /api/usage/token`（Bearer API key，当前 token 额度 granted/used/available/limits/expires）；`GET /api/log/self`（User + `New-Api-User` header，分页消费日志，可按 `token_name`/`model_name`/`group`/时间过滤）；`GET /api/log/self/stat`（区间配额汇总，**rpm/tpm 确认为最近 60 秒窗口**）；`GET /api/log/self/search`；`GET /api/log/token?key=`（公开、持 token key）；admin 面 `GET /api/log/`/`stat`/`search` 与 `DELETE /api/log/`（按 timestamp 清理）。来源：`doc.newapi.pro/en/api/token-usage/`、`github.com/QuantumNous/new-api-docs`（`api/fei-log.md`）。
+125:### §3b T-009 spike 补充确认（2026-07-21，newapi session 级成本归因源码级）
+129:- **N1（confirmed）**：`model.Token` 字段（`Id,UserId,Key,Status,Name,CreatedTime,AccessedTime,ExpiredTime,RemainQuota,UnlimitedQuota,ModelLimits*,AllowIps,UsedQuota,Group,CrossGroupRetry,DeletedAt`）**没有** `session_id`/`agent_session`/`correlation` 字段——newapi 无 session 一等绑定。来源：`model/token.go` L14–32。
+134:**注入链契约（应用层必须自行实现，非 newapi 内置）**：①（可选）预分配/取得 `sessionId`；②`POST /api/token/`（`name=session-<id>`，≤50）；③`GET /api/token/:id` 取明文 key；④将该 key 配置进 OpenClaw/Hermes **实际 LLM 出口**（`baseUrl=newapi` + `Authorization: Bearer <key>`）；⑤会话结束后 `GET /api/log/self?token_name=session-...` 或 `GET /api/usage/token`（Bearer 该 key）做归因；⑥可选 `DELETE /api/token/:id` 回收（受用户 token 数量上限约束）。
+140:来源：T-009（同上，`.hopper/handoffs/T-009-output.md`）；仓库 `github.com/QuantumNous/new-api`（`model/token.go`、`controller/token.go`、`model/log.go`）；官方文档 `doc.newapi.pro/en/api/fei-token-management/`、`doc.newapi.pro/en/api/token-usage/`。
+189:| newapi 是否 per-request token（计费不可归因项的一部分） | 未核实 | **确认不是**——是 user 下多长期 token；可行归因是 token-per-session |
+190:| newapi 用量/日志查询面细节 | 仅确认能力面存在 | **确认具体端点**：`/api/usage/token`、`/api/log/self*`、admin `/api/log/*`；rpm/tpm 为最近 60 秒窗口 |
+191:| newapi 是否有结算 webhook | 未核实 | **确认未能找到官方产品能力**（非"存在但未查到"，是"公开文档未描述此功能"） |
+192:| newapi 请求级 correlation id 是否可回查 | 未核实 | **仍未能确认**——是本轮唯一未收口项，需自建旁路账本或依赖 token-per-session |
+194:**收口率**：14 项 must-fix 事实缺口中 13 项直接收口（11 项确认存在/语义、2 项确认为不存在），仅 newapi 请求级 correlation id 1 项仍未能确认。基于此事实基线的 D1 v2 设计思路见 [[d1-v2-design-approach]]。
+203:| BLOCKER-2：newapi §7 归因链自相矛盾（`tokenRef` 不注入却要靠其查日志归因） | **收口（条件式）**——源码证实 session 级归因可行但有硬前提：key 必须真正注入模型调用；若维持"仅存不注入"，归因因果链确实不成立，详见 §3b N1-N4 |
+
+codex
+全文核验结果已收敛：三处均闭合，未发现由这三处修订引入的新矛盾。特别是全文仍出现的“九类”和旧三态字样都只存在于历史问题/更正记录中；当前规范性口径分别是 11 类事件联合与 soft steer 严格二态。现在写入最终验收报告。
+apply patch
+patch: completed
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-013-output.md
+diff --git a/.hopper/handoffs/T-013-output.md b/.hopper/handoffs/T-013-output.md
+index 04497e22699012244d3ae23e3c30aeaabde1eb56..156312e27ec1ce40572ef810aa22c5957a78c133
+--- a/.hopper/handoffs/T-013-output.md
++++ b/.hopper/handoffs/T-013-output.md
+@@ -1,28 +1,102 @@
+----
+-task_id: T-013
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 3694
+-start_time: "2026-07-21T13:31:36.061Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-21T13:31:36.062Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-013-progress.log
+-raw_log: ./T-013-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-013-output.log
+-started_by_pid: 3689
+----
++# T-013 — D1 KernelPort v3.4 最终 confirm-readiness gate
++
++## Summary
++
++v3.4 已按 T-012 点名的三个残留完成收尾：soft steer 全文规范性口径收敛为 `submitted`/`rejected` 二态，`billing_query_subject_unresolved` 已移出同步拒绝枚举并统一成为 `queryBilling()` 的 Promise rejection，§3 的既有事件数已由“九类”勘正为“十类”。三处修订分别与 §2.5、§9.1 三阶段错误模型以及全文 11 类 KernelEvent 口径自洽，未引入新的范围内矛盾；D1 KernelPort v3.4 可定稿。
++
++## Files touched
++
++- `.hopper/handoffs/T-013-output.md`：按任务要求落盘本次只读 acceptance review。
++- 其余：none；未修改 `/Users/litianyi/.llm-wiki/` 下的 v3.4 评审对象、v3.3 基线或事实材料。
++
++## Acceptance verification (6/6)
++
++### 1. ① M1↔M4：soft steer 严格二态——通过
++
++§6.1(a) 明定结果只由 RPC 调用是否成功返回分流：成功 ack 为 `submitted`，RPC/网络/连接层失败为 `rejected`，响应体字段不参与判断（v3.4:417-422）。§9.3 的竞争分支现与之对齐：soft steer 自身严格只有 `submitted`/`rejected`，明确不产生第三终态（v3.4:661）。
++
++```bash
++rg -n "submitted.?/.?rejected.?/.?timed_out|steer.*timed_out|timed_out.*steer" \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 25: 回顾 T-012 指出的 v3.3 旧冲突
++# 661: 明确旧三态已更正，soft steer 当前严格二态，timed_out 属于 stop()
++# 776: §17 审计性变更记录，复述旧口径与当前二态
++```
++
++反向检索命中的旧三态字样均在“此前误写/现已更正”的历史或变更记录中，不是当前规范性分支；全文没有仍把 `timed_out` 分配给 soft steer 的规则。
++
++### 2. ② M5：同步/异步失败通道分层——通过
++
++`queryBilling` 签名仍返回 `Promise<SessionBillingSnapshot>`（v3.4:571-574）。远端凭证/用量接口拒绝一律成为该 Promise 的异步 rejection，禁止同步拒绝，且不进入 `KernelPortRejectionCode`（v3.4:580-585）；调用方只需按 `await queryBilling()` 可能 reject 处理，不存在同步 throw 与异步 rejection 两套模型。
++
++同步的纯本地前置错误仍独立存在：aggregate 部署缺 `deploymentTokenRef` 时，`createSession` 以 `aggregate_billing_requires_deployment_token` 同步拒绝（v3.4:117,131,621-624）。`billing_query_subject_unresolved` 已不在同步枚举成员中，现被明确列为 `queryBilling` 专属异步失败码（v3.4:608-627）。
++
++```bash
++sed -n '608,629p' \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
++  | rg -n "billing_query_subject_unresolved|aggregate_billing_requires_deployment_token|异步 rejection|同步 throw|KernelPortRejectionCode"
++# KernelPortRejectionCode 枚举只保留 aggregate_billing_requires_deployment_token
++# billing_query_subject_unresolved：移出该枚举；唯一交付形状为 Promise 异步 rejection；不是同步 throw
++```
++
++### 3. ③ §3 事件计数——通过
++
++v3.4:268 已将 `MessageDeltaEvent`~`OperationCompletedEvent` 改为“十类”，再加 `ApprovalBufferResolvedEvent` 得到 11 类。判别联合实际逐项计数也确为 11 个成员（v3.4:271-282）。
++
++```bash
++awk 'NR>=271 && NR<=282 && /^  \| / {n++; print NR ":" $0} END {print "KernelEvent_union_members=" n}' \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 272..282: 逐项列出 11 个成员
++# KernelEvent_union_members=11
++```
++
++### 4. ① 新矛盾核验：steer 二态与 stop `timed_out`——通过
++
++§2.5 早已把 `timed_out` 列入 `stop()` 自身的可达 outcome 子集，并排除 `submitted`（v3.4:219-228）。§9.3 只是在锁竞争场景把“等待 steer RPC 超上限”归入这一本来就存在的 stop 终态，同时保持 steer 自身二态（v3.4:661）；二者角色分离且一致，没有给同一个 operation 双重归类。
++
++```bash
++nl -ba /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
++  | sed -n '219,228p;661,661p'
++# 225: stop() 可达 timed_out
++# 661: 等待超时属于 stop() 自身，不是 soft steer；steer 仍严格二态
++```
++
++### 5. ② 新矛盾核验：M5 与 §9.1 三阶段错误模型——通过
++
++§9.1 保留的三阶段模型仍是 `KernelErrorCode`（事件型异步运行时错误）→ `KernelPortRejectionCode`（operationId 铸造前同步拒绝）→ `OperationOutcome`（已铸造 operation 的终态）。v3.4:627-629 明确 `billing_query_subject_unresolved` 独立于这三条既有通道，是无 operationId、也不产出 `ErrorEvent` 的 `queryBilling()` 返回 Promise rejection；这与 `queryBilling` 并非 KernelPort 第八方法（v3.4:575）的既有定位相符，没有污染三阶段模型。
++
++纯本地配置缺失的两个时点也有唯一行为：创建阶段缺失走 `createSession` 同步拒绝码；若配置在查询时点已不可用，`queryBilling` 返回 rejected Promise，调用方仍统一 `await` 捕获（v3.4:580-585）。因此失败码、时点和交付形状均无重叠。
+ 
+-# T-013 — codex (background, in-progress)
++### 6. ③ 新矛盾核验：事件计数全文一致性——通过
+ 
+-Output streaming to `T-013-output.log`. Status updates here.
++当前口径相互吻合：INV-2 为“8 类内核事件 + 3 类扩展 = 11”（v3.4:56）；§3 为 10 个既有成员 + 1 个新增成员（v3.4:268-282）；`ApprovalBufferResolvedEvent` 之外有其余 10 类（v3.4:311），`OperationCompletedEvent` 之外同样有其余 10 类（v3.4:459），§6.2/§16/§17 均称新增事件为第 11 类（v3.4:516,758,778）。
++
++```bash
++rg -n "九类" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 27: 回顾 v3.3 原笔误
++# 268: “此前误写为九类”，同时给出当前十类+1=11
++# 762: §16 补记该历史笔误已在 v3.4 更正
++# 778: §17 变更记录复述“由误写的九类改正为十类”
++```
++
++所有“九类”命中都明确描述历史错误，没有任何一处仍以“九类”声明当前成员数。v3.4 的现行数字不存在残留不一致。
++
++## Decisions / deviations
++
++- 按任务指定刻意沿用 Codex 作为终验 vendor：三处残留均由 Codex T-012 提出，由同一评审方复验；这是有意偏离随机 vendor 选择，不影响独立按文本证据验收。
++- 将 §16/§17 的“同步前置 reject”按其同句与 §7/§9.1 的约束解释为“远端 I/O 前立即返回 rejected Promise”，不是同步 throw；v3.4:585、627 已明确调用方只有 `await queryBilling()` 这一条失败处理路径。
++- 将“read-only”落实为不改评审对象或对照材料；仅写任务明确要求的交付文件。未重开三处残留之外的设计范围，也未提出 nice-to-have。
++
++## Open questions
++
++none
++
++## Verdict
++
++**PASS（CONFIRMABLE）**
++
++三处残留全部闭合，且未引入任务范围内的新矛盾；D1 KernelPort v3.4 可定稿。
++
++## Next recommendation
++
++按正式发布流程将 v3.4 从 `draft` 提升为最终确认版本，并以其作为后续实现与 conformance 工作的规范基线；无需再次开放 M1-M5 或本次三处残留的设计评审。
+
+diff --git a/.hopper/handoffs/T-013-output.md b/.hopper/handoffs/T-013-output.md
+index 04497e22699012244d3ae23e3c30aeaabde1eb56..156312e27ec1ce40572ef810aa22c5957a78c133
+--- a/.hopper/handoffs/T-013-output.md
++++ b/.hopper/handoffs/T-013-output.md
+@@ -1,28 +1,102 @@
+----
+-task_id: T-013
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 3694
+-start_time: "2026-07-21T13:31:36.061Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-21T13:31:36.062Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-013-progress.log
+-raw_log: ./T-013-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-013-output.log
+-started_by_pid: 3689
+----
++# T-013 — D1 KernelPort v3.4 最终 confirm-readiness gate
++
++## Summary
++
++v3.4 已按 T-012 点名的三个残留完成收尾：soft steer 全文规范性口径收敛为 `submitted`/`rejected` 二态，`billing_query_subject_unresolved` 已移出同步拒绝枚举并统一成为 `queryBilling()` 的 Promise rejection，§3 的既有事件数已由“九类”勘正为“十类”。三处修订分别与 §2.5、§9.1 三阶段错误模型以及全文 11 类 KernelEvent 口径自洽，未引入新的范围内矛盾；D1 KernelPort v3.4 可定稿。
++
++## Files touched
++
++- `.hopper/handoffs/T-013-output.md`：按任务要求落盘本次只读 acceptance review。
++- 其余：none；未修改 `/Users/litianyi/.llm-wiki/` 下的 v3.4 评审对象、v3.3 基线或事实材料。
++
++## Acceptance verification (6/6)
++
++### 1. ① M1↔M4：soft steer 严格二态——通过
++
++§6.1(a) 明定结果只由 RPC 调用是否成功返回分流：成功 ack 为 `submitted`，RPC/网络/连接层失败为 `rejected`，响应体字段不参与判断（v3.4:417-422）。§9.3 的竞争分支现与之对齐：soft steer 自身严格只有 `submitted`/`rejected`，明确不产生第三终态（v3.4:661）。
++
++```bash
++rg -n "submitted.?/.?rejected.?/.?timed_out|steer.*timed_out|timed_out.*steer" \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 25: 回顾 T-012 指出的 v3.3 旧冲突
++# 661: 明确旧三态已更正，soft steer 当前严格二态，timed_out 属于 stop()
++# 776: §17 审计性变更记录，复述旧口径与当前二态
++```
++
++反向检索命中的旧三态字样均在“此前误写/现已更正”的历史或变更记录中，不是当前规范性分支；全文没有仍把 `timed_out` 分配给 soft steer 的规则。
++
++### 2. ② M5：同步/异步失败通道分层——通过
++
++`queryBilling` 签名仍返回 `Promise<SessionBillingSnapshot>`（v3.4:571-574）。远端凭证/用量接口拒绝一律成为该 Promise 的异步 rejection，禁止同步拒绝，且不进入 `KernelPortRejectionCode`（v3.4:580-585）；调用方只需按 `await queryBilling()` 可能 reject 处理，不存在同步 throw 与异步 rejection 两套模型。
++
++同步的纯本地前置错误仍独立存在：aggregate 部署缺 `deploymentTokenRef` 时，`createSession` 以 `aggregate_billing_requires_deployment_token` 同步拒绝（v3.4:117,131,621-624）。`billing_query_subject_unresolved` 已不在同步枚举成员中，现被明确列为 `queryBilling` 专属异步失败码（v3.4:608-627）。
++
++```bash
++sed -n '608,629p' \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
++  | rg -n "billing_query_subject_unresolved|aggregate_billing_requires_deployment_token|异步 rejection|同步 throw|KernelPortRejectionCode"
++# KernelPortRejectionCode 枚举只保留 aggregate_billing_requires_deployment_token
++# billing_query_subject_unresolved：移出该枚举；唯一交付形状为 Promise 异步 rejection；不是同步 throw
++```
++
++### 3. ③ §3 事件计数——通过
++
++v3.4:268 已将 `MessageDeltaEvent`~`OperationCompletedEvent` 改为“十类”，再加 `ApprovalBufferResolvedEvent` 得到 11 类。判别联合实际逐项计数也确为 11 个成员（v3.4:271-282）。
++
++```bash
++awk 'NR>=271 && NR<=282 && /^  \| / {n++; print NR ":" $0} END {print "KernelEvent_union_members=" n}' \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 272..282: 逐项列出 11 个成员
++# KernelEvent_union_members=11
++```
++
++### 4. ① 新矛盾核验：steer 二态与 stop `timed_out`——通过
++
++§2.5 早已把 `timed_out` 列入 `stop()` 自身的可达 outcome 子集，并排除 `submitted`（v3.4:219-228）。§9.3 只是在锁竞争场景把“等待 steer RPC 超上限”归入这一本来就存在的 stop 终态，同时保持 steer 自身二态（v3.4:661）；二者角色分离且一致，没有给同一个 operation 双重归类。
++
++```bash
++nl -ba /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
++  | sed -n '219,228p;661,661p'
++# 225: stop() 可达 timed_out
++# 661: 等待超时属于 stop() 自身，不是 soft steer；steer 仍严格二态
++```
++
++### 5. ② 新矛盾核验：M5 与 §9.1 三阶段错误模型——通过
++
++§9.1 保留的三阶段模型仍是 `KernelErrorCode`（事件型异步运行时错误）→ `KernelPortRejectionCode`（operationId 铸造前同步拒绝）→ `OperationOutcome`（已铸造 operation 的终态）。v3.4:627-629 明确 `billing_query_subject_unresolved` 独立于这三条既有通道，是无 operationId、也不产出 `ErrorEvent` 的 `queryBilling()` 返回 Promise rejection；这与 `queryBilling` 并非 KernelPort 第八方法（v3.4:575）的既有定位相符，没有污染三阶段模型。
++
++纯本地配置缺失的两个时点也有唯一行为：创建阶段缺失走 `createSession` 同步拒绝码；若配置在查询时点已不可用，`queryBilling` 返回 rejected Promise，调用方仍统一 `await` 捕获（v3.4:580-585）。因此失败码、时点和交付形状均无重叠。
+ 
+-# T-013 — codex (background, in-progress)
++### 6. ③ 新矛盾核验：事件计数全文一致性——通过
+ 
+-Output streaming to `T-013-output.log`. Status updates here.
++当前口径相互吻合：INV-2 为“8 类内核事件 + 3 类扩展 = 11”（v3.4:56）；§3 为 10 个既有成员 + 1 个新增成员（v3.4:268-282）；`ApprovalBufferResolvedEvent` 之外有其余 10 类（v3.4:311），`OperationCompletedEvent` 之外同样有其余 10 类（v3.4:459），§6.2/§16/§17 均称新增事件为第 11 类（v3.4:516,758,778）。
++
++```bash
++rg -n "九类" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 27: 回顾 v3.3 原笔误
++# 268: “此前误写为九类”，同时给出当前十类+1=11
++# 762: §16 补记该历史笔误已在 v3.4 更正
++# 778: §17 变更记录复述“由误写的九类改正为十类”
++```
++
++所有“九类”命中都明确描述历史错误，没有任何一处仍以“九类”声明当前成员数。v3.4 的现行数字不存在残留不一致。
++
++## Decisions / deviations
++
++- 按任务指定刻意沿用 Codex 作为终验 vendor：三处残留均由 Codex T-012 提出，由同一评审方复验；这是有意偏离随机 vendor 选择，不影响独立按文本证据验收。
++- 将 §16/§17 的“同步前置 reject”按其同句与 §7/§9.1 的约束解释为“远端 I/O 前立即返回 rejected Promise”，不是同步 throw；v3.4:585、627 已明确调用方只有 `await queryBilling()` 这一条失败处理路径。
++- 将“read-only”落实为不改评审对象或对照材料；仅写任务明确要求的交付文件。未重开三处残留之外的设计范围，也未提出 nice-to-have。
++
++## Open questions
++
++none
++
++## Verdict
++
++**PASS（CONFIRMABLE）**
++
++三处残留全部闭合，且未引入任务范围内的新矛盾；D1 KernelPort v3.4 可定稿。
++
++## Next recommendation
++
++按正式发布流程将 v3.4 从 `draft` 提升为最终确认版本，并以其作为后续实现与 conformance 工作的规范基线；无需再次开放 M1-M5 或本次三处残留的设计评审。
+
+exec
+/bin/zsh -lc "sed -n '1,320p' .hopper/handoffs/T-013-output.md
+shasum -a 256 /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md /Users/litianyi/.llm-wiki/agent-app-design/kernel/kernel-ecosystem-facts.md
+rg -n \""'^## (Summary|Files touched|Acceptance verification '"\\(6/6\\)|Decisions / deviations|Open questions|Verdict|Next recommendation)"'$|PASS（CONFIRMABLE）" .hopper/handoffs/T-013-output.md
+wc -l .hopper/handoffs/T-013-output.md' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+# T-013 — D1 KernelPort v3.4 最终 confirm-readiness gate
+
+## Summary
+
+v3.4 已按 T-012 点名的三个残留完成收尾：soft steer 全文规范性口径收敛为 `submitted`/`rejected` 二态，`billing_query_subject_unresolved` 已移出同步拒绝枚举并统一成为 `queryBilling()` 的 Promise rejection，§3 的既有事件数已由“九类”勘正为“十类”。三处修订分别与 §2.5、§9.1 三阶段错误模型以及全文 11 类 KernelEvent 口径自洽，未引入新的范围内矛盾；D1 KernelPort v3.4 可定稿。
+
+## Files touched
+
+- `.hopper/handoffs/T-013-output.md`：按任务要求落盘本次只读 acceptance review。
+- 其余：none；未修改 `/Users/litianyi/.llm-wiki/` 下的 v3.4 评审对象、v3.3 基线或事实材料。
+
+## Acceptance verification (6/6)
+
+### 1. ① M1↔M4：soft steer 严格二态——通过
+
+§6.1(a) 明定结果只由 RPC 调用是否成功返回分流：成功 ack 为 `submitted`，RPC/网络/连接层失败为 `rejected`，响应体字段不参与判断（v3.4:417-422）。§9.3 的竞争分支现与之对齐：soft steer 自身严格只有 `submitted`/`rejected`，明确不产生第三终态（v3.4:661）。
+
+```bash
+rg -n "submitted.?/.?rejected.?/.?timed_out|steer.*timed_out|timed_out.*steer" \
+  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+# 25: 回顾 T-012 指出的 v3.3 旧冲突
+# 661: 明确旧三态已更正，soft steer 当前严格二态，timed_out 属于 stop()
+# 776: §17 审计性变更记录，复述旧口径与当前二态
+```
+
+反向检索命中的旧三态字样均在“此前误写/现已更正”的历史或变更记录中，不是当前规范性分支；全文没有仍把 `timed_out` 分配给 soft steer 的规则。
+
+### 2. ② M5：同步/异步失败通道分层——通过
+
+`queryBilling` 签名仍返回 `Promise<SessionBillingSnapshot>`（v3.4:571-574）。远端凭证/用量接口拒绝一律成为该 Promise 的异步 rejection，禁止同步拒绝，且不进入 `KernelPortRejectionCode`（v3.4:580-585）；调用方只需按 `await queryBilling()` 可能 reject 处理，不存在同步 throw 与异步 rejection 两套模型。
+
+同步的纯本地前置错误仍独立存在：aggregate 部署缺 `deploymentTokenRef` 时，`createSession` 以 `aggregate_billing_requires_deployment_token` 同步拒绝（v3.4:117,131,621-624）。`billing_query_subject_unresolved` 已不在同步枚举成员中，现被明确列为 `queryBilling` 专属异步失败码（v3.4:608-627）。
+
+```bash
+sed -n '608,629p' \
+  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
+  | rg -n "billing_query_subject_unresolved|aggregate_billing_requires_deployment_token|异步 rejection|同步 throw|KernelPortRejectionCode"
+# KernelPortRejectionCode 枚举只保留 aggregate_billing_requires_deployment_token
+# billing_query_subject_unresolved：移出该枚举；唯一交付形状为 Promise 异步 rejection；不是同步 throw
+```
+
+### 3. ③ §3 事件计数——通过
+
+v3.4:268 已将 `MessageDeltaEvent`~`OperationCompletedEvent` 改为“十类”，再加 `ApprovalBufferResolvedEvent` 得到 11 类。判别联合实际逐项计数也确为 11 个成员（v3.4:271-282）。
+
+```bash
+awk 'NR>=271 && NR<=282 && /^  \| / {n++; print NR ":" $0} END {print "KernelEvent_union_members=" n}' \
+  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+# 272..282: 逐项列出 11 个成员
+# KernelEvent_union_members=11
+```
+
+### 4. ① 新矛盾核验：steer 二态与 stop `timed_out`——通过
+
+§2.5 早已把 `timed_out` 列入 `stop()` 自身的可达 outcome 子集，并排除 `submitted`（v3.4:219-228）。§9.3 只是在锁竞争场景把“等待 steer RPC 超上限”归入这一本来就存在的 stop 终态，同时保持 steer 自身二态（v3.4:661）；二者角色分离且一致，没有给同一个 operation 双重归类。
+
+```bash
+nl -ba /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
+  | sed -n '219,228p;661,661p'
+# 225: stop() 可达 timed_out
+# 661: 等待超时属于 stop() 自身，不是 soft steer；steer 仍严格二态
+```
+
+### 5. ② 新矛盾核验：M5 与 §9.1 三阶段错误模型——通过
+
+§9.1 保留的三阶段模型仍是 `KernelErrorCode`（事件型异步运行时错误）→ `KernelPortRejectionCode`（operationId 铸造前同步拒绝）→ `OperationOutcome`（已铸造 operation 的终态）。v3.4:627-629 明确 `billing_query_subject_unresolved` 独立于这三条既有通道，是无 operationId、也不产出 `ErrorEvent` 的 `queryBilling()` 返回 Promise rejection；这与 `queryBilling` 并非 KernelPort 第八方法（v3.4:575）的既有定位相符，没有污染三阶段模型。
+
+纯本地配置缺失的两个时点也有唯一行为：创建阶段缺失走 `createSession` 同步拒绝码；若配置在查询时点已不可用，`queryBilling` 返回 rejected Promise，调用方仍统一 `await` 捕获（v3.4:580-585）。因此失败码、时点和交付形状均无重叠。
+
+### 6. ③ 新矛盾核验：事件计数全文一致性——通过
+
+当前口径相互吻合：INV-2 为“8 类内核事件 + 3 类扩展 = 11”（v3.4:56）；§3 为 10 个既有成员 + 1 个新增成员（v3.4:268-282）；`ApprovalBufferResolvedEvent` 之外有其余 10 类（v3.4:311），`OperationCompletedEvent` 之外同样有其余 10 类（v3.4:459），§6.2/§16/§17 均称新增事件为第 11 类（v3.4:516,758,778）。
+
+```bash
+rg -n "九类" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+# 27: 回顾 v3.3 原笔误
+# 268: “此前误写为九类”，同时给出当前十类+1=11
+# 762: §16 补记该历史笔误已在 v3.4 更正
+# 778: §17 变更记录复述“由误写的九类改正为十类”
+```
+
+所有“九类”命中都明确描述历史错误，没有任何一处仍以“九类”声明当前成员数。v3.4 的现行数字不存在残留不一致。
+
+## Decisions / deviations
+
+- 按任务指定刻意沿用 Codex 作为终验 vendor：三处残留均由 Codex T-012 提出，由同一评审方复验；这是有意偏离随机 vendor 选择，不影响独立按文本证据验收。
+- 将 §16/§17 的“同步前置 reject”按其同句与 §7/§9.1 的约束解释为“远端 I/O 前立即返回 rejected Promise”，不是同步 throw；v3.4:585、627 已明确调用方只有 `await queryBilling()` 这一条失败处理路径。
+- 将“read-only”落实为不改评审对象或对照材料；仅写任务明确要求的交付文件。未重开三处残留之外的设计范围，也未提出 nice-to-have。
+
+## Open questions
+
+none
+
+## Verdict
+
+**PASS（CONFIRMABLE）**
+
+三处残留全部闭合，且未引入任务范围内的新矛盾；D1 KernelPort v3.4 可定稿。
+
+## Next recommendation
+
+按正式发布流程将 v3.4 从 `draft` 提升为最终确认版本，并以其作为后续实现与 conformance 工作的规范基线；无需再次开放 M1-M5 或本次三处残留的设计评审。
+e587a1ee759c4ff841aaf643cceb4d749a9224524937ae61da9b36782f60de3e  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+9e8f7f9208ad3e484447c1bcc73ac4344ed314a19508e8deaa865fe14c571248  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md
+7500a142b0fbb266565418f996bffafd069f7e074a95e6dab5a04027bc340656  /Users/litianyi/.llm-wiki/agent-app-design/kernel/kernel-ecosystem-facts.md
+3:## Summary
+7:## Files touched
+12:## Acceptance verification (6/6)
+84:## Decisions / deviations
+90:## Open questions
+94:## Verdict
+96:**PASS（CONFIRMABLE）**
+100:## Next recommendation
+     102 .hopper/handoffs/T-013-output.md
+
+diff --git a/.hopper/handoffs/T-013-output.md b/.hopper/handoffs/T-013-output.md
+index 04497e22699012244d3ae23e3c30aeaabde1eb56..156312e27ec1ce40572ef810aa22c5957a78c133
+--- a/.hopper/handoffs/T-013-output.md
++++ b/.hopper/handoffs/T-013-output.md
+@@ -1,28 +1,102 @@
+----
+-task_id: T-013
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 3694
+-start_time: "2026-07-21T13:31:36.061Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-21T13:31:36.062Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-013-progress.log
+-raw_log: ./T-013-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-013-output.log
+-started_by_pid: 3689
+----
++# T-013 — D1 KernelPort v3.4 最终 confirm-readiness gate
++
++## Summary
++
++v3.4 已按 T-012 点名的三个残留完成收尾：soft steer 全文规范性口径收敛为 `submitted`/`rejected` 二态，`billing_query_subject_unresolved` 已移出同步拒绝枚举并统一成为 `queryBilling()` 的 Promise rejection，§3 的既有事件数已由“九类”勘正为“十类”。三处修订分别与 §2.5、§9.1 三阶段错误模型以及全文 11 类 KernelEvent 口径自洽，未引入新的范围内矛盾；D1 KernelPort v3.4 可定稿。
++
++## Files touched
++
++- `.hopper/handoffs/T-013-output.md`：按任务要求落盘本次只读 acceptance review。
++- 其余：none；未修改 `/Users/litianyi/.llm-wiki/` 下的 v3.4 评审对象、v3.3 基线或事实材料。
++
++## Acceptance verification (6/6)
++
++### 1. ① M1↔M4：soft steer 严格二态——通过
++
++§6.1(a) 明定结果只由 RPC 调用是否成功返回分流：成功 ack 为 `submitted`，RPC/网络/连接层失败为 `rejected`，响应体字段不参与判断（v3.4:417-422）。§9.3 的竞争分支现与之对齐：soft steer 自身严格只有 `submitted`/`rejected`，明确不产生第三终态（v3.4:661）。
++
++```bash
++rg -n "submitted.?/.?rejected.?/.?timed_out|steer.*timed_out|timed_out.*steer" \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 25: 回顾 T-012 指出的 v3.3 旧冲突
++# 661: 明确旧三态已更正，soft steer 当前严格二态，timed_out 属于 stop()
++# 776: §17 审计性变更记录，复述旧口径与当前二态
++```
++
++反向检索命中的旧三态字样均在“此前误写/现已更正”的历史或变更记录中，不是当前规范性分支；全文没有仍把 `timed_out` 分配给 soft steer 的规则。
++
++### 2. ② M5：同步/异步失败通道分层——通过
++
++`queryBilling` 签名仍返回 `Promise<SessionBillingSnapshot>`（v3.4:571-574）。远端凭证/用量接口拒绝一律成为该 Promise 的异步 rejection，禁止同步拒绝，且不进入 `KernelPortRejectionCode`（v3.4:580-585）；调用方只需按 `await queryBilling()` 可能 reject 处理，不存在同步 throw 与异步 rejection 两套模型。
++
++同步的纯本地前置错误仍独立存在：aggregate 部署缺 `deploymentTokenRef` 时，`createSession` 以 `aggregate_billing_requires_deployment_token` 同步拒绝（v3.4:117,131,621-624）。`billing_query_subject_unresolved` 已不在同步枚举成员中，现被明确列为 `queryBilling` 专属异步失败码（v3.4:608-627）。
++
++```bash
++sed -n '608,629p' \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
++  | rg -n "billing_query_subject_unresolved|aggregate_billing_requires_deployment_token|异步 rejection|同步 throw|KernelPortRejectionCode"
++# KernelPortRejectionCode 枚举只保留 aggregate_billing_requires_deployment_token
++# billing_query_subject_unresolved：移出该枚举；唯一交付形状为 Promise 异步 rejection；不是同步 throw
++```
++
++### 3. ③ §3 事件计数——通过
++
++v3.4:268 已将 `MessageDeltaEvent`~`OperationCompletedEvent` 改为“十类”，再加 `ApprovalBufferResolvedEvent` 得到 11 类。判别联合实际逐项计数也确为 11 个成员（v3.4:271-282）。
++
++```bash
++awk 'NR>=271 && NR<=282 && /^  \| / {n++; print NR ":" $0} END {print "KernelEvent_union_members=" n}' \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 272..282: 逐项列出 11 个成员
++# KernelEvent_union_members=11
++```
++
++### 4. ① 新矛盾核验：steer 二态与 stop `timed_out`——通过
++
++§2.5 早已把 `timed_out` 列入 `stop()` 自身的可达 outcome 子集，并排除 `submitted`（v3.4:219-228）。§9.3 只是在锁竞争场景把“等待 steer RPC 超上限”归入这一本来就存在的 stop 终态，同时保持 steer 自身二态（v3.4:661）；二者角色分离且一致，没有给同一个 operation 双重归类。
++
++```bash
++nl -ba /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
++  | sed -n '219,228p;661,661p'
++# 225: stop() 可达 timed_out
++# 661: 等待超时属于 stop() 自身，不是 soft steer；steer 仍严格二态
++```
++
++### 5. ② 新矛盾核验：M5 与 §9.1 三阶段错误模型——通过
++
++§9.1 保留的三阶段模型仍是 `KernelErrorCode`（事件型异步运行时错误）→ `KernelPortRejectionCode`（operationId 铸造前同步拒绝）→ `OperationOutcome`（已铸造 operation 的终态）。v3.4:627-629 明确 `billing_query_subject_unresolved` 独立于这三条既有通道，是无 operationId、也不产出 `ErrorEvent` 的 `queryBilling()` 返回 Promise rejection；这与 `queryBilling` 并非 KernelPort 第八方法（v3.4:575）的既有定位相符，没有污染三阶段模型。
++
++纯本地配置缺失的两个时点也有唯一行为：创建阶段缺失走 `createSession` 同步拒绝码；若配置在查询时点已不可用，`queryBilling` 返回 rejected Promise，调用方仍统一 `await` 捕获（v3.4:580-585）。因此失败码、时点和交付形状均无重叠。
+ 
+-# T-013 — codex (background, in-progress)
++### 6. ③ 新矛盾核验：事件计数全文一致性——通过
+ 
+-Output streaming to `T-013-output.log`. Status updates here.
++当前口径相互吻合：INV-2 为“8 类内核事件 + 3 类扩展 = 11”（v3.4:56）；§3 为 10 个既有成员 + 1 个新增成员（v3.4:268-282）；`ApprovalBufferResolvedEvent` 之外有其余 10 类（v3.4:311），`OperationCompletedEvent` 之外同样有其余 10 类（v3.4:459），§6.2/§16/§17 均称新增事件为第 11 类（v3.4:516,758,778）。
++
++```bash
++rg -n "九类" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 27: 回顾 v3.3 原笔误
++# 268: “此前误写为九类”，同时给出当前十类+1=11
++# 762: §16 补记该历史笔误已在 v3.4 更正
++# 778: §17 变更记录复述“由误写的九类改正为十类”
++```
++
++所有“九类”命中都明确描述历史错误，没有任何一处仍以“九类”声明当前成员数。v3.4 的现行数字不存在残留不一致。
++
++## Decisions / deviations
++
++- 按任务指定刻意沿用 Codex 作为终验 vendor：三处残留均由 Codex T-012 提出，由同一评审方复验；这是有意偏离随机 vendor 选择，不影响独立按文本证据验收。
++- 将 §16/§17 的“同步前置 reject”按其同句与 §7/§9.1 的约束解释为“远端 I/O 前立即返回 rejected Promise”，不是同步 throw；v3.4:585、627 已明确调用方只有 `await queryBilling()` 这一条失败处理路径。
++- 将“read-only”落实为不改评审对象或对照材料；仅写任务明确要求的交付文件。未重开三处残留之外的设计范围，也未提出 nice-to-have。
++
++## Open questions
++
++none
++
++## Verdict
++
++**PASS（CONFIRMABLE）**
++
++三处残留全部闭合，且未引入任务范围内的新矛盾；D1 KernelPort v3.4 可定稿。
++
++## Next recommendation
++
++按正式发布流程将 v3.4 从 `draft` 提升为最终确认版本，并以其作为后续实现与 conformance 工作的规范基线；无需再次开放 M1-M5 或本次三处残留的设计评审。
+
+codex
+已完成 T-013 验收并落盘：[T-013-output.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-013-output.md)。
+
+结论：**PASS（CONFIRMABLE）**。三处残留全部闭合，6/6 项验证通过，未发现新矛盾；v3.4 可定稿。评审对象及对照材料均未修改。
+diff --git a/.hopper/handoffs/T-013-output.md b/.hopper/handoffs/T-013-output.md
+index 04497e22699012244d3ae23e3c30aeaabde1eb56..156312e27ec1ce40572ef810aa22c5957a78c133
+--- a/.hopper/handoffs/T-013-output.md
++++ b/.hopper/handoffs/T-013-output.md
+@@ -1,28 +1,102 @@
+----
+-task_id: T-013
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 3694
+-start_time: "2026-07-21T13:31:36.061Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-21T13:31:36.062Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-013-progress.log
+-raw_log: ./T-013-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-013-output.log
+-started_by_pid: 3689
+----
++# T-013 — D1 KernelPort v3.4 最终 confirm-readiness gate
++
++## Summary
++
++v3.4 已按 T-012 点名的三个残留完成收尾：soft steer 全文规范性口径收敛为 `submitted`/`rejected` 二态，`billing_query_subject_unresolved` 已移出同步拒绝枚举并统一成为 `queryBilling()` 的 Promise rejection，§3 的既有事件数已由“九类”勘正为“十类”。三处修订分别与 §2.5、§9.1 三阶段错误模型以及全文 11 类 KernelEvent 口径自洽，未引入新的范围内矛盾；D1 KernelPort v3.4 可定稿。
++
++## Files touched
++
++- `.hopper/handoffs/T-013-output.md`：按任务要求落盘本次只读 acceptance review。
++- 其余：none；未修改 `/Users/litianyi/.llm-wiki/` 下的 v3.4 评审对象、v3.3 基线或事实材料。
++
++## Acceptance verification (6/6)
++
++### 1. ① M1↔M4：soft steer 严格二态——通过
++
++§6.1(a) 明定结果只由 RPC 调用是否成功返回分流：成功 ack 为 `submitted`，RPC/网络/连接层失败为 `rejected`，响应体字段不参与判断（v3.4:417-422）。§9.3 的竞争分支现与之对齐：soft steer 自身严格只有 `submitted`/`rejected`，明确不产生第三终态（v3.4:661）。
++
++```bash
++rg -n "submitted.?/.?rejected.?/.?timed_out|steer.*timed_out|timed_out.*steer" \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 25: 回顾 T-012 指出的 v3.3 旧冲突
++# 661: 明确旧三态已更正，soft steer 当前严格二态，timed_out 属于 stop()
++# 776: §17 审计性变更记录，复述旧口径与当前二态
++```
++
++反向检索命中的旧三态字样均在“此前误写/现已更正”的历史或变更记录中，不是当前规范性分支；全文没有仍把 `timed_out` 分配给 soft steer 的规则。
++
++### 2. ② M5：同步/异步失败通道分层——通过
++
++`queryBilling` 签名仍返回 `Promise<SessionBillingSnapshot>`（v3.4:571-574）。远端凭证/用量接口拒绝一律成为该 Promise 的异步 rejection，禁止同步拒绝，且不进入 `KernelPortRejectionCode`（v3.4:580-585）；调用方只需按 `await queryBilling()` 可能 reject 处理，不存在同步 throw 与异步 rejection 两套模型。
++
++同步的纯本地前置错误仍独立存在：aggregate 部署缺 `deploymentTokenRef` 时，`createSession` 以 `aggregate_billing_requires_deployment_token` 同步拒绝（v3.4:117,131,621-624）。`billing_query_subject_unresolved` 已不在同步枚举成员中，现被明确列为 `queryBilling` 专属异步失败码（v3.4:608-627）。
++
++```bash
++sed -n '608,629p' \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
++  | rg -n "billing_query_subject_unresolved|aggregate_billing_requires_deployment_token|异步 rejection|同步 throw|KernelPortRejectionCode"
++# KernelPortRejectionCode 枚举只保留 aggregate_billing_requires_deployment_token
++# billing_query_subject_unresolved：移出该枚举；唯一交付形状为 Promise 异步 rejection；不是同步 throw
++```
++
++### 3. ③ §3 事件计数——通过
++
++v3.4:268 已将 `MessageDeltaEvent`~`OperationCompletedEvent` 改为“十类”，再加 `ApprovalBufferResolvedEvent` 得到 11 类。判别联合实际逐项计数也确为 11 个成员（v3.4:271-282）。
++
++```bash
++awk 'NR>=271 && NR<=282 && /^  \| / {n++; print NR ":" $0} END {print "KernelEvent_union_members=" n}' \
++  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 272..282: 逐项列出 11 个成员
++# KernelEvent_union_members=11
++```
++
++### 4. ① 新矛盾核验：steer 二态与 stop `timed_out`——通过
++
++§2.5 早已把 `timed_out` 列入 `stop()` 自身的可达 outcome 子集，并排除 `submitted`（v3.4:219-228）。§9.3 只是在锁竞争场景把“等待 steer RPC 超上限”归入这一本来就存在的 stop 终态，同时保持 steer 自身二态（v3.4:661）；二者角色分离且一致，没有给同一个 operation 双重归类。
++
++```bash
++nl -ba /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md \
++  | sed -n '219,228p;661,661p'
++# 225: stop() 可达 timed_out
++# 661: 等待超时属于 stop() 自身，不是 soft steer；steer 仍严格二态
++```
++
++### 5. ② 新矛盾核验：M5 与 §9.1 三阶段错误模型——通过
++
++§9.1 保留的三阶段模型仍是 `KernelErrorCode`（事件型异步运行时错误）→ `KernelPortRejectionCode`（operationId 铸造前同步拒绝）→ `OperationOutcome`（已铸造 operation 的终态）。v3.4:627-629 明确 `billing_query_subject_unresolved` 独立于这三条既有通道，是无 operationId、也不产出 `ErrorEvent` 的 `queryBilling()` 返回 Promise rejection；这与 `queryBilling` 并非 KernelPort 第八方法（v3.4:575）的既有定位相符，没有污染三阶段模型。
++
++纯本地配置缺失的两个时点也有唯一行为：创建阶段缺失走 `createSession` 同步拒绝码；若配置在查询时点已不可用，`queryBilling` 返回 rejected Promise，调用方仍统一 `await` 捕获（v3.4:580-585）。因此失败码、时点和交付形状均无重叠。
+ 
+-# T-013 — codex (background, in-progress)
++### 6. ③ 新矛盾核验：事件计数全文一致性——通过
+ 
+-Output streaming to `T-013-output.log`. Status updates here.
++当前口径相互吻合：INV-2 为“8 类内核事件 + 3 类扩展 = 11”（v3.4:56）；§3 为 10 个既有成员 + 1 个新增成员（v3.4:268-282）；`ApprovalBufferResolvedEvent` 之外有其余 10 类（v3.4:311），`OperationCompletedEvent` 之外同样有其余 10 类（v3.4:459），§6.2/§16/§17 均称新增事件为第 11 类（v3.4:516,758,778）。
++
++```bash
++rg -n "九类" /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
++# 27: 回顾 v3.3 原笔误
++# 268: “此前误写为九类”，同时给出当前十类+1=11
++# 762: §16 补记该历史笔误已在 v3.4 更正
++# 778: §17 变更记录复述“由误写的九类改正为十类”
++```
++
++所有“九类”命中都明确描述历史错误，没有任何一处仍以“九类”声明当前成员数。v3.4 的现行数字不存在残留不一致。
++
++## Decisions / deviations
++
++- 按任务指定刻意沿用 Codex 作为终验 vendor：三处残留均由 Codex T-012 提出，由同一评审方复验；这是有意偏离随机 vendor 选择，不影响独立按文本证据验收。
++- 将 §16/§17 的“同步前置 reject”按其同句与 §7/§9.1 的约束解释为“远端 I/O 前立即返回 rejected Promise”，不是同步 throw；v3.4:585、627 已明确调用方只有 `await queryBilling()` 这一条失败处理路径。
++- 将“read-only”落实为不改评审对象或对照材料；仅写任务明确要求的交付文件。未重开三处残留之外的设计范围，也未提出 nice-to-have。
++
++## Open questions
++
++none
++
++## Verdict
++
++**PASS（CONFIRMABLE）**
++
++三处残留全部闭合，且未引入任务范围内的新矛盾；D1 KernelPort v3.4 可定稿。
++
++## Next recommendation
++
++按正式发布流程将 v3.4 从 `draft` 提升为最终确认版本，并以其作为后续实现与 conformance 工作的规范基线；无需再次开放 M1-M5 或本次三处残留的设计评审。
+
+tokens used
+86,289
+已完成 T-013 验收并落盘：[T-013-output.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-013-output.md)。
+
+结论：**PASS（CONFIRMABLE）**。三处残留全部闭合，6/6 项验证通过，未发现新矛盾；v3.4 可定稿。评审对象及对照材料均未修改。
