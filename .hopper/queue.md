@@ -35,6 +35,8 @@ Anchor: `.hopper/queue.md::root`
 | T-019 | code-review-acceptance | done | | normal | D1 v3.5/D2 v3 收尾最终 re-verify（单 codex，接续 T-018）：D1 引用 PASS；capability_changed 的 Omit 不够严（一行 TS 加固），主会话直接补 `& {protocolVersion?:never}` 并自验，未再 gate | codex |
 | T-020 | code-review-acceptance | done | | normal | D2 v3-r2 极简确认（单 codex，接续 T-019）：Verdict CONFIRMABLE——TS5.9.3 编译验证 `& {protocolVersion?:never}` 确关闭 Omit 结构化赋值缺口（完整 descriptor 被拒 TS2322），D2 v3+D1 v3.5 可定稿 | codex |
 | T-021 | prd-research | done | | high | D5 codex app 产品形态调研 spike（升 high：全 7 子面产品规格质量依赖准确形态、需多面深挖，偏离已记录）——调研 OpenAI Codex 真实产品形态/信息架构/消息流/审批/成本/能力开关/账号坐席/模型切换，映射 D5 七子面，供起草取用避免臆造 | grok |
+| T-022 | code-review-adversarial | done | | normal | D5 产品规格 v1 双轨复核（grok 轨）：T-021 保真（有无超 confidence 臆造）/ D1·D2·D3 契约消费正确（字段事件状态机是否真实用对、C-item 诚实标注准确）/ 产品完整性 / 跨子面连贯 | grok |
+| T-023 | code-review-adversarial | done | | normal | D5 产品规格 v1 双轨复核（codex 轨）：同 T-022 同范围，异构独立视角 | codex |
 | 
 ---
 

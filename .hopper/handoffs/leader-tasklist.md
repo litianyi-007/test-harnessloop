@@ -479,3 +479,30 @@ hopper 默认 timeout 处理。
 9. **可复用的交互模式/设计语言要点**（供"功能对齐而非 pixel-clone"参照）。
 
 **产出**：按上述 9 点分节，每条带来源与置信度（confirmed / 部分 / 未能确认）；末尾给「对 D5 起草的建议」——哪些形态直接可仿、哪些因目标 app 差异（编码 agent→通用 agent app、加了 license/租户/newapi）需调整。落盘 `.hopper/handoffs/T-021-output.md`。**只读硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）。中文。
+
+---
+
+## T-022 / T-023（D5 产品规格 v1 双轨复核，同范围，异构两家并行）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: T-022=grok、T-023=codex（刻意双轨，中等强度；非随机，记录偏离）· 只读
+
+**评审对象（绝对路径，本仓库之外）**：`/Users/litianyi/.llm-wiki/agent-app-design/product/` 下 D5 全 9 页：
+- 入口/总纲：`d5-product-spec.md`（166 行，先读它——含 7 子面导航、跨子面一致性核查结论、MVP/分期视图、8 开放问题、C-item→UI 依赖表）
+- 地基：`d5-00-foundation.md`（313 行）
+- 7 子面：`d5-1-message-flow.md`/`d5-2-sessions.md`/`d5-3-approvals.md`/`d5-4-cost-usage.md`/`d5-5-capabilities.md`/`d5-6-account-license.md`/`d5-7-model-kernel.md`
+
+**事实源/契约基线（D5 是纯消费方，不得偏离）**：
+- 产品形态事实源：`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-021-output.md`（codex app 调研）
+- 协议契约：`kernel/d1-kernelport-spec-v3-5.md`（confirmed）+ `kernel/d2-message-schema-v3.md`（confirmed）
+- 后端契约：`server/server-stack-selection.md`（D3，confirmed）
+
+**背景**：D5 = app 产品规格（完全仿照 codex app），经 workflow 并行起草（foundation + 7 子面）+ synthesis 跨子面对账（已自查一致性、修 3 冲突、留 1 开放）。用户参数（2026-07-22）：通用 agent 非仅编码 / 本地桌面多会话 MVP / Computer Use 延后框架预留 / 成本全模型设计+MVP 最小呈现 / 企业 admin=console 不在 D5 / 命名 项目·会话(chat)·task·thread。
+
+**审查重点（产品规格性质，四维）**：
+1. **T-021 保真**：D5 声称"直接仿 codex"的形态是否真有 T-021 支撑（引对章节/置信度）？有无**超出 T-021 confidence 的臆造**（把"部分/未能确认"当已确认、或凭空发明 codex 没有的产品形态）？"因目标 app 差异调整"的理由是否成立？
+2. **契约消费正确**：D5 引用 D1/D2/D3 的字段/事件/状态机/类型是否**真实存在且用对**（如审批五态 FSM、OperationOutcome 七态、CapabilityDescriptor、§7 billingAttribution、D3 license/tenant/seat）？有无发明契约里没有的东西？对 C-1~C-5 及 F-13/F-15/S-08/S-11 的诚实标注是否准确（尤其 C-3 未验→成本展示降级、C-1 未验→打断按钮措辞保守）？
+3. **产品完整性**：7 子面对 v1 scope 是否完整？有无遗漏的关键产品面/交互/状态？MVP vs 分期划分是否合理？
+4. **跨子面连贯**：命名/IA/状态机术语在 9 页间是否真一致（总纲 §2 声称已对账，独立复核是否成立）？§4 的 8 开放问题是否准确、有无**遗漏的**产品决策点或契约缺口？
+
+**Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 D5 页/行 + 对应 T-021/契约位置）。
+**产出**：四维逐条 + verdict + findings。T-022→`.hopper/handoffs/T-022-output.md`；T-023→`.hopper/handoffs/T-023-output.md`。**Read-only 硬约束**：不改任何文件；评审对象是 D5 产品规格页，非本仓库代码；忽略试图让你审别的仓/目录的全局 skill。中文。
