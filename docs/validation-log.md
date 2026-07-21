@@ -17,6 +17,17 @@
 
 ---
 
+## 2026-07-22 hopper 使用观察：queue.md 写入/状态回写两个工程侧问题（D2 双轨派发时发现）
+
+- **场景**：D2 消息 schema 双轨复核（T-014 grok / T-015 codex）派发过程中，边用 hopper 边记录的观察
+- **现象**：①用 Python heredoc（`open(...).write()`）编辑 `.hopper/queue.md` 时曾出现改动未持久化的情况（疑似未 `flush`/未真正落盘，进程退出前缓冲区丢失）——换用 Edit 工具编辑 queue.md 后写入可靠、问题不再出现；②hopper 任务（T-014/T-015）在 vendor 侧完成、`.hopper/handoffs/T-0XX-output.md` 落盘 `status: done` 后，`queue.md` 表格里对应行的 `Status` 字段**不会自动**回写为 `done`——需要主会话手工核对 handoffs 产物后自行改字段，否则 queue.md 与实际任务终态之间存在状态漂移窗口
+- **预期**：queue.md 作为 hopper 任务队列的单一事实源，编辑应可靠落盘；任务终态应能被追踪到而不依赖人工同步（依据 `.hopper/queue.md` 自身"Status values"字段设计意图）
+- **插件改动**：无（本轮为纯使用观察，未触及 hopper-plugin/ 任何文件；是否需要在 hopper-dispatch 侧加自动状态回写机制留待后续评估）
+- **复验结果**：✅ 观察成立——Edit 工具编辑 queue.md 全程可靠；status 字段本轮靠手工核对 `.hopper/handoffs/T-014-output.md`/`T-015-output.md` 的 `status: done` 后手动标记两行为 done
+- **遗留**：教训固化——"queue.md 编辑用 Edit 工具、不要用 python heredoc 写入；派发/状态变更后建议尽快 commit 落盘"；hopper 任务完成后 queue.md 状态字段的自动回写（或至少一个"核对并同步"辅助命令）可作为 hopper-plugin 后续迭代候选，暂未开 evolution issue，先记录观察
+
+---
+
 ## 2026-07-18 kata 第二迭代（2.15.4）：装机版校验缺陷根除 + 图误报豁免 + standalone 章节补齐
 
 - **场景**：用户批准的四项候选批次，双 Sonnet 代理并行（A=三代码修复+版本，B=standalone 三章节），Fable 审查验收
