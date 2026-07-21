@@ -397,3 +397,46 @@ hopper 默认 timeout 处理。
 
 **Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 v2 行号 + 对应 D1 行号）。
 **产出**：第一轮 finding 逐项闭合结论 + 新矛盾核验 + verdict。T-016→`.hopper/handoffs/T-016-output.md`；T-017→`.hopper/handoffs/T-017-output.md`。**Read-only 硬约束**：不改任何文件；评审对象是 D2 v2；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-018（D1 v3.5 + D2 v3 定向 re-verify，单 codex，接续 T-017）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（用户定 D2 v3 复核=单 codex 定向 re-verify，grok 已 PASS_WITH_NOTE；codex T-017 提出的 5 finding 由其本人验证闭合最有效；非随机，记录偏离）· 只读
+
+**评审对象（绝对路径，本仓库之外）**：
+- `~/.llm-wiki/agent-app-design/kernel/d2-message-schema-v3.md`（499 行，D2 v3）
+- `~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-5.md`（823 行，D1 v3.5，protocolVersion 连接级化）
+
+对照：D2 v2 `kernel/d2-message-schema-v2.md`、D1 v3.4 `kernel/d1-kernelport-spec-v3-4.md`（被 v3.5 supersede）、你的 T-017 复核 `.hopper/handoffs/T-017-output.md`、`kernel/kernel-ecosystem-facts.md`。
+
+**背景**：你在 T-017 判 D2 v2 REWORK，提 5 finding。其中 HIGH#1（protocolVersion"最小澄清"实为语义变更）触发用户授权正式修 D1——D1 v3.5 把 protocolVersion 从 per-event 正式重定义为连接级契约版本 + 新增反序列化重建规则，删除 v3.4 的"最小澄清"注释。其余 4 finding 由 D2 v3 落实。
+
+**只验两件事（限定 T-017 的 5 finding + 本轮新编辑，不重开无关范围、不提 nice-to-have）**：
+1. **5 finding 是否真闭合**：
+   - HIGH#1 protocolVersion：D1 v3.5 的连接级重定义 + 反序列化重建规则是否自洽、诚实（不再是"伪装的注释"）？D2 v3 是否与之对齐？进程内每事件仍可读该字段、wire 只握手传一次、反序列化回填——这条闭环是否唯一可实现？
+   - HIGH#2 StopRequestPayload：`EmptyPayload=Record<string,never>` 是否真封闭（`req.stop` 携 Send payload 现在能否被类型拒绝）？其余 3 处同病是否一并修？
+   - HIGH#3 握手字段：`CapabilitiesRequestPayload` 是否已正式声明 `supportedProtocolVersions`、版本协商路径可按 schema 实现？
+   - HIGH#4 版本热切：是否已禁同连接热切、改断连+重握手、`evt.capability_changed` 不再承载 wire 版本切换？自举环是否消除？
+   - MEDIUM#5 res.unknown：§3.9 与 §7.4 分流是否已统一为唯一确定规则？
+2. **本轮新编辑有无引入新矛盾**：D1 v3.5 的 protocolVersion 重定义与 D1 其余正文（事件判别联合、状态机）是否自洽？D2 v3 的 EmptyPayload/握手 schema/禁热切/res.unknown 改动彼此及与保留正文是否自洽？
+
+**Verdict**：`CONFIRMABLE`（5 finding 全闭合、无新矛盾 → D1 v3.5 + D2 v3 可定稿）或 `MUST-FIX`（仅列仍未闭合或新引入的真矛盾）。
+**产出**：5 finding 逐项闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-018-output.md`。**Read-only 硬约束**：不改任何文件；评审对象是上述两份 spec；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-019（D1 v3.5/D2 v3 收尾最终 re-verify，单 codex，接续 T-018）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-018，2 处遗漏由其本人终验；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/kernel/d2-message-schema-v3.md`（v3，已收尾）+ `~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-5.md`（v3.5，已收尾）。对照：你的 T-018 复核 `.hopper/handoffs/T-018-output.md`。
+
+**背景**：你在 T-018 判 T-017 的 5 finding 全 PASS，但发现 2 处 protocolVersion 连接级化的传播遗漏（MUST-FIX）：①`evt.capability_changed` 仍逐事件传 protocolVersion ②D1 v3.5 规范正文引用已 supersede 且允许热切的 D2 v2。本轮已收尾：①新增 `WireCapabilityDescriptorPayload=Omit<CapabilityDescriptorPayload,'protocolVersion'>`，capability_changed 改用它，反序列化同时回填事件基字段与嵌套 descriptor 两处 protocolVersion；②D1 v3.5 规范性引用（§3 行306/314、§4.1 行362）改指 D2 v3，历史提及保留。
+
+**只验（严格限定这 2 处，不重开其他）**：
+1. **2 处是否真闭合**：①capability_changed 的 wire 快照是否确已排除 protocolVersion、反序列化重建是否覆盖事件基字段+嵌套 descriptor 两处、握手响应 res.capabilities 的 protocolVersion 是否正确保留？②D1 v3.5 的**规范性**引用是否全改 D2 v3、无规范处仍指 v2（historical/audit 提及 v2 保留是允许的）？
+2. **这 2 处修改有无引入新矛盾**：WireCapabilityDescriptorPayload 与 Omit 语义、反序列化扩展规则、D1↔D2 引用一致性——是否自洽？
+
+**Verdict**：`CONFIRMABLE`（2 处闭合、无新矛盾 → D1 v3.5 + D2 v3 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
+**产出**：2 处逐项 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-019-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
