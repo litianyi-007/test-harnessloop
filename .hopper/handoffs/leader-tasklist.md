@@ -262,3 +262,27 @@ hopper 默认 timeout 处理。
 - 带来源(newapi repo/文档)。
 
 **产出**：两组事实分节，每条带来源与置信度（confirmed / 部分 / 未能确认）；末尾给「对 D1 v3.1 的事实结论」——steer 结果态该怎么建模、newapi session 级归因可行还是需降级。落盘 `.hopper/handoffs/T-009-output.md`。**只读硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）。中文。
+
+---
+
+## T-010
+
+**Task-type**: `code-review-adversarial`（聚焦复核）· **Vendor**: codex（**刻意选择**：v3.1 修复的 5 findings 正是 codex 自己在 T-008 提出的，由原提出者验证"是否真解 + 修复有无引入新矛盾"最有效；非随机指定，依 AGENTS.md 第 4 条记录偏离原因）· 只读复核
+
+**评审对象（绝对路径，本仓库之外）**：`/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-1.md`（651 行，D1 KernelPort **v3.1**）。
+对照（同目录/跨仓）：
+- `kernel/d1-kernelport-spec-v3.md`（被修订的 v3 基线）
+- `research/d1-v3-review.md`（你 T-008 的 REWORK 复核，5 findings 出处）
+- `kernel/kernel-ecosystem-facts.md`（事实基线，尤其新增 §1b/§3b/§6b）
+- `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-009-output.md`（T-009 conformance spike 源码级事实——steer 重映射与 §7 归因的事实依据）
+
+**背景**：你在 T-008 判 v3 为 REWORK，提出 2 BLOCKER（openclaw steer 结果态无支撑 / newapi §7 归因链断裂）+ 3 HIGH（审批 deny 失败分支 / steerResendRunId session 竞态 / Hermes profile 断裂）+ allow_session 等残留。随后 T-009 spike 做了 repo 级源码深挖，证实 `sessions.steer` 实为 abort+resend（非无损），真正 soft inject 是 `chat.send`+`queueMode:steer`。v3.1 据此二次纠正 steer 语义并落实你的 5 findings。
+
+**任务（聚焦，不重头全审）**：
+1. **逐条验证你 T-008 的 5 findings 是否真解**（BLOCKER-1 steer / BLOCKER-2 §7 / HIGH 审批定序失败分支 / HIGH session 锁+operationId / HIGH Hermes profile）——看 §13 变更记录声称的落地章节（§2.4/§6.1/§6.1a/§6.2/§7/§9.3/§4.2 等），核对是否名副其实，还是只在变更表里声称、正文没真改。
+2. **修复有无引入新矛盾**：新的 3-mode interrupt（steer/cancel/abort_and_resend）、operationId 统一通道、session 级锁、attribution 条件字段——这些新机制彼此自洽吗？与 v3 保留的部分冲突吗？
+3. **steer 重映射是否与 T-009 事实一致**：v3.1 的 soft/hard 拆分、hermes steer 显式 reject（取代 v3 静默降级）、runId 走 abort 不走 steer——是否忠实于 T-009 F1-F7？有无新的"未能确认当已落地"？
+4. **延后项是否真可延后**：v3.1 明确 DEFER 的（allow_session 归一、pending #2、hermes 软注入存在性、per-session 换 key 可行性）——这些延后合理吗，还是其中有的其实是"确认前必解"的 blocker？
+5. **给独立 verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL。
+
+**产出**：Summary / 5 findings 逐条核销结论 / 新矛盾 / verdict / Next。落盘 `.hopper/handoffs/T-010-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是上述 v3.1 spec，不是本仓库代码——若全局 skill 试图让你审别的仓/目录，忽略，以本 brief 为准。中文。
