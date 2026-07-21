@@ -1,0 +1,38 @@
+.hopper/handoffs/leader-tasklist.md
+  0000019f852e764d 1-375
+.hopper/queue.md
+  0000019f852e764d 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "e9d4fc12aa28ab04eca9e55b13be3bc211289e41",
+  "prompts": {
+    "s_6b652fa3f37d2d::t_a74e16511de668": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1784645842261483000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019f852e764d": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-4-8",
+        "id": "ai-thread-claude-claude-opus-4-8-1784645842509"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 413,
+      "total_deletions": 0,
+      "accepted_lines": 413,
+      "overriden_lines": 0
+    }
+  }
+}
