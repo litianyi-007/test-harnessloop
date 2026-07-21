@@ -506,3 +506,30 @@ hopper 默认 timeout 处理。
 
 **Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 D5 页/行 + 对应 T-021/契约位置）。
 **产出**：四维逐条 + verdict + findings。T-022→`.hopper/handoffs/T-022-output.md`；T-023→`.hopper/handoffs/T-023-output.md`。**Read-only 硬约束**：不改任何文件；评审对象是 D5 产品规格页，非本仓库代码；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-024（D5 v2.1 定向 re-verify，单 codex，接续 T-023）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-023，验证自己提的 F-01..F-10 是否真闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/product/` 下 D5 全 9 页（v2+v2.1 修订后；入口 `d5-product-spec.md` §2.6/§2.7 有本轮处理对照）。对照：你的 T-023 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-023-output.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`、`kernel/d2-message-schema-v3.md`、`server/server-stack-selection.md`。
+
+**背景**：你在 T-023 判 D5 REWORK，提 F-01(BLOCKER)..F-10。经两轮修订（v2 主批次 + v2.1 收尾，后者补齐 v2 因编号漂移漏做的 F-05/F-08/F-09 并核验 F-02/F-03/F-04/F-06）。
+
+**只验两件事（严格限定 F-01..F-10 + 修订新编辑，不重开无关范围、不提 nice-to-have）**：
+1. **F-01..F-10 是否逐条真闭合**：
+   - F-01 createSession 时点：草稿态+首发原子 create+send 是否四页一致、config 冻结/只读转换是否定义清楚？
+   - F-02 billing snapshot：D5.4 是否已纠正"snapshot=token/金额账单源"的误用、改指 D3 usage_ledger/invoice/bill、C-3 标为必要非充分？
+   - F-03 缓冲审批：foundation/D5.2/D5.3 是否已从可见 PENDING/confirmed 计数里移除缓冲请求、只计 active pending？
+   - F-04 能力 toggle：是否已去掉对未定义 server_override 通道的确认依赖、改为 allowed(D3 feature-flags,P7 待定)/active(createSession 冻结)两层、不承诺当前 session 即时变更？
+   - F-05 License 离线：是否已把离线/吊销/到期执行策略降为待产品+安全决策开放项、删除"D3 confirmed grace"误称、修正 D3 Open#2 错误引用？
+   - F-06 archive：是否已建为独立布尔轴+保留底层 lifecycle+定义 Active 归档通知策略、消除自相矛盾？
+   - F-07 License 身份/授权：分离是否清楚？
+   - F-08 模型热切 confidence：是否已从 T-021 confirmed 降为未能确认/待验？
+   - F-09 缺失行为：附件/dictation/slash/skill 提及/mcp、Subagent 面板/stop all、回合完成通知/Prevent sleep、列表 Running 态、附件假引用——是否都已归属（MVP 或显式分期）？
+   - F-10 死链+过时元数据：是否清干净？
+2. **v2/v2.1 新编辑有无引入新矛盾**（尤其新增的 D5.1 §3.0、D5.2 §4.4/§10、D5.6 License 状态机重写、archive 布尔轴）：彼此及与保留正文是否自洽？总纲 §2 一致性结论是否据实（不再过度声称）？
+
+**Verdict**：`CONFIRMABLE`（F-01..F-10 全闭合、无新矛盾 → D5 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
+**产出**：F-01..F-10 逐条闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-024-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
