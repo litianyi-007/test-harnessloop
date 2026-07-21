@@ -33,6 +33,7 @@ Anchor: `.hopper/queue.md::root`
 | T-017 | code-review-adversarial | done | | normal | D2 v2 第二次双轨复核（codex 轨）：同 T-016 同范围，异构独立视角 | codex |
 | T-018 | code-review-acceptance | done | | normal | D1 v3.5 + D2 v3 定向 re-verify（单 codex）：codex T-017 的 5 finding 是否真闭合（protocolVersion 连接级化诚实自洽/StopReq 真封闭/握手字段入schema/禁版本热切/res.unknown 统一）+ 新编辑有无新矛盾 | codex |
 | T-019 | code-review-acceptance | done | | normal | D1 v3.5/D2 v3 收尾最终 re-verify（单 codex，接续 T-018）：D1 引用 PASS；capability_changed 的 Omit 不够严（一行 TS 加固），主会话直接补 `& {protocolVersion?:never}` 并自验，未再 gate | codex |
+| T-020 | code-review-acceptance | done | | normal | D2 v3-r2 极简确认（单 codex，接续 T-019）：Verdict CONFIRMABLE——TS5.9.3 编译验证 `& {protocolVersion?:never}` 确关闭 Omit 结构化赋值缺口（完整 descriptor 被拒 TS2322），D2 v3+D1 v3.5 可定稿 | codex |
 | 
 ---
 

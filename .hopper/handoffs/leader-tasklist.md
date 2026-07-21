@@ -440,3 +440,19 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（2 处闭合、无新矛盾 → D1 v3.5 + D2 v3 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
 **产出**：2 处逐项 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-019-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-020（D2 v3-r2 极简确认，单 codex，接续 T-019）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-019，验证其点名的 Omit 缺口是否已按其自身处方闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/kernel/d2-message-schema-v3.md`（§4 `WireCapabilityDescriptorPayload` 定义处，约 375-381 行）。对照：你的 T-019 复核 `.hopper/handoffs/T-019-output.md`（其 Next 建议用 `Omit<..., 'protocolVersion'> & { protocolVersion?: never }`）。
+
+**背景**：你在 T-019 判 D1 引用 PASS，但指出 `WireCapabilityDescriptorPayload = Omit<CapabilityDescriptorPayload, 'protocolVersion'>` 不够严——`Omit` 只移除键、不阻止带 protocolVersion 的完整对象因结构化兼容被赋值，序列化时仍可能泄漏该字段，与"类型即排除"的强声明不符。本轮已按你的 Next 处方直改为 `Omit<CapabilityDescriptorPayload, 'protocolVersion'> & { protocolVersion?: never }`（wiki commit `d113215`），并补注释说明构造 wire DTO 时须显式剥离、不要直接断言内存态 descriptor。
+
+**只验一件事（严格限定这一处，不重开其他）**：
+- `& { protocolVersion?: never }` 是否确实关闭了结构化赋值缺口——带 protocolVersion 的完整 `CapabilityDescriptorPayload` 现在能否被类型拒绝赋给 `WireCapabilityDescriptorPayload`？"类型定义本身即排除 protocolVersion"（§7.3）这一强声明现在是否成立？这一改动有无引入新矛盾（与反序列化重建规则、§7.1/§7.3 的一致性）？
+
+**Verdict**：`CONFIRMABLE`（这一处已闭合、无新矛盾 → D2 v3 + D1 v3.5 可定稿）或 `MUST-FIX`（仍未闭合的具体点）。
+**产出**：这一处的闭合结论 + verdict。落盘 `.hopper/handoffs/T-020-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
