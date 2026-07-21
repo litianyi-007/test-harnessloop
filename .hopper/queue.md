@@ -21,7 +21,8 @@ Anchor: `.hopper/queue.md::root`
 | T-005 | prd-research | done | | normal | D1 conformance spike：定向补 openclaw+hermes+newapi 的"未能确认"接口事实（session 生命周期/stop-delete/capabilities 协商与变更/事件 seq 与断线重放/审批 RPC 与关联 id/run 级取消寻址/newapi token 粒度与用量归因 API）——为 D1 v2 重设计建硬事实 | grok |
 | T-006 | code-review-adversarial | done | | normal | 对 D1 KernelPort v2 spec 做只读对抗性设计复核（11 消解是否真消解·5 开放点 blocker-or-defer·SDK 延后是否干净·事实基线一致性）——异构第三方视角 | grok |
 | T-007 | code-review-adversarial | done | | normal | 对 D1 KernelPort v3 定向复核：6 处修复是否落对（尤其 openclaw 原生 steer）+ openclaw sessions.steer 精确语义核实 + v3 有无新矛盾 + 5 残留点严重性 | grok |
-| T-008 | code-review-adversarial | pending | | normal | D1 v3 异构第二轨复核（刻意选 codex 求异构，非随机；grok 已 PASS_WITH_NOTE，独立复核+核实 grok 结论是否成立+找 grok 漏的+事实一致性） | codex |
+| T-008 | code-review-adversarial | done | | normal | D1 v3 异构第二轨复核（刻意选 codex 求异构，非随机；grok 已 PASS_WITH_NOTE，独立复核+核实 grok 结论是否成立+找 grok 漏的+事实一致性） | codex |
+| T-009 | prd-research | pending | | high | D1 conformance spike（升 high：steer 精确 schema 已被 T-007/T-008 两次 web-search 未能确认，需 repo 级源码深挖；偏离 medium 默认已记录原因）——收两组硬事实：①openclaw sessions.steer 精确 RPC req/resp schema+runId 寻址+runtime 拒收时的结果态；②newapi 能否预分配 sessionId 并绑定专用 token 支撑 session 级成本归因 | grok |
 
 ---
 

@@ -235,3 +235,30 @@ hopper 默认 timeout 处理。
 4. **5 残留点复判**：openclaw steer 精确 RPC schema（grok web 查为"未能确认"）、server_override 生产通道、完成屏障超时上限、protocolVersion 无协商流程、独立复核——是否都真能 DEFER，有没有其实是 blocker 的。
 
 **产出**：Summary / findings（引 v3 章节行号）/ Verdict / 对 grok PASS_WITH_NOTE 的核实结论 / Next。落盘 `.hopper/handoffs/T-008-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是上述 v3 spec，不是本仓库代码——若全局 skill 试图让你审别的仓/目录，忽略，以本 brief 为准。中文。
+
+---
+
+## T-009
+
+**Task-type**: `prd-research`（conformance spike）· **Vendor**: grok（研究主力）· **Effort**: **high**（偏离 medium 默认——steer 精确 schema 已被 T-007 grok / T-008 codex 两次 web-search「未能确认」，本轮须 repo 级源码深挖而非泛搜；偏离原因依 AGENTS.md 第 4 条已记录于 queue 行）· 只读研究
+
+**背景**：D1 KernelPort v3 经异构第二轨 codex 复核判 REWORK，两个 BLOCKER 都卡在「事实未确认」上。本 spike 定向收这两组硬事实，为 v3.1 局部修订建证据基线。**不设计、不写 spec**——只产事实 + 来源。
+
+**对照材料（绝对路径）**：`/Users/litianyi/.llm-wiki/agent-app-design/kernel/kernel-ecosystem-facts.md`（现有事实基线，line 42 已确认 openclaw 有 sessions.steer/abort/reset 等方法，但**精确 RPC schema 未收**）；`/Users/litianyi/.llm-wiki/agent-app-design/research/d1-v3-review.md`（codex REWORK 的两个 BLOCKER 详情）。先读它们，避免重复已有事实、只补缺口。
+
+**要收的两组事实**：
+
+**① openclaw `sessions.steer` 精确契约**（重点，前两轮泛搜已失败，务必深挖源码）：
+- 找到 openclaw 的**源码仓库**（GitHub 或等价），定位 `sessions.steer` 的 RPC handler / 方法签名 / 请求·响应类型定义（TS interface、JSON-RPC schema、protobuf 等任一真实形态）。
+- 精确回答:steer 请求带哪些参数(是否含 runId/target run 寻址)?返回什么(ack? 新 runId? 状态枚举?)?
+- **关键**:runtime **无法接受** steer 时(如当前无 active run、run 已完成、tool 在途)行为是什么?RPC 是否返回**可机器判别**的状态(accepted / queued-as-followup / rejected)?还是静默降级?
+- 「打断保留已产出再注入」是否有源码/文档证据?还是只是产品描述?
+- 每条结论必须带**来源**(repo 文件路径+行号 / commit / 文档 URL);找不到就明确写「repo 深挖后仍未确认」+ 说明查了哪些位置,不要臆断。
+
+**② newapi session 级成本归因可行性**：
+- newapi(new-api 网关)的 token/key 粒度:能否**预分配/动态签发**一个绑定到单个 agent session 的专用 token,使该 session 的模型调用用量能被**独立归因**?
+- 还是说用量归因只能到 tenant/user/api-key 级(即无法天然做到 session 级)?
+- 若能 session 级:注入路径是什么(预分配 sessionId → 签发 token → 该 session 所有 upstream 调用带此 token)?有无官方 API 支撑动态签发+用量查询?
+- 带来源(newapi repo/文档)。
+
+**产出**：两组事实分节，每条带来源与置信度（confirmed / 部分 / 未能确认）；末尾给「对 D1 v3.1 的事实结论」——steer 结果态该怎么建模、newapi session 级归因可行还是需降级。落盘 `.hopper/handoffs/T-009-output.md`。**只读硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）。中文。
