@@ -330,3 +330,25 @@ hopper 默认 timeout 处理。
 **Verdict**：`CONFIRMABLE`（M1-M5 全闭合、无新矛盾 → D1 v3.3 可定稿）或 `MUST-FIX`（仅列 M1-M5 中仍未闭合的、或新编辑引入的真矛盾）。
 
 **产出**：M1-M5 逐项闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-012-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是 v3.3 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-013
+
+**Task-type**: `code-review-acceptance`（v3.4 最终 confirm-readiness gate，**接续 T-012，只验 3 处残留闭合**）· **Vendor**: codex（刻意选择：3 处残留是你 T-012 提出的，由你终验最有效；非随机，记录偏离）· 只读
+
+**评审对象（绝对路径，本仓库之外）**：`/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md`（784 行，D1 KernelPort **v3.4 收尾**）。
+对照：`kernel/d1-kernelport-spec-v3-3.md`（被修订基线）、`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-012-output.md`（3 处残留原文）、`kernel/kernel-ecosystem-facts.md`。
+
+**背景**：你在 T-012 判 v3.3 为 MUST-FIX——M2/M3/M4 已闭合，只剩 3 处机械残留：①M1↔M4（M4 锁规则把 soft steer 终态写成三态，与 §6.1(a) 二态冲突）②M5（`queryBilling` 返 Promise 却把远端拒绝归入同步 `KernelPortRejectionCode`）③§3 事件计数"九类"笔误。v3.4 是**只针对这 3 处的收尾修订**。
+
+**只验两件事（严格限定这 3 处，不重开其他范围、不提 nice-to-have）**：
+1. **3 处残留是否真闭合**：
+   - ①M1↔M4：soft `interrupt(mode:'steer')` 的 `OperationOutcome` 是否**全文**严格二态 `submitted`/`rejected`？§9.3 的 stop 等待超时是否已明确归为 **stop() 自身**的 `timed_out`、不再作为 steer 的第三终态？（§9.3 行661 + §6.1(a)）
+   - ②M5：`billing_query_subject_unresolved` 是否已移出同步 `KernelPortRejectionCode`、改为 `queryBilling` 的异步 Promise rejection？同步（纯本地配置缺失，`aggregate_billing_requires_deployment_token`）与异步（远端凭证/接口拒绝）是否分层清晰、给了调用方唯一确定的失败模型？（§7 行580-585 + §9.1 行608-627）
+   - ③§3：行268 是否已由"九类"改为"十类"、与 INV-2/§6.1a/§9.2/§16 的 11 类口径一致？
+2. **这 3 处修改有无引入新矛盾**：§9.3 的二态收敛与 §2.5 stop 的 `timed_out` 是否自洽？M5 的异步码归类与 §629 三阶段错误模型是否自洽？§3 计数是否全文再无残留不一致？
+
+**Verdict**：`CONFIRMABLE`（3 处全闭合、无新矛盾 → **D1 v3.4 可定稿**）或 `MUST-FIX`（仅列 3 处中仍未闭合的、或新引入的真矛盾）。
+
+**产出**：3 处逐项闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-013-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是 v3.4 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。
