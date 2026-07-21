@@ -1,0 +1,40 @@
+.hopper/handoffs/T-013-output-raw.txt
+  0000019f8501d6f3 1-2102
+.hopper/handoffs/T-013-output.log
+  0000019f8501d6f3 1-2102
+.hopper/handoffs/T-013-progress.log
+  0000019f8501d6f3 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "b7a154b227a43ffce70f133de398a1b1e3a392d7",
+  "prompts": {
+    "s_0524bd405717fa::t_a17b12d68de561": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1784642917732717000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019f8501d6f3": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-4-8",
+        "id": "ai-thread-claude-claude-opus-4-8-1784642918131"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 4206,
+      "total_deletions": 0,
+      "accepted_lines": 4206,
+      "overriden_lines": 0
+    }
+  }
+}
