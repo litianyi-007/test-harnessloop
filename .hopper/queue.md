@@ -32,7 +32,7 @@ Anchor: `.hopper/queue.md::root`
 | T-016 | code-review-adversarial | done | | normal | D2 v2 第二次双轨复核（grok 轨）：第一轮 REWORK 的 4 类 finding（字段分名/protocolVersion 单一契约版本/判别联合封闭/§9.2 补漏）是否真闭合 + v2 新编辑有无新矛盾 | grok |
 | T-017 | code-review-adversarial | done | | normal | D2 v2 第二次双轨复核（codex 轨）：同 T-016 同范围，异构独立视角 | codex |
 | T-018 | code-review-acceptance | done | | normal | D1 v3.5 + D2 v3 定向 re-verify（单 codex）：codex T-017 的 5 finding 是否真闭合（protocolVersion 连接级化诚实自洽/StopReq 真封闭/握手字段入schema/禁版本热切/res.unknown 统一）+ 新编辑有无新矛盾 | codex |
-| T-019 | code-review-acceptance | pending | | normal | D1 v3.5/D2 v3 收尾最终 re-verify（单 codex，接续 T-018）：只验 T-018 的 2 处 protocolVersion 传播遗漏是否闭合（capability_changed wire 排除 + D1 引用改 D2 v3）+ 无新矛盾 → CONFIRMABLE 则定稿 | codex |
+| T-019 | code-review-acceptance | done | | normal | D1 v3.5/D2 v3 收尾最终 re-verify（单 codex，接续 T-018）：D1 引用 PASS；capability_changed 的 Omit 不够严（一行 TS 加固），主会话直接补 `& {protocolVersion?:never}` 并自验，未再 gate | codex |
 | 
 ---
 
