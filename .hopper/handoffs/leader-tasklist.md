@@ -286,3 +286,23 @@ hopper 默认 timeout 处理。
 5. **给独立 verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL。
 
 **产出**：Summary / 5 findings 逐条核销结论 / 新矛盾 / verdict / Next。落盘 `.hopper/handoffs/T-010-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是上述 v3.1 spec，不是本仓库代码——若全局 skill 试图让你审别的仓/目录，忽略，以本 brief 为准。中文。
+
+---
+
+## T-011
+
+**Task-type**: `code-review-acceptance`（定稿前 confirm-readiness gate，**非开放重审**）· **Vendor**: codex（刻意选择：codex 在 T-008/T-010 两轮判 v3/v3.1 为 REWORK，最熟悉全部 finding 史，由它确认"这些 finding 是否已被诚实解决或诚实登记为待验项"最有说服力；非随机，依 AGENTS.md 第 4 条记录偏离）· 只读
+
+**评审对象（绝对路径，本仓库之外）**：`/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-2.md`（711 行，D1 KernelPort **v3.2 诚实收窄**）。
+对照：`kernel/d1-kernelport-spec-v3-1.md`（被修订基线）、`research/d1-v31-review.md`（你 T-010 的 REWORK + 7 新矛盾 + Next 清单）、`kernel/kernel-ecosystem-facts.md`（§1b/§3b/§6b）、`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-009-output.md`（spike 事实）。
+
+**背景**：v3.2 是对你 T-010 REWORK 的**收窄型**修订——策略不是"再证明确认不了的东西"，而是把 live-probe-limited 项从契约断言降级为收窄子集 + 显式 C-item 清单。头号 BLOCKER（soft steer ack）已收窄为 `submitted`/`rejected` 二态并登记 C-1；BLOCKER-2 §7 时序/attribution 权威化；7 新矛盾逐条处理；allow_session/pending#2 补齐；审批四态→五态；锁矩阵补全 + F-08 范围校正；§10 勘正。5 个 C-item：C-1 soft ack 语义 / C-2 operation 账本 / C-3 per-session 换 key / C-4 openclaw hard error 信号 / C-5 hermes ACP soft inject 存在性。
+
+**这道 gate 只验三件事（不要重头全审、不要提新的锦上添花建议）**：
+1. **收窄是否诚实**：v3.2 声称收窄/降级的每一处（尤其 soft steer 二态、§7 billingAttribution 权威化、operation 仅在线订阅、F-08 范围校正），是否**真的**不再把未确认信号当契约断言？有没有**残留**的"未能确认当已落地"？有没有哪处"收窄"其实是把真问题藏进了模糊措辞？
+2. **5 个 C-item 是否真属实现阶段**：逐条判——每个 C-item 是否**确实**是设计阶段无法关闭、只能靠 live probe/真实内核验证的？有没有哪个 C-item 其实是**设计就该定、被错误延后**的隐藏 blocker？（尤其 C-1 soft ack、C-3 换 key——它们被延后是否会让 D1 契约的公开形状在实现期被迫返工？）
+3. **v3.2 新编辑有无引入内部矛盾**：五态审批状态机、补全的锁矩阵、新增 `aborted_resend_failed`/`submitted` 终态、`billingAttribution`/`approvalDecisionKinds` 新字段——彼此自洽吗？与 v3.2 保留的 v3.1 正文冲突吗？
+
+**Verdict（二选一为主）**：`CONFIRMABLE`（= D1 v3.2 可作为设计阶段成果定稿，剩余仅 C-item 待实现期验证）或 `MUST-FIX`（列出必须先解的具体项——仅限真正阻断定稿的，不含 nice-to-have）。若确有则可给 `PASS_WITH_NOTE` 语义的少量非阻断 note。
+
+**产出**：三项核验逐条结论 + verdict + （若 MUST-FIX）阻断项清单。落盘 `.hopper/handoffs/T-011-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是上述 v3.2 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。
