@@ -456,3 +456,26 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（这一处已闭合、无新矛盾 → D2 v3 + D1 v3.5 可定稿）或 `MUST-FIX`（仍未闭合的具体点）。
 **产出**：这一处的闭合结论 + verdict。落盘 `.hopper/handoffs/T-020-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-021（D5 codex app 产品形态调研 spike，grok，high）
+
+**Task-type**: `prd-research`（产品形态调研 spike）· **Vendor**: grok（研究主力）· **Effort**: **high**（偏离 medium 默认——D5 是"完全仿照 codex app"的全 7 子面产品规格，质量取决于对真实产品形态的准确、多面了解，需深挖而非泛览；偏离原因依 AGENTS.md 第 4 条记录于本行）· 只读研究
+
+**背景/目的**：即将起草 D5 产品规格（app 完全仿照 codex app）。为避免臆造（data-contract 纪律），先把 **codex app 的真实产品形态**落为可引用事实基线，供 D5 起草直接取用。
+
+**先厘清对象**：用户的目标 app = 原生桌面 agent app、消息流为核心、个人免费/企业坐席。"codex app"最可能指 **OpenAI 的 Codex**（agentic 编码助手产品）。请先确认其当前产品形态与**各表面**（web / CLI / IDE 扩展 / 桌面 app / ChatGPT 内 Codex 等），聚焦其中**面向用户的 chat/消息流 app 形态**（与目标 app 最接近的那个表面）。若"codex app"存在真实歧义（如指别的产品），明确指出并给出你的判断依据，不臆断。
+
+**要收的事实（直接映射 D5 七子面，每条带来源 URL + 置信度）**：
+1. **整体产品形态与信息架构**：主界面布局、导航结构、核心对象（task/session/thread/project 等叫法与层级）。
+2. **D5.1 核心消息流**：对话/任务如何呈现——用户输入、agent 流式输出、tool-call/命令执行的展示方式、diff/文件改动呈现、运行状态。
+3. **D5.2 会话/任务管理**：列表、新建、恢复、并行任务、历史。
+4. **D5.3 审批/权限 UX**：如何请求批准（运行命令/改文件/联网等）、批准粒度、"本会话允许"之类选项、超时/拒绝的呈现。
+5. **D5.4 成本/用量展示**：是否展示 token/花费/额度，粒度（按 task/账号/plan）。
+6. **D5.5 能力/工具开关**：plugin/tool/skill 的启用停用、MCP 或扩展管理界面。
+7. **D5.6 账号/plan/坐席**：登录、个人 vs 团队/企业、坐席/席位、计费 plan 的产品化呈现。
+8. **D5.7 模型/内核切换**：模型选择、切换 UX、是否暴露给用户。
+9. **可复用的交互模式/设计语言要点**（供"功能对齐而非 pixel-clone"参照）。
+
+**产出**：按上述 9 点分节，每条带来源与置信度（confirmed / 部分 / 未能确认）；末尾给「对 D5 起草的建议」——哪些形态直接可仿、哪些因目标 app 差异（编码 agent→通用 agent app、加了 license/租户/newapi）需调整。落盘 `.hopper/handoffs/T-021-output.md`。**只读硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）。中文。
