@@ -38,6 +38,7 @@ Anchor: `.hopper/queue.md::root`
 | T-022 | code-review-adversarial | done | | normal | D5 产品规格 v1 双轨复核（grok 轨）：T-021 保真（有无超 confidence 臆造）/ D1·D2·D3 契约消费正确（字段事件状态机是否真实用对、C-item 诚实标注准确）/ 产品完整性 / 跨子面连贯 | grok |
 | T-023 | code-review-adversarial | done | | normal | D5 产品规格 v1 双轨复核（codex 轨）：同 T-022 同范围，异构独立视角 | codex |
 | T-024 | code-review-acceptance | done | | normal | D5 v2.1 定向 re-verify（单 codex，接续 T-023）：F-01..F-10 是否逐条真闭合（createSession时点/billing snapshot/缓冲审批/能力toggle/License离线/archive/身份/模型热切confidence/缺失行为/死链）+ v2/v2.1 新编辑无新矛盾 | codex |
+| T-025 | code-review-acceptance | done | | normal | D5 v2.2 最终 re-verify（单 codex，接续 T-024）：F-01/02/03/08/09 五处残留是否真闭合 + v2.2 编辑无新矛盾 → CONFIRMABLE 则 D5 定稿 | codex |
 | 
 ---
 

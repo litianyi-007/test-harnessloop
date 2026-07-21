@@ -533,3 +533,21 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（F-01..F-10 全闭合、无新矛盾 → D5 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
 **产出**：F-01..F-10 逐条闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-024-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-025（D5 v2.2 最终 re-verify，单 codex，接续 T-024）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-024，验证其点名的 5 残留是否闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/product/` 下 D5 九页（v2.2 后；总纲 §2.8 有 T-024 逐条对照）。对照：你的 T-024 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-024-output.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`。
+
+**背景**：你在 T-024 判 F-04/05/06/07/10 已闭合、F-01/02/03/08/09 仍剩"改了一半没删旧矛盾文字"的残留。v2.2 已收：F-01 补 create成功/send失败分支（终态 Active(idle)+首发失败标记、可重试）；F-02 清 §4.3/foundation §5.5·5.6/D5.6 §7.2 的旧"session 归因=展示成本"残留；F-03 D5.2 §0 边界表改 active pending 0/1；F-08 删 D5.7 §3.4 两条旧 confirmed；F-09 D5.1:256 §3.1→§3.0。
+
+**只验（严格限定这 5 处 + 有无新矛盾，不重开 F-04/05/06/07/10、不提 nice-to-have）**：
+1. F-01/F-02/F-03/F-08/F-09 五处残留是否**这次真闭合**（旧矛盾文字是否已删净、新分支是否自洽）？
+2. v2.2 这几处编辑有无引入新矛盾（尤其 F-01 新失败分支与 §2.2 状态机/D5.3/D5.7 一致性；F-02 清理后 D5.4 §2.4 与 §4.3/foundation 是否终于一致）？
+3. 总纲 §2.8/闭合统计是否据实（不再过度声称）？
+
+**Verdict**：`CONFIRMABLE`（5 残留全闭合、无新矛盾 → D5 可定稿）或 `MUST-FIX`（仅列仍未闭合的具体点位）。
+**产出**：5 处逐条 + verdict。落盘 `.hopper/handoffs/T-025-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。

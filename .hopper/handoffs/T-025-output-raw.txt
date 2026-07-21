@@ -1,0 +1,1754 @@
+Reading additional input from stdin...
+OpenAI Codex v0.144.5
+--------
+workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019f8690-bb26-7e91-9038-1ad576823348
+--------
+user
+# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+
+You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+on your role — it overrides anything you may read locally.
+
+1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+   specialist." Nothing is listening downstream — if you delegate, the task fails.
+3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+   complete, closed loop.
+5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+   output, and proceed. The loop is closed — begin now and finish.
+
+---
+
+# Task-type: code-review-acceptance
+
+Anchor: `.hopper/tasks/code-review-acceptance.md::root`
+
+## Purpose
+
+Verify a change against its stated acceptance criteria. Review only — no edits.
+
+## Input shape
+
+- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+- Positive scope (files allowed) and negative scope (files that must not change)
+- Budget: time and vendor-cost ceiling
+
+## Output shape (output.md)
+
+The output should contain, in this order:
+
+- **Summary**: what was delivered, in two to four sentences
+- **Files touched**: paths with a one-line rationale each (or "none")
+- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+- **Decisions / deviations**: judgment calls or scope changes (or "none")
+- **Open questions**: list, or "none"
+- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+- **Next recommendation**: what should happen next
+
+## Notes
+
+This frame describes the SHAPE of the work and the expected output, not an
+identity to adopt. The vendor CLI brings its own behavior; the frame only states
+what the protocol expects back.
+
+---
+
+## Task spec
+
+## T-025（D5 v2.2 最终 re-verify，单 codex，接续 T-024）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-024，验证其点名的 5 残留是否闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/product/` 下 D5 九页（v2.2 后；总纲 §2.8 有 T-024 逐条对照）。对照：你的 T-024 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-024-output.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`。
+
+**背景**：你在 T-024 判 F-04/05/06/07/10 已闭合、F-01/02/03/08/09 仍剩"改了一半没删旧矛盾文字"的残留。v2.2 已收：F-01 补 create成功/send失败分支（终态 Active(idle)+首发失败标记、可重试）；F-02 清 §4.3/foundation §5.5·5.6/D5.6 §7.2 的旧"session 归因=展示成本"残留；F-03 D5.2 §0 边界表改 active pending 0/1；F-08 删 D5.7 §3.4 两条旧 confirmed；F-09 D5.1:256 §3.1→§3.0。
+
+**只验（严格限定这 5 处 + 有无新矛盾，不重开 F-04/05/06/07/10、不提 nice-to-have）**：
+1. F-01/F-02/F-03/F-08/F-09 五处残留是否**这次真闭合**（旧矛盾文字是否已删净、新分支是否自洽）？
+2. v2.2 这几处编辑有无引入新矛盾（尤其 F-01 新失败分支与 §2.2 状态机/D5.3/D5.7 一致性；F-02 清理后 D5.4 §2.4 与 §4.3/foundation 是否终于一致）？
+3. 总纲 §2.8/闭合统计是否据实（不再过度声称）？
+
+**Verdict**：`CONFIRMABLE`（5 残留全闭合、无新矛盾 → D5 可定稿）或 `MUST-FIX`（仅列仍未闭合的具体点位）。
+**产出**：5 处逐条 + verdict。落盘 `.hopper/handoffs/T-025-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+codex
+我会严格只复核 T-024 点名的 F-01/F-02/F-03/F-08/F-09 及其直接一致性，并核对总纲 §2.8；除写入指定的 T-025 评审输出外，不改评审对象。
+exec
+/bin/zsh -lc "pwd && rg --files .hopper/handoffs | rg 'T-024-output\\.md"'$|leader-tasklist'"\\.md"'$'"' && rg --files /Users/litianyi/.llm-wiki/agent-app-design/product | sort && rg --files /Users/litianyi/.llm-wiki/agent-app-design/product/kernel | rg 'd1-kernelport-spec-v3-5\\.md"'$'"'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ exited 1 in 0ms:
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+.hopper/handoffs/leader-tasklist.md
+.hopper/handoffs/T-024-output.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-3-approvals.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-5-capabilities.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md
+rg: /Users/litianyi/.llm-wiki/agent-app-design/product/kernel: IO error for operation on /Users/litianyi/.llm-wiki/agent-app-design/product/kernel: No such file or directory (os error 2)
+
+exec
+/bin/zsh -lc "rg --files /Users/litianyi/.llm-wiki/agent-app-design | rg 'kernel/d1-kernelport-spec-v3-5\\.md"'$'"' && sed -n '1,260p' .hopper/handoffs/T-024-output.md && rg -n -A80 -B5 '"'^## T-025'"' .hopper/handoffs/leader-tasklist.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-5.md
+---
+phase: done
+last_progress_at: "2026-07-21T21:11:18.833Z"
+last_progress: Task completed successfully.
+progress_seq: 2
+terminal_event_emitted: true
+status: done
+end_time: "2026-07-21T21:11:18.831Z"
+exit_code: 0
+signal: null
+timed_out: null
+duration_ms: 309520
+adapter_status: success
+---
+# Summary
+
+已按 T-023 的 F-01～F-10 对 D5 v2/v2.1 九页及三份上游契约完成定向复核。F-04/F-05/F-06/F-07/F-10 已闭合；F-01/F-02/F-03/F-08/F-09 仍有正文级残留，其中 F-01 仍缺首发失败边界，F-02/F-08 仍保留被本轮新文字否定的旧结论。由于新增修订与保留正文尚未完全自洽，D5 当前不能定稿。
+
+# Files touched
+
+- `.hopper/handoffs/T-024-output.md` — 本次只读验收的指定交付物；未修改 D5 九页、T-023 或 D1/D2/D3 契约。
+
+# Acceptance verification (5/11)
+
+> `5/11` 表示 F-01～F-10 加“v2/v2.1 新编辑无新矛盾”共 11 项中通过 5 项。
+
+## F-01 — 未闭合
+
+四页已统一“New Chat 进入 Draft、首次发送才 create、创建时配置随后只读”的表面时点：foundation `d5-00-foundation.md:140`、D5.2 `d5-2-sessions.md:84-114`、D5.3 `d5-3-approvals.md:55`、D5.7 `d5-7-model-kernel.md:132-148` 一致。
+
+但“原子 create+send”仍没有契约或补偿语义。D5.2 把两个独立 Promise 调用称为“不可分割”（`d5-2-sessions.md:88,96-106`），只定义了 `createSession` 步骤 0-3 失败时回 Draft（`:107-111,120-126`），没有定义 **create 已成功、首条 `send()` 失败** 时 Chat 是保留 Active+冻结配置、退回 Draft，还是销毁 session。D1 明确 `createSession()` 与 `send()` 是两个独立方法（`d1-kernelport-spec-v3-5.md:147,164-168`），且连 create 内部步骤 1-3 都“不承诺跨步骤原子性”（`:150-158`）；因此当前文本不能支撑所声称的跨方法原子性，config 在该失败分支是否仍冻结也不明确。
+
+复核命中：
+
+```sh
+rg -n '原子|不可分割|创建失败|send\(firstMessage\)' \
+  ~/.llm-wiki/agent-app-design/product/d5-2-sessions.md
+```
+
+## F-02 — 未闭合
+
+D5.4 §2.4 的新正文已正确说明 `SessionBillingSnapshot` 只有请求/额度字段、没有 token/金额/币种，C-3 只是必要非充分条件，并把 L3 权威路径指向 D3 `usage_ledger`（`d5-4-cost-usage.md:98-111`；D1 快照字段见 `d1-kernelport-spec-v3-5.md:585-600`；D3 账本见 `server-stack-selection.md:42,45,61`）。
+
+但同页状态图仍写 `attribution:'session'` 后“UI 可展示本会话成本”（`d5-4-cost-usage.md:178-190`），foundation 也仍写 `'session'` 即可展示“本会话成本”（`d5-00-foundation.md:269,273-281`），D5.6 继续沿用同一说法（`d5-6-account-license.md:252-257`）。这些保留正文重新把 C-3/session attribution 写成费用展示的充分条件，与 D5.4 §2.4 和 D1 字段事实直接冲突。
+
+关键 grep 输出：
+
+```text
+d5-4-cost-usage.md:185: UI 可展示"本会话成本"
+d5-00-foundation.md:269: 'session' 时可展示"本会话成本"
+d5-00-foundation.md:277: 决定该 Chat 能否展示"本会话成本"
+```
+
+## F-03 — 未闭合
+
+主定义已改对：foundation 只把 active pending 映射为可见 Reviewing（`d5-00-foundation.md:217-232`），D5.2 主字段明确每 session 仅 0/1、缓冲不计入且“不做共 N 条计数”（`d5-2-sessions.md:53-54`），D5.3 也明确缓冲期不发可见事件（`d5-3-approvals.md:141-156`），与 D1 “不触发新的可见 pending 状态”一致（`d1-kernelport-spec-v3-5.md:540-547`）。
+
+但 D5.2 的范围边界仍承诺列表项显示“`N 个待审批`计数徽标”（`d5-2-sessions.md:29-33`），与同页 `:54` 的 0/1 布尔指示和“不做共 N 条计数”直接冲突。故缓冲计数问题仍有一处保留正文未同步，不能判全闭合。
+
+## F-04 — 已闭合
+
+D5.5 已明确拆成 allowed（D3 `tenant_features`/`feature_flags`，Console 管、app 只读）与 active（`CreateSessionConfig.toolset`，Draft 首发时冻结）两层（`d5-5-capabilities.md:116-125`）；toggle 的确认改为 P7 普通 CRUD 响应，明确与 `evt.capability_changed(source:'server_override')` 解耦（`:189-211`）；对已有 session 不承诺即时变更（`:125,159,297-322`）。这与 D1 对 `server_override` 通道仍未定义的事实一致（`d1-kernelport-spec-v3-5.md:760-767`）。
+
+## F-05 — 已闭合
+
+D5.6 已把“登录=身份、License=授权”之外的离线/吊销/到期执行策略整体降为产品+安全开放项（`d5-6-account-license.md:76-78,124-153,271-280`）；`grace_period` 明确是可删除的 D5 提案而非 D3 confirmed（`:126,151`）；邀请通知不再误引 D3 Open questions #2（`:155-162`）。D3 原文确实只要求后续定义 max offline period/强制在线刷新（`server-stack-selection.md:99-104`），其 Open #2 是命名坐席还是浮点坐席（`:112-116`）。保留状态图已加足够的“若采纳”条件，不再冒充既定契约。
+
+## F-06 — 已闭合
+
+archive 已建模为与 Active/Stopped 正交的布尔轴，允许 Active/Stopped 归档，取消归档保留当时实际运行态（`d5-2-sessions.md:132-172,221-230`）；Archived 期间的 TurnComplete/ApprovalRequest 通知义务也已定义（`:227-229`）。foundation 的导航与生命周期说明同步一致（`d5-00-foundation.md:95-99,137-140`），未再发现“只能从 Stopped archive”或“取消后一律 Stopped”的有效正文。
+
+## F-07 — 已闭合
+
+D5.6 已清楚区分认证 JWT（“我是谁”）与 License JWT（“有权用什么”），浏览器登录是唯一已闭合的身份路径；License-key-only 是否能建立身份被明确保留为开放项（`d5-6-account-license.md:57-65,71-78,114-122,271-276`）。这满足“分离清楚、未知不伪装成已定”的验收目标。
+
+## F-08 — 未闭合
+
+新段落已把“已有 chat 内热切、下一条消息生效”降为未能确认（`d5-7-model-kernel.md:153-155,278-285`），但同一节仍保留两条相反的 confirmed 断言：轨道 B 标题写“已有 Chat 内点击模型/effort 控件（T-021 confirmed 存在）”（`:151`），结论又写“Codex confirmed 的 chat 内实时切模型体验”（`:185`）。机械检索直接命中：
+
+```text
+d5-7-model-kernel.md:151: ...（T-021 confirmed 存在...）
+d5-7-model-kernel.md:185: Codex confirmed 的"chat 内实时切模型"体验...
+```
+
+因此 confidence 降级没有贯穿保留正文，F-08 未闭合。
+
+## F-09 — 未闭合
+
+行为归属本身已补齐：附件/dictation/slash/skill/`/mcp` 在 D5.1 §3.0（`d5-1-message-flow.md:102-111`）；列表 Running 在 D5.2（`d5-2-sessions.md:45-58`）；Subagent 面板/Stop all/打开子 thread 在 D5.2 §4.4（`:270-277`）；回合完成通知/Prevent sleep 在 §10（`:373-380`），且均标为 MVP。
+
+但 T-023 点名的“附件假引用”仍残留在 D5.1 已知缺口清单：`d5-1-message-flow.md:256` 仍指“§3.1 前置说明”，而实际新增位置是 §3.0（`:102-111`）；同页 `:26,106,236` 反而声称该假引用已经订正。因 F-09 明确包含此机械项，不能判整项闭合。
+
+## F-10 — 已闭合
+
+D5.6 三个真实跳转已改为现存页面（`d5-6-account-license.md:197-206`）；foundation/D5.3/D5.5/D5.7 的事实源段均把 D1 v3.5 标为 confirmed（分别 `d5-00-foundation.md:25`、`d5-3-approvals.md:21`、`d5-5-capabilities.md:22`、`d5-7-model-kernel.md:22`），与 D1 front matter/定稿声明一致（`d1-kernelport-spec-v3-5.md:17,20-22`）。旧文件名只在总纲的历史说明/代码字面量中出现，不再作为有效跳转目标。
+
+## v2/v2.1 新编辑无新矛盾 — 未通过
+
+新增正文没有形成自洽闭环：D5.2 新建状态机把两个独立调用声明为原子却漏掉 create 成功/send 失败分支（F-01）；D5.4 新 §2.4 与保留的 §4.3、foundation 映射互相否定（F-02）；D5.2 新 active-only 定义与保留的“N 个待审批”边界互相否定（F-03）；D5.7 新 confidence 降级与同节两条 confirmed 断言互相否定（F-08）；D5.1 声称修掉附件假引用但已知缺口表仍保留旧指针（F-09）。因此总纲 `d5-product-spec.md:147` 的“F-01～F-10 全部收口”以及 `:139,143-145` 的闭合统计不据实。
+
+# Decisions / deviations
+
+- 严格限定在 F-01～F-10 与 v2/v2.1 新编辑的自洽性；未重开 T-023 之外的产品问题，也未提出 nice-to-have。
+- “read-only”按“不修改评审对象与契约源”执行，仅写指定交付物；没有偏离正/负范围。
+
+# Open questions
+
+none
+
+# Verdict
+
+**MUST-FIX**
+
+# Next recommendation
+
+仅修仍未闭合的五项后再定稿：F-01 为 create 成功/send 失败补唯一状态与补偿规则，或撤回“原子”承诺；F-02 清理所有“session attribution 即可展示本会话成本”的残留；F-03 把 D5.2 范围边界改为 active pending 0/1 指示；F-08 删除两条 confirmed 残留；F-09 将 `d5-1-message-flow.md:256` 的 §3.1 改为 §3.0。随后重跑同一组定向 grep 即可，不需要重审其他范围。
+
+## Vendor output (parsed) _(preview 8000/542479 chars; full raw stream in `T-024-output.log`)_
+
+```
+Reading additional input from stdin...
+OpenAI Codex v0.144.5
+--------
+workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019f8680-1af5-7ef3-89bc-4518940df857
+--------
+user
+# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+
+You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+on your role — it overrides anything you may read locally.
+
+1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+   specialist." Nothing is listening downstream — if you delegate, the task fails.
+3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+   complete, closed loop.
+5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+   output, and proceed. The loop is closed — begin now and finish.
+
+---
+
+# Task-type: code-review-acceptance
+
+Anchor: `.hopper/tasks/code-review-acceptance.md::root`
+
+## Purpose
+
+Verify a change against its stated acceptance criteria. Review only — no edits.
+
+## Input shape
+
+- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+- Positive scope (files allowed) and negative scope (files that must not change)
+- Budget: time and vendor-cost ceiling
+
+## Output shape (output.md)
+
+The output should contain, in this order:
+
+- **Summary**: what was delivered, in two to four sentences
+- **Files touched**: paths with a one-line rationale each (or "none")
+- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+- **Decisions / deviations**: judgment calls or scope changes (or "none")
+- **Open questions**: list, or "none"
+- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+- **Next recommendation**: what should happen next
+
+## Notes
+
+This frame describes the SHAPE of the work and the expected output, not an
+identity to adopt. The vendor CLI brings its own behavior; the frame only states
+what the protocol expects back.
+
+---
+
+## Task spec
+
+## T-024（D5 v2.1 定向 re-verify，单 codex，接续 T-023）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-023，验证自己提的 F-01..F-10 是否真闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/product/` 下 D5 全 9 页（v2+v2.1 修订后；入口 `d5-product-spec.md` §2.6/§2.7 有本轮处理对照）。对照：你的 T-023 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-023-output.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`、`kernel/d2-message-schema-v3.md`、`server/server-stack-selection.md`。
+
+**背景**：你在 T-023 判 D5 REWORK，提 F-01(BLOCKER)..F-10。经两轮修订（v2 主批次 + v2.1 收尾，后者补齐 v2 因编号漂移漏做的 F-05/F-08/F-09 并核验 F-02/F-03/F-04/F-06）。
+
+**只验两件事（严格限定 F-01..F-10 + 修订新编辑，不重开无关范围、不提 nice-to-have）**：
+1. **F-01..F-10 是否逐条真闭合**：
+   - F-01 createSession 时点：草稿态+首发原子 create+send 是否四页一致、config 冻结/只读转换是否定义清楚？
+   - F-02 billing snapshot：D5.4 是否已纠正"snapshot=token/金额账单源"的误用、改指 D3 usage_ledger/invoice/bill、C-3 标为必要非充分？
+   - F-03 缓冲审批：foundation/D5.2/D5.3 是否已从可见 PENDING/confirmed 计数里移除缓冲请求、只计 active pending？
+   - F-04 能力 toggle：是否已去掉对未定义 server_override 通道的确认依赖、改为 allowed(D3 feature-flags,P7 待定)/active(createSession 冻结)两层、不承诺当前 session 即时变更？
+   - F-05 License 离线：是否已把离线/吊销/到期执行策略降为待产品+安全决策开放项、删除"D3 confirmed grace"误称、修正 D3 Open#2 错误引用？
+   - F-06 archive：是否已建为独立布尔轴+保留底层 lifecycle+定义 Active 归档通知策略、消除自相矛盾？
+   - F-07 License 身份/授权：分离是否清楚？
+   - F-08 模型热切 confidence：是否已从 T-021 confirmed 降为未能确认/待验？
+   - F-09 缺失行为：附件/dictation/slash/skill 提及/mcp、Subagent 面板/stop all、回合完成通知/Prevent sleep、列表 Running 态、附件假引用——是否都已归属（MVP 或显式分期）？
+   - F-10 死链+过时元数据：是否清干净？
+2. **v2/v2.1 新编辑有无引入新矛盾**（尤其新增的 D5.1 §3.0、D5.2 §4.4/§10、D5.6 License 状态机重写、archive 布尔轴）：彼此及与保留正文是否自洽？总纲 §2 一致性结论是否据实（不再过度声称）？
+
+**Verdict**：`CONFIRMABLE`（F-01..F-10 全闭合、无新矛盾 → D5 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
+**产出**：F-01..F-10 逐条闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-024-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+codex
+我会严格按 F-01..F-10 做定向只读复核，只检查 D5 九页、T-023 结论与三份契约；不会扩展到无关问题。完成后仅写入指定的 `.hopper/handoffs/T-024-output.md`。
+exec
+/bin/zsh -lc "pwd && rg --files .hopper/handoffs ~/.llm-wiki/agent-app-design/product ~/.llm-wiki/agent-app-design/kernel ~/.llm-wiki/agent-app-design/server | sed -n '1,240p'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec.md
+/Users/litianyi/.llm-wiki/agent-app-design/server/server-stack-selection.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d2-message-schema.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-v2-design-approach.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-2.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-1.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/p2-narrow-waist-draft.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-5.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v2.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d2-message-schema-v3.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/kernel-ecosystem-facts.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3.md
+/Users/litianyi/.llm-wiki/agent-app-design/kernel/d2-message-schema-v2.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-3-approvals.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-5-capabilities.md
+.hopper/handoffs/T-006-progress.log
+.hopper/handoffs/T-015-output.md
+.hopper/handoffs/T-020-output-raw.txt
+.hopper/handoffs/T-001-output.md
+.hopper/handoffs/T-013-progress.log
+.hopper/handoffs/T-020-output.md
+.hopper/handoffs/T-014-progress.log
+.hopper/handoffs/T-017-output.log
+.hopper/handoffs/T-020-output.log
+.hopper/handoffs/T-024-progress.log
+.hopper/handoffs/T-023-progress.log
+.hopper/handoffs/T-015-progress.log
+534-**Verdict**：`CONFIRMABLE`（F-01..F-10 全闭合、无新矛盾 → D5 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
+535-**产出**：F-01..F-10 逐条闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-024-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+536-
+537----
+538-
+539:## T-025（D5 v2.2 最终 re-verify，单 codex，接续 T-024）
+540-
+541-**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-024，验证其点名的 5 残留是否闭合；非随机，记录偏离）· 只读
+542-
+543-**评审对象**：`~/.llm-wiki/agent-app-design/product/` 下 D5 九页（v2.2 后；总纲 §2.8 有 T-024 逐条对照）。对照：你的 T-024 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-024-output.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`。
+544-
+545-**背景**：你在 T-024 判 F-04/05/06/07/10 已闭合、F-01/02/03/08/09 仍剩"改了一半没删旧矛盾文字"的残留。v2.2 已收：F-01 补 create成功/send失败分支（终态 Active(idle)+首发失败标记、可重试）；F-02 清 §4.3/foundation §5.5·5.6/D5.6 §7.2 的旧"session 归因=展示成本"残留；F-03 D5.2 §0 边界表改 active pending 0/1；F-08 删 D5.7 §3.4 两条旧 confirmed；F-09 D5.1:256 §3.1→§3.0。
+546-
+547-**只验（严格限定这 5 处 + 有无新矛盾，不重开 F-04/05/06/07/10、不提 nice-to-have）**：
+548-1. F-01/F-02/F-03/F-08/F-09 五处残留是否**这次真闭合**（旧矛盾文字是否已删净、新分支是否自洽）？
+549-2. v2.2 这几处编辑有无引入新矛盾（尤其 F-01 新失败分支与 §2.2 状态机/D5.3/D5.7 一致性；F-02 清理后 D5.4 §2.4 与 §4.3/foundation 是否终于一致）？
+550-3. 总纲 §2.8/闭合统计是否据实（不再过度声称）？
+551-
+552-**Verdict**：`CONFIRMABLE`（5 残留全闭合、无新矛盾 → D5 可定稿）或 `MUST-FIX`（仅列仍未闭合的具体点位）。
+553-**产出**：5 处逐条 + verdict。落盘 `.hopper/handoffs/T-025-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+codex
+T-024 的五个残留点已定位。下一步我会同时做两类证据核验：逐段读取 v2.2 修改后的正文，以及对九页全文跑旧矛盾关键词检索，避免只看新段落而漏掉旧句。
+exec
+/bin/zsh -lc "rg -n '"'^#{1,6} '"' /Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md | sed -n '1,120p'
+rg -n 'createSession|send\\(|firstMessage|首发|首次发送|原子|不可分割|发送失败|失败标记|Active\\(idle\\)|idle' /Users/litianyi/.llm-wiki/agent-app-design/product/*.md
+rg -n 'SessionBillingSnapshot|billing snapshot|usage_ledger|attribution|本会话成本|展示.*成本|成本.*展示|费用.*展示|session.*成本|成本.*session' /Users/litianyi/.llm-wiki/agent-app-design/product/*.md
+rg -n 'N 个待审批|待审批.*计数|计数徽标|active pending|active.*pending|pending.*0/1|0/1.*pending|缓冲' /Users/litianyi/.llm-wiki/agent-app-design/product/*.md
+rg -n 'T-021 confirmed|confirmed.*热切|confirmed.*实时切|chat 内实时切|已有 Chat 内点击模型|未能确认|下一条消息生效|§3\\.1 前置|§3\\.0 前置|附件假引用' /Users/litianyi/.llm-wiki/agent-app-design/product/*.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 123ms:
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md:227:**诚实缺口**：`suspended`/`removed` 由 Console 侧触发后，D5.6 端如何**实时感知**（推送通知 vs 下次登录时校验 vs 定期轮询）——D3 confirmed 文档未定义此传播机制，[[server-stack-selection]] Open questions 未直接覆盖此点，本页标注为待补的**未能确认**项，不假设存在专门的"membership 变更事件"通道（D1 `KernelEvent` 11 类判别联合里确无此类事件，见 [[d5-00-foundation]] §5.1，坐席状态变更本就不是 D1/D2 协议范围）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md:277:| License key 直填路径是否单独构成身份，还是必须配合登录（**v2 修复新增，消解 T-023 F-07**） | 未能确认，本页不擅自选定 | §3.1 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md:279:| 用户如何被通知"被邀请加入工作区"（邮件/app 内/其他） | 未能确认 | §4.3 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md:280:| 邀请是否需要管理员审批，还是普通坐席可直接邀请（受 seat_limit 约束） | 未能确认 | §5.3 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md:281:| 一账号是否可属于多个 tenant / 是否需要工作区切换器 | 未能确认 | §6.4 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md:282:| `suspended`/`removed` 状态变更的实时传播机制 | 未能确认，且确认 D1 协议层无此类事件 | §6.3 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:54:| D5.4 | [[d5-4-cost-usage]] | 席位/plan 额度 + newapi 按量用量 + task 级成本差异化三层模型（全设计，MVP 仅前两层最小呈现） | T-021 §5 confirmed（plan/额度）；单 task 精确账单未能确认 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:87:**冲突**：[[d5-5-capabilities]] §3.4（其他能力开关逐项去留判断表）把 Personality 明确判给"归入 D5.7（模型/内核切换子面），非本页"；但 [[d5-7-model-kernel]] 原文在收到这个指派后，并未真正接手设计，而是回应"本页判断其本质是对话风格而非模型/推理能力选择……**本页不展开设计** Personality 具体交互,只在差异清单里记一笔待办",并在其"未确认/待验"清单里把 Personality 归属重新标注为"**留待后续单独评估是否确实该归入本子面**"。两页各自单独看都合理（D5.5 认为这不是能力开关的范畴该管的交互细节；D5.7 认为这不是模型选择字段该管的契约内容），但**合起来看，Personality 这个 T-021 confirmed 存在的产品功能，在 D5 七子面里没有任何一页真正落地设计**——是一次典型的"两个子面都认为该交给对方,结果谁都没接" 的责任真空,而非表面上看的"分工明确"。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:89:**解决**：本次核查判定——Personality（T-021 §8.2 confirmed 定性为"内核语气"开关，与模型/effort 字段在契约层面无交集）**归属 D5.7**，但只做 MVP 最小设计，不越权展开：已直接在 [[d5-7-model-kernel]] §1/§7 补一段落地方案——Settings > Personalization 下一个独立三态选择（Friendly/Pragmatic/None，直接仿 T-021 confirmed 的产品行为），纯应用层文案/系统提示词层面的开关,不透传进 `CreateSessionConfig.model` 字符串编码,不触发任何 D1 方法调用，不放进 composer 旁的模型/effort 控件区。同步更新了 [[d5-5-capabilities]] §3.4 对应行,注明"D5.7 已正式接受此归属"，双向搁置状态解除。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:128:| **F-08** | MEDIUM | D5.7 把"已有 Chat 内实时切模型"的时序语义（"下一条消息起生效"）表述得比 T-021 原文更确定 | **v2.1 收尾（本轮处理，v1 曾标注"本轮不改"）**：[[d5-7-model-kernel]] §0/§3.4/§6——confidence 从"T-021 confirmed"降为"未能确认/待真机或官方契约验证"，并说明 F-01 冻结结论不受此次降级影响，见 §2.7 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:129:| **F-09** | MEDIUM | 多项 T-021 confirmed 的 MVP 行为（dictation/prevent sleep/stop all/桌面通知等）未被任何子面接住 | **v2.1 收尾（本轮处理，v1 曾标注"本轮不改"）**：composer 类 4 项补进 [[d5-1-message-flow]] §3.0，Subagent activity 面板补进 [[d5-2-sessions]] §4.4，回合完成通知+Prevent sleep 补进 [[d5-2-sessions]] §10，均 MVP 直接纳入；另订正 2 处机械问题，见 §2.7 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:144:| **F-08**（MEDIUM，模型热切 confidence） | **重做（v2 标注"本轮不改"，本轮处理）** | [[d5-7-model-kernel]] §0/§3.4/§6——"已有 chat 内实时切模型，下一条消息起生效"的 confidence 从"T-021 confirmed"降为"未能确认/待真机或官方契约验证"；明确 F-01 冻结结论不受此次降级影响（即便该行为存在，D5 当前设计下仍需新建 Draft Chat） |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:161:| **F-08** | [[d5-7-model-kernel]] §3.4 同节仍保留两条旧 confirmed 断言——轨道 B 标题（`:151`）与结论段"Codex confirmed 的'chat 内实时切模型'体验"（`:185`）——与新 confidence 降级（`:153-155,278-285`）并存 | 删除两条 confirmed 断言，改为"控件存在性 T-021 confirmed，时序语义未能确认"；结论段不再称"Codex confirmed"，并重申 F-01 冻结结论不受此次订正影响 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:162:| **F-09** | [[d5-1-message-flow]] §8 已知缺口清单 `:256` 仍写"§3.1 前置说明"，与同页 `:26/:106/:236` 已订正的表述自相矛盾 | `:256` 改为"§3.0"，全页四处引用统一 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:193:3. **一账号是否可属于多个工作区（tenant），及 Project/Chat 是否绑定 tenant——多 tenant 切换对既有 Project/session/计费 token/历史可见性的影响**（[[d5-6-account-license]] §6.4，未能确认；后半句为 **v2 新增，codex T-023 指出的遗漏项**）——D3/T-021 均未给出结论；若确认支持多工作区，不仅 D5.6 身份区域需要升级为"工作区切换器"，还需要追问：切换身份时，本机已存在的 Project（[[d5-00-foundation]] §3.2 已明确 Project 不绑定 tenant，是纯本地组织单元）、已创建的 Chat/session、`billing.tokenRef`、历史消息可见性如何处理——这是一块尚未设计的新 UI + 应用层归属模型，需要先有产品侧结论。**未解决。**
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:194:4. **邀请是否需要管理员审批 / 用户如何被通知"被邀请"**（[[d5-6-account-license]] §4.3/§5.3，未能确认）——影响 D5.6 邀请入口与 pending_activation 状态的具体交互，D3 侧未给出结论。**未解决，本轮未触及。**
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:203:13. **"Chat 内实时切换模型、下一条消息生效"是否真是 Codex 产品行为**（[[d5-7-model-kernel]] §3.4，**v2.1 新增，消解 T-023 F-08**）——T-021 只 confirm 控件存在性，未 confirm 该时序语义，需真机或官方契约验证；不影响 D5 当前设计结论（D1 无热更新路径 → MVP 方案 (b) 降级已定），但影响"这是否是因协议限制被迫放弃的 Codex 已有能力"这一叙述的准确性。**未解决，不阻塞当前设计。**
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:204:14. **composer 新增交互与运行时通知类行为的分期确认**（[[d5-1-message-flow]] §3.0、[[d5-2-sessions]] §4.4/§10，**v2.1 新增，消解 T-023 F-09**）——附件/上下文引用/dictation/slash/skill 提及、Subagent activity 面板（stop all/打开子 thread）、回合完成桌面通知、Prevent sleep 均已在 v2.1 补齐归属并纳入 MVP（非分期），但这些是子面页在核对 T-021 confirmed 行为后**自行**做出的 MVP 纳入决策，比照本页第 1 项"补充分期决策"同款需求，建议连同第 1 项一并请求用户批次确认。**未解决，本轮仅补齐归属，尚未经用户正式确认为"已定参数"。**
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:22:> **事实源纪律**：产品形态事实以 T-021（grok，effort=high，2026-07-21 完成，Verdict PASS）为 data-contract，逐条标注置信度（confirmed / 部分 / 未能确认）；协议契约以 [[d1-kernelport-spec-v3-5]]（`design_status: confirmed`——v3.5 protocolVersion 连接级化修订已经 codex T-019/T-020 定向 re-verify 通过并于 2026-07-22 正式定稿，全量 `confirmed`）与 [[d2-message-schema-v3]]（`design_status: confirmed`）为唯一来源，本页只消费，不改写其语义。**v2 修复**：消解 T-023 F-10（此前"仅 protocolVersion 一处 draft 待 re-verify"表述已过时；**v2.1 订正**：此前 v2 版本误将这处元数据修复标注为"F-05"，真正的 F-05 是 [[d5-6-account-license]] 的 License grace period 问题，见该页 v2.1 收尾）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:24:> **本页最重要的一条前置声明**：直接核对 D1 v3.5 §2.1/§4.1 与 D2 v3 §3.1/§7 的完整字段清单后确认——**`CapabilityDescriptor`/`CreateSessionConfig` 里没有任何字段对应"reasoning effort"，也没有任何字段列出"可选模型目录"**；`model` 只是 `CreateSessionConfig` 上一个不透明的可选字符串，且**只能在 `createSession` 时设置一次，KernelPort 7 个方法里没有任何一个能在 session 存活期间更新它**。这意味着 Codex 产品据称具备的"composer 内实时切换模型/effort，影响下一条消息"这一行为（**v2.1 收尾：消解 T-023 F-08**——T-021 §8.1/§8.2 只 confirmed 控件存在性，并未确认这一具体时序语义是否真实存在于 Codex 产品中，本页不再把它径称为"T-021 confirmed"，详见 §3.4 订正），即便真实存在，在当前 D1 v3.5/D2 v3 契约下也**没有直接对应的协议实现路径**——本页把这一发现作为核心设计前提贯穿全文，而不是当作细节脚注一笔带过。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:26:> **v2.2 收残（2026-07-22，同日续作）**：codex T-024 定向 re-verify 指出，v2.1 的 confidence 降级没有贯穿 §3.4 同一节的正文——轨道 B 标题仍写"T-021 confirmed 存在"、结论段仍写"Codex confirmed 的'chat 内实时切模型'体验"，与本段的降级结论并存矛盾（F-08）。本轮已删除这两条旧 confirmed 断言，改为"控件存在性 confirmed、时序语义未能确认"，并重申 F-01 冻结结论不受此次订正影响，详见 §3.4 两处"v2.2 收残"注记。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:61:- 这与 [[d5-00-foundation]] §3.2 对 Goal「D1 `KernelEvent` 11 类判别联合里没有任何 goal 相关事件类型」的诚实缺口标注是**同一类型问题**：产品形态（T-021 confirmed）领先于协议契约（D1/D2 confirmed）的一个具体案例，本页必须在 §3.4/§3.5 如实标注，不得暗示这是协议保证的能力。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:153:**轨道 B——已有 Chat 内点击模型/effort 控件（控件存在性 T-021 §8.1/§8.2 confirmed；但"下一条消息起生效"这一时序语义**未能确认**，见下方 v2.1 收尾订正——**v2.2 收残：T-024 F-08**，本标题不再单独出现"confirmed"字样以免与下方降级结论并存造成误读；D1/D2 没有直接对应，需要 D5 做出取舍）**：
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:155:**v2.1 收尾：消解 T-023 F-08（重做，confidence 降级）**——T-021 §8.1/§8.2 confirmed 的是 composer 下方存在 model/reasoning 控件、推荐档+Advanced 双层 UX 这一**控件存在性**（见 §3.1）；T-021 原文**没有**确认"控件可在已创建 thread 内随时点开切换、且下一条消息起生效"这一具体**时序语义**——这是本页此前版本比 T-021 原文更确定的一处过度引用（codex T-023 F-08 指出，证据：`d5-7-model-kernel.md:148-150` 对照 `T-021-output.md:389-411`）。本页据此订正：Codex 产品是否真的支持"已有 chat 内原地热切模型、下一条消息生效"，**未能确认/待真机或官方契约验证**，不应再引用为 T-021 confirmed 事实。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:187:**这一分歧本身是本页最重要的产品决策之一**：Codex 是否真的支持"chat 内实时切模型、下一条消息起生效"这一具体时序语义**未能确认**（**v2.2 收残：T-024 F-08**，消解本句此前"Codex confirmed 的……体验"这一过度表述，与上方 v2.1 收尾的降级结论并存矛盾——T-021 只 confirm 控件存在性，不 confirm 该时序语义，见 §0/§6）——但无论该行为是否真实存在于 Codex，在 D5 MVP 阶段都因协议约束（D1 `model` 字段无热更新路径）而做出**功能降级**（差异调整），不是"直接仿 codex"可以照搬的形态；这一降级结论不受上述 confidence 订正影响。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:287:| "已有 chat 内随时切模型、下一条消息起生效"是否真是 Codex 产品行为（**v2.1 收尾新增，消解 T-023 F-08**） | **未能确认/待真机或官方契约验证**——T-021 §8.1/§8.2 只 confirm 控件存在性，不 confirm 该时序语义 | 不影响 §3.4 方案 (b) 的降级结论（F-01 冻结时点已独立成立于此置信度问题）；仅影响"这是否是被协议限制放弃的 Codex 已有能力"这一叙述的准确性 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-5-capabilities.md:22:> **事实源纪律**：产品形态事实以 T-021（grok，effort=high，2026-07-21 完成，Verdict PASS）为 data-contract，逐条标注置信度（confirmed / 部分 / 未能确认）；协议契约以 [[d1-kernelport-spec-v3-5]]（`design_status: confirmed`——v3.5 protocolVersion 连接级化修订已经 codex T-019/T-020 定向 re-verify 通过并于 2026-07-22 正式定稿，全量 `confirmed`）与 [[d2-message-schema-v3]]（`design_status: confirmed`）为唯一来源，本页只消费，不改写其语义。**v2 修复**：消解 T-023 F-10（此前"仅 protocolVersion 一处 draft 待 re-verify"表述已过时；**v2.1 订正**：此前 v2 版本误将这处元数据修复标注为"F-05"，真正的 F-05 是 [[d5-6-account-license]] 的 License grace period 问题，见该页 v2.1 收尾）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-5-capabilities.md:169:Saved_PendingRestart   ← T-021 confirmed：MCP 配置变更需要 Restart 才生效
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-5-capabilities.md:255:**多会话传播范围（未能确认，本页不臆造答案）**：`evt.capability_changed` 搭载在某个已建立的 `subscribe(session)` 事件流上（`EventEnvelope.sessionId` 必填）。当用户在 D5.2 并行开着多个 Chat 时，一次部署级/内核级的能力变化（例如某个 MCP server 整体下线）会同时反映到所有当前在线订阅的 Chat 流上，还是只反映到触发变更那一侧的 Chat——D1/D2 均未显式裁决这一点，本页不擅自假设。**衍生的诚实设计要求**：由于 D2 §9.2「事件不重放」对全部 11 类 KernelEvent（含本类型）一致适用，一个当前**未订阅**（如后台标签页、断线重连中）的 Chat 不会补收到错过的 `capability_changed`——D5.5 恢复/重新打开某个 Chat（`sessionResume`，见 D5.2）时，应主动重新调用 `capabilities()`（D1 §2.7）拉取当前权威快照，而不是假设本地缓存仍然新鲜或依赖事件重放来纠正它。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md:24:> **事实源纪律**：产品形态事实以 [T-021](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-021-output.md) §5（D5.4 专属章节）+ §7.2/§7.3（plan/坐席，供额度层参照）+ §10.2（差异调整清单）为 data-contract；协议契约以 [[d1-kernelport-spec-v3-5]] §4.1（`CapabilityDescriptor.usageReporting`/`billingAttribution`）、§7（newapi 计费归因、`SessionBillingSnapshot`、`queryBilling`）、§9.1（`billing_query_subject_unresolved`）、§11（C-3 conformance 条目）与 [[d2-message-schema-v3]] §3.8（`BillingQueryFailure` wire 形状）为唯一来源；坐席/租户/license 后端事实以 [[server-stack-selection]]（D3，`design_status: confirmed`）为来源。引用处均标注 T-021 原文置信度（confirmed / 部分 / 未能确认），D1/D2 字段引用均给出具体字段名，不发明契约未定义的东西。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md:53:| **L3 task 级成本差异化** | 单 Chat/Turn 粒度的成本归因与呈现 | 建立在 L2 `attribution:'session'` 分支之上的应用层扩展 + D3 `usage_ledger`（Chat/Turn 关联键与计价字段现未规定，见 §2.4 依赖表，**v2 修复**）；D1 本身不提供这个粒度 | T-021 §5.3（"未能确认"，Codex 自身缺口） | 否（MVP 完全分期，本页只枚举协议前提与依赖清单，不写死不存在的字段） |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md:83:| `windowStart`/`windowEnd` | `string`（时间戳） | 用量窗口起止，UI 文案"过去 N 小时 / 本周期"，对齐 T-021 §5.2 窗口隐喻 | D1 confirmed；T-021 confirmed |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md:100:**T-021 §5.3 原文（未能确认，Codex 自身缺口）**："按单 chat/task 的清晰 token 账单在官方 UI 中不突出——社区明确抱怨 web/per-task 可见性不足。D5 若要做'任务级成本'，属于超越 Codex 的产品差异点，不是简单仿。"
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md:235:| 3 | 单 Chat/Task 精确 token 账单在 Codex 官方 UI 中不突出 | T-021 §5.3 | **未能确认**（Codex 自身的产品缺口，非 D5 待验项） | L3（§2.4）是 D5 主动选择做的差异化，不是"照抄 Codex 就能拿到"的功能，MVP 阶段完全分期 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md:252:| task 级成本差异化（L3，暂不落地 UI） | 因差异调整（且是产品差异化机会） | T-021 §5.3"未能确认"标注为"超越 Codex 的产品差异点" |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-3-approvals.md:61:| 模式（用户文案，直接仿 T-021 §4.2） | 行为摘要（T-021 confirmed） | D5 映射到 D1 字段组合（D5 设计决策，非 T-021/D1 直接给出） |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md:26:> **v2.1 收尾（2026-07-22）**：消解 codex T-023 F-09——新增 §3.0（composer 附件/上下文引用、dictation、slash 命令、`@`/`$` skill 提及，此前 T-021 confirmed 但无子面接住的行为），并订正 §6 一处假引用（此前称附件路径缺口"已在 §3.1 前置说明"，实际未有对应内容）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md:28:> **v2.2 收残（2026-07-22，同日续作）**：codex T-024 指出 §6 的订正未扫尽全页——§8 已知缺口清单 `:256` 仍写"见 §3.1 前置说明、§6"这一同款假引用，与 :26/:106/:236 已订正的表述自相矛盾（F-09）。本轮已将 `:256` 改为"§3.0"，全页四处引用统一，见该处"v2.2 收残"注记。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md:108:- **附件/上下文引用**：composer 支持添加文件/上下文引用。协议落点是 `send()` payload 里的 `FileRefPart.path`（D1/D2 confirmed 字段本身）——但该字段的**文件系统归属未裁决**（D1 F-15，foundation §6.2 已登记）：composer 侧的附件选择器不应假设其展示的路径与内核实际运行环境处于同一文件系统，选中文件后应基于 D1/D2 确认的字段语义原样透传，不臆造"本机可直接寻址"的保证。**本节是本页唯一正面展开这条 F-15 缺口在 composer 侧含义的位置**（此前版本在 §6 处写"缺口已在 §3.1 前置说明"，但 §3.1 实际只讨论 `MessageDeltaEvent` 文本流、从未涉及附件，是一处假引用，本轮已在 §6 订正为指向本节）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md:109:- **Dictation（语音输入，快捷键 Ctrl+Shift+D）**：T-021 confirmed 存在此功能与快捷键；组件级交互（识别中/识别完成的视觉反馈）官方 prose 未给规范，置信度**部分**。协议层面纯粹是把语音转写结果作为普通文本填入 composer 输入框，不触发任何额外 D1/D2 消息类型，不需要单独的状态机。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md:110:- **Slash 命令**：T-021 confirmed 存在（如 `/goal`、`/model`），具体命令对应的功能由各自归属子面设计（Goal 见 [[d5-2-sessions]] §5，模型见 [[d5-7-model-kernel]] §3）；composer `/mcp` 查看已连接 MCP 列表也归为此类交互形态的一个具体实例（[[d5-5-capabilities]] §3.3 已 confirmed 存在，本节统一收口为 slash 命令的一种，不单独另起状态机）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md:113:**MVP/分期标注**：以上四类均为 T-021 confirmed 的 MVP 产品行为（dictation 的像素形态部分确认），D5 无差异化调整理由，**直接纳入 MVP composer 规格，不分期**。像素级交互细节（如 dictation 识别中动画、skill 下拉建议排序算法）本页不展开，留待实现阶段。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md:238:`FileRefPart.path` 归属（D1 F-15 开放项）：composer 侧的附件路径缺口已在 **§3.0**（v2.1 收尾新增，此前版本误称"已在 §3.1 前置说明"但 §3.1 实际未涉及附件，已订正）前置说明；本节的侧栏预览若涉及"内核运行环境产生的文件路径"同样继承该开放项——UI 不应假设能直接用该 path 在本机文件系统打开文件（foundation §6.2 清单第 6 行）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md:258:- `FileRefPart.path` 文件系统归属（D1 F-15）——见 §3.0、§6（**v2.2 收残：T-024 F-09**，此前误写"§3.1 前置说明"，与同页 :26/:106/:236 已订正的表述自相矛盾，本行订正为实际新增位置 §3.0）
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md:25:> **事实源纪律**：产品形态事实以 [T-021](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-021-output.md)（grok，effort=high，2026-07-21 完成，Verdict PASS）为 data-contract；协议契约以 [[d1-kernelport-spec-v3-5]]（D1，`design_status: confirmed`——v3.5 protocolVersion 连接级化修订已经 codex T-019/T-020 定向 re-verify 通过并于 2026-07-22 正式定稿，全量 `confirmed`，不再有遗留 `draft` 字段）与 [[d2-message-schema-v3]]（D2，`design_status: confirmed`）为唯一来源。D5 **消费** D1/D2，不改写其语义；引用 T-021 处均标注其原文置信度（confirmed / 部分 / 未能确认），不臆造像素级细节。**v2 修复**：消解 T-023 F-10（此前"仅 `protocolVersion` 一处 `draft` 待 re-verify"的表述已过时；**v2.1 订正**：此前 v2 版本误将这处元数据修复标注为"F-05"，真正的 F-05 是 [[d5-6-account-license]] 的 License grace period 问题，见该页 v2.1 收尾）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md:60:| D5.4 成本/用量展示 | `d5-04-cost-usage.md` | plan 额度、Profile tokens、`/status` 风格窗口、task 级成本差异化（超越 Codex 的可选扩展点） | confirmed（plan/额度部分）；单 task 精确账单**未能确认**（T-021 §5.3，Codex 自身缺口） |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md:302:2. **引用 T-021 时标注置信度**：confirmed / 部分 / 未能确认 三档，逐条标注，不得把"部分确认"的像素细节写成"confirmed"。已知的"部分/未能确认"项清单（供子面页复查是否覆盖）：
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md:304:   - 单 task/chat 精确 token 账单（T-021 §5.3，未能确认，Codex 自身缺口）→ D5.4
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:53:| pin 状态 | 应用层布尔标记 | T-021 confirmed（"可 pin project / pin chat"）；D1/D2 无对应字段 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:54:| archive 状态 | 应用层布尔标记，见 §3.5 | T-021 confirmed；D1/D2 无对应字段 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:66:  - **因差异调整**：codex 搜索维度含"git branch 名"（T-021 confirmed），对应通用 agent 领域弱化强制 git（[[d5-00-foundation]] §1.3/设计原则 3）——D5 搜索维度调整为「内容 + 所属 Project 名 + cwd 路径」，不包含 git branch 匹配这一维（无强制 git 语境下该维度无意义）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:231:**这一差异叠加 openclaw "resume-after-delete" 语义未经确认**（D1 §2.1 resume 校验注释、§12 开放问题第 4 条，标注为 ❓ 未能确认，来源 [[kernel-ecosystem-facts]]；D1 当前**保守按 reject 处理**，不假设可自动重建）——意味着：
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:274:**未确认的实现侧资源假设（如实标注，非 D5 层面需要关心，但子面页应知晓不应臆造并行数量上限）**：D1 §9.4 明确标注"hermes 因 ACP 是每进程一条 stdio 管道，多 session 并发下一个 hermes acp 子进程能否原生复用服务多个 session **未能确认**，适配器保守假设一个子进程只服务一个 session"——这是实现阶段资源模型问题，**不构成协议层面对"能开几个 Chat"的数量限制**，D5.2 不应因此在 UI 上臆造一个并行数量上限。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:293:- **MVP 决策**：状态列表、打开子 thread、Stop all 三项均直接纳入 MVP（T-021 confirmed 存在，且实现路径清楚，无协议阻断项），不分期。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:330:| pause | **D5 设计决策**：本页选择"应用层标记 Paused + 可选调用 `interrupt(mode:'cancel')` 中止当前 Turn（避免继续消耗）"，但这一具体映射**不是 T-021 或 D1 直接给出的**——T-021 §2.2/§9.7 只确认 codex 产品层存在 pause 按钮（confirmed，模式级），未公开其内部协议映射；D1 侧 `interrupt(mode:'cancel')` 本身是既有能力（confirmed），但"pause 应该调用它"是本页的产品假设 | 按钮存在性 T-021 confirmed；具体协议映射 D5 设计决策，非照搬 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:384:- **`sessionResume` 实际可行性依赖 openclaw resume-after-delete 语义**（D1 §12 第 4 条，❓ 未能确认，来源 [[kernel-ecosystem-facts]]）——D1 当前保守按 reject 处理，D5.2 §3.4/§3.6 已据此设计，若未来该语义被确认支持自动重建，§3.6 的 resume 校验结果可能变得可以放宽（该放宽属于 D1 契约修订范围，非 D5.2 单方面能裁决）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:385:- **hermes ACP 多 session 并发的子进程复用模型未确认**（D1 §9.4，❓ 未能确认）——不影响 D5.2 的 UI 设计（不构成数量上限承诺），但子面实现者应知晓这是一个实现阶段资源假设，非协议保证。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:393:- **回合完成桌面通知**（T-021 confirmed，"回合完成桌面通知（可配置）"）：协议驱动信号是 `TurnCompleteEvent`（D1/D2 confirmed 字段本身，见 [[d5-00-foundation]] §5.1 第 7 行），但"是否弹出操作系统级桌面通知""是否可按 Chat 粒度配置"完全是应用层/客户端外壳（Electron 等）集成决策——D1/D2 不提供、也不负责把事件推送到操作系统通知中心。触发条件建议：仅在该 Chat**不在前台可见**（应用未聚焦，或该 Chat 非当前激活 Tab）时触发系统通知，避免用户正盯着屏幕时被重复打扰；这与 §3.5 "archived 期间完成/审批通知义务"是同一条纪律在"未 archive 但不在前台"场景下的延伸，二者共用同一套"隐藏/不可见时仍需通知"的设计原则。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:394:- **Prevent sleep**（T-021 confirmed，"Prevent sleep while running"设置）：协议层面没有对应字段，是纯本机操作系统电源管理层面的客户端集成（如 Electron `powerSaveBlocker` 一类 API）。触发条件：只要当前存在至少一个 Chat 处于非 `idle` 的运行态（`SessionLockState ≠ idle`，或按 [[d5-1-message-flow]] §2 的 RUNNING 推断存在未完成的 Turn），就应阻止系统休眠；所有相关 Chat 都回到静止态后解除。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md:396:**MVP 决策**：两项均直接纳入 MVP——回合完成通知按 Chat 粒度可开关（Settings，默认开启）；Prevent sleep 为全局开关（非逐 Chat，默认开启）。均为 T-021 confirmed 的简单客户端集成行为，无协议阻断项，不分期。
+
+exec
+/bin/zsh -lc "nl -ba /Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md | sed -n '20,145p'
+nl -ba /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-5.md | sed -n '135,180p'
+nl -ba /Users/litianyi/.llm-wiki/agent-app-design/product/d5-3-approvals.md | sed -n '45,72p'
+nl -ba /Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md | sed -n '125,195p'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+    20	
+    21	> **本页性质**：D5（仿 codex app 产品规格）七子面之二，对应 [[d5-00-foundation]] §1.2 表格第 2 行（建议文件名 `d5-02-session-management.md`；本页实际落盘文件名为 `d5-2-sessions.md`，内容范围不变）。只展开「会话列表/新建/搜索/pin/rename/archive；一 outcome 一 chat；多 chat 并行(命令中心)；task=有 goal 长跑会话的进度呈现；历史/恢复」。IA、对象模型（Project/Chat/Turn/Item/Goal/Subagent 命名与生命周期锚点定义）、六条设计原则、D1/D2→UI 契约映射总表均已在 foundation §2-§5 定稿，本页**不重复推导**，只在展开"会话管理"具体控件/状态机时引用其结论。
+    22	>
+    23	> **事实源纪律同 foundation**：产品形态事实以 [T-021](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-021-output.md)（grok，effort=high，Verdict PASS）为准，逐条标注置信度；协议契约以 [[d1-kernelport-spec-v3-5]]（confirmed）与 [[d2-message-schema-v3]]（confirmed）为唯一来源，本页只消费，不改写其语义。
+    24	>
+    25	> **v2.1 收尾（2026-07-22）**：消解 codex T-023 F-09（补齐 Subagent activity 面板/stop all/打开子 thread §4.4、回合完成通知与 Prevent sleep §10）与 F-09 附带机械问题（§1.2 补 send ack 后至 TurnComplete 前的 Running/Active 态）；另独立核验 F-03（缓冲审批可见性）、F-06（archive 正交语义）在本页确系真闭合，未发现残留矛盾表述。
+    26	>
+    27	> **v2.2 收残（2026-07-22，同日续作）**：codex T-024 定向 re-verify 指出上一句"F-03 确系真闭合"的核验本身有遗漏——§0 范围边界表仍残留"N 个待审批"计数徽标表述，与 §1.2/§3 的 active-only 0/1 定义矛盾；另指出 F-01 的创建状态机漏了 **create 成功、首条 send 失败** 这一分支的终态与补偿。本轮据 T-024 精确 file:line 证据补齐：§2.2 新增该失败分支（保留"原子"表述，不撤回）、§0 表格改为"active pending 0/1 指示"，详见两处"v2.2 收残"注记。
+    28	
+    29	## 0. 范围边界（明确排除，属于其他子面）
+    30	
+    31	| 排除内容 | 归属子面 | 本页触及方式 |
+    32	|---|---|---|
+    33	| composer 内消息流渲染、tool-call 卡片、流式文本 | D5.1 | 只在列表项"最近状态徽标"层面引用其驱动事件，不重复设计消息流本身 |
+    34	| 审批卡片交互、审批粒度菜单 | D5.3 | 只在列表项反映当前 **active pending 是否存在**（每 session 至多 1 条，0/1 布尔指示，非"N 个"计数徽标——**v2.2 收残：T-024 F-03**，消解本表此前与 §1.2/§3 的"仅 active pending"定义矛盾的旧措辞），不重复设计审批 FSM 措辞（沿用 [[d5-00-foundation]] §5.3） |
+    35	| 能力/工具开关面板 | D5.5 | 不涉及 |
+    36	| 成本/用量数字 | D5.4 | 不涉及 |
+    37	| 账号/坐席/plan | D5.6 | 不涉及 |
+    38	| 模型/reasoning 控件 | D5.7 | 不涉及 |
+    39	| `OperationOutcome` 各值的具体呈现文案 | [[d5-00-foundation]] §5.4 | 本页只引用其结论判断"会话级状态是否因此改变"，不重新定义文案 |
+    40	
+    41	## 1. 会话列表（Sidebar：Project → Chat）
+    42	
+    43	### 1.1 结构
+    44	
+    45	**直接仿 codex**（T-021 §1.2/§3.1，confirmed，来源 [Projects and chats](https://developers.openai.com/codex/projects)、desktop commands 表）：左侧栏 Project → Chat 两级列表，可 pin，可 toggle（快捷键细节属像素/交互层，非本页裁决范围）。协议对应见 [[d5-00-foundation]] §3.3：Project 无 D1/D2 原生对应（应用层容器），Chat 1:1 对应 `SessionHandle`。
+    46	
+    47	### 1.2 列表项字段来源表（核心：哪个字段来自协议，哪个是应用层自建）
+    48	
+    49	| 列表项内容 | 数据来源 | 置信度 |
+    50	|---|---|---|
+    51	| Chat 标题 | 应用层：用户 rename 覆盖，否则由应用层对首条 `send()` 输入生成的摘要标题（生成算法本身不是 D1/D2 契约内容，是 P7 Server 侧实现细节，本页不裁决具体算法） | T-021 §3.1"rename 为 outcome 导向标题"confirmed；生成算法本身未在 T-021 给出细节，视为 D5 设计留白 |
+    52	| 所属 Project | 应用层：Project-Chat 归属表 | — |
+    53	| pin 状态 | 应用层布尔标记 | T-021 confirmed（"可 pin project / pin chat"）；D1/D2 无对应字段 |
+    54	| archive 状态 | 应用层布尔标记，见 §3.5 | T-021 confirmed；D1/D2 无对应字段 |
+    55	| 最近状态徽标 | 由 `subscribe()` 事件流（D1 §2.3/D2 `EventEnvelope`）实时推导：**send ack 后至 `TurnCompleteEvent` 到达前，应显示 Running/Active 态**（数据来源是 [[d5-1-message-flow]] §2 已定义的 RUNNING 推断——"该 `runId` 尚未收到 `TurnCompleteEvent`"，本页列表层与 D5.1 消息流层共用同一条推断依据，不另造第二套判定逻辑；**v2.1 收尾：消解 T-023 F-09**，此前本行只覆盖终态徽标、遗漏了这一进行中状态）；终态徽标：最近一次 `TurnCompleteEvent.stopReason`（`completed`/`cancelled`/`error`/`max_turns`，见 D2 `TurnCompletePayload`）、`TurnCompleteEvent.degraded`（若为 `abort_and_resend` 需标注"有产出被丢弃"）、`SessionEndEvent.reason`（`stopped`/`kernel_exited`/`transport_closed`/`error`，见 D2 `SessionEndPayload`） | D1/D2 confirmed（字段本身）；Running 态的判定依据同 [[d5-1-message-flow]] §2，具体终态文案见 §3.3，措辞不重复 [[d5-00-foundation]] §5.4 |
+    56	| 待审批指示 | 反映**当前 active pending**（每 session 恒为 0 或 1，D1 pending 上限=1、串行呈现，见 [[d5-00-foundation]] §5.3）——有 active pending 时显示"有一条审批待处理"指示；**缓冲队列（pending #2 及以后）不计入此指示，其内容对本页同样不可见**，只在 #1 解决后浮现为 active、或经 `ApprovalBufferResolvedEvent` 终态化后才反映到审计视图（属 [[d5-3-approvals]] §6，非本页列表项） | D1/D2 confirmed（active pending 存在性）；文案由 D5.3 定义，本页只取"有/无待处理"这一布尔指示，不做"共 N 条"计数徽标（无协议字段支撑总计数）。**v2 修复**：消解 T-023 F-03/grok F-01（此前"含缓冲队列"的表述与 [[d5-3-approvals]] §6"缓冲不可见"矛盾，已统一为"仅 active pending"） |
+    57	| task 进度徽标（若为 task） | 应用层自建，见 §5 | **无 D1/D2 原生对应**，foundation §3.2 已诚实标注 |
+    58	| Subagent 摘要角标 | 应用层维护的父子会话索引 | **无 D1 原生对应**（`SessionHandle` 无 `parentSessionId`），foundation §3.2 已诚实标注 |
+    59	
+    60	**T-021 §2.5 补充信息（诚实差异标注）**：T-021 观察到 codex app-server 有一套 **Thread runtime** 词汇——`idle`/`active`/`systemError`/`notLoaded`（confirmed，来源 app-server 事件列表）。**D1 没有等价的单一字段直接暴露这套"整体健康度"状态**——`CapabilityDescriptor`/`SessionHandle` 均无此枚举，D1 只暴露更窄的 `SessionLockState`（`idle`/`send_pending`/`interrupt_in_progress`/`stop_in_progress`，D1 §9.3，语义是"当前是否有 operation 在途的互斥锁"，不是"这个会话整体是否健康"）。**D5 设计决策**：若要在列表项呈现类似"systemError"的整体状态，只能由应用层对 `ErrorEvent`/`SessionEndEvent.reason`（`kernel_exited`/`error`）做合成推断，不存在可以直接读取的协议字段——子面实现时不应假设存在一个"thread health"查询接口。
+    61	
+    62	### 1.3 搜索
+    63	
+    64	- **Chat 内搜索**：直接仿 codex（T-021 §3.5，confirmed，"⌘F chat 内 find"）。技术上是对已加载 Item 转录的本地文本匹配，不依赖 D1/D2 提供搜索能力（D1 七方法中无搜索方法）。
+    65	- **跨 Chat 搜索**：直接仿 codex 的"可匹配内容"部分（T-021 §3.1/§3.5，confirmed，"⌘G 搜历史 chat，含内容与 git branch 名"；技术列表 `thread/list` 支持 `searchTerm`/`cwd`/`sourceKinds`/分页，这是 codex **app-server**（非本项目 D1）自己的查询接口，D1/D2 不提供等价方法——**D5 若要支持跨 Chat 全文搜索，需要由应用层（P7 Server，D3 已定 TS+NestJS+PostgreSQL）维护会话转录的可搜索索引，不在 D1/D2 契约范围内**，这是本页需要标注的又一处"无协议原生对应"。
+    66	  - **因差异调整**：codex 搜索维度含"git branch 名"（T-021 confirmed），对应通用 agent 领域弱化强制 git（[[d5-00-foundation]] §1.3/设计原则 3）——D5 搜索维度调整为「内容 + 所属 Project 名 + cwd 路径」，不包含 git branch 匹配这一维（无强制 git 语境下该维度无意义）。
+    67	
+    68	### 1.4 pin
+    69	
+    70	**直接仿 codex**（T-021 §3.1，confirmed）：Project 与 Chat 均可独立 pin，纯应用层布尔标记，不触发任何 D1 方法调用，不影响 `SessionHandle` 生命周期。
+    71	
+    72	### 1.5 rename
+    73	
+    74	**直接仿 codex**（T-021 §3.1，confirmed，"rename 为 outcome 导向标题"）：纯应用层字段覆盖，不触发任何 D1 方法调用。
+    75	
+    76	### 1.6 archive / 取消 archive
+    77	
+    78	见 §3.5（与会话生命周期状态机放在一起讨论，因为"能否安全 archive"与该 Chat 底层 session 是否已终结相关）。
+    79	
+    80	## 2. 新建会话
+    81	
+    82	### 2.1 新建入口
+    83	
+    84	**直接仿 codex**（T-021 §1.4/§3.2，confirmed）：New chat / Quick chat 两种入口；可从 Project 内新建并继承其共享上下文（cwd/instructions/sources，见 [[d5-00-foundation]] §3.2 Project 定义）；Deep link 预填 `prompt`/`path` 属 MVP 可选项（[[d5-00-foundation]] §2.2 已标注"本页不裁决具体协议前缀命名"）。
+    85	
+    86	**权威澄清（v2 修复：消解 T-023 F-01 BLOCKER）**：点击 New chat / Quick chat 进入的是**草稿态（Draft）**——不立即调用 `createSession()`，见 §2.2 的完整时点收口。
+    87	
+    88	### 2.2 创建状态机：草稿态 → 首次发送时原子 create+send（v2 修复：消解 T-023 F-01，BLOCKER）
+    89	
+    90	**权威时点（用户已定，2026-07-22 v2 修复批次统一）**：点击"新建"/"Quick chat"进入的是**草稿态（Draft）**——纯 UI/应用层本地状态，**不占用任何 D1 `SessionHandle`/`sessionId`，不触发 `createSession()` 或其他任何 D1 方法调用**。composer 在 Draft 态下可自由配置四类"创建时字段"：model（[[d5-7-model-kernel]] §3）、sandbox + approvalProfile（[[d5-3-approvals]] §2/§3）、toolset（[[d5-5-capabilities]] §7）。**只有当用户发送首条消息时**，应用层才原子执行"`createSession(config)` → 首条 `send(message)`"这一次不可分割的"首发"操作——`config` 在这一刻冻结，随后 composer 的这四类控件转为**只读展示**。
+    91	
+    92	这是本页与 [[d5-3-approvals]]/[[d5-7-model-kernel]]/[[d5-00-foundation]] 四页统一的唯一权威创建时点——**此前 D5.2 v1 曾把该时点错误地放在"点新建"那一刻，与 D5.7 v1 的"首次发送"时点冲突（T-023 F-01，BLOCKER），本轮据用户裁决（首发原子 create+send）收口统一**。
+    93	
+    94	`createSession()` 本身仍是单次 `Promise<SessionHandle>` 调用，其内部执行序列（D1 §2.1，confirmed）不变，只是**触发时点后移到首次发送**：
+    95	
+    96	```
+    97	[Draft]（composer 可编辑 model/sandbox/approvalProfile/toolset，无 sessionId，不触发任何 D1 方法）
+    98	  │ 用户发送首条消息——原子操作：createSession(config) 立即接 send(firstMessage)，
+    99	  │   config 在此刻冻结，composer 上述四类控件转为只读（见下方"配置冻结"段）
+   100	  ▼
+   101	Creating（瞬时，等待 createSession() resolve；期间 composer 已禁用，不接受第二次提交）
+   102	  步骤 0：aggregate 计费前置校验（仅 billingAttribution:'user_tenant_aggregate' 部署适用）
+   103	         → 若 deploymentTokenRef 缺失，同步拒绝 aggregate_billing_requires_deployment_token，
+   104	           不进入下方步骤，Creating 直接失败，见 §2.3
+   105	  步骤 1：预分配 sessionId（adapter 本地生成 UUID；此时原生内核会话尚不存在）
+   106	  步骤 2：铸造计费 token（newapi POST /api/token/，写入 SessionHandle.billing.tokenRef）
+   107	  步骤 3：向内核发起原生会话创建，成功后回填 SessionHandle.kernelSessionId
+   108	Creating → Active(idle) → 紧接着首条 send() 发出（进入 §3 生命周期状态机 + D5.1 Turn 状态机）
+   109	  │
+   110	  ├─ send() 成功（res.send() 返回 {runId}）——正常进入 RUNNING，见 D5.1 §2
+   111	  │
+   112	  └─ 首条 send() 本身失败（**v2.2 收残：T-024 F-01，补失败分支**——createSession 已经
+   113	      resolve、`SessionHandle`/`sessionId` 已真实存在，内核侧原生会话已建立，这与下方
+   114	      "步骤 0-3 任一步失败"的 Creating 失败分支是两个不同的失败点，不得混同）：
+   115	      唯一终态是 **Active(idle) + 首发失败标记**——**不回退 Draft**（session 已存在，
+   116	      回退会遗留一个 UI 假装不存在、但内核侧真实存在的孤儿 session）、**不算创建失败**
+   117	      （createSession 本身已成功）。Chat 在列表/详情中呈现为"已创建，首条消息发送失败，
+   118	      可重试发送"；composer 保留用户已输入的首条消息内容，允许重试 `send()`，也允许
+   119	      `stop()` 该尚无成功 Turn 的 session。**补偿规则**：`config`（model/sandbox/
+   120	      approvalProfile/toolset）已随 createSession 完成而冻结，**不因 send 失败重新
+   121	      开放编辑**——若想更换配置，仍需按 §2.2 既有规则新建一个 Draft Chat，不得为这
+   122	      一失败分支单独开一个"回到可编辑"的例外
+   123	Creating → [创建失败]      （步骤 0-3 任一步失败，见 §2.3；D1 §2.1 明确"步骤 1-3 之间任一步失败
+   124	                            的处理规则不承诺跨步骤原子性"——但因为触发时点已经后移到"用户确认要
+   125	                            发送"这一刻，创建失败时 Chat 退回 Draft 态即可：composer 保留用户已
+   126	                            输入的首条消息内容与已选配置，用户可修改配置后重试，不遗留半成品
+   127	                            sessionId 列表项）
+   128	```
+   129	
+   130	**配置冻结与只读转换（呼应 [[d5-3-approvals]] §2/[[d5-7-model-kernel]] §3.4 同款收口）**：首次发送触发 `createSession` 之后，composer 上 model/sandbox/approvalProfile/toolset 四类控件从"可编辑"转为"只读展示"——展示的是该 Chat 已冻结的配置，不再影响当前 Chat；若用户想使用不同配置，需要新建一个 Draft Chat（与 [[d5-7-model-kernel]] §3.4 方案 (b)"新建时选择运行环境/模型"同构：两页共享同一条契约约束——**D1 只在 `createSession` 时接受配置，之后不可变，可变窗口只在 Draft 阶段**）。这也回答了此前 codex 提出的开放问题"composer 权限模式在已有 Chat 中是只读、还是需要运行期更新契约"——答案是**只读，引导新建**，不需要新的 D1 运行期更新契约（见 [[d5-3-approvals]] §2 v2 修复）。
+   131	
+   132	**Draft 态在会话列表中的呈现**（D5 设计决策，T-021/D1 均未直接给出）：Draft Chat 可以在 Chat 列表中显示为一个"未发送"占位项（composer 打开即为该 Draft），具体像素/是否支持多个并行 Draft 本页不裁决，只要求：**Draft 态不得计入任何依赖 sessionId 的列表字段**（如 §1.2 表格"最近状态徽标""待审批指示"均要求协议事件驱动，Draft 态没有 sessionId 因而这些字段应显示为空/占位，不得虚构）。
+   133	
+   134	**这是相对 v1 的额外收益**：v1 把"Creating 态过早创建列表项可能呈现半成品 Chat"当作需要专门规避的风险（见旧版 D5 设计决策段）；v2 的 Draft 优先结构从时序上结构性消解了这个风险——Draft 本来就没有 sessionId，创建失败时退回 Draft 不产生任何"存在但不可用"的中间态。
+   135	
+   136	### 2.3 创建失败呈现
+   137	
+   138	| 失败原因 | D1 拒绝码 | 置信度 | UI 呈现建议 |
+   139	|---|---|---|---|
+   140	| 部署未配置聚合计费 token | `aggregate_billing_requires_deployment_token`（D1 §9.1） | D1/D2 confirmed | 沿用 [[d5-00-foundation]] §5.2 已标注的口径：这是部署配置问题，**不应**期望终端用户 UI 自行修复，应引导至诊断信息（Console 侧，D5.2 不展开） |
+   141	| resume 目标不可恢复 | 见 §3.6 | D1/D2 confirmed（拒绝行为）；底层内核是否可恢复本身部分未确认 | 见 §3.6 |
+   142	| 其他步骤 1-3 失败（网络/内核侧拒绝等） | 无专属拒绝码，属通用失败 | — | 呈现为"发送失败，请重试"，Chat 退回 Draft 态，不留下半成品列表项（同 §2.2 v2 修复的时点收口） |
+   143	
+   144	### 2.4 深链预填（MVP 可选，非阻断项）
+   145	
+   135	    // v3.3 新增强制约束（消解 codex T-011 M5）：本字段在类型层面仍是可选——`billingAttribution:
+   136	    // 'session'` 的部署下确实不需要它——但当该内核部署实例的 `billingAttribution`（§4.1，部署时
+   137	    // 静态声明）为 `'user_tenant_aggregate'` 时，本字段**必须**提供；`createSession` 在这种情况下
+   138	    // 若发现本字段缺失，必须**同步拒绝**（`aggregate_billing_requires_deployment_token`，见 §9.1），
+   139	    // 不得在没有可查询凭证的情况下静默创建 session，见下方"内部执行序列"新增的前置校验。
+   140	  };
+   141	  toolset?: { allow?: string[]; deny?: string[]; };
+   142	  sandbox?: 'read-only' | 'workspace-write' | 'full-access';
+   143	  approvalProfile?: 'auto' | 'manual' | 'plan';
+   144	  resume?: { sessionId: string };
+   145	}
+   146	
+   147	function createSession(config: CreateSessionConfig): Promise<SessionHandle>;
+   148	```
+   149	
+   150	**内部执行序列（v3.2 修订：步骤重排+步骤 1 新增，消解 codex T-010 BLOCKER-2 残留"createSession 无预分配 id"时序缺口；v3.3 新增步骤 0 前置校验，消解 codex T-011 M5）**：
+   151	
+   152	0. **aggregate 计费前置校验（v3.3 新增）**：若该内核部署实例的 `billingAttribution`（部署时静态声明，见 §4.1）为 `'user_tenant_aggregate'`，且 `config.newapiEndpoint.deploymentTokenRef` 未提供，`createSession` **同步拒绝**（`aggregate_billing_requires_deployment_token`，见 §9.1），不进入下方步骤 1-3——aggregate 模式下 `deploymentTokenRef` 是 §7 唯一的计费查询主体，缺失它却仍创建 session，等于承诺了一个将来注定查不到账的 `SessionBillingSnapshot`。`billingAttribution:'session'` 的部署不受本步骤约束（本字段本就不参与该模式下的查询，见上方 §2.1 字段说明）。
+   153	1. **预分配 `sessionId`**（v3.2 新增，原步骤 1"resume 校验"下移为步骤 1a）：adapter 本地生成一个 UUID 作为该 session 的 `sessionId`，此时原生内核会话**尚不存在**。若 `config.resume` 提供，则复用该已存在 session 的 `sessionId`（本步骤退化为查找而非新铸）。
+   154	   - 1a. resume 校验（同 v3.1，未变，位置下移但内容不变）：`config.resume` 提供时校验目标 session 是否可 resume，不可 resume（如 openclaw resume-after-delete 场景，见 §12 第 4 条）则显式 reject，不静默新建。
+   155	2. **铸造计费 token**：调用 newapi `POST /api/token/` 为该 session 铸造一个专用 token（`name=session-<sessionId>`，此时 `sessionId` 已在步骤 1 铸造完毕，不存在"无预分配 id 却已引用它"的时序缺口），写入返回值 `SessionHandle.billing.tokenRef`（§7）。本步骤只完成"铸造+记录引用"，**不等于**归因已经成立——`tokenRef` 对应的 key 是否被实际配置进该 session 的模型调用出口（§7 注入链契约步骤④）是另一个独立的、由 §4.1 `billingAttribution` 权威声明的问题。
+   156	3. 向目标内核发起原生会话创建；成功后取得内核返回的原生会话 id，写入 `SessionHandle.kernelSessionId`（v3.2 新增字段，见上）。
+   157	
+   158	步骤 1-3 之间任一步失败的处理规则同 v3.1，未变（不承诺跨步骤原子性）。
+   159	
+   160	### 2.2 send
+   161	
+   162	（同 v3.1，未受本次修订影响，原样保留）
+   163	
+   164	```ts
+   165	function send(
+   166	  session: SessionHandle,
+   167	  input: KernelInput
+   168	): Promise<{ runId: string }>;
+   169	```
+   170	
+   171	### 2.3 subscribe
+   172	
+   173	（同 v3.1，未受本次修订影响，原样保留）
+   174	
+   175	```ts
+   176	function subscribe(session: SessionHandle): AsyncStream<KernelEvent>;
+   177	```
+   178	
+   179	### 2.4 interrupt（v3.2 修订：`OperationOutcome` 收窄+补齐终态，`InterruptResult.affectedRunId` 改可选）
+   180	
+    45	
+    46	T-021 §4.1：Sandbox 决定"技术上能做什么"（读/写路径、网络），Approval policy 决定"何时必须停下来问人（或 auto-review）"。默认本地：`workspace-write` + 网络关闭；出界写文件或需网络的命令触发审批请求。
+    47	
+    48	D5 对齐：两层**分别**映射到 D1 两个独立字段，不得合并成一个"权限等级"下拉——这是仿照的关键约束，也与 D1 契约结构天然吻合：
+    49	
+    50	| 层 | D1 字段 | 取值 | 门控关系 |
+    51	|---|---|---|---|
+    52	| Sandbox | `CreateSessionConfig.sandbox`（创建时选定）/ `CapabilityDescriptor.sandboxLevels?`（当前连接支持的档位集合，可选字段） | `'read-only' \| 'workspace-write' \| 'full-access'` | Settings > Permissions 面板只渲染 `capabilities().sandboxLevels` 声明存在的档位；该字段本身可选——若某内核部署未声明，D5 应有 UI 兜底（如仅显示当前 `sandbox` 只读展示，不提供切换），不得假设三档必然齐全 |
+    53	| Approval policy | `CreateSessionConfig.approvalProfile`（创建时选定）+ 运行时逐请求走 `respondApproval` | `'auto' \| 'manual' \| 'plan'` | 三个 profile 字面量本身未与 T-021 三档 UI 文案（Ask/Approve for me/Full access）建立官方对应关系——**这是 D5 设计决策**，见 §3 表格 |
+    54	
+    55	**v2 修复：配置时点澄清（消解 T-023 F-01）**——`CreateSessionConfig.sandbox`/`approvalProfile` 均只能在 `createSession` 时设定一次。按 [[d5-2-sessions]] §2.2 v2 修复后的权威时点：composer 上这两个控件在**草稿态（Draft Chat，未发送首条消息前）**可自由切换；**首次发送**触发原子 `createSession(config)+send()` 后，这两个值随 `config` 一并冻结，composer 对应控件转为**只读展示**（展示该 Chat 已锁定的权限模式，不再可编辑），若想使用不同的 sandbox/approvalProfile 需要新建一个 Draft Chat——这与 [[d5-7-model-kernel]] §3.4"轨道 A/B"对模型选择给出的结论完全同构（共享同一条契约约束：D1 只在 `createSession` 时接受配置，之后不可变）。这也回答了此前 codex 提出的开放问题"composer 权限模式在已有 Chat 中是只读、还是需要运行期更新契约"——答案是**只读，引导新建**，不需要新的 D1 运行期更新契约。
+    56	
+    57	## 3. Composer 下的权限模式控件（直接仿 codex 形态，映射关系为 D5 设计决策）
+    58	
+    59	### 3.1 三档用户可见模式（T-021 §4.2 confirmed）
+    60	
+    61	| 模式（用户文案，直接仿 T-021 §4.2） | 行为摘要（T-021 confirmed） | D5 映射到 D1 字段组合（D5 设计决策，非 T-021/D1 直接给出） |
+    62	|---|---|---|
+    63	| **Ask for approval**（推荐默认） | workspace 内自动；越界/网络/敏感动作询问 | `sandbox:'workspace-write'` + `approvalProfile:'manual'`——每条越界请求正常走 §5 的五态 FSM，人工逐条决策 |
+    64	| **Approve for me**（设置里称 Auto-review） | 同一 sandbox 边界；eligible 请求交给 reviewer agent | `sandbox:'workspace-write'`（同上一档，**不放宽 sandbox**，只是 approval 决策的发起方从人变成应用层自动化逻辑）——见 §9 的协议缺口标注，D1 `approvalProfile` 三个字面量里没有一个字面对应"auto-review"，D5 只能复用 `'manual'` 并在应用层叠加自动决策逻辑，或声明为自定义扩展；本页不裁决具体落地为哪个字面量，仅标注这是需要在实现前决策的开放项 |
+    65	| **Full access** | 危险全开（需设置中显式 enable 才进菜单） | `sandbox:'full-access'` + `approvalProfile`可设为更宽松的策略；**但 sandbox 全开不等于零审批**——T-021 §4.3："Destructive MCP：有 destructive 注解则始终要批"，即便 sandbox 是 `full-access`，`approvalKinds` 里标记为 destructive 的 `mcp`/`tool` 类请求仍应正常触发 §5 的 PENDING 态，D5 不得把"Full access"实现成"关闭审批 FSM"，只是放宽 sandbox 技术边界 |
+    66	
+    67	**首次使用门槛**（直接仿，T-021 §4.2 confirmed）：三个模式需先在 **Settings > General > Permissions** 显式 enable 后才出现在 composer 下拉菜单——启用 ≠ 选中，两步分离。组织策略可禁用某些模式（D5 侧对应租户/坐席能力开关，属 [[d5-5-capabilities]]/[[d5-6-account-license]] 范围，本页只标注这一约束存在）。
+    68	
+    69	### 3.2 菜单项渲染规则（D5 设计决策，遵循 foundation 原则 5 的扩展点纪律）
+    70	
+    71	菜单可见的 sandbox 档位 = `capabilities().sandboxLevels`（若声明）∩ 本地 Settings 已 enable 集合 ∩ 组织策略允许集合。**不得硬编码三个 if 分支**——`sandboxLevels` 是可选数组字段，未来任何新增档位（如 Computer Use 专属隔离环境，见 §10）都应该是"数组多一个值，UI 自动多渲染一项"，不是"UI 代码需要跟着改"。
+    72	
+   125	**核心设计约束（本页反复强调，避免后续实现阶段遗忘）**：无论 D5.7 的 UI 上呈现多少层级的选择（推荐档/Advanced/effort/speed），**最终传给 `createSession` 的只有一个 `config.model: string` 字段**——D1/D2 没有第二个参数可以携带 effort、speed、供应商等维度。因此：
+   126	
+   127	- **D5 设计决策**：D5 的 Server/newapi 路由层需要自行定义一套"UI 选择组合 → `model` 字符串"的编码约定（例如把档位+effort+供应商编码进一个复合标识符，或反过来用一个不透明的路由 key 代表整个组合），这套编码约定完全是应用层产物，D1/D2 对其内部格式没有任何规定，也不校验其合法性——`model?: string` 对 D1 而言就是一个透传的不透明字符串。
+   128	- 这也意味着：如果用户在 Advanced 里选择了"某个模型 + High effort"，实际生效与否、是否被 newapi 正确解析，D1/D2 这一层**完全无法验证**——`createSession` 只会在 RPC 层面成功或失败（`RejectionFailure`），不会告诉调用方"你传的这个 model 字符串对应的 effort 是否被下游正确识别"。这一诚实边界应体现在 UI 上：Advanced 面板提交后，唯一能确认的是"会话已创建"，而非"effort 档位已生效"——后者依赖应用层自己的路由实现是否正确，协议层不提供这层保证。
+   129	
+   130	### 3.4 状态机：模型/effort 选择控件（区分"新建 Chat"与"已有 Chat 内切换"两条轨道）
+   131	
+   132	这是本页状态机设计的核心，也是与 [[d5-00-foundation]] §3.2 Goal/Subagent 诚实缺口同类型的一处关键分歧点。
+   133	
+   134	**v2 修复：与 [[d5-2-sessions]] §2.2 统一术语（消解 T-023 F-01）**——下方"轨道 A"里的 `Recommended`/`AdvancedExpanded`/`PendingCreate` 三态，对应的正是 [[d5-2-sessions]] §2.2 定义的**草稿态（Draft Chat）**内部的 composer 子状态（`PendingCreate` = Draft 态下 composer 已配置完毕、等待发送）；`CommittedToSession` 对应 [[d5-2-sessions]] §2.2"首次发送触发原子 `createSession()`+`send()`，config 冻结"这一跨全部子面统一的权威时点。本页 v1 版本独立推导出这一状态机时尚未与 D5.2 显式对齐术语（当时 D5.2 v1 错误地把 createSession 时点放在"点新建"那一刻），v2 修复后两页共享同一条时点权威，不再是各自平行的结论。
+   135	
+   136	**轨道 A——Draft Chat 内选择模型/effort，首次发送时冻结（D1/D2 有直接对应，confirmed）**：
+   137	
+   138	```
+   139	Recommended（默认态，展示推荐档滑块；Chat 处于 Draft，无 sessionId）
+   140	   │ 用户点击 Advanced
+   141	   ▼
+   142	AdvancedExpanded（展示具体模型/effort/speed 明细；仍是 Draft）
+   143	   │ 用户完成选择（或维持 Recommended 默认）
+   144	   ▼
+   145	PendingCreate（Draft 态下 composer 已配置完毕，尚未提交，等待首条消息）
+   146	   │ 用户发送首条消息 → 原子 createSession(config.model=<编码结果>)+send()
+   147	   ▼
+   148	CommittedToSession（该值已写入 SessionHandle 所在的这一次 createSession 调用，
+   149	   本 Chat 全程生命周期内不可再变——D1 confirmed：无热更新路径，见 §2.1/§3.3；
+   150	   composer 模型/effort 控件转为只读展示，同 [[d5-2-sessions]] §2.2"配置冻结"段）
+   151	```
+   152	
+   153	**轨道 B——已有 Chat 内点击模型/effort 控件（控件存在性 T-021 §8.1/§8.2 confirmed；但"下一条消息起生效"这一时序语义**未能确认**，见下方 v2.1 收尾订正——**v2.2 收残：T-024 F-08**，本标题不再单独出现"confirmed"字样以免与下方降级结论并存造成误读；D1/D2 没有直接对应，需要 D5 做出取舍）**：
+   154	
+   155	**v2.1 收尾：消解 T-023 F-08（重做，confidence 降级）**——T-021 §8.1/§8.2 confirmed 的是 composer 下方存在 model/reasoning 控件、推荐档+Advanced 双层 UX 这一**控件存在性**（见 §3.1）；T-021 原文**没有**确认"控件可在已创建 thread 内随时点开切换、且下一条消息起生效"这一具体**时序语义**——这是本页此前版本比 T-021 原文更确定的一处过度引用（codex T-023 F-08 指出，证据：`d5-7-model-kernel.md:148-150` 对照 `T-021-output.md:389-411`）。本页据此订正：Codex 产品是否真的支持"已有 chat 内原地热切模型、下一条消息生效"，**未能确认/待真机或官方契约验证**，不应再引用为 T-021 confirmed 事实。
+   156	
+   157	不过，无论 Codex 产品实际行为如何，本页 §2.1/§3.3 已从 D1/D2 契约本身独立确认"`model` 字段只能在 `createSession` 时设置一次、无热更新路径"这一结论，**不受这次置信度订正影响**——F-01 已裁决 `config` 在 `createSession` 时冻结、之后不可变（见 [[d5-2-sessions]] §2.2），故"chat 内热切"在 D5 当前设计下本就需要新建 Draft Chat 才能实现，与下方两个候选方案的降级结论完全一致；不得把这一未确认的 Codex 产品时序语义当作 codex/T-021 已经证实的既成事实、进而推导"D5 是被协议限制被迫放弃了 Codex 已有能力"这一叙述。D5 必须显式做出设计选择，本页给出两个候选方案并给建议，**不擅自假装两者不冲突**：
+   158	
+   159	```
+   160	方案 (a)——应用层悄悄开新 session，Chat 身份不变（更贴近 Codex 体验，但需要新的应用层设计）
+   161	  ReadOnlyDisplay(当前 session 绑定的 model)
+   162	    │ 用户在已有 Chat 内选择新模型/effort
+   163	    ▼
+   164	  PendingSwitch（UI 提示"下一条消息起生效"）
+   165	    │ 用户发送下一条消息
+   166	    ▼
+   167	  ReplacingSession（应用层在 D1 之上编排：createSession 一个新的 SessionHandle，
+   168	     绑定新 config.model；同时需要解决"历史消息如何在新 session 里延续"这一
+   169	     应用层设计问题——D1/D2 未提供任何"迁移历史到新 session"的机制，纯属应用层
+   170	     编排，且本页不展开具体设计，只标注这是 D5.2/D3 Server 需要单独规格的缺口）
+   171	    │
+   172	    ▼
+   173	  CommittedToNewSession（用户视角仍是同一个 Chat，协议视角已经是新的 sessionId/
+   174	     runId 序列的开始）
+   175	
+   176	方案 (b)——MVP 降级为"仅新建 Chat 时可选，已有 Chat 内模型控件只读展示"（更诚实、更简单）
+   177	  ReadOnlyDisplay(当前 session 绑定的 model，控件呈禁用态)
+   178	    │ 用户点击 → 提示"模型在新建会话时选择，当前会话已锁定"，
+   179	       引导"用此配置新建一个 Chat"而非原地切换
+   180	```
+   181	
+   182	**D5 设计决策（本页建议）**：MVP 采用方案 (b)。理由：
+   183	1. 方案 (a) 需要先解决"同一 Chat 身份下切换 sessionId"这一应用层编排问题——涉及历史消息延续、计费 token（`billing.tokenRef` 是随 `createSession` 逐次铸造的，见 D1 §2.1 步骤 2）如何在"同一 Chat"内衔接等，均超出本页范围，且没有先例可循，贸然设计容易过度承诺。
+   184	2. 方案 (b) 如实反映了当前契约边界，不需要新增任何应用层机制即可实现，符合 [[d5-00-foundation]] 设计原则 4"本地多会话 MVP 优先，避免过度设计拖慢 MVP"。
+   185	3. 若后续确有产品需求要做到方案 (a) 的"无感切换"体验，应作为 D5.2（会话管理）或 D3（Server）的独立设计项，先明确"Chat 身份延续跨 sessionId"的应用层契约，而不是本页单方面裁决。
+   186	
+   187	**这一分歧本身是本页最重要的产品决策之一**：Codex 是否真的支持"chat 内实时切模型、下一条消息起生效"这一具体时序语义**未能确认**（**v2.2 收残：T-024 F-08**，消解本句此前"Codex confirmed 的……体验"这一过度表述，与上方 v2.1 收尾的降级结论并存矛盾——T-021 只 confirm 控件存在性，不 confirm 该时序语义，见 §0/§6）——但无论该行为是否真实存在于 Codex，在 D5 MVP 阶段都因协议约束（D1 `model` 字段无热更新路径）而做出**功能降级**（差异调整），不是"直接仿 codex"可以照搬的形态；这一降级结论不受上述 confidence 订正影响。
+   188	
+   189	**v2 修复：跨子面一致性确认**——本页结论（方案 b：MVP 仅 Draft 态可选，已有 Chat 内只读）与 [[d5-3-approvals]] §2 v2 修复后的权限模式结论（同样"只读，引导新建"）同构一致——两者共享同一条契约约束（D1 只在 `createSession` 时接受配置，之后不可变），不再是各自独立推导、恰好巧合一致的两个结论。
+   190	
+   191	### 3.5 模型/effort 目录的数据来源：不是 D1 `capabilities()`
+   192	
+   193	**诚实缺口标注**：§2.1 已确认 `CapabilityDescriptor` 没有"可用模型列表"字段。composer 上"推荐档/Sol/Terra/Luna/Advanced 模型下拉"这些 UI 元素实际渲染的选项列表，**不来自** D1 `capabilities()` 调用——它必须来自应用层（P7 Server）自己维护的一份模型/效力档位目录，这份目录很可能是 Server 侧查询 newapi 的 Management API（D6 范围，本页不展开）得到的结果，或是部署时静态配置的一份路由表。
+   194	
+   195	D2 §7.2 第 1 点确认 `capabilities()`（不带 `sessionId`）可以在建连后立即调用，探测**部署级**能力基线——但即便如此，返回的仍是 §2.1 列出的 15 个字段，其中没有一个是模型目录，因此这次调用**不能**替代应用层的模型目录查询。D5.7 的模型选择器数据流应明确写成两条独立通道：
+
+exec
+/bin/zsh -lc "nl -ba /Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md | sed -n '40,205p'
+nl -ba /Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md | sed -n '245,292p'
+nl -ba /Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md | sed -n '235,270p'
+rg -n -i \"attribution.{0,80}(本会话成本|会话成本|成本展示|展示.{0,10}成本)|((本会话成本|会话成本|成本展示|展示.{0,10}成本).{0,80}attribution)|'session'.{0,80}(本会话成本|会话成本|展示.{0,10}成本)\" /Users/litianyi/.llm-wiki/agent-app-design/product/*.md || true" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+    40	|---|---|---|---|
+    41	| 席位/plan 额度 | 个人免费 tier 窗口 + 企业按坐席（对齐 D3 seat/license） | 额度进度条 + 坐席状态只读展示 | 坐席变更/邀请等 admin 操作（Console） |
+    42	| newapi 按量用量 | `SessionBillingSnapshot` 全字段（含 session/aggregate 两种归因分支） | 用量窗口进度条 + 新鲜度提示 | 逐 token/逐模型明细拆分 |
+    43	| task 级成本差异化 | 字段来源与前提条件（本页 §2.4） | **不做**——完全分期 | 单 Chat/Turn 精确 token/费用账单 UI |
+    44	
+    45	## 2. 三层成本/用量模型（全模型设计）
+    46	
+    47	### 2.1 层级总览
+    48	
+    49	| 层 | 定义 | 驱动契约 | Codex 对照（T-021） | MVP 是否呈现 |
+    50	|---|---|---|---|---|
+    51	| **L1 席位/plan 额度** | 账号/租户级的可用配额与坐席状态 | D3：`license`/`tenant`/`seat`/`membership`/`feature_flags`（见 [[server-stack-selection]]） | T-021 §7.2（plan 表）+ §7.3（席位）+ §5.2（窗口） | 是（最小化） |
+    52	| **L2 newapi 按量用量** | 单 session 或租户聚合的实际调用量 | D1 §7 `SessionBillingSnapshot` + `CapabilityDescriptor.usageReporting`/`billingAttribution` | T-021 §5.1（Profile tokens/`/status`/Settings>Usage） | 是（最小化） |
+    53	| **L3 task 级成本差异化** | 单 Chat/Turn 粒度的成本归因与呈现 | 建立在 L2 `attribution:'session'` 分支之上的应用层扩展 + D3 `usage_ledger`（Chat/Turn 关联键与计价字段现未规定，见 §2.4 依赖表，**v2 修复**）；D1 本身不提供这个粒度 | T-021 §5.3（"未能确认"，Codex 自身缺口） | 否（MVP 完全分期，本页只枚举协议前提与依赖清单，不写死不存在的字段） |
+    54	
+    55	三层关系：L1 回答"我还有多少配额/我是不是收费坐席"，L2 回答"newapi 侧实际测得多少用量"，L3 回答"这些用量里哪些是这个 Chat 花掉的"——L3 在协议层面依赖 L2 的 `attribution` 取值，若 L2 声明为 `'user_tenant_aggregate'`，L3 在协议层面**不可行**，只能等待 L1/L2 的部署条件改变（即 D1 §11 C-3 验证通过），这是本页最重要的一条依赖链，反复出现在下文各处。
+    56	
+    57	### 2.2 层 1：席位/plan 额度
+    58	
+    59	**契约来源（D3，confirmed）**：[[server-stack-selection]] 六项能力表——`license`（plan、entitlements、exp、status）、`tenant`+`tenant_id`、`seat`/`membership`（role、状态、`seat_limit`）、`tenant_features`（JSONB `entitlements`/`feature_flags`）。P0 MVP 范围明确写为"个人 free / 企业 paid plan；JWT license；tenant+seat；feature JSON；手动/简易账单"。
+    60	
+    61	**Codex 对照**：
+    62	
+    63	- Plan 分层（Free/Go、Plus、Pro、Business、Enterprise）——T-021 §7.2，confirmed。**直接仿 codex**的是"分层展示 + 每层限额差异"这个模式本身，**不直接仿**具体价格带与档位名（Plus ~$20/mo 等）——因为目标 app 是自有 license/租户体系，非 ChatGPT 订阅，T-021 §7.4/§10.2 明确"计费"行要求"对接 license/租户/newapi：账号用量按租户配额；账单语义用自有 credit"。**因差异调整**：D5.4 用"租户 plan（对应 D3 `license.entitlements`）"取代 ChatGPT 具体价格档位。
+    64	- 5 小时/weekly 窗口隐喻——T-021 §5.2，confirmed。**直接仿 codex**：窗口进度条这个呈现范式（"剩余额度 + 下次重置时间"）保留，即便底层配额规则可能不是严格的滚动 5 小时窗口，而是 D3 `license` 的 `exp`/`entitlements` 定义的周期。
+    65	- 坐席（seat）——T-021 §7.3，confirmed："workspace membership 决定能否登录；seats + roles 决定可用表面与功能"。**因差异调整**：D5.4 显式采用"租户 → 席位 → 角色 → 可用工具/模型"这条 T-021 §10.2 建议的链路，对应 D3 `tenant`→`seat`/`membership`→`feature_flags`，而非 ChatGPT Business/Enterprise 的 workspace 语义。
+    66	
+    67	**两分支呈现（用户已定参数）**：
+    68	
+    69	- 个人免费 tier 窗口：单用户视角，展示"免费额度剩余 + 窗口重置时间"，无坐席概念。
+    70	- 企业按坐席：展示"我在哪个租户 + 我的坐席状态（active/inactive，只读）+ 该坐席绑定的 plan 额度"，**不展示**坐席分配、邀请、角色管理等 admin 操作（那些在 Console，foundation §1.1）。
+    71	
+    72	### 2.3 层 2：newapi 按量用量
+    73	
+    74	**对齐 X2**（[[x2-newapi-unified-gateway]]，confirmed）："所有内核的 LLM 调用统一经由 newapi 网关，newapi 成为计费/成本/能力开关的统一入口"——这是 L2 层数据的唯一权威来源：D5.4 展示的用量数字，最终都来自 newapi 网关侧的计量，经 D1 `queryBilling()` 暴露给 UI。
+    75	
+    76	**`SessionBillingSnapshot` 逐字段展开**（D1 §7，confirmed）：
+    77	
+    78	| D1 字段 | 类型 | D5.4 展示建议 | 置信度/注意 |
+    79	|---|---|---|---|
+    80	| `sessionId` | `string` | 内部关联键，不直接展示 | D1 confirmed |
+    81	| `tokenRef` | `string` | 不展示（内部计费凭证引用，见 §7 注入链契约步骤②） | D1 confirmed |
+    82	| `attribution` | `'session' \| 'user_tenant_aggregate'` | 决定整个用量卡片走哪条呈现分支（见下方状态机 §4.3） | D1 confirmed；直接取自部署时静态声明，非运行时推断（D1 §7②） |
+    83	| `windowStart`/`windowEnd` | `string`（时间戳） | 用量窗口起止，UI 文案"过去 N 小时 / 本周期"，对齐 T-021 §5.2 窗口隐喻 | D1 confirmed；T-021 confirmed |
+    84	| `requestCount` | `number` | 额度/速率展示的分子 | D1 confirmed |
+    85	| `totalQuota` | `number` | 额度进度条分母 | D1 confirmed |
+    86	| `rpm`/`tpm` | `number` | 速率展示（可选，MVP 可不做，超出最小化范围） | D1 confirmed |
+    87	| `fetchedAt` | `string`（时间戳） | "数据截至 X 分钟前"新鲜度提示，**必须**展示——D1 明确"非 run 级、非实时" | D1 confirmed（强约束：不得暗示实时） |
+    88	| `correlatable` | `false`（恒定值） | **不展示为可勾选/可关联项**——UI 不得暗示"可以做请求级精确关联" | D1 confirmed；这是 T-021 §5.3 指出的"Codex 本身也做不到"的同源缺口 |
+    89	
+    90	**`billingAttribution` 二分支与 C-3 诚实标注**（D1 §4.1/§7/§11 C-3）：
+    91	
+    92	- `CapabilityDescriptor.billingAttribution` 是**部署时静态声明**，不是运行时推断（D1 §4.1 原文："由部署时的配置/能力握手权威决定，不再靠运行时自诊断"）。
+    93	- **`'session'` 分支**：前提是内核部署实例真的把 per-session newapi token 注入进了该 session 的模型调用出口（D1 §7 注入链契约步骤④）。**诚实待验（C-3，D1 §11）**：openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl——"T-009 明确标注'本任务未展开'……不同部署环境的答案可能不同"。验证方法（D1 §11 原文）：在目标部署环境为两个不同 session 配置不同的 newapi baseUrl/key，观察各自模型调用是否真的落到对应 key 上（可通过 `/api/log/self?token_name=...` 互相验证隔离性）。**本页明确标注：C-3 尚未验证，D5.4 不得假设 `'session'` 分支当前已成立。**
+    94	- **`'user_tenant_aggregate'` 降级分支**：C-3 验证不可行时的既定降级路径（D1 §7/§11 C-3 原文）——`queryBilling()` 改用部署级凭证 `CreateSessionConfig.newapiEndpoint.deploymentTokenRef` 查询，此时"session 参数只用作报告标签，不是查询过滤条件"。D5.4 在此分支下**不得**声称能拆分到单个 Chat，只能展示租户/用户聚合用量——这是 foundation §5.5 已给出的强约束，本页原样继承。
+    95	
+    96	**Codex 对照**：Settings > Profile 的 activity insights/lifetime tokens/peak tokens、CLI `/status` 的会话内 token/context 占用与 5h/weekly 限额剩余、Settings > Usage 的 remaining credit/limits——T-021 §5.1，confirmed（来源：desktop settings 文档 + 社区/第三方指南一致指向官方 `/status`）。**直接仿 codex** 的是"以 plan 额度/rate limit 为主，而非每条消息美元账单"这个呈现哲学（T-021 §5.1 原文小标题）。**因差异调整**：账单语义改用自有 credit/租户配额（T-021 §10.2"计费"行），且新增"数据截至 X 分钟前"新鲜度提示与"聚合 vs session 归因"两种降级呈现——这两点是 Codex 原文未强调、但 D1 `fetchedAt`/`attribution`/`correlatable` 三字段直接要求的呈现细节，属于 D5 自行从契约推出的设计决策，不是 T-021 调研到的产品形态。
+    97	
+    98	### 2.4 层 3：task 级成本差异化（超越 Codex 的产品差异点）——v2 修复：诚实延后 + 依赖枚举（消解 T-023 F-02）
+    99	
+   100	**T-021 §5.3 原文（未能确认，Codex 自身缺口）**："按单 chat/task 的清晰 token 账单在官方 UI 中不突出——社区明确抱怨 web/per-task 可见性不足。D5 若要做'任务级成本'，属于超越 Codex 的产品差异点，不是简单仿。"
+   101	
+   102	**协议前提（本页强调，不臆造；v2 修复收紧措辞）**：v1 版本曾把"L2 的 `attribution:'session'` 分支成立"直接写成 L3 唯一协议路径的**充分条件**——这个表述不准确。即便 `attribution:'session'` 成立，`SessionBillingSnapshot`（D1 §7）也只有 `requestCount`/`totalQuota`/`rpm`/`tpm`/`windowStart`/`windowEnd`/`fetchedAt`/`correlatable` 这些字段，**没有** token 数、单价、credit、币种字段；`correlatable` 恒为 `false` 还明确否定请求级关联。因此 `attribution:'session'` 只是 L3 的**必要条件之一**，不是充分条件——一旦 `attribution:'user_tenant_aggregate'`，`queryBilling(session)` 返回的就是整个部署实例的聚合用量，`session` 参数"只用作报告标签"（D1 §7 原文），这一分支下任何试图从聚合数字里拆出单 Chat 成本的 UI 设计都是在编造数据，D1/D2 协议本身不支持。
+   103	
+   104	**L3 依赖枚举（诚实延后，MVP 完全分期，本页不臆造不存在的字段）**：
+   105	
+   106	| # | 依赖 | 现状 | 归属 |
+   107	|---|---|---|---|
+   108	| 1 | D3 侧需提供带 **Chat/Turn 关联键** + **计价（单位/币种/模型价格版本）** 的 `usage_ledger` | [[server-stack-selection]] 已定义 `usage_ledger`/`invoice`/`bill`（P0 MVP"手动/简易账单"），但**未规定**其字段是否携带可关联到单个 Chat/Turn 的键，也未规定计价单位（token/credit/USD/CNY）、币种、模型价格版本这些字段——这是**D3 侧的实现前依赖**，D5.4 不能替 D3 裁决这些字段，只能列为前提，不写死不存在的字段名 | D3 待补（未定契约） |
+   109	| 2 | C-3（per-session 换模型出口 key/baseUrl 可行性） | 未验证，见 §6 第 1 行/D1 §11 | 本页已有（D1 侧） |
+   110	
+   111	**MVP 决策（用户已定）**：L3 是**差异化点、MVP 完全分期**——即使 C-3 未来验证通过、`attribution:'session'` 成立，只要上表依赖 1（D3 `usage_ledger` 的关联键/计价字段）尚未定义，L3 的 UI（单 Chat 精确账单卡片、跨 Chat 成本对比、task 级成本历史趋势等）仍不在 D5.4 当前设计范围内落地——本页只做到"枚举这条差异化路径的两项协议/契约前提"，不画线框、不定组件、**不写死任何 D3 尚未定义的字段名**。理由对齐 foundation 设计原则第 6 条："避免过度设计拖慢 MVP"。
+   112	
+   113	## 3. MVP UI 呈现（最小化范围）
+   114	
+   115	**位置**：对齐 T-021 §1.2（confirmed）——desktop settings 的 Profile/Usage 区域是 Codex 原生落点；对齐 foundation §2.1 的 Chat sidebar 定位，可选在 Chat sidebar 内放置一个精简只读卡片，二者不冲突（一个是全局账号视图，一个是当前会话上下文里的快捷入口）。
+   116	
+   117	| 控件 | 内容 | 数据来源 | 标注 |
+   118	|---|---|---|---|
+   119	| 额度/坐席卡片 | 个人：免费 tier 窗口剩余 + 重置时间；企业：租户名 + 坐席状态（只读）+ plan 额度 | D3 `license`/`seat`/`membership` | **因差异调整**：坐席/租户信息是 D3 契约产物，Codex 无对应租户概念（ChatGPT workspace 语义不同），见 §2.2 |
+   120	| 用量窗口进度条 | "过去 N 小时 / 本周期"用量 + 剩余额度 | D1 `SessionBillingSnapshot.windowStart/windowEnd/requestCount/totalQuota` | **直接仿 codex**：窗口进度条范式，T-021 §5.2 confirmed |
+   121	| 新鲜度提示 | "数据截至 X 分钟前" | D1 `fetchedAt` | **因差异调整**：D1 显式要求标注非实时，这是协议强约束推出的呈现，T-021 原文未强调此细节 |
+   122	| 归因降级提示（仅 aggregate 分支可见） | "以下为租户/账号聚合用量，暂不支持按会话拆分" | D1 `attribution:'user_tenant_aggregate'` | **因差异调整**：D5 自有的降级措辞设计，Codex 无对应（Codex 官方 UI 本身就不做 per-task 拆分，见 T-021 §5.3，此提示是 D5 为诚实呈现协议限制而加） |
+   123	
+   124	**MVP 明确不做**（分期）：
+   125	
+   126	- 单 Chat/Turn 精确 token/费用账单（层 3，§2.4）。
+   127	- `rpm`/`tpm` 速率明细展示。
+   128	- Enterprise workspace analytics / Compliance API（T-021 §5.1 提到的企业侧功能，归属 Console/P6，不在 D5）。
+   129	- 坐席邀请、角色分配等 admin 操作（Console）。
+   130	
+   131	## 4. 状态机（写作纪律优先项）
+   132	
+   133	### 4.1 额度/用量数据刷新状态机
+   134	
+   135	驱动：D1 `queryBilling(session, window?)` 返回 `Promise<SessionBillingSnapshot>`（D1 §7，confirmed）；`fetchedAt` 字段决定"新鲜度"判断。
+   136	
+   137	```
+   138	Idle（未查询过 / 首次进入卡片）
+   139	  │ 用户打开额度/用量卡片，或 UI 定时刷新触发
+   140	  ▼
+   141	Fetching（await queryBilling() 进行中）
+   142	  │
+   143	  ├─ resolve(SessionBillingSnapshot) ──▶ Fresh（刚拿到快照，fetchedAt≈now）
+   144	  │                                         │ 经过 UI 自定义的"新鲜度阈值"（D5 设计决策，非协议规定）
+   145	  │                                         ▼
+   146	  │                                      Stale（仍展示上次快照数值，但新鲜度提示变为"X 分钟前"）
+   147	  │                                         │ 下一次刷新触发
+   148	  │                                         └──▶ 回到 Fetching
+   149	  │
+   150	  └─ reject('billing_query_subject_unresolved') ──▶ FetchFailed（见 §4.4，不得展示零值快照）
+   151	```
+   152	
+   153	**注意**：D1/D2 没有定义"用量刷新"的协议层触发事件（不像 `CapabilityChangedEvent` 有专门的 wire type）——刷新节奏（轮询间隔、是否在打开卡片时才查询）完全是应用层自行决定，D5 需在实现阶段自行设计，本状态机只锚定"数据从哪几个协议状态转移过来"。
+   154	
+   155	### 4.2 超限状态机
+   156	
+   157	**协议诚实缺口标注**：D1 `KernelEvent` 11 类判别联合里**没有**"配额耗尽"专属事件类型（同 foundation §3.2 Goal 缺口的同款问题）——超限的判定完全依赖 UI 自行比较 `SessionBillingSnapshot.requestCount` 与 `totalQuota`，不存在协议层的"超限推送"。
+   158	
+   159	```
+   160	Normal（requestCount / totalQuota 低于 D5 自定阈值，如 80%）
+   161	  │ 下次刷新，比值超过阈值
+   162	  ▼
+   163	Approaching（额度接近上限，UI 显示提醒色，composer 仍可用）
+   164	  │ 下次刷新，requestCount ≥ totalQuota
+   165	  ▼
+   166	Exceeded（额度耗尽）
+   167	  │
+   168	  ├─ Codex 参照（T-021 §5.2，confirmed）：Codex 是软限流——超出 5h/weekly 窗口后请求变慢或需等待，
+   169	  │   并非硬阻断；Credits 可扩展用量。**直接仿 codex**：D5.4 呈现层面同样不建议在超限时强制阻断
+   170	  │   composer——这是 D5 设计决策，非 D1 协议要求（D1 层面 send() 本身不检查配额，`session_locked`
+   171	  │   等既有拒绝码里也没有"配额不足"这一项）。
+   172	  │
+   173	  └─ 若目标部署要做硬阻断（企业侧策略），需要应用层自行在 composer 提交前插入配额检查——
+   174	      **这不是 D1/D2 保证的能力**，若做，属于 D5/Server 自建逻辑，须在实现阶段显式声明，
+   175	      不得暗示这是内核原生拒绝。
+   176	```
+   177	
+   178	### 4.3 `billingAttribution` 声明分支（部署时静态值，非运行时转移，但决定 UI 呈现走哪条分支）
+   179	
+   180	严格讲这不是一个会在运行时发生转移的状态机（D1 §4.1 明确"部署时确定的静态事实，通常整个部署实例内所有 session 取值一致"），但因为它直接决定 L2/L3 两套完全不同的呈现路径，写作纪律要求同样显式列出：
+   181	
+   182	```
+   183	部署阶段声明（一次性，不随 session 变化）
+   184	  ├─ 'session'（C-3 验证通过、per-session 换 key 已配置）
+   185	  │     └─▶ **仅满足 L3 的必要条件之一，非充分条件**（**v2.2 收残：T-024 F-02**，消解本图
+   186	  │         此前"UI 可展示本会话成本"这一过度表述与 §2.4 正文的矛盾）——`SessionBillingSnapshot`
+   187	  │         本身仍只有 `requestCount`/`totalQuota`/`rpm`/`tpm`/时间窗字段，没有 token/金额/
+   188	  │         币种，**不得**仅凭这一分支成立就宣称"UI 可展示本会话成本"；真正展示"本会话成本"
+   189	  │         还需 §2.4 依赖枚举第 1 项（D3 `usage_ledger` 提供 Chat/Turn 关联键+计价字段）同时
+   190	  │         就位，两项缺一均不可行，L3 仍完全分期
+   191	  │
+   192	  └─ 'user_tenant_aggregate'（C-3 不成立，或部署未做这项工程量——本页明确标注：截至目前 C-3 未验证，
+   193	       应假设当前处于此分支）
+   194	        └─▶ UI 只能展示租户/用户聚合用量；**不得**声称能拆到单 Chat；
+   195	            §3 归因降级提示卡片即对应此分支
+   196	```
+   197	
+   198	**通过 `CapabilityChangedEvent` 感知变化**：若部署配置变更导致 `billingAttribution` 值改变（罕见，理论上需要重新部署/重新握手），UI 通过 D1 `CapabilityChangedEvent`/D2 `evt.capability_changed`（foundation §5.1 第 9 行）感知，并以完整能力快照替换本地缓存——同 foundation 已有结论，本页不重复展开。
+   199	
+   200	### 4.4 `queryBilling` 查询失败呈现状态机
+   201	
+   202	```
+   203	Requesting（await queryBilling()）
+   204	  │
+   205	  ├─ 成功 resolve ──▶ 按 §4.1 Fresh/Stale 正常渲染快照
+   245	| `succeeded` | hard abort+resend 均完成；stop 正常完成 | "已中断并重新开始" / "已停止" | — |
+   246	| `submitted`（仅 soft steer） | RPC 被接受，**不承诺**消息确实注入 active run | "已提交转向请求" | **不得**呈现为"已成功打断"——D1 明确这是结构性不可观察边界，措辞必须诚实（D1 §6.1(a)） |
+   247	| `aborted_no_resend` | 存在可抢占窗口下 stop 抢先，resend 被丢弃 | "已中止，未重新发送" | 仅 hermes 与 openclaw runId 定向路径可靠，openclaw 单 RPC 路径不适用（D1 §9.3 F-08 范围校正） |
+   248	| `aborted_resend_failed` | abort 确认生效但 resend 自身失败 | "已中止旧内容，但重试发送失败" | openclaw 上仅在 error 响应体透出可判读信号时才可靠（D1 §11 C-4 待验） |
+   249	| `aborted_effect_unknown` | abort 是否生效本身不可判定 | **必须**呈现为"状态不确定"，**不得**暗示"已中止"或"仍在运行" | D1 §6.1(b) 强制性要求：调用方不得据此推断旧 run 状态，需主动重新查询；这是 D5.1 措辞设计里最容易出错的一格 |
+   250	| `rejected` | abort/cancel 从未生效（同步失败） | "操作被拒绝" | 收窄后不再涵盖"无法区分"的场景，那类走 `aborted_effect_unknown` |
+   251	| `timed_out` | 等待内核确认超时 | "等待响应超时" | — |
+   252	
+   253	`SessionLockState`（`idle`/`send_pending`/`interrupt_in_progress`/`stop_in_progress`，D1 §9.3）驱动 composer/操作按钮的可用性：例如 `send_pending` 期间应禁用第二次发送（避免触发 `session_locked` 拒绝码）。
+   254	
+   255	### 5.5 D1 CapabilityDescriptor → 各子面（逐字段展开）
+   256	
+   257	| 字段 | 驱动子面 | 映射要点 |
+   258	|---|---|---|
+   259	| `protocolVersion` | 无（内部握手） | 不建议暴露给终端用户 UI；至多出现在 debug/about 面板 |
+   260	| `kernel`/`kernelVersion` | D5.6（可能）/ 调试信息 | `SessionHandle.kernel` 的类型层面缺口 S-08 仍**未裁决**（D1 INV-1），D5 若要在 UI 上区分内核类型需留意这一开放项 |
+   261	| `tools.discoverable`/`names` | **D5.5** | 能力/工具开关面板的可发现工具清单来源 |
+   262	| `approvalGranularity` | **D5.3** | per-tool/per-command/batch 决定审批卡片是逐工具、逐命令还是批量呈现 |
+   263	| `approvalKinds`（`exec`/`tool`/`mcp`/`sandbox`/`file_write`） | **D5.3** | 审批对象种类；**诚实缺口**：当前枚举**不含** computer-use 专属值，若 MVP 后接入 Computer Use 需要先推动 D1 新增该枚举成员，D5 不应现在假设它已存在（对应设计原则 5） |
+   264	| `approvalDecisionKinds`（`allow_once`/`allow_always`/`allow_session`/`deny`） | **D5.3** | 门控 `respondApproval` 可用决策；`allow_session` 仅 hermes ACP 线路具备 |
+   265	| `interruptModes`（`steer`/`cancel`/`abort_and_resend`） | **D5.1** | 门控运行状态条上可用的中断操作按钮；hermes 恒不含 `steer` |
+   266	| `streamingGranularity` | **D5.1** | token-delta（打字机）/chunk/message-only 决定消息流渲染节奏 |
+   267	| `sessionResume` | **D5.2** | 是否提供"恢复会话"入口 |
+   268	| `thinkingVisibility`（none/summary/raw） | **D5.1** | thinking 折叠展示深度 |
+   269	| `sandboxLevels`（read-only/workspace-write/full-access） | **D5.3** | 权限模式菜单的 sandbox 档位来源，供 T-021 §4.2 三档"Ask for approval / Approve for me / Full access"组合使用——**v2 修复澄清（消解 grok T-022 F-03）**：三档不是与 `sandboxLevels` 三值一一对应，Ask 与 Approve for me 实际共享同一 sandbox 值 `workspace-write`，差异只在 approval 决策主体；三用户模式到 sandbox+approvalProfile 的完整映射见 [[d5-3-approvals]] §3.1 |
+   270	| `usageReporting`（none/best-effort/authoritative） | **D5.4** | 决定用量展示文案的置信度措辞——`best-effort` 时不应use "精确用量"字样 |
+   271	| `billingAttribution`（session/user_tenant_aggregate） | **D5.4** + **D5.6** | `'session'` 是 L3"本会话成本"展示的**必要非充分条件之一**（**v2.2 收残：T-024 F-02**，消解本行此前"可展示本会话成本"这一过度表述——另需 D3 `usage_ledger` 关联键/计价字段就位，见 [[d5-4-cost-usage]] §2.4）；`'user_tenant_aggregate'` 时**不得**声称能拆分到单个 Chat，只能展示租户/用户聚合用量——这是 D5.4 与 T-021 §5.3"task 级成本是超越 Codex 的差异化扩展点"能否兑现的硬前提之一 |
+   272	
+   273	### 5.6 D1 §7 计费 → D5.4 / D5.6
+   274	
+   275	`SessionBillingSnapshot`（D1 §7）字段与 D5.4 展示项的对应：
+   276	
+   277	| D1 字段 | D5.4 展示建议 | 注意 |
+   278	|---|---|---|
+   279	| `attribution` | `'session'` 是"本会话成本"展示的**必要非充分条件之一**，非单独充分——具体依赖见 [[d5-4-cost-usage]] §2.4（**v2.2 收残：T-024 F-02**） | 直接取自部署时静态声明，非运行时推断 |
+   280	| `windowStart`/`windowEnd` | 用量统计窗口起止（对齐 T-021 §5.2 的"5 小时/weekly"窗口隐喻） | — |
+   281	| `requestCount`/`totalQuota`/`rpm`/`tpm` | 额度进度条、速率展示 | — |
+   282	| `fetchedAt` | "数据截至 X 分钟前"新鲜度提示 | 非实时；D1 明确"非 run 级、非实时" |
+   283	| `correlatable: false`（恒定值） | **不得**在 UI 上暗示可以做请求级精确关联 | 这是 T-021 §5.3 指出的"Codex 本身也做不到"的缺口，D5 若要做 task 级成本差异化，必须清楚这是**建立在应用层自行核算之上的产品扩展**，D1 `queryBilling` 本身不提供这个粒度 |
+   284	
+   285	`billing_query_subject_unresolved`（`queryBilling()` 的唯一异步失败码，D1 §7/§9.1）：D5.4 必须区分"查询失败"与"用量为零"两种语义，**不得**在查询失败时静默展示一个字段齐全但虚构为零的用量快照。
+   286	
+   287	### 5.7 D1 拒绝码 / 错误码 / session 锁 → 跨子面通用错误呈现
+   288	
+   289	| 类别 | 典型码 | 驱动子面 | 备注 |
+   290	|---|---|---|---|
+   291	| `KernelPortRejectionCode`（方法调用同步拒绝） | `session_not_found`/`session_already_stopped`/`session_locked` | D5.1/D5.2 通用错误提示 | — |
+   292	| | `unsupported_interrupt_mode`/`no_active_run_for_steer` | D5.1 | 应体现为按钮禁用/置灰，而非点击后报错——前置于 `capabilities().interruptModes` 判断 |
+   235	- **假设主路径为单一有效工作区上下文**（登录后身份区域展示唯一 tenant，或"个人"），据此设计 §5.2/§6.2；
+   236	- 若未来确认支持多工作区，身份区域需要升级为"工作区切换器"（下拉/侧栏 workspace list），这属于**待验证后再展开的扩展点**，本页不现在设计其像素，只在 §5.2 表格里预留"当前所属工作区名称"这一单数展示位作为起点。
+   237	
+   238	## 7. 跨 D1/D2 契约的诚实缺口（本页核心纪律项）
+   239	
+   240	### 7.1 createSession 门控与租户/坐席上下文注入
+   241	
+   242	引 [[d5-00-foundation]] §5.2：`createSession` 驱动子面标注为"**D5.2**（新建 Chat）+ **D5.6**（`billing.tokenRef` 铸造，租户/坐席上下文注入）"。具体到 D1 契约（confirmed）：
+   243	
+   244	- `createSession` 步骤 0（v3.3 新增前置校验）：若该内核部署实例的 `billingAttribution` 为 `'user_tenant_aggregate'` 且 `config.newapiEndpoint.deploymentTokenRef` 未提供，**同步拒绝** `aggregate_billing_requires_deployment_token`。
+   245	- 步骤 2：为该 session 铸造专属计费 token，写入 `SessionHandle.billing.tokenRef`。
+   246	
+   247	**D5.6 呈现含义**：新建 Chat 这个动作在协议层可能因为**部署配置问题**（而非用户的 License/坐席状态问题）而失败。§4.2 的阻断态（`expired`/`revoked`/`suspended`）与这里的 `aggregate_billing_requires_deployment_token` 是**两类完全不同的错误**，不能用同一套文案：
+   248	
+   249	| 错误来源 | 用户能否自行解决 | D5.6 呈现建议 |
+   250	|---|---|---|
+   251	| License/坐席状态阻断（§4.2/§6.3） | 部分可以（续费/联系管理员） | 明确的账号/坐席状态提示 |
+   252	| `aggregate_billing_requires_deployment_token` | **不能**——这是部署配置缺失，foundation §5.2 已明确"不应期望终端用户 UI 能自行修复" | 展示为系统/部署级错误，引导"联系管理员"或指向 Console 诊断信息，**不得**呈现为"你的 License 有问题" |
+   253	
+   254	### 7.2 billingAttribution 对本页的影响
+   255	
+   256	引 [[d5-00-foundation]] §5.5：`billingAttribution`（`'session'` / `'user_tenant_aggregate'`）驱动子面标注"**D5.4 + D5.6**"。对 D5.6 而言：
+   257	
+   258	- `'session'` 时：只是 L3"本 Chat 成本"展示的**必要非充分条件之一**（**v2.2 收残：T-024 F-02**，消解本行此前"理论上可以展示"这一过度表述——还需 D3 `usage_ledger` 关联键/计价字段就位，见 [[d5-4-cost-usage]] §2.4），具体呈现属 D5.4 范围；
+   259	- `'user_tenant_aggregate'` 时：D5.6 的"用量概览"区块（§6.2）**只能**展示租户/坐席聚合用量，**不得**暗示能拆到单个 Chat——这与 §4.1 License 与 §6.2 用量概览共享同一条纪律：D1 `SessionBillingSnapshot.correlatable` 恒为 `false` 时不得暗示请求级关联（引 [[d5-00-foundation]] §5.6）。
+   260	
+   261	### 7.3 能力开关的两套独立门控
+   262	
+   263	见 §6.1：D3 的 `tenant_features`（租户能力开关）与 D1 `CapabilityDescriptor`（内核/连接能力协商，confirmed）是**两套独立机制**，可能叠加：一个工具即便 `tenant_features` 允许，也可能因为 `CapabilityDescriptor.tools.discoverable` 为空而在当前内核连接下不可见；反之亦然。D5.6 只负责呈现"租户维度的开关状态"，两者叠加后的最终可用工具清单渲染属于 D5.5 职责（见 [[d5-00-foundation]] §5.5 `tools.discoverable`/`names` 行）。
+   264	
+   265	### 7.4 SessionHandle.kernel 类型缺口（S-08）
+   266	
+   267	引 [[d5-00-foundation]] §5.5：`SessionHandle.kernel`/`kernelVersion` 的类型层面缺口 S-08 仍**未裁决**（D1 INV-1），标注"D5.6（可能）/ 调试信息"。本页只在**调试/关于面板**语境下可能涉及内核类型展示，非账号/坐席主线 UI，此处仅如实转述 foundation 的缺口标注，不展开设计。
+   268	
+   269	## 8. Computer Use 权限的坐席维度接口预留（简短提及，主体在 D5.3）
+   270	
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md:29:> **v2.2 收残（2026-07-22，同日续作）**：codex T-024 指出 §5.5/§5.6 的 `billingAttribution`/`attribution` 两行仍残留"`'session'` 即可展示本会话成本"的过度表述，与 [[d5-4-cost-usage]] §2.4"必要非充分"正文矛盾（F-02）。本轮已订正为"必要非充分条件之一"，见两处"v2.2 收残"注记；本页 §5.3 PENDING 行未再涉及本轮 F-01/F-03/F-08/F-09 残留（那些残留分别落在 [[d5-2-sessions]]/[[d5-7-model-kernel]]/[[d5-1-message-flow]]，非本页正文）。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md:271:| `billingAttribution`（session/user_tenant_aggregate） | **D5.4** + **D5.6** | `'session'` 是 L3"本会话成本"展示的**必要非充分条件之一**（**v2.2 收残：T-024 F-02**，消解本行此前"可展示本会话成本"这一过度表述——另需 D3 `usage_ledger` 关联键/计价字段就位，见 [[d5-4-cost-usage]] §2.4）；`'user_tenant_aggregate'` 时**不得**声称能拆分到单个 Chat，只能展示租户/用户聚合用量——这是 D5.4 与 T-021 §5.3"task 级成本是超越 Codex 的差异化扩展点"能否兑现的硬前提之一 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md:279:| `attribution` | `'session'` 是"本会话成本"展示的**必要非充分条件之一**，非单独充分——具体依赖见 [[d5-4-cost-usage]] §2.4（**v2.2 收残：T-024 F-02**） | 直接取自部署时静态声明，非运行时推断 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md:27:> **v2.2 收残（2026-07-22，同日续作）**：codex T-024 指出 §7.2 仍残留"`attribution:'session'` 时理论上可以展示本 Chat 成本"的过度表述，与 [[d5-4-cost-usage]] §2.4"必要非充分"正文矛盾（F-02）。本轮已订正为"必要非充分条件之一"，见该处"v2.2 收残"注记；本页 F-05/F-07 相关正文经 T-024 确认真闭合，未再改动。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:142:| **F-02**（HIGH，D5.4 billing snapshot 误用） | **核验有误——codex T-024 判定未真闭合，v2.2 已收残（见 §2.8）** | [[d5-4-cost-usage]] §2.4/§6 当时按 codex 要求正确纠正了正文（(a) `SessionBillingSnapshot` 定性为"请求/额度"快照；(b) L3 权威数据源指向 D3 `usage_ledger`；(c) C-3 降级为必要非充分条件），但本轮核验**只核对了 §2.4/§6，未核对 §4.3 状态图**——`d5-4-cost-usage.md` §4.3 与 `d5-00-foundation.md` §5.5/§5.6、`d5-6-account-license.md` §7.2 仍残留"`attribution:'session'` 即可展示本会话成本"的旧表述，被 T-024 判定 F-02 实际**未闭合**（`.hopper/handoffs/T-024-output.md` F-02 节）。v2.2 批次已定点清理，详见 §2.8 |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:159:| **F-02** | [[d5-4-cost-usage]] §4.3 状态图（`:178-190`）、[[d5-00-foundation]] §5.5/§5.6（`:269,273-281`）、[[d5-6-account-license]] §7.2（`:252-257`）仍残留"`attribution:'session'` 即可展示本会话成本"的旧表述，与 §2.4 新正文"必要非充分"矛盾 | 四处残留统一改为"`'session'` 是必要非充分条件之一，另需 D3 `usage_ledger` 关联键/计价字段就位（见 [[d5-4-cost-usage]] §2.4）" |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md:216:| **C-3** | openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl（§7 注入链契约步骤④的可行性前提，决定 `billingAttribution` 能否取 `'session'`） | 为两个不同 session 配置不同 newapi baseUrl/key，观察调用是否分别落到对应 key（可通过 `/api/log/self?token_name=...` 互验隔离性） | **D5.4**（L2/L3 是否可展示"本会话成本"）+ **D5.6**（用量概览区块是否只能展示聚合数字） | 走 `billingAttribution:'user_tenant_aggregate'` 降级路径，D5.4/D5.6 均已按此保守假设设计（本页 §4 开放问题第 7 条已提请单独排期验证） |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md:239:| 7 | D3 `usage_ledger` 缺 Chat/Turn 关联键与计价（单位/币种/模型价格版本）字段定义（**v2 修复新增，消解 T-023 F-02**；**v2.1 核验有误**：v2.1 当时只核对了 §2.4/本表正文，未核对 §4.3 状态图，codex T-024 定向 re-verify 指出 §4.3 仍残留"UI 可展示本会话成本"的旧表述，判定 F-02 v2.1 时点上其实未真闭合；**v2.2 收残**：已改写 §4.3，明确 `attribution:'session'` 只是必要非充分条件，见该节注记） | [[server-stack-selection]] | **D3 侧未定义**——不是待验证，是尚未裁决的契约缺口 | L3 唯一可行路径的必要依赖之一，见 §2.4 依赖枚举；D5.4 不代 D3 裁决具体字段名 |
+
+exec
+/bin/zsh -lc "nl -ba /Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md | sed -n '112,172p'
+rg -n 'N 个待审批|计数徽标|active pending|pending.*0/1|0/1.*pending' /Users/litianyi/.llm-wiki/agent-app-design/product/*.md
+rg -n -i '(chat|会话).{0,45}(实时切|热切|下一条消息).{0,45}confirmed|confirmed.{0,45}(chat|会话).{0,45}(实时切|热切|下一条消息)|T-021 confirmed 存在' /Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md || true
+rg -n '§3\\.1 前置说明|§3\\.1.*附件|附件.*§3\\.1|§3\\.0' /Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 111ms:
+26:> **v2.1 收尾（2026-07-22）**：消解 codex T-023 F-09——新增 §3.0（composer 附件/上下文引用、dictation、slash 命令、`@`/`$` skill 提及，此前 T-021 confirmed 但无子面接住的行为），并订正 §6 一处假引用（此前称附件路径缺口"已在 §3.1 前置说明"，实际未有对应内容）。
+28:> **v2.2 收残（2026-07-22，同日续作）**：codex T-024 指出 §6 的订正未扫尽全页——§8 已知缺口清单 `:256` 仍写"见 §3.1 前置说明、§6"这一同款假引用，与 :26/:106/:236 已订正的表述自相矛盾（F-09）。本轮已将 `:256` 改为"§3.0"，全页四处引用统一，见该处"v2.2 收残"注记。
+108:- **附件/上下文引用**：composer 支持添加文件/上下文引用。协议落点是 `send()` payload 里的 `FileRefPart.path`（D1/D2 confirmed 字段本身）——但该字段的**文件系统归属未裁决**（D1 F-15，foundation §6.2 已登记）：composer 侧的附件选择器不应假设其展示的路径与内核实际运行环境处于同一文件系统，选中文件后应基于 D1/D2 确认的字段语义原样透传，不臆造"本机可直接寻址"的保证。**本节是本页唯一正面展开这条 F-15 缺口在 composer 侧含义的位置**（此前版本在 §6 处写"缺口已在 §3.1 前置说明"，但 §3.1 实际只讨论 `MessageDeltaEvent` 文本流、从未涉及附件，是一处假引用，本轮已在 §6 订正为指向本节）。
+238:`FileRefPart.path` 归属（D1 F-15 开放项）：composer 侧的附件路径缺口已在 **§3.0**（v2.1 收尾新增，此前版本误称"已在 §3.1 前置说明"但 §3.1 实际未涉及附件，已订正）前置说明；本节的侧栏预览若涉及"内核运行环境产生的文件路径"同样继承该开放项——UI 不应假设能直接用该 path 在本机文件系统打开文件（foundation §6.2 清单第 6 行）。
+258:- `FileRefPart.path` 文件系统归属（D1 F-15）——见 §3.0、§6（**v2.2 收残：T-024 F-09**，此前误写"§3.1 前置说明"，与同页 :26/:106/:236 已订正的表述自相矛盾，本行订正为实际新增位置 §3.0）
+
+exec
+/bin/zsh -lc "nl -ba /Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md | sed -n '145,245p'
+nl -ba /Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md | sed -n '40,103p'
+rg -n 'Draft|Creating|Active|Stopped|首发失败|发送失败|创建失败|createSession|send\\(' /Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md | sed -n '1,200p'
+rg -n '首发失败|发送失败|创建失败|Draft|Active\\(idle\\)|config.*冻结|冻结.*config' /Users/litianyi/.llm-wiki/agent-app-design/product/d5-3-approvals.md /Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+   145	
+   146	同 [[d5-00-foundation]] §2.2：D5 不强制照搬 `codex://` 协议前缀，是否实现"新建 chat 预填 prompt + 指定 workspace 路径"的深链能力留给 D6/D7 集成阶段裁决，本页不展开。
+   147	
+   148	## 3. 会话生命周期状态机（核心）
+   149	
+   150	### 3.1 总览状态图
+   151	
+   152	对应 [[d5-00-foundation]] §3.2「会话（Chat/thread）」生命周期锚点的展开（**v2 修复：补草稿态 + archive 改为正交轴，消解 T-023 F-01/F-06**）：
+   153	
+   154	```
+   155	[Draft]（composer 可编辑创建时配置，无 sessionId，见 §2.2）
+   156	  │ 首次发送消息 → 原子 createSession()+send()（config 冻结，见 §2.2）
+   157	  ▼
+   158	Active(idle)  ←──────────────────────────────┐
+   159	  │  send() / interrupt() / stop()           │ 见 §3.2 SessionLockState 子状态
+   160	  ▼                                          │
+   161	Active(send_pending / interrupt_in_progress /│
+   162	        stop_in_progress)  ──────────────────┘（操作完成后回到 idle，除非是 stop 完成）
+   163	  │
+   164	  │ stop() 完成（outcome:'succeeded'）
+   165	  │   或 SessionEndEvent（内核侧被动终结，见 §3.3）
+   166	  ▼
+   167	Stopped { reason }
+   168	  │ 应用层 resume 操作（受 sessionResume 能力门控，见 §3.6）
+   169	  ▼
+   170	Active(idle)（同一 sessionId，见 D1 resume 语义）
+   171	
+   172	────────────────────────────────────────────────────────────────
+   173	archived：与上述运行态（Draft 除外——Draft 本无 sessionId，不支持 archive）
+   174	**正交**的独立布尔标记，任意 Active/Stopped 子态均可 archive/取消 archive，
+   175	不改变底层运行态本身（v2 修复：取代 v1"archive 只能从 Stopped 进入"与
+   176	"archive 与底层生命周期正交"两处自相矛盾的表述，详见 §3.5）：
+   177	
+   178	  Active(任意子态) ──archive──▶ Active(同一子态) + archived
+   179	    （底层 session 不受影响，继续接收 TurnCompleteEvent/ApprovalRequestEvent
+   180	     等全部协议事件；只是从默认可见列表隐藏，见 §3.5 通知义务）
+   181	  Stopped{reason} ──archive──▶ Stopped{reason} + archived
+   182	
+   183	  任意 +archived 态 ──取消 archive──▶ 回到 archive 前的实际运行态本身
+   184	    （不强制降级为 Stopped——v1 版本曾把"取消 archive"统一画成回到 Stopped，
+   185	     与"Active Chat 可被 archive"自相矛盾，v2 已修正）
+   186	```
+   187	
+   188	`pinned` 是与上述生命周期**正交**的独立布尔标记（§1.4）——一个 `Stopped`/`archived` 状态的 Chat 仍可被 pin，D1/D2 对此无约束，纯应用层决策。
+   189	
+   190	### 3.2 `SessionLockState` 子状态与操作可用性门控
+   191	
+   192	**直接消费 D1 契约**（D1 §9.3，confirmed）：
+   193	
+   194	```ts
+   195	type SessionLockState = 'idle' | 'send_pending' | 'interrupt_in_progress' | 'stop_in_progress';
+   196	```
+   197	
+   198	完整互斥矩阵见 D1 §9.3 表格（本页不复制全表，只摘录对 D5.2 列表/操作按钮的门控要点）：
+   199	
+   200	| 锁状态 | 会话列表项应呈现 | composer/操作按钮门控 |
+   201	|---|---|---|
+   202	| `idle` | 无特殊标记 | 发送/interrupt/stop 均可用 |
+   203	| `send_pending` | 可选"发送中…"极短暂标记（D1 §9.3 明确"窗口极短，正常情况几乎不可观察"） | 第二次 `send()` 应在 UI 层禁用（避免触发 `session_locked` 拒绝，同 [[d5-00-foundation]] §5.4 末段结论） |
+   204	| `interrupt_in_progress` | 运行状态条呈现属 D5.1，列表项可显示"处理中" | 见 D5.1；`stop()` 到达时的仲裁规则见 D1 §9.3"stop 优先仲裁"，本页不复述 |
+   205	| `stop_in_progress` | 列表项显示"正在停止…" | 二次 `stop()` 应禁用（`session_locked`/`session_already_stopped`，见 §7） |
+   206	
+   207	### 3.3 终结路径：`stop()` vs `SessionEndEvent`（两条独立路径，均需呈现）
+   208	
+   209	**主动路径**：用户发起 `stop()`，其 `OperationOutcome` 三态子集（`succeeded`/`timed_out`/`rejected`，D1 §2.5，confirmed）决定 Chat 是否真正进入 `Stopped`：
+   210	- `succeeded` → Chat 进入 `Stopped{reason:'stopped'}`。
+   211	- `timed_out`/`rejected` → **D1 未终结该会话**，列表项应维持此前状态，不得擅自标记为 Stopped（措辞沿用 [[d5-00-foundation]] §5.4 对应行，本页不重复定义新文案）。
+   212	
+   213	**被动路径**：内核侧主动上报 `SessionEndEvent`（D1 §3/D2 `SessionEndPayload`，confirmed），`reason` 字段四值决定 UI 措辞差异——**这四个 reason 值语义不同，不应统一呈现为"已停止"**：
+   214	
+   215	| `SessionEndEvent.reason` | 含义 | D5.2 呈现建议 |
+   216	|---|---|---|
+   217	| `stopped` | 与用户主动 `stop()` 对应（旁路镜像） | "已停止"，与主动路径一致 |
+   218	| `kernel_exited` | 内核进程退出（非用户发起） | **不得**呈现为"已停止"——应标注"内核已退出"，提示这是非预期终结，可能需要用户判断是否重试/排查，而非当作正常收尾 |
+   219	| `transport_closed` | 连接层关闭 | 应标注"连接已断开"，与内核仍在运行但暂不可达区分——不应暗示会话内容已丢失 |
+   220	| `error` | 错误终结 | 应标注"因错误终结"，链接至 D5.1 内联错误呈现（不重复定义错误文案本身） |
+   221	
+   222	这是本页在 D1/D2 已确认字段基础上的**如实展开**（D1/D2 confirmed 字段本身；四态各自对应的 UI 措辞是 D5 设计决策，T-021 未给出对应产品文案，foundation 也未展开到这一粒度）。
+   223	
+   224	### 3.4 关键差异：openclaw 原生删除 vs hermes 仅中断——诚实缺口标注
+   225	
+   226	**这是本页在阅读 D1 §5 Transport 映射表时发现的一处对"会话生命周期终结后能否恢复"有直接影响、且未被 foundation 展开的细节**，本页在此如实标注：
+   227	
+   228	- **openclaw**：`stop()` 映射为两步非原子序列——`sessions.abort`/`chat.abort`（确认 `turn_complete` 或超时）→ `sessions.delete`（D1 §5 Transport 映射表，confirmed）。也就是说 **openclaw 的 `stop()` 会导致内核原生会话被真正删除**，靠 D1 §6.3"已 stop 黑名单"机制兜底非原子窗口期的一致性。
+   229	- **hermes**：`stop()` 对应 ACP `cancel(session_id)`，**只中断当前 prompt，不销毁持久会话**——持久删除需要走 CLI `hermes sessions delete`，这是 D1 `stop()` 方法本身**未覆盖**的独立操作（D1 §5 Transport 映射表，confirmed）。
+   230	
+   231	**这一差异叠加 openclaw "resume-after-delete" 语义未经确认**（D1 §2.1 resume 校验注释、§12 开放问题第 4 条，标注为 ❓ 未能确认，来源 [[kernel-ecosystem-facts]]；D1 当前**保守按 reject 处理**，不假设可自动重建）——意味着：
+   232	
+   233	> 同样一次"停止"操作（UI 上是同一个按钮、同一次 `stop()` 调用），在 openclaw 后端下大概率导致该 Chat **事实上不可恢复**（原生会话已删除，resume 是否重建未确认，D1 保守拒绝），在 hermes 后端下持久会话**可能仍然存在**（`stop()` 本身不删除），恢复的可行性取决于该内核部署的 `sessionResume` 能力声明。
+   234	
+   235	**这与 D1 INV-1（透明性）如何共存**：INV-1 要求 UI 不得对内核类型做分支判断（[[d1-kernelport-spec-v3-5]] §1）。本页的结论是：**UI 确实不应该、也不能对 openclaw/hermes 分别设计"恢复"交互**——唯一暴露给 UI 的、合规的信号是 `capabilities().sessionResume`（boolean，见 §3.6）。但这也意味着：**当 `sessionResume:false` 时，UI 侧完全无法向用户解释"为什么这个 Chat 不能恢复"是因为内核类型差异**，只能呈现一个笼统的"该会话不支持恢复"提示——这是 INV-1 透明性换来的代价，本页认为需要显式记录，而不是留给实现阶段自己发现。子面实现时不应尝试绕过 INV-1 去为两种内核设计不同的恢复文案。
+   236	
+   237	### 3.5 归档（Archive）——与运行态正交的 UI 组织标记，非 D1 概念（v2 修复：消解 T-023 F-06）
+   238	
+   239	**诚实缺口**：D1/D2 全文没有"archive"概念，`SessionHandle` 没有对应字段——archive/取消 archive 是纯应用层（P7 Server）对 Chat 元数据的一个布尔标记操作，不触发任何 D1 方法调用，也不隐含"该会话已 stop"。
+   240	
+   241	**权威语义（v2 修复，取代 v1 版本"archive 只能从 Stopped 进入"的状态图与"archive 与底层生命周期正交"这段文字两处自相矛盾的表述）**：`archived` 是与 §3.1 状态图中 `Active`/`Stopped` 等**运行态正交**的独立布尔轴——是纯粹的 UI 组织标记（"货架"），不是运行态状态机上的一个节点：
+   242	
+   243	- **任意运行态的 Chat 均可被 archive**，包括仍处于 `Active`（甚至 `send_pending`/`interrupt_in_progress` 等子态）的 Chat——archive 操作本身只是把它从默认可见列表隐藏，**不触发、也不影响** `stop()`：底层 `SessionHandle` 继续存在、继续可以 `send()`、继续产生 `TurnCompleteEvent`/`ApprovalRequestEvent`/`SessionEndEvent` 等全部协议事件。
+   244	- **archived 期间的通知义务（v2 新增，回应 T-023 对"隐藏运行中会话缺通知设计"的指出）**：即使 Chat 已被 archive、从默认列表隐藏，若其底层 session 仍是 `Active` 并产生了新的 `TurnCompleteEvent`（回合完成）或 `ApprovalRequestEvent`（新审批到达），D5.2 仍需向用户呈现某种非侵入式提醒（如"已归档会话中有更新"的全局/Archived 分区徽标）——**不得**因为 UI 隐藏就静默丢弃这些事件的呈现义务，否则用户可能对一个仍在消耗额度/等待审批的会话完全失去感知。具体徽标像素本页不展开，只要求这条纪律不被忽略。
+   245	- **取消 archive 恢复到 archive 前的实际运行态**，不强制降级为 `Stopped`——若被 archive 的 Chat 底层仍是 `Active`，取消 archive 后应直接回到 `Active`（可能已经是不同的子态，取决于 archive 期间的实际协议事件），而不是像 v1 版本状态图那样统一回退到"未归档但已终结态"。
+    40	
+    41	## 1. 消息流总览：Item 渲染总表
+    42	
+    43	主工作区 = 当前 Chat 的消息流，逐 Turn 分组显示（同一 `runId` 下的事件归属同一个可视 Turn 块；foundation §3.3 已确认 Turn ↔ `runId` 的对应关系）。D2 十一类事件中，**7 类**在本子面的消息流区域内直接渲染为 Item 或驱动运行状态条，**4 类**不在本页展开（属于其他子面，仅作交接说明）：
+    44	
+    45	| # | D2 wire type | 是否在 D5.1 消息流内渲染 | 本页对应章节 |
+    46	|---|---|---|---|
+    47	| 1 | `evt.message.delta` | 是——流式文本 Item | §3.1 |
+    48	| 2 | `evt.thinking` | 是——折叠 Item | §3.2 |
+    49	| 3 | `evt.tool_call` | 是——tool-call 块（配对 `evt.tool_result`） | §3.3 |
+    50	| 4 | `evt.tool_result` | 是——同上 + 驱动产物侧通道 | §3.3、§6 |
+    51	| 5 | `evt.approval_request` | 是——在消息流中的**插入点**（完整 FSM 见 D5.3） | §3.4 |
+    52	| 6 | `evt.error` | 是——内联错误 Item | §3.5 |
+    53	| 7 | `evt.turn_complete` | 是——不作为 Item，驱动运行状态条终态 | §2、§5 |
+    54	| 8 | `evt.session_end` | 否——D5.2（会话生命周期终结，见 foundation §5.1 第 8 行） | §7 |
+    55	| 9 | `evt.capability_changed` | 否——D5.5/D5.3/D5.7（能力集变化，见 foundation §5.1 第 9 行） | §7 |
+    56	| 10 | `evt.operation_completed` | 是，但不是消息流 Item——驱动运行状态条对 interrupt/stop 结果的旁路反馈 | §5 |
+    57	| 11 | `evt.approval_buffer_resolved` | 否——从未被提升为可见 pending，消息流里没有对应可见状态，呈现属于 D5.3 审计视图（见 foundation §5.1 第 11 行） | §3.4 |
+    58	
+    59	## 2. Turn：一次 `send()` 的生命周期状态机
+    60	
+    61	**D5 设计决策（重要澄清）**：D1/D2 本身**没有**一个字面命名为「Turn 状态机」的枚举类型——`send()` 只返回 `{runId}`（[[d1-kernelport-spec-v3-5]] §2.2），Turn 是否「仍在运行」是 D5 依据「该 `runId` 尚未收到 `TurnCompleteEvent`」这一事件到达顺序自行推断的产品层状态，不是 D1 暴露的显式查询字段（D1 没有「query active run」方法）。下面的状态机是 D5 把 `send()`/事件流/`SessionLockState`（[[d1-kernelport-spec-v3-5]] §9.3）三者合成后的呈现层状态机，需要与 §9.3 的锁状态严格区分开——两者不是同一回事（下方专门澄清）。
+    62	
+    63	```
+    64	IDLE（无未决 runId，composer 可发送）
+    65	  │ 用户点击发送 → send()
+    66	  ▼
+    67	SUBMITTING（等待 res.send() ack；D1 SessionLockState=send_pending，
+    68	             极短窗口，正常情况几乎不可感知，见 D1 §9.3 表首行）
+    69	  │ res.send({runId}) 返回
+    70	  ▼
+    71	RUNNING（SessionLockState 已回落 idle——send() 的 Promise 完成不代表
+    72	         agent 已经跑完，只代表这次 RPC 往返本身成功；D5 以
+    73	         「该 runId 尚未出现 TurnCompleteEvent」判定仍在 RUNNING，
+    74	         期间持续渲染 message.delta / thinking / tool_call / tool_result /
+    75	         approval_request / error 等 Item，seq 仅保证同一 runId 内排序，
+    76	         不承诺跨 run 单调，见 [[d1-kernelport-spec-v3]] KernelEventBase.seq 注释）
+    77	  │                                            │
+    78	  │ 用户发起 interrupt()/stop()                 │ 内核直接产出 TurnCompleteEvent
+    79	  ▼                                            │（stopReason: completed/error/max_turns）
+    80	INTERRUPTING（SessionLockState 转 interrupt_in_progress/                │
+    81	              stop_in_progress，三条 mode 子状态机见 §5）                │
+    82	  │ operation 终态化 + TurnCompleteEvent 到达                            │
+    83	  ▼                                                                     ▼
+    84	RESOLVED（TurnCompleteEvent.stopReason 摘要展示，运行状态条落定，
+    85	          composer 恢复可发送）
+    86	  │
+    87	  ▼
+    88	回到 IDLE（等待下一次 send()）
+    89	```
+    90	
+    91	**同一 session 同时只有一个 active run**：[[d1-kernelport-spec-v3]] 在 `ApprovalRequestEvent.runId` 收紧为必填时的注释明确「§9 约束『一 session 一次一个 active run』」——这意味着 Turn 在**同一个 Chat 内部是严格串行的**，多 Turn 并行只能发生在**不同 Chat**之间（呼应 foundation 设计原则 1「命令中心，非单轮 chatbot」与 D5.2 的并行会话管理，本页不展开跨 Chat 并行）。
+    92	
+    93	**composer/操作按钮可用性 = D1 §9.3 完整互斥矩阵的直接翻译**（不新增规则，逐字对照 [[d1-kernelport-spec-v3-5]] §9.3）：
+    94	
+    95	| 当前 SessionLockState \ 按钮 | 发送 | 转向/取消/放弃重来（interrupt） | 停止（stop） |
+    96	|---|---|---|---|
+    97	| `idle` | 可用 | 可用（可选项受 `capabilities().interruptModes` 门控，见 §5） | 可用 |
+    98	| `send_pending` | 禁用（否则命中 `session_locked`） | 禁用（`session_locked`） | 禁用（`session_locked`） |
+    99	| `interrupt_in_progress` | 禁用（`session_locked`） | 禁用（`session_locked`，同一时刻只允许一个 interrupt 在途） | **可用，但会触发「stop 优先仲裁」**（见 §5.3） |
+   100	| `stop_in_progress` | 禁用（`session_already_stopped` 或 `session_locked`，视黑名单是否已写入） | 禁用（`session_already_stopped`） | 禁用（`session_locked`，不支持 stop 重入） |
+   101	
+   102	## 3. 流式 Item 渲染
+   103	
+110:       └─ Turn（轮）                    ←→ D1 send() 产生的一个 runId
+127:| **轮（Turn）** | turn | **有**——对应 D1 `send()` 产生的 `runId` | 见 §3.3 |
+136:- D1/D2 关系：**无原生对应**——`CreateSessionConfig.cwd` 是 D1 `createSession` 的入参之一（见 D1 §2.1），Project 在应用层把"多个 Chat 共享同一个 cwd/instructions/sources"这件事固化为一个可见实体，D1 本身不知道"Project"的存在，只逐次接受每个 Chat 各自的 `cwd`。
+141:- D1/D2 关系：**1:1 对应 `SessionHandle`**——`sessionId`（D1 v3.2 起由 adapter 预分配的 UUID，createSession 步骤 1 铸造，见 D1 §2.1）是该 Chat 的稳定寻址锚点；`kernelSessionId`（内核原生会话 id，步骤 3 之后回填）是内部实现细节，不建议暴露给终端用户 UI。
+142:- 生命周期锚点（**v2 修复：补草稿态，消解 T-023 F-01 BLOCKER**）：**Draft**（用户点击"新建"，纯 UI/应用层本地态，尚不存在 `SessionHandle`/`sessionId`，composer 可自由配置 `createSession` 的四类创建时字段——model（[[d5-7-model-kernel]]）/sandbox+approvalProfile（[[d5-3-approvals]]）/toolset（[[d5-5-capabilities]]）——不触发任何 D1 方法调用）→ **首次发送消息时，应用层原子执行 `createSession(config)` + 首条 `send()`，`config` 此刻冻结**（权威时点，详见 [[d5-2-sessions]] §2.2；此前 v1 版本 D5.2 曾把该时点错误地放在"点新建"那一刻，与 D5.7 v1 的"首次发送"时点冲突，已在此收口统一）→ `createSession()` 铸造（resolve→active）→ `subscribe()` 建立事件流 → 若干 Turn（见下）→ `interrupt()`/`stop()` 或内核侧 `SessionEndEvent` 终结 → 应用层 archive/delete（`archived` 与上述运行态正交，任意 Active/Stopped 态均可 archive/取消 archive，不改变底层运行态本身，详见 [[d5-2-sessions]] §3.5，**v2 修复：消解 T-023 F-06**）。
+146:- D1/D2 关系：**对应一次 `send()` 调用返回的 `runId`**（D1 §2.2）——该 `runId` 下产生的所有 `KernelEvent`（`MessageDeltaEvent`/`ThinkingEvent`/`ToolCallEvent`/... 均携带可选 `runId` 字段，`ApprovalRequestEvent`/`TurnCompleteEvent` 的 `runId` 在 D2 wire 层被收紧为**必填**，见 D2 §4 表）共同构成这一轮的消息流片段；`TurnCompleteEvent` 是该 Turn 的终态事件。
+147:- 一个 Chat 内可有多个 Turn（多次 `send()`）；`interrupt(mode:'abort_and_resend')` 会产生 `newRunId`，即开启一个新 Turn 并终结旧 Turn（旧 Turn 以 `degraded:{kind:'abort_and_resend'}` 标注收尾，见 D1 §6.1(b)）。
+170:| Turn | `send()` 返回的 `{runId}` | `EventEnvelope.runId` | `runId`（`ApprovalRequestEvent`/`TurnCompleteEvent` 必填） |
+210:| `createSession` | **D5.2**（新建 Chat）+ **D5.6**（`billing.tokenRef` 铸造，租户/坐席上下文注入） | 步骤 0 的 `aggregate_billing_requires_deployment_token` 前置校验失败是部署配置问题，不应期望终端用户 UI 能自行修复，需引导至（Console 侧的）诊断信息 | D1/D2 confirmed |
+248:| `aborted_resend_failed` | abort 确认生效但 resend 自身失败 | "已中止旧内容，但重试发送失败" | openclaw 上仅在 error 响应体透出可判读信号时才可靠（D1 §11 C-4 待验） |
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-3-approvals.md:55:**v2 修复：配置时点澄清（消解 T-023 F-01）**——`CreateSessionConfig.sandbox`/`approvalProfile` 均只能在 `createSession` 时设定一次。按 [[d5-2-sessions]] §2.2 v2 修复后的权威时点：composer 上这两个控件在**草稿态（Draft Chat，未发送首条消息前）**可自由切换；**首次发送**触发原子 `createSession(config)+send()` 后，这两个值随 `config` 一并冻结，composer 对应控件转为**只读展示**（展示该 Chat 已锁定的权限模式，不再可编辑），若想使用不同的 sandbox/approvalProfile 需要新建一个 Draft Chat——这与 [[d5-7-model-kernel]] §3.4"轨道 A/B"对模型选择给出的结论完全同构（共享同一条契约约束：D1 只在 `createSession` 时接受配置，之后不可变）。这也回答了此前 codex 提出的开放问题"composer 权限模式在已有 Chat 中是只读、还是需要运行期更新契约"——答案是**只读，引导新建**，不需要新的 D1 运行期更新契约。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:134:**v2 修复：与 [[d5-2-sessions]] §2.2 统一术语（消解 T-023 F-01）**——下方"轨道 A"里的 `Recommended`/`AdvancedExpanded`/`PendingCreate` 三态，对应的正是 [[d5-2-sessions]] §2.2 定义的**草稿态（Draft Chat）**内部的 composer 子状态（`PendingCreate` = Draft 态下 composer 已配置完毕、等待发送）；`CommittedToSession` 对应 [[d5-2-sessions]] §2.2"首次发送触发原子 `createSession()`+`send()`，config 冻结"这一跨全部子面统一的权威时点。本页 v1 版本独立推导出这一状态机时尚未与 D5.2 显式对齐术语（当时 D5.2 v1 错误地把 createSession 时点放在"点新建"那一刻），v2 修复后两页共享同一条时点权威，不再是各自平行的结论。
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:136:**轨道 A——Draft Chat 内选择模型/effort，首次发送时冻结（D1/D2 有直接对应，confirmed）**：
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:139:Recommended（默认态，展示推荐档滑块；Chat 处于 Draft，无 sessionId）
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:142:AdvancedExpanded（展示具体模型/effort/speed 明细；仍是 Draft）
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:145:PendingCreate（Draft 态下 composer 已配置完毕，尚未提交，等待首条消息）
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:157:不过，无论 Codex 产品实际行为如何，本页 §2.1/§3.3 已从 D1/D2 契约本身独立确认"`model` 字段只能在 `createSession` 时设置一次、无热更新路径"这一结论，**不受这次置信度订正影响**——F-01 已裁决 `config` 在 `createSession` 时冻结、之后不可变（见 [[d5-2-sessions]] §2.2），故"chat 内热切"在 D5 当前设计下本就需要新建 Draft Chat 才能实现，与下方两个候选方案的降级结论完全一致；不得把这一未确认的 Codex 产品时序语义当作 codex/T-021 已经证实的既成事实、进而推导"D5 是被协议限制被迫放弃了 Codex 已有能力"这一叙述。D5 必须显式做出设计选择，本页给出两个候选方案并给建议，**不擅自假装两者不冲突**：
+/Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md:189:**v2 修复：跨子面一致性确认**——本页结论（方案 b：MVP 仅 Draft 态可选，已有 Chat 内只读）与 [[d5-3-approvals]] §2 v2 修复后的权限模式结论（同样"只读，引导新建"）同构一致——两者共享同一条契约约束（D1 只在 `createSession` 时接受配置，之后不可变），不再是各自独立推导、恰好巧合一致的两个结论。
+
+codex
+五个目标点的正文现已全部对上；我正在做最后一轮交叉一致性核验。当前重点是确认 F-01 的“原子”仅作为产品首发编排单元使用，失败语义仍以两个独立 Promise 的实际边界为准，以及 F-02 的四个旧表述点均已统一为“必要非充分”。
+exec
+/bin/zsh -lc "DOC=/Users/litianyi/.llm-wiki/agent-app-design/product
+D1=/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-5.md
+rg -n '首条 send\\(\\) 本身失败|唯一终态是 \\*\\*Active\\(idle\\) \\+ 首发失败标记|允许重试 "'`send'"\\(\\)"'`|不因 send 失败重新|Creating → '"\\[创建失败\\]' \""'$DOC/d5-2-sessions.md"
+rg -n '"'function createSession|不承诺跨步骤原子性|function send\\(' \""'$D1"
+rg -n "必要非充分|usage_ledger|不得.*仅凭.*展示.*本会话成本" "$DOC/d5-4-cost-usage.md" "$DOC/d5-00-foundation.md" "$DOC/d5-6-account-license.md" | sed -n '"'1,100p'
+rg -n 'active pending 是否存在|每 session 恒为 0 或 1|不做\"共 N 条\"计数徽标' \""'$DOC/d5-2-sessions.md"
+rg -n '"'控件存在性.*confirmed.*时序语义.*未能确认|实时切模型.*未能确认|下一条消息起生效.*未能确认' \""'$DOC/d5-7-model-kernel.md"
+rg -n '"'FileRefPart\\.path.*见 §3\\.0、§6' \""'$DOC/d5-1-message-flow.md"
+rg -n '"'以下一轮 codex 定向 re-verify.*为准|不自行宣称\"全部收口\"|待最终 re-verify' \""'$DOC/d5-product-spec.md"
+shasum -a 256 "$DOC"/*.md "$D1"
+git status --short -- .hopper/handoffs/T-025-output.md' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 237ms:
+34:| 审批卡片交互、审批粒度菜单 | D5.3 | 只在列表项反映当前 **active pending 是否存在**（每 session 至多 1 条，0/1 布尔指示，非"N 个"计数徽标——**v2.2 收残：T-024 F-03**，消解本表此前与 §1.2/§3 的"仅 active pending"定义矛盾的旧措辞），不重复设计审批 FSM 措辞（沿用 [[d5-00-foundation]] §5.3） |
+56:| 待审批指示 | 反映**当前 active pending**（每 session 恒为 0 或 1，D1 pending 上限=1、串行呈现，见 [[d5-00-foundation]] §5.3）——有 active pending 时显示"有一条审批待处理"指示；**缓冲队列（pending #2 及以后）不计入此指示，其内容对本页同样不可见**，只在 #1 解决后浮现为 active、或经 `ApprovalBufferResolvedEvent` 终态化后才反映到审计视图（属 [[d5-3-approvals]] §6，非本页列表项） | D1/D2 confirmed（active pending 存在性）；文案由 D5.3 定义，本页只取"有/无待处理"这一布尔指示，不做"共 N 条"计数徽标（无协议字段支撑总计数）。**v2 修复**：消解 T-023 F-03/grok F-01（此前"含缓冲队列"的表述与 [[d5-3-approvals]] §6"缓冲不可见"矛盾，已统一为"仅 active pending"） |
+26:> **v2.2 收残（2026-07-22，同日续作）**：codex T-024 定向 re-verify 指出，v2.1 的 confidence 降级没有贯穿 §3.4 同一节的正文——轨道 B 标题仍写"T-021 confirmed 存在"、结论段仍写"Codex confirmed 的'chat 内实时切模型'体验"，与本段的降级结论并存矛盾（F-08）。本轮已删除这两条旧 confirmed 断言，改为"控件存在性 confirmed、时序语义未能确认"，并重申 F-01 冻结结论不受此次订正影响，详见 §3.4 两处"v2.2 收残"注记。
+153:**轨道 B——已有 Chat 内点击模型/effort 控件（控件存在性 T-021 §8.1/§8.2 confirmed；但"下一条消息起生效"这一时序语义**未能确认**，见下方 v2.1 收尾订正——**v2.2 收残：T-024 F-08**，本标题不再单独出现"confirmed"字样以免与下方降级结论并存造成误读；D1/D2 没有直接对应，需要 D5 做出取舍）**：
+155:**v2.1 收尾：消解 T-023 F-08（重做，confidence 降级）**——T-021 §8.1/§8.2 confirmed 的是 composer 下方存在 model/reasoning 控件、推荐档+Advanced 双层 UX 这一**控件存在性**（见 §3.1）；T-021 原文**没有**确认"控件可在已创建 thread 内随时点开切换、且下一条消息起生效"这一具体**时序语义**——这是本页此前版本比 T-021 原文更确定的一处过度引用（codex T-023 F-08 指出，证据：`d5-7-model-kernel.md:148-150` 对照 `T-021-output.md:389-411`）。本页据此订正：Codex 产品是否真的支持"已有 chat 内原地热切模型、下一条消息生效"，**未能确认/待真机或官方契约验证**，不应再引用为 T-021 confirmed 事实。
+187:**这一分歧本身是本页最重要的产品决策之一**：Codex 是否真的支持"chat 内实时切模型、下一条消息起生效"这一具体时序语义**未能确认**（**v2.2 收残：T-024 F-08**，消解本句此前"Codex confirmed 的……体验"这一过度表述，与上方 v2.1 收尾的降级结论并存矛盾——T-021 只 confirm 控件存在性，不 confirm 该时序语义，见 §0/§6）——但无论该行为是否真实存在于 Codex，在 D5 MVP 阶段都因协议约束（D1 `model` 字段无热更新路径）而做出**功能降级**（差异调整），不是"直接仿 codex"可以照搬的形态；这一降级结论不受上述 confidence 订正影响。
+287:| "已有 chat 内随时切模型、下一条消息起生效"是否真是 Codex 产品行为（**v2.1 收尾新增，消解 T-023 F-08**） | **未能确认/待真机或官方契约验证**——T-021 §8.1/§8.2 只 confirm 控件存在性，不 confirm 该时序语义 | 不影响 §3.4 方案 (b) 的降级结论（F-01 冻结时点已独立成立于此置信度问题）；仅影响"这是否是被协议限制放弃的 Codex 已有能力"这一叙述的准确性 |
+258:- `FileRefPart.path` 文件系统归属（D1 F-15）——见 §3.0、§6（**v2.2 收残：T-024 F-09**，此前误写"§3.1 前置说明"，与同页 :26/:106/:236 已订正的表述自相矛盾，本行订正为实际新增位置 §3.0）
+164:**统计口径（据实更新，取代 §2.7 末句过时表述）**：本轮 v2.2 处理 F-01/F-02/F-03/F-08/F-09 五项机械级残留；F-04/F-05/F-06/F-07/F-10 五项沿用 v2/v2.1 结论（codex T-024 已交叉确认真闭合，本轮未再改动）。**F-01～F-10 是否全部真闭合，以下一轮 codex 定向 re-verify（覆盖本次 v2.2 修订）结果为准**——本页/本轮不自行宣称"全部收口"，§2.7 末句"至此……全部有据可查地收口或核验闭合"的表述已被 T-024 判定不据实，此处不重复该断言，主仓库 `goal-breakdown.md` D5 行同步标注为"v2.2 收残，待最终 re-verify"。
+ba238e7f25805f10691ca94d0077edd99856b45d37f013aa85e797e595f738ea  /Users/litianyi/.llm-wiki/agent-app-design/product/d5-00-foundation.md
+dd7795a97ae1bcca6fab5fec470db9d8b1babe971430db8e2cafb06a07ca5958  /Users/litianyi/.llm-wiki/agent-app-design/product/d5-1-message-flow.md
+6cc16fad1f56c3d510768ac2ee453d1c030dd779d96e25d6f066884369c9e44e  /Users/litianyi/.llm-wiki/agent-app-design/product/d5-2-sessions.md
+a776430a26d4bf7479e91eede574578b9fa4bf043fbbe7a64708d2e576a2deb8  /Users/litianyi/.llm-wiki/agent-app-design/product/d5-3-approvals.md
+fadac87209b5eb986c89433c75b2daa7f398805fe53f734af861fc4ca6375adb  /Users/litianyi/.llm-wiki/agent-app-design/product/d5-4-cost-usage.md
+e0435b4aabc6bec7ec5608d17eabf4f6640c1a591bfdb86268451facb9aa7ca9  /Users/litianyi/.llm-wiki/agent-app-design/product/d5-5-capabilities.md
+5a5b35cbce2eb141524e37a1f1d95082451fd0ae23e7b5c7a40ec21f3bc25c3d  /Users/litianyi/.llm-wiki/agent-app-design/product/d5-6-account-license.md
+3c6e5de02ac34188b9d64c36d62a6ecb9eac86ffffcbe2ac53b6ac93ad828208  /Users/litianyi/.llm-wiki/agent-app-design/product/d5-7-model-kernel.md
+9bd700cda09f9c50548033cf3c934650348e62399eedfcf990c0cee1ba8de256  /Users/litianyi/.llm-wiki/agent-app-design/product/d5-product-spec.md
+4bd778f5d1d0f195907c91a06735a5cbec4d50536a207d7eba0e6dbbc853c3f6  /Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-5.md
+?? .hopper/handoffs/T-025-output.md
+
+exec
+/bin/zsh -lc "ls -l .hopper/handoffs/T-025-output.md && sed -n '1,240p' .hopper/handoffs/T-025-output.md && stat -f 'size=%z mtime=%Sm birth=%SB' -t '%Y-%m-%dT%H:%M:%S%z' .hopper/handoffs/T-025-output.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+-rw-r--r--@ 1 litianyi  staff  614 Jul 22 05:24 .hopper/handoffs/T-025-output.md
+---
+task_id: T-025
+adapter: codex
+model: gpt-5.6-sol
+status: in-progress
+pid: 73478
+start_time: "2026-07-21T21:24:18.938Z"
+end_time: null
+exit_code: null
+duration_ms: null
+mode: background
+phase: starting
+last_progress_at: "2026-07-21T21:24:18.939Z"
+last_progress: Background task queued.
+progress_seq: 1
+progress_log: ./T-025-progress.log
+raw_log: ./T-025-output.log
+vendor_session_id: null
+terminal_event_emitted: false
+host_native: null
+session_id: null
+log: ./T-025-output.log
+started_by_pid: 73474
+---
+
+# T-025 — codex (background, in-progress)
+
+Output streaming to `T-025-output.log`. Status updates here.
+size=614 mtime=2026-07-22T05:24:18+0800 birth=2026-07-22T05:24:18+0800
+
+codex
+最终核验结论为 7/7：五个残留均已闭合，v2.2 未引入新的有效正文矛盾，总纲 §2.8 也没有提前宣称全部通过。我现在只写入指定验收报告，并会复核九页与 D1 的哈希未发生变化。
+apply patch
+patch: completed
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-025-output.md
+diff --git a/.hopper/handoffs/T-025-output.md b/.hopper/handoffs/T-025-output.md
+index 3411d59c62937ab6709fefc0aec07899d7a5738f..2e9e254201fb8a6dc4a09d81f442b4d17249467a
+--- a/.hopper/handoffs/T-025-output.md
++++ b/.hopper/handoffs/T-025-output.md
+@@ -1,28 +1,80 @@
+----
+-task_id: T-025
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 73478
+-start_time: "2026-07-21T21:24:18.938Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-21T21:24:18.939Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-025-progress.log
+-raw_log: ./T-025-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-025-output.log
+-started_by_pid: 73474
+----
++# Summary
++
++已按 T-024 点名的 F-01/F-02/F-03/F-08/F-09 五处残留，对 D5 v2.2 九页及 D1 v3.5 契约完成最终定向 re-verify。五处旧矛盾均已从有效正文清净，新分支与直接相关状态机/跨页约束自洽；总纲 §2.8 也据实保留“待下一轮 re-verify”的口径。因此本轮可确认 D5 定稿。
++
++# Files touched
++
++- `.hopper/handoffs/T-025-output.md` — 本次只读验收的指定交付物；未修改 D5 九页或 D1 契约。
++
++# Acceptance verification (7/7)
++
++## 1. F-01 — 已闭合
++
++`d5-2-sessions.md:112-127` 已把两个失败点明确拆开：`createSession` resolve 后首条 `send()` 失败的唯一终态为 `Active(idle) + 首发失败标记`，不回 Draft、不算创建失败，保留首条消息，允许重试 `send()` 或 `stop()`，且配置继续冻结；步骤 0-3 的 create 失败则仍回 Draft。该边界与 D1 的两个独立方法及非跨步骤原子承诺一致（`d1-kernelport-spec-v3-5.md:147,158,165-168`）。
++
++直接证据：
++
++```text
++d5-2-sessions.md:112: └─ 首条 send() 本身失败
++d5-2-sessions.md:115: 唯一终态是 **Active(idle) + 首发失败标记**
++d5-2-sessions.md:118: 允许重试 `send()`
++d5-2-sessions.md:120: 已随 createSession 完成而冻结，**不因 send 失败重新开放编辑**
++d5-2-sessions.md:123: Creating → [创建失败]（步骤 0-3 任一步失败）
++d1-kernelport-spec-v3-5.md:147: function createSession(...)
++d1-kernelport-spec-v3-5.md:158: 不承诺跨步骤原子性
++d1-kernelport-spec-v3-5.md:165: function send(...)
++```
++
++## 2. F-02 — 已闭合
++
++T-024 指出的四处有效正文现已统一：D5.4 §4.3（`d5-4-cost-usage.md:184-190`）、foundation §5.5/§5.6（`d5-00-foundation.md:271,279`）、D5.6 §7.2（`d5-6-account-license.md:258`）都把 `attribution:'session'` 定为 L3 的必要非充分条件，并要求 D3 `usage_ledger` 同时具备 Chat/Turn 关联键和计价字段；与 D5.4 §2.4（`:102-111`）一致。旧句仅在修订沿革中作为“此前错误”被引用，不再构成现行结论。
++
++关键 grep 命中：
++
++```text
++d5-4-cost-usage.md:188: 不得仅凭这一分支成立就宣称“UI 可展示本会话成本”
++d5-4-cost-usage.md:189: 还需 ... D3 `usage_ledger` 提供 Chat/Turn 关联键+计价字段
++d5-00-foundation.md:271: 必要非充分条件之一
++d5-00-foundation.md:279: 必要非充分条件之一，非单独充分
++d5-6-account-license.md:258: 必要非充分条件之一 ... 还需 D3 `usage_ledger`
++```
++
++## 3. F-03 — 已闭合
++
++D5.2 §0 边界表已改成 active pending 0/1 布尔指示（`d5-2-sessions.md:34`），与 §1.2 的“每 session 恒为 0 或 1、缓冲队列不计入、不做共 N 条计数徽标”（`:56`）以及 D5.3 的 active-only 规则一致。现存“N 个”字样均用于明确否定旧计数设计或记录修订历史，不再有要求展示缓冲计数的有效正文。
++
++## 4. F-08 — 已闭合
++
++D5.7 §3.4 两处旧 confirmed 断言已删除：轨道 B 现只确认控件存在性，明确时序语义未能确认（`d5-7-model-kernel.md:153-155`）；结论段同样写为未能确认（`:187`），开放项表保持相同口径（`:287`）。模型配置仍在 `createSession` 时冻结且已有 Chat 只读（`:146-150,176-189`），未因 confidence 降级改变 F-01 结论。
++
++## 5. F-09 — 已闭合
++
++D5.1 已知缺口清单现指向实际存在的 §3.0 与 §6（`d5-1-message-flow.md:258`），和该页 §3.0 正文（`:106-113`）及 §6 回指（`:238`）一致。`§3.1 前置说明` 仅在修订说明中作为旧错误被提及，不再是现行跳转目标。
++
++## 6. v2.2 编辑无新矛盾 — 通过
++
++- F-01：首发 send 失败落到 D5.2 生命周期已有的 `Active(idle)`（`d5-2-sessions.md:158-170`）；因 create 已成功而保持配置冻结，与 D5.3 `sandbox/approvalProfile` 只读规则（`d5-3-approvals.md:55`）和 D5.7 model 只读规则（`d5-7-model-kernel.md:146-150`）一致。
++- F-02：D5.4 §2.4/§4.3、foundation §5.5/§5.6、D5.6 §7.2 已统一为“session 归因 + D3 ledger 两项均需满足”，没有相互否定的现行结论。
++- F-03/F-08/F-09：本轮修改均是旧措辞清理或机械引用订正，全文定向 grep 未发现新的相反有效断言。
++
++## 7. 总纲 §2.8 / 闭合统计 — 通过
++
++`d5-product-spec.md:154-162` 如实记录 T-024 的 5 已闭合/5 残留及 v2.2 五项处理；`:164` 明确“F-01～F-10 是否全部真闭合，以下一轮 codex 定向 re-verify 结果为准”“本轮不自行宣称全部收口”，并保留“待最终 re-verify”状态。统计与本轮进入验收前的实际状态一致，没有过度声称。
++
++# Decisions / deviations
++
++- 严格限定于五处残留、其直接一致性与总纲 §2.8；未重开 F-04/F-05/F-06/F-07/F-10，也未提出 nice-to-have。
++- 按 T-024 给出的闭合路径，将“补唯一终态与补偿规则”视为 F-01 的充分修复；保留的“原子”按产品侧一次首发编排单元理解，不读作 D1 对两个 Promise 的事务性全成全败承诺，实际失败语义以 §2.2 明列分支为准。
++- “read-only”按不修改评审对象与契约执行，仅写指定交付物；无范围偏离。
++
++# Open questions
++
++none
++
++# Verdict
++
++**CONFIRMABLE**
+ 
+-# T-025 — codex (background, in-progress)
++# Next recommendation
+ 
+-Output streaming to `T-025-output.log`. Status updates here.
++D5 可定稿；将外层跟踪状态从“v2.2 收残，待最终 re-verify”推进为“最终 re-verify 通过/confirmed”即可，本轮五处不需再改正文。
+
+diff --git a/.hopper/handoffs/T-025-output.md b/.hopper/handoffs/T-025-output.md
+index 3411d59c62937ab6709fefc0aec07899d7a5738f..2e9e254201fb8a6dc4a09d81f442b4d17249467a
+--- a/.hopper/handoffs/T-025-output.md
++++ b/.hopper/handoffs/T-025-output.md
+@@ -1,28 +1,80 @@
+----
+-task_id: T-025
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 73478
+-start_time: "2026-07-21T21:24:18.938Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-21T21:24:18.939Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-025-progress.log
+-raw_log: ./T-025-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-025-output.log
+-started_by_pid: 73474
+----
++# Summary
++
++已按 T-024 点名的 F-01/F-02/F-03/F-08/F-09 五处残留，对 D5 v2.2 九页及 D1 v3.5 契约完成最终定向 re-verify。五处旧矛盾均已从有效正文清净，新分支与直接相关状态机/跨页约束自洽；总纲 §2.8 也据实保留“待下一轮 re-verify”的口径。因此本轮可确认 D5 定稿。
++
++# Files touched
++
++- `.hopper/handoffs/T-025-output.md` — 本次只读验收的指定交付物；未修改 D5 九页或 D1 契约。
++
++# Acceptance verification (7/7)
++
++## 1. F-01 — 已闭合
++
++`d5-2-sessions.md:112-127` 已把两个失败点明确拆开：`createSession` resolve 后首条 `send()` 失败的唯一终态为 `Active(idle) + 首发失败标记`，不回 Draft、不算创建失败，保留首条消息，允许重试 `send()` 或 `stop()`，且配置继续冻结；步骤 0-3 的 create 失败则仍回 Draft。该边界与 D1 的两个独立方法及非跨步骤原子承诺一致（`d1-kernelport-spec-v3-5.md:147,158,165-168`）。
++
++直接证据：
++
++```text
++d5-2-sessions.md:112: └─ 首条 send() 本身失败
++d5-2-sessions.md:115: 唯一终态是 **Active(idle) + 首发失败标记**
++d5-2-sessions.md:118: 允许重试 `send()`
++d5-2-sessions.md:120: 已随 createSession 完成而冻结，**不因 send 失败重新开放编辑**
++d5-2-sessions.md:123: Creating → [创建失败]（步骤 0-3 任一步失败）
++d1-kernelport-spec-v3-5.md:147: function createSession(...)
++d1-kernelport-spec-v3-5.md:158: 不承诺跨步骤原子性
++d1-kernelport-spec-v3-5.md:165: function send(...)
++```
++
++## 2. F-02 — 已闭合
++
++T-024 指出的四处有效正文现已统一：D5.4 §4.3（`d5-4-cost-usage.md:184-190`）、foundation §5.5/§5.6（`d5-00-foundation.md:271,279`）、D5.6 §7.2（`d5-6-account-license.md:258`）都把 `attribution:'session'` 定为 L3 的必要非充分条件，并要求 D3 `usage_ledger` 同时具备 Chat/Turn 关联键和计价字段；与 D5.4 §2.4（`:102-111`）一致。旧句仅在修订沿革中作为“此前错误”被引用，不再构成现行结论。
++
++关键 grep 命中：
++
++```text
++d5-4-cost-usage.md:188: 不得仅凭这一分支成立就宣称“UI 可展示本会话成本”
++d5-4-cost-usage.md:189: 还需 ... D3 `usage_ledger` 提供 Chat/Turn 关联键+计价字段
++d5-00-foundation.md:271: 必要非充分条件之一
++d5-00-foundation.md:279: 必要非充分条件之一，非单独充分
++d5-6-account-license.md:258: 必要非充分条件之一 ... 还需 D3 `usage_ledger`
++```
++
++## 3. F-03 — 已闭合
++
++D5.2 §0 边界表已改成 active pending 0/1 布尔指示（`d5-2-sessions.md:34`），与 §1.2 的“每 session 恒为 0 或 1、缓冲队列不计入、不做共 N 条计数徽标”（`:56`）以及 D5.3 的 active-only 规则一致。现存“N 个”字样均用于明确否定旧计数设计或记录修订历史，不再有要求展示缓冲计数的有效正文。
++
++## 4. F-08 — 已闭合
++
++D5.7 §3.4 两处旧 confirmed 断言已删除：轨道 B 现只确认控件存在性，明确时序语义未能确认（`d5-7-model-kernel.md:153-155`）；结论段同样写为未能确认（`:187`），开放项表保持相同口径（`:287`）。模型配置仍在 `createSession` 时冻结且已有 Chat 只读（`:146-150,176-189`），未因 confidence 降级改变 F-01 结论。
++
++## 5. F-09 — 已闭合
++
++D5.1 已知缺口清单现指向实际存在的 §3.0 与 §6（`d5-1-message-flow.md:258`），和该页 §3.0 正文（`:106-113`）及 §6 回指（`:238`）一致。`§3.1 前置说明` 仅在修订说明中作为旧错误被提及，不再是现行跳转目标。
++
++## 6. v2.2 编辑无新矛盾 — 通过
++
++- F-01：首发 send 失败落到 D5.2 生命周期已有的 `Active(idle)`（`d5-2-sessions.md:158-170`）；因 create 已成功而保持配置冻结，与 D5.3 `sandbox/approvalProfile` 只读规则（`d5-3-approvals.md:55`）和 D5.7 model 只读规则（`d5-7-model-kernel.md:146-150`）一致。
++- F-02：D5.4 §2.4/§4.3、foundation §5.5/§5.6、D5.6 §7.2 已统一为“session 归因 + D3 ledger 两项均需满足”，没有相互否定的现行结论。
++- F-03/F-08/F-09：本轮修改均是旧措辞清理或机械引用订正，全文定向 grep 未发现新的相反有效断言。
++
++## 7. 总纲 §2.8 / 闭合统计 — 通过
++
++`d5-product-spec.md:154-162` 如实记录 T-024 的 5 已闭合/5 残留及 v2.2 五项处理；`:164` 明确“F-01～F-10 是否全部真闭合，以下一轮 codex 定向 re-verify 结果为准”“本轮不自行宣称全部收口”，并保留“待最终 re-verify”状态。统计与本轮进入验收前的实际状态一致，没有过度声称。
++
++# Decisions / deviations
++
++- 严格限定于五处残留、其直接一致性与总纲 §2.8；未重开 F-04/F-05/F-06/F-07/F-10，也未提出 nice-to-have。
++- 按 T-024 给出的闭合路径，将“补唯一终态与补偿规则”视为 F-01 的充分修复；保留的“原子”按产品侧一次首发编排单元理解，不读作 D1 对两个 Promise 的事务性全成全败承诺，实际失败语义以 §2.2 明列分支为准。
++- “read-only”按不修改评审对象与契约执行，仅写指定交付物；无范围偏离。
++
++# Open questions
++
++none
++
++# Verdict
++
++**CONFIRMABLE**
+ 
+-# T-025 — codex (background, in-progress)
++# Next recommendation
+ 
+-Output streaming to `T-025-output.log`. Status updates here.
++D5 可定稿；将外层跟踪状态从“v2.2 收残，待最终 re-verify”推进为“最终 re-verify 通过/confirmed”即可，本轮五处不需再改正文。
+
+exec
+/bin/zsh -lc 'DOC=/Users/litianyi/.llm-wiki/agent-app-design/product
+D1=/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-5.md
+shasum -a 256 "$DOC"/*.md "$D1"
+wc -l -c .hopper/handoffs/T-025-output.md
+rg -n '"'"'^# (Summary|Files touched|Acceptance verification '"\\(7/7\\)|Decisions / deviations|Open questions|Verdict|Next recommendation)"'$|''^'"\\*\\*(CONFIRMABLE|MUST-FIX)\\*\\*"'$'"' .hopper/handoffs/T-025-output.md
+git status --short -- .hopper/handoffs/T-025-output.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+diff --git a/.hopper/handoffs/T-025-output.md b/.hopper/handoffs/T-025-output.md
+index 3411d59c62937ab6709fefc0aec07899d7a5738f..2e9e254201fb8a6dc4a09d81f442b4d17249467a
+--- a/.hopper/handoffs/T-025-output.md
++++ b/.hopper/handoffs/T-025-output.md
+@@ -1,28 +1,80 @@
+----
+-task_id: T-025
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 73478
+-start_time: "2026-07-21T21:24:18.938Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-21T21:24:18.939Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-025-progress.log
+-raw_log: ./T-025-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-025-output.log
+-started_by_pid: 73474
+----
++# Summary
++
++已按 T-024 点名的 F-01/F-02/F-03/F-08/F-09 五处残留，对 D5 v2.2 九页及 D1 v3.5 契约完成最终定向 re-verify。五处旧矛盾均已从有效正文清净，新分支与直接相关状态机/跨页约束自洽；总纲 §2.8 也据实保留“待下一轮 re-verify”的口径。因此本轮可确认 D5 定稿。
++
++# Files touched
++
++- `.hopper/handoffs/T-025-output.md` — 本次只读验收的指定交付物；未修改 D5 九页或 D1 契约。
++
++# Acceptance verification (7/7)
++
++## 1. F-01 — 已闭合
++
++`d5-2-sessions.md:112-127` 已把两个失败点明确拆开：`createSession` resolve 后首条 `send()` 失败的唯一终态为 `Active(idle) + 首发失败标记`，不回 Draft、不算创建失败，保留首条消息，允许重试 `send()` 或 `stop()`，且配置继续冻结；步骤 0-3 的 create 失败则仍回 Draft。该边界与 D1 的两个独立方法及非跨步骤原子承诺一致（`d1-kernelport-spec-v3-5.md:147,158,165-168`）。
++
++直接证据：
++
++```text
++d5-2-sessions.md:112: └─ 首条 send() 本身失败
++d5-2-sessions.md:115: 唯一终态是 **Active(idle) + 首发失败标记**
++d5-2-sessions.md:118: 允许重试 `send()`
++d5-2-sessions.md:120: 已随 createSession 完成而冻结，**不因 send 失败重新开放编辑**
++d5-2-sessions.md:123: Creating → [创建失败]（步骤 0-3 任一步失败）
++d1-kernelport-spec-v3-5.md:147: function createSession(...)
++d1-kernelport-spec-v3-5.md:158: 不承诺跨步骤原子性
++d1-kernelport-spec-v3-5.md:165: function send(...)
++```
++
++## 2. F-02 — 已闭合
++
++T-024 指出的四处有效正文现已统一：D5.4 §4.3（`d5-4-cost-usage.md:184-190`）、foundation §5.5/§5.6（`d5-00-foundation.md:271,279`）、D5.6 §7.2（`d5-6-account-license.md:258`）都把 `attribution:'session'` 定为 L3 的必要非充分条件，并要求 D3 `usage_ledger` 同时具备 Chat/Turn 关联键和计价字段；与 D5.4 §2.4（`:102-111`）一致。旧句仅在修订沿革中作为“此前错误”被引用，不再构成现行结论。
++
++关键 grep 命中：
++
++```text
++d5-4-cost-usage.md:188: 不得仅凭这一分支成立就宣称“UI 可展示本会话成本”
++d5-4-cost-usage.md:189: 还需 ... D3 `usage_ledger` 提供 Chat/Turn 关联键+计价字段
++d5-00-foundation.md:271: 必要非充分条件之一
++d5-00-foundation.md:279: 必要非充分条件之一，非单独充分
++d5-6-account-license.md:258: 必要非充分条件之一 ... 还需 D3 `usage_ledger`
++```
++
++## 3. F-03 — 已闭合
++
++D5.2 §0 边界表已改成 active pending 0/1 布尔指示（`d5-2-sessions.md:34`），与 §1.2 的“每 session 恒为 0 或 1、缓冲队列不计入、不做共 N 条计数徽标”（`:56`）以及 D5.3 的 active-only 规则一致。现存“N 个”字样均用于明确否定旧计数设计或记录修订历史，不再有要求展示缓冲计数的有效正文。
++
++## 4. F-08 — 已闭合
++
++D5.7 §3.4 两处旧 confirmed 断言已删除：轨道 B 现只确认控件存在性，明确时序语义未能确认（`d5-7-model-kernel.md:153-155`）；结论段同样写为未能确认（`:187`），开放项表保持相同口径（`:287`）。模型配置仍在 `createSession` 时冻结且已有 Chat 只读（`:146-150,176-189`），未因 confidence 降级改变 F-01 结论。
++
++## 5. F-09 — 已闭合
++
++D5.1 已知缺口清单现指向实际存在的 §3.0 与 §6（`d5-1-message-flow.md:258`），和该页 §3.0 正文（`:106-113`）及 §6 回指（`:238`）一致。`§3.1 前置说明` 仅在修订说明中作为旧错误被提及，不再是现行跳转目标。
++
++## 6. v2.2 编辑无新矛盾 — 通过
++
++- F-01：首发 send 失败落到 D5.2 生命周期已有的 `Active(idle)`（`d5-2-sessions.md:158-170`）；因 create 已成功而保持配置冻结，与 D5.3 `sandbox/approvalProfile` 只读规则（`d5-3-approvals.md:55`）和 D5.7 model 只读规则（`d5-7-model-kernel.md:146-150`）一致。
++- F-02：D5.4 §2.4/§4.3、foundation §5.5/§5.6、D5.6 §7.2 已统一为“session 归因 + D3 ledger 两项均需满足”，没有相互否定的现行结论。
++- F-03/F-08/F-09：本轮修改均是旧措辞清理或机械引用订正，全文定向 grep 未发现新的相反有效断言。
++
++## 7. 总纲 §2.8 / 闭合统计 — 通过
++
++`d5-product-spec.md:154-162` 如实记录 T-024 的 5 已闭合/5 残留及 v2.2 五项处理；`:164` 明确“F-01～F-10 是否全部真闭合，以下一轮 codex 定向 re-verify 结果为准”“本轮不自行宣称全部收口”，并保留“待最终 re-verify”状态。统计与本轮进入验收前的实际状态一致，没有过度声称。
++
++# Decisions / deviations
++
++- 严格限定于五处残留、其直接一致性与总纲 §2.8；未重开 F-04/F-05/F-06/F-07/F-10，也未提出 nice-to-have。
++- 按 T-024 给出的闭合路径，将“补唯一终态与补偿规则”视为 F-01 的充分修复；保留的“原子”按产品侧一次首发编排单元理解，不读作 D1 对两个 Promise 的事务性全成全败承诺，实际失败语义以 §2.2 明列分支为准。
++- “read-only”按不修改评审对象与契约执行，仅写指定交付物；无范围偏离。
++
++# Open questions
++
++none
++
++# Verdict
++
++**CONFIRMABLE**
+ 
+-# T-025 — codex (background, in-progress)
++# Next recommendation
+ 
+-Output streaming to `T-025-output.log`. Status updates here.
++D5 可定稿；将外层跟踪状态从“v2.2 收残，待最终 re-verify”推进为“最终 re-verify 通过/confirmed”即可，本轮五处不需再改正文。
+
+ succeeded in 113ms:
+?? .hopper/handoffs/T-025-output.md
+
+codex
+验收完成，结论为 **CONFIRMABLE（7/7）**。
+
+F-01/F-02/F-03/F-08/F-09 均已闭合，未发现 v2.2 引入新矛盾；总纲 §2.8 统计据实。D5 九页及 D1 契约哈希保持不变，可进入定稿。
+
+报告：[T-025-output.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-025-output.md)
+diff --git a/.hopper/handoffs/T-025-output.md b/.hopper/handoffs/T-025-output.md
+index 3411d59c62937ab6709fefc0aec07899d7a5738f..2e9e254201fb8a6dc4a09d81f442b4d17249467a
+--- a/.hopper/handoffs/T-025-output.md
++++ b/.hopper/handoffs/T-025-output.md
+@@ -1,28 +1,80 @@
+----
+-task_id: T-025
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 73478
+-start_time: "2026-07-21T21:24:18.938Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-21T21:24:18.939Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-025-progress.log
+-raw_log: ./T-025-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-025-output.log
+-started_by_pid: 73474
+----
++# Summary
++
++已按 T-024 点名的 F-01/F-02/F-03/F-08/F-09 五处残留，对 D5 v2.2 九页及 D1 v3.5 契约完成最终定向 re-verify。五处旧矛盾均已从有效正文清净，新分支与直接相关状态机/跨页约束自洽；总纲 §2.8 也据实保留“待下一轮 re-verify”的口径。因此本轮可确认 D5 定稿。
++
++# Files touched
++
++- `.hopper/handoffs/T-025-output.md` — 本次只读验收的指定交付物；未修改 D5 九页或 D1 契约。
++
++# Acceptance verification (7/7)
++
++## 1. F-01 — 已闭合
++
++`d5-2-sessions.md:112-127` 已把两个失败点明确拆开：`createSession` resolve 后首条 `send()` 失败的唯一终态为 `Active(idle) + 首发失败标记`，不回 Draft、不算创建失败，保留首条消息，允许重试 `send()` 或 `stop()`，且配置继续冻结；步骤 0-3 的 create 失败则仍回 Draft。该边界与 D1 的两个独立方法及非跨步骤原子承诺一致（`d1-kernelport-spec-v3-5.md:147,158,165-168`）。
++
++直接证据：
++
++```text
++d5-2-sessions.md:112: └─ 首条 send() 本身失败
++d5-2-sessions.md:115: 唯一终态是 **Active(idle) + 首发失败标记**
++d5-2-sessions.md:118: 允许重试 `send()`
++d5-2-sessions.md:120: 已随 createSession 完成而冻结，**不因 send 失败重新开放编辑**
++d5-2-sessions.md:123: Creating → [创建失败]（步骤 0-3 任一步失败）
++d1-kernelport-spec-v3-5.md:147: function createSession(...)
++d1-kernelport-spec-v3-5.md:158: 不承诺跨步骤原子性
++d1-kernelport-spec-v3-5.md:165: function send(...)
++```
++
++## 2. F-02 — 已闭合
++
++T-024 指出的四处有效正文现已统一：D5.4 §4.3（`d5-4-cost-usage.md:184-190`）、foundation §5.5/§5.6（`d5-00-foundation.md:271,279`）、D5.6 §7.2（`d5-6-account-license.md:258`）都把 `attribution:'session'` 定为 L3 的必要非充分条件，并要求 D3 `usage_ledger` 同时具备 Chat/Turn 关联键和计价字段；与 D5.4 §2.4（`:102-111`）一致。旧句仅在修订沿革中作为“此前错误”被引用，不再构成现行结论。
++
++关键 grep 命中：
++
++```text
++d5-4-cost-usage.md:188: 不得仅凭这一分支成立就宣称“UI 可展示本会话成本”
++d5-4-cost-usage.md:189: 还需 ... D3 `usage_ledger` 提供 Chat/Turn 关联键+计价字段
++d5-00-foundation.md:271: 必要非充分条件之一
++d5-00-foundation.md:279: 必要非充分条件之一，非单独充分
++d5-6-account-license.md:258: 必要非充分条件之一 ... 还需 D3 `usage_ledger`
++```
++
++## 3. F-03 — 已闭合
++
++D5.2 §0 边界表已改成 active pending 0/1 布尔指示（`d5-2-sessions.md:34`），与 §1.2 的“每 session 恒为 0 或 1、缓冲队列不计入、不做共 N 条计数徽标”（`:56`）以及 D5.3 的 active-only 规则一致。现存“N 个”字样均用于明确否定旧计数设计或记录修订历史，不再有要求展示缓冲计数的有效正文。
++
++## 4. F-08 — 已闭合
++
++D5.7 §3.4 两处旧 confirmed 断言已删除：轨道 B 现只确认控件存在性，明确时序语义未能确认（`d5-7-model-kernel.md:153-155`）；结论段同样写为未能确认（`:187`），开放项表保持相同口径（`:287`）。模型配置仍在 `createSession` 时冻结且已有 Chat 只读（`:146-150,176-189`），未因 confidence 降级改变 F-01 结论。
++
++## 5. F-09 — 已闭合
++
++D5.1 已知缺口清单现指向实际存在的 §3.0 与 §6（`d5-1-message-flow.md:258`），和该页 §3.0 正文（`:106-113`）及 §6 回指（`:238`）一致。`§3.1 前置说明` 仅在修订说明中作为旧错误被提及，不再是现行跳转目标。
++
++## 6. v2.2 编辑无新矛盾 — 通过
++
++- F-01：首发 send 失败落到 D5.2 生命周期已有的 `Active(idle)`（`d5-2-sessions.md:158-170`）；因 create 已成功而保持配置冻结，与 D5.3 `sandbox/approvalProfile` 只读规则（`d5-3-approvals.md:55`）和 D5.7 model 只读规则（`d5-7-model-kernel.md:146-150`）一致。
++- F-02：D5.4 §2.4/§4.3、foundation §5.5/§5.6、D5.6 §7.2 已统一为“session 归因 + D3 ledger 两项均需满足”，没有相互否定的现行结论。
++- F-03/F-08/F-09：本轮修改均是旧措辞清理或机械引用订正，全文定向 grep 未发现新的相反有效断言。
++
++## 7. 总纲 §2.8 / 闭合统计 — 通过
++
++`d5-product-spec.md:154-162` 如实记录 T-024 的 5 已闭合/5 残留及 v2.2 五项处理；`:164` 明确“F-01～F-10 是否全部真闭合，以下一轮 codex 定向 re-verify 结果为准”“本轮不自行宣称全部收口”，并保留“待最终 re-verify”状态。统计与本轮进入验收前的实际状态一致，没有过度声称。
++
++# Decisions / deviations
++
++- 严格限定于五处残留、其直接一致性与总纲 §2.8；未重开 F-04/F-05/F-06/F-07/F-10，也未提出 nice-to-have。
++- 按 T-024 给出的闭合路径，将“补唯一终态与补偿规则”视为 F-01 的充分修复；保留的“原子”按产品侧一次首发编排单元理解，不读作 D1 对两个 Promise 的事务性全成全败承诺，实际失败语义以 §2.2 明列分支为准。
++- “read-only”按不修改评审对象与契约执行，仅写指定交付物；无范围偏离。
++
++# Open questions
++
++none
++
++# Verdict
++
++**CONFIRMABLE**
+ 
+-# T-025 — codex (background, in-progress)
++# Next recommendation
+ 
+-Output streaming to `T-025-output.log`. Status updates here.
++D5 可定稿；将外层跟踪状态从“v2.2 收残，待最终 re-verify”推进为“最终 re-verify 通过/confirmed”即可，本轮五处不需再改正文。
+
+tokens used
+92,202
+验收完成，结论为 **CONFIRMABLE（7/7）**。
+
+F-01/F-02/F-03/F-08/F-09 均已闭合，未发现 v2.2 引入新矛盾；总纲 §2.8 统计据实。D5 九页及 D1 契约哈希保持不变，可进入定稿。
+
+报告：[T-025-output.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-025-output.md)
