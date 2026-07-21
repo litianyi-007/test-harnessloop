@@ -29,6 +29,8 @@ Anchor: `.hopper/queue.md::root`
 | T-013 | code-review-acceptance | done | | normal | v3.4 最终 gate（接续 T-012，只验 3 处残留闭合）：M1↔M4 soft 终态是否全文严格二态 / M5 失败通道同步-异步分层是否唯一确定 / §3 事件计数笔误是否勘正——+ 这 3 处修改有无引入新矛盾。不重开其他范围 | codex |
 | T-014 | code-review-adversarial | done | | normal | D2 消息 schema v1 双轨复核（grok 轨）：是否忠实+完整序列化 D1 v3.4 定稿契约、有无语义漂移、封套/三层错误/审批流映射是否自洽、5 条回指 D1 待澄清点是否准确且无遗漏 | grok |
 | T-015 | code-review-adversarial | done | | normal | D2 消息 schema v1 双轨复核（codex 轨）：同 T-014 同范围，异构独立视角 | codex |
+| T-016 | code-review-adversarial | done | | normal | D2 v2 第二次双轨复核（grok 轨）：第一轮 REWORK 的 4 类 finding（字段分名/protocolVersion 单一契约版本/判别联合封闭/§9.2 补漏）是否真闭合 + v2 新编辑有无新矛盾 | grok |
+| T-017 | code-review-adversarial | done | | normal | D2 v2 第二次双轨复核（codex 轨）：同 T-016 同范围，异构独立视角 | codex |
 | 
 ---
 

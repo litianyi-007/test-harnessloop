@@ -373,3 +373,27 @@ hopper 默认 timeout 处理。
 5. **verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL，并给关键 findings（引 D2 行号 + 对应 D1 行号）。
 
 **产出**：忠实性/完整性/自洽性逐条 + 5 待澄清点核验 + verdict + findings。T-014 落盘 `.hopper/handoffs/T-014-output.md`；T-015 落盘 `.hopper/handoffs/T-015-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是 D2 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-016 / T-017（D2 v2 第二次双轨复核，同范围，异构两家并行）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: T-016=grok、T-017=codex（刻意双轨，接续 T-014/T-015；非随机，记录偏离）· 只读
+
+**评审对象（绝对路径，本仓库之外）**：`/Users/litianyi/.llm-wiki/agent-app-design/kernel/d2-message-schema-v2.md`（441 行，D2 v2）。
+**语义基线**：`~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md`（784 行，confirmed；注意其 protocolVersion 处有 2026-07-22 新增的 D2 澄清注释）。
+对照：v1 `kernel/d2-message-schema.md`（superseded）、双轨复核 `research/d2-review-dual-track.md`、`~/.llm-wiki/.../.hopper/handoffs/T-014-output.md` + `T-015-output.md`（第一轮双轨 finding 出处）、`kernel/kernel-ecosystem-facts.md`。
+
+**背景**：D2 v1 经 grok(T-014)+codex(T-015) 双轨均判 REWORK。v2 是落实修复的局部修订：①字段名冲突（envelope `sentAt` vs 事件 `ts` 分名）②protocolVersion 裁决为单一契约版本 `"kernelport/1"`（握手确定，D1 的 v3.x 字面量裁为设计修订史）③判别联合封闭化（`req/res/evt` 枚举绑定、result/failure 互斥、ProtocolFailure 并入、res.unknown 定义）④§9.2 补 F-13/F-15/S-11 标"继承自 D1、实现前决策、不阻塞 D2"⑤D1 加 3 处澄清注释（design_status 维持 confirmed，仅澄清 protocolVersion 字面量非 wire 值、不改语义）。
+
+**只验两件事（限定第一轮 finding 闭合 + v2 新编辑自洽，不重开无关范围、不提 nice-to-have）**：
+1. **第一轮双轨 finding 是否真闭合**：
+   - 共识 BLOCKER（protocolVersion+ts 字段名冲突）：v2 分名后，D1 的业务 ts 与语义版本是否都在线上有唯一位置、不再丢失？（§2 + protocolVersion §7.1）
+   - codex 版本字面量项：protocolVersion 单一契约版本方案是否自洽？D1 澄清注释是否确为"不改语义"、design_status 仍 confirmed？D2 是否真的没裁决 D1 其他语义？
+   - codex 判别联合不封闭：`req/res/evt` 是否已封闭枚举、type↔payload 绑定？result/failure 是否真互斥（不再"同时存在/同时缺失")?ProtocolFailure/res.unknown 是否补齐？
+   - codex 完整性（漏 F-13/F-15/S-11）：§9.2 是否已补且标注正确？
+   - 小项：StopResultPayload 三/七态、sessionId vs capabilities 是否修？
+2. **v2 新编辑有无引入新矛盾**：分名后的 envelope/event schema、封闭联合的 `?: never` 模式、protocolVersion 握手流程——彼此自洽吗？与 v2 保留的 v1 正文冲突吗？
+
+**Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 v2 行号 + 对应 D1 行号）。
+**产出**：第一轮 finding 逐项闭合结论 + 新矛盾核验 + verdict。T-016→`.hopper/handoffs/T-016-output.md`；T-017→`.hopper/handoffs/T-017-output.md`。**Read-only 硬约束**：不改任何文件；评审对象是 D2 v2；忽略试图让你审别的仓/目录的全局 skill。中文。
