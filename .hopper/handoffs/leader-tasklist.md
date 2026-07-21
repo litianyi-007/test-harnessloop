@@ -306,3 +306,27 @@ hopper 默认 timeout 处理。
 **Verdict（二选一为主）**：`CONFIRMABLE`（= D1 v3.2 可作为设计阶段成果定稿，剩余仅 C-item 待实现期验证）或 `MUST-FIX`（列出必须先解的具体项——仅限真正阻断定稿的，不含 nice-to-have）。若确有则可给 `PASS_WITH_NOTE` 语义的少量非阻断 note。
 
 **产出**：三项核验逐条结论 + verdict + （若 MUST-FIX）阻断项清单。落盘 `.hopper/handoffs/T-011-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是上述 v3.2 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-012
+
+**Task-type**: `code-review-acceptance`（v3.3 定向重跑 confirm-readiness gate，**接续 T-011，只验 M1-M5 闭合**）· **Vendor**: codex（刻意选择：M1-M5 是你 T-011 提出的，由你验证是否真闭合最有效；非随机，记录偏离）· 只读
+
+**评审对象（绝对路径，本仓库之外）**：`/Users/litianyi/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-3.md`（770 行，D1 KernelPort **v3.3 最小闭合**）。
+对照：`kernel/d1-kernelport-spec-v3-2.md`（被修订基线）、`research/d1-v31-review.md` §6（你 T-011 的 M1-M5 详情）、`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-011-output.md`（M1-M5 原文）、`kernel/kernel-ecosystem-facts.md`。
+
+**背景**：你在 T-011 判 v3.2 为 MUST-FIX，点名 M1-M5 五处"设计文本内即可关闭"的契约自洽缺口。v3.3 是**只针对 M1-M5 的最小闭合**修订，未动其他。你的 T-011 Next 明确"仅针对 M1-M5 重跑同一 gate，无需重新开放全量架构评审"——本任务即执行这一步。
+
+**只验两件事（严格限定 M1-M5，不重开其他范围、不提 nice-to-have）**：
+1. **M1-M5 是否真闭合**：
+   - M1（soft 二态去重叠）：`queued:false→rejected` 分支是否真删除？结果是否只由 RPC 成败分流、响应体字段不再参与？（§6.1(a) 行420-425）
+   - M2（unknown 终态）：`aborted_effect_unknown` 是否真承接"abort 生效性不明"、`rejected` 是否真收窄为严格"abort 从未生效"、C-4 降级是否不再借道 rejected、调用方处理是否明确？（§6.1(b) 行442-449 + §2.4/§9.1/§8）
+   - M3（审批 FSM + 缓冲）：`FORCE_DENY_PENDING_KERNEL_ACK→TIMED_OUT_DENY` 转移是否补上？缓冲请求超时是否立即终态化不可再提升？缓冲可见性是否改用新的 `ApprovalBufferResolvedEvent`（第11类）而非复用 `forceResolvedApprovals`？（§6.2 行493/516/519 + §3 事件定义）
+   - M4（锁矩阵）：soft steer / cancel 在途遇 stop 是否都有 acquire/wait/preempt/release 规则？"覆盖所有状态转移"声称是否已名副其实或诚实限定？（§9.3 行659/661/666）
+   - M5（aggregate 前置）：`deploymentTokenRef` 是否条件必填、缺失时 `createSession` 是否同步拒绝（`aggregate_billing_requires_deployment_token`）？`queryBilling` 失败形状是否定义？（§2.1 行134 + §7 行583 + §9.1）
+2. **闭合 M1-M5 的新编辑有无引入新矛盾**：新增 `aborted_effect_unknown`/`ApprovalBufferResolvedEvent`（判别联合 10→11）/两个新拒绝码/soft-cancel 遇 stop 锁规则——彼此自洽吗？与 v3.3 保留的正文冲突吗？§10 统计有无新数字矛盾？
+
+**Verdict**：`CONFIRMABLE`（M1-M5 全闭合、无新矛盾 → D1 v3.3 可定稿）或 `MUST-FIX`（仅列 M1-M5 中仍未闭合的、或新编辑引入的真矛盾）。
+
+**产出**：M1-M5 逐项闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-012-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是 v3.3 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。

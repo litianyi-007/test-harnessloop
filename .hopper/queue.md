@@ -24,7 +24,8 @@ Anchor: `.hopper/queue.md::root`
 | T-008 | code-review-adversarial | done | | normal | D1 v3 异构第二轨复核（刻意选 codex 求异构，非随机；grok 已 PASS_WITH_NOTE，独立复核+核实 grok 结论是否成立+找 grok 漏的+事实一致性） | codex |
 | T-009 | prd-research | done | | high | D1 conformance spike（升 high：steer 精确 schema 已被 T-007/T-008 两次 web-search 未能确认，需 repo 级源码深挖；偏离 medium 默认已记录原因）——收两组硬事实：①openclaw sessions.steer 精确 RPC req/resp schema+runId 寻址+runtime 拒收时的结果态；②newapi 能否预分配 sessionId 并绑定专用 token 支撑 session 级成本归因 | grok |
 | T-010 | code-review-adversarial | done | | normal | v3.1 聚焦复核（刻意选 codex：验证 codex 自己 T-008 提的 5 findings 是否真解 + 有无引入新矛盾 + steer 重映射是否与 T-009 事实一致 + 延后项是否真可延后；非随机，记录偏离原因） | codex |
-| T-011 | code-review-acceptance | pending | | normal | v3.2 定稿前 confirm-readiness gate（刻意选 codex：T-008/T-010 两轮 REWORK 最熟 finding 史；只验三件事：收窄是否诚实无残留过度声称 / 5 个 C-item 是否真属实现阶段无隐藏设计 blocker / v3.2 新编辑有无引入内部矛盾）——非开放重审 | codex |
+| T-011 | code-review-acceptance | done | | normal | v3.2 定稿前 confirm-readiness gate（刻意选 codex：T-008/T-010 两轮 REWORK 最熟 finding 史；只验三件事：收窄是否诚实无残留过度声称 / 5 个 C-item 是否真属实现阶段无隐藏设计 blocker / v3.2 新编辑有无引入内部矛盾）——非开放重审 | codex |
+| T-012 | code-review-acceptance | pending | | normal | v3.3 定向重跑 confirm-readiness gate（刻意选 codex，接续 T-011）：只验 M1-M5 五项是否真闭合 + v3.3 为闭合它们的新编辑（aborted_effect_unknown 终态/ApprovalBufferResolvedEvent 第11类/两个新拒绝码/soft-cancel 遇 stop 锁规则）有无引入新矛盾——不重开 M1-M5 之外任何范围 | codex |
 
 ---
 
