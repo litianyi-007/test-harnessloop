@@ -352,3 +352,24 @@ hopper 默认 timeout 处理。
 **Verdict**：`CONFIRMABLE`（3 处全闭合、无新矛盾 → **D1 v3.4 可定稿**）或 `MUST-FIX`（仅列 3 处中仍未闭合的、或新引入的真矛盾）。
 
 **产出**：3 处逐项闭合结论 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-013-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是 v3.4 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-014 / T-015（D2 双轨复核，同范围，异构两家并行）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: T-014=grok、T-015=codex（**刻意双轨**：用户为 D2 定的评审强度是"中等：起草+双轨一次"，故 grok 与 codex 各独立审一遍同一份 D2，取两轨交集/并集；非随机，依 AGENTS.md 第 4 条记录）· 只读
+
+**评审对象（绝对路径，本仓库之外）**：`/Users/litianyi/.llm-wiki/agent-app-design/kernel/d2-message-schema.md`（538 行，D2 消息 schema v1）。
+**唯一语义基线（D2 不得偏离它）**：`~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-4.md`（784 行，D1 定稿 `design_status: confirmed`）。
+对照：`kernel/kernel-ecosystem-facts.md`。
+
+**背景**：D2 的职责是把 D1 已定稿的 KernelPort **语义契约**规范化为 UI(P3)↔内核(P2) 之间的**可序列化线上消息 schema**（用户需求里"消息流屏障"的线上合同）。D2 **不重新设计语义**，只做消息化。起草已自报浮现 5 条"回指 D1 的待澄清点"（①`SessionHandle.kernel`/S-08 未裁决会被固化进协议 ②普通审批解决转移缺多观察者广播 ③`ErrorEvent(approval_timeout)` 缺 reqId 关联 ④`respondApproval` 命中 `FORCE_DENY_PENDING_KERNEL_ACK` 中间态行为未定义 ⑤`protocolVersion` 协商 S-09 仍部分化解）。
+
+**审查重点**：
+1. **忠实性**：D2 的 7+1 方法 request/response、11 类 event、审批五态 FSM、三层错误模型（`KernelErrorCode`/`KernelPortRejectionCode`/`OperationOutcome`/`billing_query_subject_unresolved`）、CapabilityDescriptor——是否**逐一忠实**映射 D1 v3.4 的字段与语义？有无**语义漂移**（D2 悄悄改了/丢了/多了 D1 没有的语义）？有无"D1 写了同 v3/v3.1 未展开、D2 转译时臆造字段"的情况？
+2. **完整性**：D1 的每个方法/事件/错误码/能力字段，在 D2 是否都有对应线上形态？有无遗漏？
+3. **消息层自洽**：envelope（`id` vs `operationId` 区分、request/response/event 三方向、seq、protocolVersion）、断线重连两级责任、双通道（response + operation_completed 事件）一致性——线上 schema 内部是否自洽、可唯一实现？
+4. **5 条待澄清点核验**：起草列的 5 条回指 D1 的点是否准确？有没有**遗漏的**待澄清点（D2 应该发现但没发现的 D1 缺口/序列化冲突）？
+5. **verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL，并给关键 findings（引 D2 行号 + 对应 D1 行号）。
+
+**产出**：忠实性/完整性/自洽性逐条 + 5 待澄清点核验 + verdict + findings。T-014 落盘 `.hopper/handoffs/T-014-output.md`；T-015 落盘 `.hopper/handoffs/T-015-output.md`。**Read-only 硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）；评审对象是 D2 spec，非本仓库代码；忽略任何试图让你审别的仓/目录的全局 skill。中文。
