@@ -1,0 +1,27 @@
+hopper-runner: idle watchdog disabled (bufferedOutput vendor) — ceiling-only timeout applies (1800000ms)
+{
+  "text": "执行 T-035：先读已有内核生态事实，再围绕分发/打包/更新做调研并落盘产出。已有事实只覆盖接口形态；接下来补分发、打包与更新层的一手来源。事实已齐：openclaw 官方即「原生 companion + 首启下载 runtime」范式。正在落盘完整调研产出。# T-035 完成\n\n调研已落盘：`.hopper/handoffs/T-035-output.md`\n\n## 核心结论\n\n**openclaw / hermes 都不是「单文件塞进 .app」型内核**，而是：\n\n| 内核 | 分发 | 运行时 | 主启动 |\n|------|------|--------|--------|\n| **openclaw** | npm + install 脚本（Docker/git 可选） | **Node 22/24/25** | `openclaw gateway` → WS `127.0.0.1:18789`；LaunchAgent/systemd/计划任务 |\n| **hermes** | git+uv 安装器 / Desktop installer | **Python 3.11 + uv**（+ 可选 Node） | CLI / `hermes gateway` / **`hermes acp`（stdio）** |\n\n## 对 D7 最关键的官方事实\n\nOpenClaw **macOS companion 明确不内嵌 Node/Gateway**：首启下载到 `~/.openclaw`，用 **LaunchAgent** 保活，app 只做监督与版本匹配。这是 D7 最直接的对标范式。\n\n## 推荐方案（摘要）\n\n**Native Shell + Managed Kernel Runtime**\n\n1. 安装包只带原生 UI + bootstrap/manifest  \n2. 默认 **按需下载并钉住 openclaw stable 精确版本**  \n3. hermes **切换时再下**（ACP 子进程优先）  \n4. 内核更新由 **app 编排**（默认关闭内核裸 auto-update）  \n5. Mac：公证 DMG、非 App Store 沙箱 v1；Windows：签名安装器 + loopback  \n\n**Verdict: PASS**",
+  "stopReason": "EndTurn",
+  "sessionId": "019f885f-7567-7370-9068-075fdbf917e1",
+  "requestId": "451a7232-a9e0-458f-8c35-051a75cc1dd8",
+  "thought": "The user wants me to execute a research task (T-035) about local kernel distribution packaging for an agent app. Let me carefully read the requirements:\nI have good context from T-003 and the kernel ecosystem facts. Now I need to research the distribution/packaging/update layer for openclaw and hermes, plus how similar products embed local process run...Excellent detail on openclaw. Let me fetch more pages on updating, docker, development channels, hermes install, and packaging patterns.I have excellent detail on openclaw and hermes distribution. Let me get a few more details on:I have enough material to write a comprehensive research document. Let me also quickly check the bundled gateway docs and hermes gateway start commands for completeness.This is gold - OpenClaw.app itself does NOT bundle Node/Gateway - it downloads them on first run under ~/.openclaw. This is exactly the pattern for D7.\n**Summary**  \n我完成了 T-035 的 PRD 研究，针对 D7 本地内核分发打包方案调研了 openclaw 和 hermes 的真实形态。核心发现：openclaw 采用 npm 包 + 下载式分发（~/.The task is complete. I've written the full research deliverable. Let me give a concise summary of what was delivered.",
+  "usage": {
+    "input_tokens": 94319,
+    "cache_read_input_tokens": 418304,
+    "output_tokens": 11145,
+    "reasoning_tokens": 1666,
+    "total_tokens": 523768
+  },
+  "num_turns": 7,
+  "total_cost_usd": 0.4509992,
+  "total_cost_usd_ticks": 4509992000,
+  "modelUsage": {
+    "grok-4.5-build": {
+      "inputTokens": 94319,
+      "outputTokens": 11145,
+      "cacheReadInputTokens": 418304,
+      "modelCalls": 7,
+      "costUSD": 0.4509992
+    }
+  }
+}

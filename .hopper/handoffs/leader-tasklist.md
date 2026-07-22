@@ -680,3 +680,23 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（4 残留全闭合、无新矛盾 → D6 可定稿）或 `MUST-FIX`（仅列仍未闭合点位）。
 **产出**：4 处逐条 + verdict。落盘 `.hopper/handoffs/T-034-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-035（D7 本地内核分发打包调研 spike，grok，high）
+
+**Task-type**: `prd-research` · **Vendor**: grok · **Effort**: **high**（偏离 medium：D7 是 app 分发的基础性打包决策，需对 openclaw/hermes 真实分发形态+嵌入原生 app 的打包/更新机制做有深度的选型，非泛览；偏离已记录本行）· 只读研究
+
+**背景/目的**：即将设计 D7=**本地内核分发打包**——客户端本地 agent 内核（openclaw 默认稳定分支 / hermes 等可切）如何随原生 Mac/Windows app 分发、安装、运行、更新。已定上下文：X1=本地内核；内核是**独立本地进程**，app 经 D2 JSON-RPC(Gateway) 与之通信；D4 已定=各端原生 client（Swift/C#）。
+
+**先读已有事实**（避免重复）：`~/.llm-wiki/agent-app-design/kernel/kernel-ecosystem-facts.md`、`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-003-output.md`（内核生态实况：openclaw/hermes 形态与控制接口）。本轮补的是**分发/打包/运行时/更新**这一层的事实。
+
+**要收的事实（每条带来源 URL + 置信度）**：
+1. **openclaw 的真实分发形态**：是二进制 release / npm 包 / docker / 源码构建？运行时依赖（Node？系统库？）；如何作为**本地 Gateway 进程**启动（命令行/服务/端口/stdio）；稳定分支/版本发布节奏与版本钉法。
+2. **hermes 等可切内核的分发形态**（同上，作对照）。
+3. **把这类本地进程内核嵌入原生桌面 app 的打包方式**：随 app bundle 打包 vs 独立安装器/首启下载；Mac(.app/.dmg/notarization/沙箱对本地进程的限制)、Windows(MSIX/安装器/签名/防火墙对本地端口的影响)各自的现实做法；有无成熟范式（如 VS Code 嵌 server、Ollama/本地 LLM app 嵌运行时的分发案例）。
+4. **内核版本管理与更新**：内核与 app 的版本解耦/独立更新、稳定分支钉版、内核自更新 vs 随 app 更新、回滚。
+5. **多内核可切的分发影响**：默认装 openclaw、hermes 等按需下载 vs 全打包；切换内核时的分发/进程管理。
+6. **对"开发者非专家、优先 Mac、成本敏感、非 Electron"的适配度排序 + 对 D7 设计的建议**。
+
+**产出**：按上述 6 点分节，每条带来源与置信度（confirmed/部分/未能确认）；末尾「对 D7 设计的建议」——推荐的内核分发/打包/更新方案 + 取舍理由 + 风险。落盘 `.hopper/handoffs/T-035-output.md`。**只读硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）。中文。
