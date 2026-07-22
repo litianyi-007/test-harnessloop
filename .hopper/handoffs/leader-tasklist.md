@@ -612,3 +612,18 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（F-01..F-07 全闭合、无新矛盾 → D4 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
 **产出**：F-01..F-07 逐条 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-029-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-030（D4 v2.1 最终 re-verify，单 codex，接续 T-029）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-029，验证其点名的 4 残留是否闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d4-cross-platform-arch.md`（v2.1）。对照：你的 T-029 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-029-output.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`、`kernel/d2-message-schema-v3.md`、`server/server-stack-selection.md`。
+
+**背景**：你在 T-029 判 F-04/05/07 闭合、F-01/02/03/06 剩残留。v2.1 已收：F-01 `expected` 改 `Partial<ClientObservableState>`+新增 callOutcomes/observedEvents 字段+hard 示例改合法 `res.interrupt.result.outcome:aborted_effect_unknown`+§4.1 措辞对齐 DSL；F-02 License 行改 OPEN/deferred + §0/§2/§8 的 D3"REST 契约面"旧措辞全文统一为"无 endpoint/OpenAPI 契约、阻断性前置依赖"；F-03 §5.5 门禁对象改生成 DTO 版本（手写 IKernelClient 不参与门禁）；F-06 schema-negative 唯一预期收紧为"拒绝畸形消息"。
+
+**只验（严格限定这 4 处 + v2.1 编辑无新矛盾，不重开 F-04/05/07、不提 nice-to-have）**：F-01/F-02/F-03/F-06 是否这次真闭合（旧矛盾措辞是否删净、新类型/示例是否自洽、D3 表述是否全文一致）+ v2.1 编辑有无引入新矛盾。
+
+**Verdict**：`CONFIRMABLE`（4 残留全闭合、无新矛盾 → D4 可定稿）或 `MUST-FIX`（仅列仍未闭合点位）。
+**产出**：4 处逐条 + verdict。落盘 `.hopper/handoffs/T-030-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
