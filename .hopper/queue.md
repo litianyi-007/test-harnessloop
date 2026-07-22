@@ -53,6 +53,7 @@ Anchor: `.hopper/queue.md::root`
 | T-037 | code-review-adversarial | done | | normal | D7 内核分发打包 v1 双轨复核（codex 轨）：同 T-036 同范围，异构独立视角 | codex |
 | T-038 | code-review-acceptance | done | | normal | D7 v2 定向 re-verify（单 codex，接续 T-037）：F-01..F-06 是否真闭合（服务descriptor/迁移前snapshot事务回滚/下载FSM签名catalog/实例身份配对/沙箱收窄/卸载）+ v2 新编辑无新矛盾 → CONFIRMABLE 则 D7 定稿 | codex |
 | T-039 | code-review-acceptance | done | | normal | D7 v2.1 最终 re-verify（单 codex，接续 T-038）：7 收残项是否真闭合（事务顺序/catalog签名envelope/密钥拆分/KeepAlive/卸载核验/semver/措辞）+ v2.1 编辑无新矛盾 → CONFIRMABLE 则 D7 定稿 | codex |
+| T-040 | code-review-acceptance | done | | normal | D1 v3.6 hermes-steer 源码修正复核（单 codex）：源码保真(三入口/无ack)+修正自洽+结果态建模+C-5/#9解除是否成立 → CONFIRMABLE 则 v3.6 定稿 | codex |
 | 
 ---
 

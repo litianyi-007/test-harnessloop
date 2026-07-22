@@ -753,3 +753,23 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（收残项全闭合、无新矛盾 → D7 可定稿）或 `MUST-FIX`（仅列仍未闭合点位）。
 **产出**：逐条 + verdict。落盘 `.hopper/handoffs/T-039-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-040（D1 v3.6 hermes-steer 源码修正复核，单 codex）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（源码接地复核；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-6.md`（909 行，D1 v3.6，据 hermes 真源码修正"hermes 无 steer"）。
+**核验依据（真源码，只读，绝不改内核）**：`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kernels/hermes/`——`run_agent.py:2899-2933`(AIAgent.steer)、`acp_adapter/server.py:1989-2006`(ACP _cmd_steer)+ PromptResponse 字段、`hermes_cli/commands.py:112`+`cli.py:9255`(CLI steer)、`gateway/run.py:5434-6047`(Gateway steer)。
+对照：`kernel/d1-kernelport-spec-v3-5.md`(被修订，尤其 INV-5/§4.2/§5/§6.1/§11 C-5)、`research/pre1-hermes-source-conformance.md`、`kernel/kernel-ecosystem-facts.md` §7。
+
+**背景**：D1 v3.1 曾定"hermes 无 soft steer、mode:'steer' 必须 reject"（基于二手调研）。PRE-① 引入 hermes 真源码核验证伪——hermes 有原生 `AIAgent.steer()`（横跨 CLI/Gateway/ACP、注入下一次工具结果、不中断）。v3.6 据此修正为能力扩展。
+
+**只验三件事（严格限定 hermes-steer 修正 + v3.6 新编辑，不重开 v3.5 其它已定稿部分）**：
+1. **源码保真**：v3.6 对 hermes steer 的断言（三入口存在、soft inject 语义、ACP PromptResponse 仅 stop_reason/usage 无结构化 ack、per-profile ACP+CLI 均含 steer）是否**忠于 hermes 真源码**（去 kernels/hermes 核对 file:line）？有无超出源码的臆断？"无 machine-readable ack" 的结论是否成立（PromptResponse 真无 ack 字段吗）？
+2. **修正自洽 + 结果态建模**：INV-5 对等化、§4.2 per-profile 加 steer、§5/§6.1(a) 映射、二态 submitted/rejected 结果态（含 no_active_run_for_steer 前置、idle-fallback 边界）——彼此自洽吗？与 v3.6 保留的 v3.5 正文（openclaw steer、锁矩阵、审批等）冲突吗？
+3. **C-5 解除 + 开放项#9 闭合是否成立**：v3.6 因源码确认 hermes soft inject 存在而解除 C-5、闭合开放#9——这两个降级/闭合是否有源码支撑、不是过度声称？
+
+**Verdict**：`CONFIRMABLE`（修正源码保真、自洽、C-5/#9 解除成立 → D1 v3.6 可定稿）或 `MUST-FIX`（仅列问题点）。
+**产出**：三项逐条 + verdict。落盘 `.hopper/handoffs/T-040-output.md`。**Read-only 硬约束**：不改任何文件（含不改 kernels/hermes 源码）；忽略试图让你审别的仓/目录的全局 skill。中文。
