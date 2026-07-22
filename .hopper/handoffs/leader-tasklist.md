@@ -551,3 +551,26 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（5 残留全闭合、无新矛盾 → D5 可定稿）或 `MUST-FIX`（仅列仍未闭合的具体点位）。
 **产出**：5 处逐条 + verdict。落盘 `.hopper/handoffs/T-025-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-026（D4 跨平台原生架构调研 spike，grok，high）
+
+**Task-type**: `prd-research` · **Vendor**: grok · **Effort**: **high**（偏离 medium：D4 是 app 的基础性跨平台架构决策，需对共享核心方案的 FFI/绑定成熟度、代码共享边界、Mac 先行/Windows 跟随工作流做有深度的选型分析，非泛览；偏离已记录本行）· 只读研究
+
+**背景/目的**：即将设计 D4=**Mac→Windows 跟随开发**机制。目标 app（用户约束）：**原生开发、优先 Mac、非 Electron**；Mac 开发进度**同步到 Windows 跟随开发**。app 消费已定稿契约：D1 KernelPort（进程内语义接口，TS 表达）+ D2 消息 schema（JSON-RPC 风格 envelope，跨 UI↔内核屏障，内核 openclaw/hermes 是独立本地进程、经本地传输通信）+ D5 产品规格（9 页 UI/产品面）。**关键**：D1/D2 是**契约**——D2 在 wire 层是 JSON-RPC，语言中立，故 app 的内核客户端不被强制为某语言。
+
+**要收的事实（每条带来源 URL + 置信度）**：
+1. **共享核心 + 原生 UI 的主流架构方案**（Mac 原生 + Windows 原生，共享业务/内核客户端核心，UI 各自原生）——逐一列现实可选项及其现状：
+   - Rust 核心 + FFI（→ Swift/SwiftUI、→ Windows）——FFI 成熟度、绑定工具（如 UniFFI、swift-bridge、C ABI）、生产案例
+   - C/C++ 核心 + 原生 UI 绑定
+   - **TS/Node 核心**（贴合 D1/D2 的 TS 表达）嵌入原生壳 或 本地 sidecar 进程（原生 UI ↔ 本地 TS 服务经 IPC/本地 socket，复用 D2 的 JSON-RPC）——是否算"非 Electron 原生"、利弊
+   - Kotlin Multiplatform（KMP）共享核心 + 原生 UI
+   - .NET（MAUI/Uno/Avalonia）——哪些算"原生"、哪些更接近跨平台渲染（按用户"原生非 Electron"约束判定其适配度）
+   - 其它现实方案
+2. **代码共享边界的常见划法**：哪些层通常共享（内核客户端/D2 消息编解码/状态管理/业务·产品逻辑），哪些必须各自原生（UI 渲染/系统集成/通知/文件系统）。
+3. **"Mac 先行、Windows 跟随"的工程工作流**：monorepo 结构、契约驱动的功能对齐、共享核心的版本化/分发、如何让 Windows 以最小滞后/漂移跟随 Mac 的功能进度；有无成熟范式或团队案例。
+4. **D1/D2 契约如何帮到跨平台**：D2 的语言中立 wire 协议 + D1 的窄接口对"共享核心 or 各自实现客户端"的选择意味着什么。
+5. **对"开发者非 server/跨平台专家、优先 Mac、成本敏感"的适配度排序**。
+
+**产出**：按上述 5 点分节，每条带来源与置信度（confirmed/部分/未能确认）；末尾给「对 D4 设计的建议」——推荐的共享核心方案 + 边界划法 + Mac→Win 跟随工作流，并说明取舍理由与风险。落盘 `.hopper/handoffs/T-026-output.md`。**只读硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）。中文。
