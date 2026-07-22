@@ -574,3 +574,24 @@ hopper 默认 timeout 处理。
 5. **对"开发者非 server/跨平台专家、优先 Mac、成本敏感"的适配度排序**。
 
 **产出**：按上述 5 点分节，每条带来源与置信度（confirmed/部分/未能确认）；末尾给「对 D4 设计的建议」——推荐的共享核心方案 + 边界划法 + Mac→Win 跟随工作流，并说明取舍理由与风险。落盘 `.hopper/handoffs/T-026-output.md`。**只读硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）。中文。
+
+---
+
+## T-027 / T-028（D4 跨平台架构 v1 双轨复核，同范围，异构两家并行）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: T-027=grok、T-028=codex（刻意双轨，中等强度；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d4-cross-platform-arch.md`（284 行，D4 架构 v1）。
+**事实源/契约基线**：`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-026-output.md`（跨平台架构调研）；`kernel/d2-message-schema-v3.md`(confirmed)、`kernel/d1-kernelport-spec-v3-5.md`(confirmed)、`product/d5-product-spec.md`(confirmed)、`server/server-stack-selection.md`(D3)。
+
+**背景**：D4=Mac→Windows 跟随开发架构。用户已定方向：**各端原生 client（Swift/C#）+ 共享 D2 契约/codegen/金标 parity 测试**；不上 Rust 核心/TS sidecar/KMP/Electron。spec 以 T-026 为事实源，诚实标注选定方案是 T-026 排序 rank #2（用户为"零 Node 运行时"约束接受的代价）。
+
+**审查重点（技术架构 spec）**：
+1. **T-026 保真**：spec 声称的架构事实/案例（1Password Rust-but-Electron、Dropbox 2019 放弃 C++ 共享 model、UniFFI 成熟度、rank 排序）是否真有 T-026 支撑、有无超 confidence 臆造？rank #2 的诚实成本对照是否准确？
+2. **ADR 合理性**：6 个否决方案（Rust+FFI/C++/KMP/.NET 跨端 UI/Electron-Tauri/TS sidecar）的否决理由是否成立、公允？选定方案（各端原生 client+共享契约）对"原生非 Electron/Mac 先行/非专家/成本敏感"约束是否真自洽？
+3. **D4→D2 依赖是否正确刻画**：spec 核实 D2 v3 无机器可读 schema、列为阻断性前置——这个核实对吗（D2 v3 确实只有 TS-in-markdown 表达）？codegen 方案（提升 JSON Schema）是否可行、覆盖面（11 类事件+7+1 方法+EmptyPayload/WireCapabilityDescriptorPayload）是否完整？有无遗漏的 D2 类型？
+4. **契约消费正确 + 金标 parity 设计**：D1/D2/D5/D3 引用是否真实用对？金标 fixtures 取自 D1/D2 真实状态机（审批五态/OperationOutcome 七态/SessionLockState/握手/断线重连/三层错误）是否覆盖关键契约边角？多语言 runner + CI 闸设计是否可实现？
+5. **内部自洽 + 完整性**：monorepo 骨架、契约优先流程、Mac 先行 Win 跟随、落地顺序（含第 0 步）是否连贯可执行？写两遍的成本/漂移风险是否如实、缓解措施（codegen+金标）是否够？T-026 4 open questions 的裁决（#1 开放/#2#4 moot/#3 裁决）是否恰当？
+
+**Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 D4 行 + 对应 T-026/契约位置）。
+**产出**：五维逐条 + verdict + findings。T-027→`.hopper/handoffs/T-027-output.md`；T-028→`.hopper/handoffs/T-028-output.md`。**Read-only 硬约束**：不改任何文件；评审对象是 D4 spec；忽略试图让你审别的仓/目录的全局 skill。中文。
