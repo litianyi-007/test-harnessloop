@@ -155,6 +155,15 @@
 - **③结转实现阶段项**：**LaunchAgent-vs-子进程监督模型二选一 live-probe**（§4.2，呼应 T-035 Next #3）——需在干净 Mac 上用 `install-cli.sh --prefix` 类路径模拟 app 托管安装 openclaw stable，实测验证 LaunchAgent（OS 托管）vs app 托管子进程两种监督模型的行为差异（崩溃恢复、orphan 清理、`OPENCLAW_NO_AUTO_UPDATE` 第三方托管边界下的 self-update 契约稳定性），并核实生成的 plist 是否符合 §4.2a 定义的完整 descriptor；**首启下载 live-probe（含离线路径）**——需在真实 Mac 上完整走一遍"下载→quarantine→执行→版本更新→TCC 提示"链路，验证 §3.1a 离线失败 FSM（重试/镜像/离线 SKU 三级兜底）与 §3.1b 签名 catalog 密钥基础设施（HSM/云 KMS/离线根等具体托管方案未裁决）的真实可靠性；**openclaw install-cli 可定制性**——`install-cli.sh --prefix`/`openclaw gateway install`/Windows `install.ps1` 是否稳定接受自定义 prefix、state home、service label、端口、认证环境变量，T-035 未逐项验证，直接影响 §4.2a/§4.2b 完整 descriptor 能否真正落地；**hermes 精确 pin/rollback 契约**——`hermes update` 存在且能按安装布局自动检测，但精确 pin 到 tag/commit + 安全回滚的一等命令契约未完全确认，需实现阶段对目标 hermes 版本实测；**多内核端口/状态隔离实测**——需构造"机器上已有独立 openclaw 实例占用 18789"及"探测后、bind 前端口被抢占"两类场景，验证 §6.3 探测-分配逻辑与 §4.3a 实例身份四重确认的真实可靠性；此外 Windows Hub payload 布局未确认、`HERMES_HOME` 官方性未确认、kernel migration epoch 具体取值未标定、Windows per-install marker 在真实同名冲突场景下的可靠性等（§7 结转表共 15 项），均如实标注为实现前冒烟/验证项，不因 D7 定稿而视为已解决。
 - **④RA-L3 七议程 D1-D7 全部定稿——下一步 RA-L4 dev-readiness gate**：D1（内核抽象接口规格）、D2（消息 schema）、D3（server 技术选型）、D4（跨平台架构）、D5（产品规格）、D6（newapi 集成方式）、D7（本地内核分发打包）**七项决策议程（2026-07-18 细化）至此全部 `design_status: confirmed` 正式定稿**——RA-L3 阶段性完成。下一步进入 **RA-L4 dev-readiness gate**：在实际启动 app 开发前，核对本轮结转清单是否已阻断实现（D4→D2 机器可读 schema、D4→D3 API 契约、C-3 per-session key 注入验证、newapi token-id 取法冒烟确认、D7 监督模型/首启下载/install-cli/hermes pin-rollback/多内核端口隔离等 live-probe 项），确认哪些属于"实现阶段第 0 步必须先做"、哪些可与首个开发里程碑并行，作为进入实现阶段前的最后一道读关卡。
 
+### RA-L4 dev-readiness gate 评估与 design→dev 转换决策（2026-07-22，user-confirmed）
+
+- **RA-L4 综合评估结论**：PR 设计 wiki `research/ra-l4-dev-readiness-assessment.md` 逐一通读 D1 §11 C-items+§12 开放问题、D2 §9.2、D3 六项开放问题、D4 §3/§7.1a/§8 依赖声明、D5 §4 十四项开放问题、D6 §7 结转表（13 项）、D7 §7 结转表（15 项），去重合并得**全量结转项 27 项**（CO-01～CO-27），分类 **PREREQUISITE 6 项 / DURING-DEV 21 项**；五项核对维度（设计完整性/证据充分性/阻断项识别完整性/阻断项前置计划/隐藏"设计未定却要开发"缺口）逐一通过，未发现隐藏缺口。**Verdict：`READY`（附前置计划）**。
+- **6 项 PREREQUISITE**：CO-01（C-1 soft steer ack 语义）、CO-02（C-3 per-session 换 key，跨设计影响面最广）、CO-03（C-4 hard abort error 信号）、CO-08（newapi token-id 取法+REST 路径冒烟）——以上 4 项需真实 openclaw/hermes（+ newapi）环境做 live-probe，同批可跑完，**待用户安排环境**；CO-06（D2 机器可读 schema+codegen，D4 codegen 唯一输入源）、CO-07（D3 OpenAPI 契约，阻断 D5.4/D5.6/D6-session-token-proxy 三功能面）——以上 2 项无需真实环境、是"转录/起草已定稿契约"性质工作，**本轮已启动**。`goal-breakdown.md`「实现阶段（RA-L5 / IMPL）议程」章节已注入为 PRE-1..PRE-6。
+- **首批 5 个开发子目标**：按 D4 §5/§6 落地顺序（`contracts/d2 schema+fixtures → codegen → kernel-client 两端 → Mac 最小壳打通 createSession/subscribe → Windows parity`）注入 SG-1（D2 schema+fixtures 骨架）/ SG-2（D3 契约+NestJS 骨架，**并行轨**）/ SG-3（codegen 管线）/ SG-4（kernel-client 双端骨架+Mac 最小壳 `createSession`/`subscribe`）/ SG-5（Windows parity 追赶），详见 `goal-breakdown.md` 同章节。D5 产品 UI 细节、D6 计费注入链完整实现、D7 打包分发**明确不在首批范围内**，留待第二批。
+- **用户确认**：用户已据 RA-L4 verdict 确认从需求分析阶段转入实现阶段（design→dev 转换，2026-07-22），先启动无需环境的前置②③（即 PRE-5 D2 schema+codegen、PRE-6 D3 OpenAPI 契约），内核 conformance 探针批次①（PRE-1~PRE-4）待用户安排真实 openclaw/hermes 环境后执行。
+- **唯一同步风险点（C-3 → D3）**：若 PRE-2（C-3 per-session 换 key 探针）结果为"不支持"，须**立即同步**给 PRE-6（D3 契约起草）与 SG-2 执行方，收窄 session-token-proxy 端点范围至聚合查询，避免过度设计返工——这是 RA-L4 评估识别的唯一一处"延迟同步即返工"的具体风险，其余 26 项结转项均无此类紧迫性。
+- **执行纪律重申（既定规则）**：实现类写代码（`code-impl`）绝不派第三方 vendor（codex/grok 仅用于对抗/验收评审与研究），一律由主会话 claude-sonnet-5 子代理执行；app 代码统一落盘至主仓库 `app/` 目录，遵循 D4 已定稿的 monorepo 骨架。
+
 ## Non-Goals
 
 - 不承诺生产级上线或商业化——本 goal 是探索性实验，失败与成功皆为可接受的结果
@@ -171,7 +180,7 @@
 2. **插件进化**——≥ 5 项由本 goal 实战触发的改进发布至上游三插件（沿用 TH-xxxx 编号与版本发布留痕惯例）
 3. **内容连载**——≥ 3 篇里程碑文章成稿至 PR wiki `drafts/`
 
-**近期里程碑**：需求设计逐级展开至 dev-readiness 并经用户签署，届时再次执行 `$harnessloop-goal update` 注入 dev 子目标。当前阶段仅做需求分析，不做编码。
+**近期里程碑**：需求设计逐级展开至 dev-readiness 已于 2026-07-22 完成签署（RA-L4 verdict `READY`，见「RA-L4 dev-readiness gate 评估与 design→dev 转换决策」节），`$harnessloop-goal update` 已注入 dev 子目标（`goal-breakdown.md`「实现阶段（RA-L5 / IMPL）议程」，PRE-1..PRE-6 + SG-1..SG-5）。当前阶段：设计阶段收官，进入实现阶段——无需真实环境的前置（PRE-5/PRE-6）本轮启动，内核 conformance 探针批次（PRE-1~PRE-4）待用户安排真实 openclaw/hermes 环境。
 
 ## Acceptance Criteria
 
@@ -205,6 +214,8 @@
 
 ## Status
 
-**proposed（2026-07-18，material change：业务与技术栈重定）**
+**proposed（2026-07-22，material change：设计阶段收官，进入实现阶段）**
 
-本 goal 处于 propose 阶段，当前子阶段为需求分析（Requirement Analysis）。五份契约文件（本文件 + goal-breakdown.md + thresholds.md + data-contract.md + feedback-policy.md）已按新业务身份重写落盘，无 `rounds/` 目录、无执行轮。dev 分解明确推迟至需求达 dev-ready 并经用户签署后注入（届时再次执行 `$harnessloop-goal update`）。RA-L1 顶层域结构（七支柱 P1–P7）已经用户 2026-07-18 确认（见 goal-breakdown.md「L1 七支柱」表，状态 confirmed）。RA-L2 首轮（架构核心 P1-P3）已经用户 2026-07-18 确认（见上「RA-L2 确认与架构决策」节），并同步锁定两项架构级决策 X1（本地内核优先）/ X2（统一经 newapi），server 由此收敛为瘦业务控制面。下一步：RA-L3 议程（7 项决策 D1-D7，见 goal-breakdown.md）确认中，pending 用户确认。
+本 goal 需求分析阶段（RA-L1→RA-L4）已收官：RA-L1 顶层域结构（七支柱 P1–P7，2026-07-18 confirmed）、RA-L2 架构核心 P1-P3（2026-07-18 confirmed，锁定 X1 本地内核优先 / X2 统一经 newapi）、**RA-L3 七议程 D1-D7 全部 `done/confirmed` 定稿（2026-07-21~2026-07-22）**、**RA-L4 dev-readiness gate verdict = `READY`（附前置计划，user-confirmed 2026-07-22）**——详见本文件「RA-L4 dev-readiness gate 评估与 design→dev 转换决策」节。
+
+**当前子阶段：实现阶段（RA-L5 / IMPL）启动**。`goal-breakdown.md` 已注入 6 项前置（PRE-1..PRE-6）与首批 5 个开发子目标（SG-1..SG-5）：无需真实环境的 PRE-5（D2 schema+codegen）、PRE-6（D3 OpenAPI 契约）本轮 in-progress；需真实 openclaw/hermes 环境的内核 conformance 探针批次 PRE-1~PRE-4 处于 blocked-待环境，待用户安排环境后执行。五份契约文件（本文件 + goal-breakdown.md + thresholds.md + data-contract.md + feedback-policy.md）仍无 `rounds/` 目录、无执行轮——具体执行轮/scope-lock 待 SG-1/SG-2 实际启动编码时经 `$harnessloop-continue` 开启。下一步：推进 PRE-5/PRE-6，并与用户协调 PRE-1~PRE-4 所需真实环境的落实方式。
