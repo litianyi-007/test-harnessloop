@@ -665,3 +665,18 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（F-01..F-09 全闭合/诚实结转、无新矛盾 → D6 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
 **产出**：F-01..F-09 逐条 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-033-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-034（D6 v2.1 最终 re-verify，单 codex，接续 T-033）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-033，验证其点名的 4 残留是否闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d6-newapi-integration.md`（v2.1）。对照：你的 T-033 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-033-output.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`、`server/server-stack-selection.md`、`product/d5-2-sessions.md`、`product/d5-4-cost-usage.md`、`.hopper/handoffs/T-005-output.md`。
+
+**背景**：你在 T-033 判 F-01/02/06/07/08 闭合、F-03/04/05/09 剩残留。v2.1 已收：F-03 模型透传路径图与正文口径统一为"待冒烟确认/推测"；F-04 queryBilling 映射订正为 `GET /api/log/self`(token_name 过滤)、requestCount 标应用层近似、删"凑出完整快照"、`/stat` 仅 rpm/tpm；F-05 session-token 代理条件化为 path①必需/path②跳过、§4.3/§7/§8 四处移除误列 `send()`；F-09 §3.3 新增双终结信号(stop succeeded / SessionEndEvent)下的幂等回收规则(去重键 sessionId + DELETE 幂等 + 未知创建结果 + 孤儿枚举关系)。F-01 §7 引用改 #11。
+
+**只验（严格限定这 4 处 + v2.1 编辑无新矛盾，不重开 F-01/02/06/07/08、不提 nice-to-have）**：F-03/F-04/F-05/F-09 是否这次真闭合（旧矛盾口径是否统一删净、条件化/幂等规则是否自洽）+ v2.1 编辑有无引入新矛盾。
+
+**Verdict**：`CONFIRMABLE`（4 残留全闭合、无新矛盾 → D6 可定稿）或 `MUST-FIX`（仅列仍未闭合点位）。
+**产出**：4 处逐条 + verdict。落盘 `.hopper/handoffs/T-034-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。

@@ -47,6 +47,7 @@ Anchor: `.hopper/queue.md::root`
 | T-031 | code-review-adversarial | done | | normal | D6 newapi 集成 v1 双轨复核（grok 轨）：事实保真(有无臆造endpoint)/C-3处理诚实/契约消费正确/client直连vsD3代理叉口/内部自洽 | grok |
 | T-032 | code-review-adversarial | done | | normal | D6 newapi 集成 v1 双轨复核（codex 轨）：同 T-031 同范围，异构独立视角 | codex |
 | T-033 | code-review-acceptance | done | | normal | D6 v2 定向 re-verify（单 codex，接续 T-032）：F-01..F-09 是否真闭合（叉口默认B/archive回收/非原子补偿/token-id结转/置信度纠正）+ v2 新编辑无新矛盾 → CONFIRMABLE 则 D6 定稿 | codex |
+| T-034 | code-review-acceptance | done | | normal | D6 v2.1 最终 re-verify（单 codex，接续 T-033）：F-03/04/05/09 四残留是否真闭合 + v2.1 编辑无新矛盾 → CONFIRMABLE 则 D6 定稿 | codex |
 | 
 ---
 
