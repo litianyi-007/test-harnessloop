@@ -51,6 +51,7 @@ Anchor: `.hopper/queue.md::root`
 | T-035 | prd-research | done | | high | D7 本地内核分发打包调研 spike（升 high）——openclaw/hermes 真实分发形态(二进制/npm/docker/运行时/Gateway启动)、嵌入原生 app 的打包(Mac notarization/Win MSIX签名)、版本管理更新、多内核可切分发影响 | grok |
 | T-036 | code-review-adversarial | done | | normal | D7 内核分发打包 v1 双轨复核（grok 轨）：T-035保真/契约消费/RuntimeLayout+分发+监督可执行/诚实标注/内部自洽 | grok |
 | T-037 | code-review-adversarial | done | | normal | D7 内核分发打包 v1 双轨复核（codex 轨）：同 T-036 同范围，异构独立视角 | codex |
+| T-038 | code-review-acceptance | done | | normal | D7 v2 定向 re-verify（单 codex，接续 T-037）：F-01..F-06 是否真闭合（服务descriptor/迁移前snapshot事务回滚/下载FSM签名catalog/实例身份配对/沙箱收窄/卸载）+ v2 新编辑无新矛盾 → CONFIRMABLE 则 D7 定稿 | codex |
 | 
 ---
 

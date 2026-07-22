@@ -721,3 +721,20 @@ hopper 默认 timeout 处理。
 
 **Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 D7 行 + 对应 T-035/契约位置）。
 **产出**：五维逐条 + verdict + findings。T-036→`.hopper/handoffs/T-036-output.md`；T-037→`.hopper/handoffs/T-037-output.md`。**Read-only 硬约束**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-038（D7 v2 定向 re-verify，单 codex，接续 T-037）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-037，验证自己提的 F-01..F-06 是否真闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d7-kernel-packaging.md`（v2，约523 行）。对照：你的 T-037 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-037-output.md`（+ log）、grok T-036、`research/d7-review-dual-track.md`；事实源 `.hopper/handoffs/T-035-output.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`、`architecture/d4-cross-platform-arch.md`。
+
+**背景**：你在 T-037 判 D7 v1 REWORK（F-01..F-06，4/5 维不通过）。v2 已收：F-01 沙箱收窄为单一非沙箱直发(删轻沙箱分支)；F-02 实例身份四重+首次 pairing/auth(复用 D1 握手，openclaw 原生支持结转 live-probe)；F-03 LaunchAgent 完整 descriptor + Windows Task register/recover/delete；F-04 事务化更新(互斥+全量 snapshot+事务日志+崩溃恢复)+回滚带 state 恢复+跨未知 epoch 阻断；F-05 可恢复下载 FSM+两级签名 catalog(checksum 非唯一信任锚)；F-06 安装/修复/卸载三态+所有权校验。诚实标注 7→14 项、checksum 升实现前阻断验证、CompatMatrix 最终字段名、probe→spawn TOCTOU 补上。
+
+**只验两件事（严格限定 F-01..F-06 + v2 新编辑，不重开无关范围、不提 nice-to-have）**：
+1. **F-01..F-06 是否逐条真闭合**（F-03 服务 descriptor 是否真可落实隔离；F-04 迁移前 snapshot + 事务回滚是否自洽、L219/L231 矛盾是否消解；F-05 下载 FSM + 签名 catalog 是否闭合信任链；F-02 实例身份/配对是否不再靠 PID、诚实结转 live-probe；F-01 轻沙箱分支是否真删；F-06 卸载/所有权是否完整）。
+2. **v2 新编辑有无引入新矛盾**（新增 §3.1a/§3.1b/§4.2a/§4.2b/§4.3a/§4.3b/§5.3/§5.4/§6.3 与保留正文、T-035 事实、D1/D4 契约是否自洽）。
+
+**Verdict**：`CONFIRMABLE`（F-01..F-06 全闭合/诚实结转、无新矛盾 → D7 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
+**产出**：F-01..F-06 逐条 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-038-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
