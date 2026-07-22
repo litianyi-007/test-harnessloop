@@ -648,3 +648,20 @@ hopper 默认 timeout 处理。
 
 **Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 D6 行 + 对应事实源/契约位置）。
 **产出**：五维逐条 + verdict + findings。T-031→`.hopper/handoffs/T-031-output.md`；T-032→`.hopper/handoffs/T-032-output.md`。**Read-only 硬约束**：不改任何文件；评审对象是 D6 spec；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-033（D6 v2 定向 re-verify，单 codex，接续 T-032）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-032，验证自己提的 F-01..F-09 是否真闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d6-newapi-integration.md`（v2）。对照：你的 T-032 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-032-output.md`（+ log）、grok T-031、`research/d6-review-dual-track.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`、`server/server-stack-selection.md`、`product/d5-2-sessions.md`、`product/d5-4-cost-usage.md`、`.hopper/handoffs/T-003/005/009-output.md`。
+
+**背景**：你在 T-032 判 D6 v1 REWORK，提 F-01..F-09。v2 已收：F-07 叉口默认改 B(D3 代理)+8 点安全清单+撤回"纯凭证+跳数"；F-08 token 回收改绑真终结节点(stop succeeded/SessionEndEvent)非 archive；F-09 新增 §3.3 补偿/幂等/孤儿扫描/重试+"已完整闭合"改"部分闭合"；F-01 token id 取法标为实现前冒烟阻断项(不臆造)；F-02/03/04/05/06 置信度/依赖范围/L3 估算/queryBilling 字段映射逐条纠正。
+
+**只验两件事（严格限定 F-01..F-09 + v2 新编辑，不重开无关范围、不提 nice-to-have）**：
+1. **F-01..F-09 是否逐条真闭合**（尤其 F-07 默认 B 是否贯穿 §3.2/§4.2/§4.3/§7/§8、安全影响是否真铺开；F-08 回收节点是否真绑真终结、archive 明确不触发；F-09 补偿机制是否自洽；F-01/F-05 未验/依赖项是否诚实登记不臆造；置信度纠正 F-02/03/04/06 是否到位）。
+2. **v2 新编辑有无引入新矛盾**（新增 §3.3、默认 B 展开、依赖范围区分与保留正文/D5.2/D5.4/D3/D4→D3 是否自洽）。
+
+**Verdict**：`CONFIRMABLE`（F-01..F-09 全闭合/诚实结转、无新矛盾 → D6 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
+**产出**：F-01..F-09 逐条 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-033-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
