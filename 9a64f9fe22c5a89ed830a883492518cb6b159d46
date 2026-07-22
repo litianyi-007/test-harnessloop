@@ -1,0 +1,38 @@
+.harnessloop/goals/20260718-002-agent-app/goal-breakdown.md
+  0000019f88034b92 1-81
+.harnessloop/goals/20260718-002-agent-app/goal.md
+  0000019f88034b92 1-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "9a64f9fe22c5a89ed830a883492518cb6b159d46",
+  "prompts": {
+    "s_75709e02cb9817::t_aa7e6a47bbe58d": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1784693344820382000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019f88034b92": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-4-8",
+        "id": "ai-thread-claude-claude-opus-4-8-1784693345170"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 277,
+      "total_deletions": 0,
+      "accepted_lines": 277,
+      "overriden_lines": 0
+    }
+  }
+}
