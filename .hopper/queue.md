@@ -42,6 +42,7 @@ Anchor: `.hopper/queue.md::root`
 | T-026 | prd-research | done | | high | D4 跨平台原生架构调研 spike（升 high：基础性架构选型、需深度分析共享核心方案 FFI/成熟度）——Mac 原生优先/Windows 跟随+共享核心（Rust/C++/TS-sidecar/KMP/.NET 等），代码共享边界、Mac 先行 Win 跟随工作流、D1/D2 契约如何助跨平台 | grok |
 | T-027 | code-review-adversarial | done | | normal | D4 跨平台架构 v1 双轨复核（grok 轨）：T-026 保真/ADR 合理性/D4→D2 依赖刻画/契约消费+金标parity/内部自洽 | grok |
 | T-028 | code-review-adversarial | done | | normal | D4 跨平台架构 v1 双轨复核（codex 轨）：同 T-027 同范围，异构独立视角 | codex |
+| T-029 | code-review-acceptance | done | | normal | D4 v2 定向 re-verify（单 codex，接续 T-028）：F-01..F-07 是否真闭合（fixture DSL/产品行为parity+D4→D3依赖/client stub手写/hard6态/Rust否决理由/capability_changed fixture/9页）+ v2 新编辑无新矛盾 | codex |
 | 
 ---
 

@@ -595,3 +595,20 @@ hopper 默认 timeout 处理。
 
 **Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 D4 行 + 对应 T-026/契约位置）。
 **产出**：五维逐条 + verdict + findings。T-027→`.hopper/handoffs/T-027-output.md`；T-028→`.hopper/handoffs/T-028-output.md`。**Read-only 硬约束**：不改任何文件；评审对象是 D4 spec；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-029（D4 v2 定向 re-verify，单 codex，接续 T-028）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-028，验证自己提的 F-01..F-07 是否真闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d4-cross-platform-arch.md`（v2）。对照：你的 T-028 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-028-output.md`（+ log）、grok T-027 `.hopper/handoffs/T-027-output.md`、d4-review-dual-track `research/d4-review-dual-track.md`；契约 `kernel/d1-kernelport-spec-v3-5.md`、`kernel/d2-message-schema-v3.md`、`product/d5-product-spec.md`、`server/server-stack-selection.md`。
+
+**背景**：你在 T-028 判 D4 v1 REWORK，提 F-01..F-07。v2 已收：F-01 fixture 升确定性 action/timeline DSL（§4.3/4.4）；F-02 新增 §4.6 产品行为 parity + 撤回"金标唯一机制"过度声称 + §7.1a D4→D3 API 契约阻断依赖；F-03 client stub 裁为手写（不生成 IDL，理由已记录）；F-04 hard 六态（§4.2）；F-05 删除"Rust 叠第 3 进程"错误论证；F-06 capability_changed 拆 schema-negative+reconnect fixture；F-07 parity 覆盖 9 页。grok 的 §2.5 锚点/类型闭包/stop 三态等 NOTE 亦已处理。
+
+**只验两件事（严格限定 F-01..F-07 + v2 新编辑，不重开无关范围、不提 nice-to-have）**：
+1. **F-01..F-07 是否逐条真闭合**（尤其 F-02 产品行为 parity 是否真扩到 D5 产品逻辑层且诚实划自动/手工边界、D4→D3 依赖是否列为阻断前置；F-04 hard 六态是否补全；F-03 手写裁决是否自洽；F-05 Rust 否决理由是否已换成站得住的论证）。
+2. **v2 新编辑有无引入新矛盾**（新增 §4.6 产品 parity、§7.1a D4→D3 依赖、fixture DSL 与保留正文是否自洽；撤回过度声称后 §4.1 与 §4.6 边界是否清楚）。
+
+**Verdict**：`CONFIRMABLE`（F-01..F-07 全闭合、无新矛盾 → D4 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
+**产出**：F-01..F-07 逐条 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-029-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
