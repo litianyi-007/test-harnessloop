@@ -738,3 +738,18 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（F-01..F-06 全闭合/诚实结转、无新矛盾 → D7 可定稿）或 `MUST-FIX`（仅列仍未闭合项）。
 **产出**：F-01..F-06 逐条 + 新矛盾核验 + verdict。落盘 `.hopper/handoffs/T-038-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-039（D7 v2.1 最终 re-verify，单 codex，接续 T-038）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续 T-038，验证其点名的收残项是否闭合；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d7-kernel-packaging.md`（v2.1）。对照：你的 T-038 复核 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-038-output.md`；事实源 `.hopper/handoffs/T-035-output.md`；契约 `architecture/d4-cross-platform-arch.md`。
+
+**背景**：你在 T-038 判 D7 v2 的实质补充已落地、剩收尾精化 MUST-FIX。v2.1 已收：①T-035/"唯一"措辞据实收窄+订正"从未提及轻沙箱"的事实错误；②事务顺序统一"停写→一致快照→swap"、回滚先停新进程再恢复；③catalog 加 Ed25519 签名 envelope+单调 sequence+expiresAt；④设备配对密钥入 Keychain/Credential Manager+与服务端凭据拆分+scopes+轮换；⑤KeepAlive 显式 `{SuccessfulExit:false,Crashed:true}`；⑥卸载补内容核验(exe 路径+per-install 标识逐字节)；⑦semver 钉 npm node-semver v7 区间语法。
+
+**只验（严格限定 T-038 点名的收残项 + v2.1 编辑无新矛盾，不重开无关范围、不提 nice-to-have）**：上述 7 项是否这次真闭合（尤其事务顺序是否全文唯一一致、catalog 信任链是否闭合、密钥拆分是否自洽、semver 语法是否可机器执行）+ v2.1 编辑有无引入新矛盾。
+
+**Verdict**：`CONFIRMABLE`（收残项全闭合、无新矛盾 → D7 可定稿）或 `MUST-FIX`（仅列仍未闭合点位）。
+**产出**：逐条 + verdict。落盘 `.hopper/handoffs/T-039-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
