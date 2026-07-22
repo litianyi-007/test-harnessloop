@@ -1,0 +1,19 @@
+{
+  "name": "@test-harnessloop/d2-codegen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "D2 JSON Schema -> 各语言类型 codegen 管线（PRE-②/SG-1 骨架）。本轮只打通 schema -> TS 这一条样板；Swift/C# 见 README『下一步』。",
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-schemas.mjs",
+    "gen:ts": "node scripts/generate-ts.mjs",
+    "typecheck:ts": "tsc --noEmit --strict --target es2020 ../../../generated/ts/d2.d.ts",
+    "gen": "npm run validate && npm run gen:ts && npm run typecheck:ts"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "json-schema-to-typescript": "^15.0.4",
+    "typescript": "^5.9.3"
+  }
+}

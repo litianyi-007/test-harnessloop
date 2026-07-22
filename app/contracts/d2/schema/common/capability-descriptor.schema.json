@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common/capability-descriptor.schema.json",
+  "title": "CapabilityDescriptorPayload / WireCapabilityDescriptorPayload",
+  "$comment": "对应 D2 v3 §7（CapabilityDescriptorPayload，含 protocolVersion）与 §4（WireCapabilityDescriptorPayload，v3-r1/r2 新增，排除 protocolVersion）。TS 原文需要 `Omit<T,'protocolVersion'> & { protocolVersion?: never }` 两层技巧才能让类型系统真正拒绝携带 protocolVersion 的对象（T-019/T-020 两轮 codex re-verify 才收紧）；JSON Schema 版本天然更简单——WireCapabilityDescriptorPayload 直接不在 properties 里声明 protocolVersion 且 additionalProperties:false，任何携带该键的对象在校验时直接被拒绝，不需要 TS 的 never 技巧（呼应 D4 §3.3 第 1 条论证）。",
+  "$defs": {
+    "CapabilityDescriptorPayload": {
+      "type": "object",
+      "description": "握手响应 res.capabilities 的成功 result（D2 v3 §7）——protocolVersion 在此出现一次是允许且必要的（§7.1 权威值的唯一来源）。逐字段对应 D1 §4.1，无新增/无精简。",
+      "properties": {
+        "protocolVersion": {
+          "type": "string",
+          "description": "wire 层单一契约版本标识，握手期确定，唯一权威值（D1 v3.5：连接级契约版本，D2 v3 §7.1）。当前基线 'kernelport/1'。"
+        },
+        "kernel": { "type": "string", "enum": ["openclaw", "hermes"] },
+        "kernelVersion": { "type": "string" },
+        "snapshotAt": { "type": "string", "format": "date-time" },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "discoverable": { "type": "boolean" },
+            "names": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["discoverable"],
+          "additionalProperties": false
+        },
+        "approvalGranularity": { "type": "string", "enum": ["per-tool", "per-command", "batch"] },
+        "approvalKinds": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["exec", "tool", "mcp", "sandbox", "file_write"] }
+        },
+        "approvalDecisionKinds": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["allow_once", "allow_always", "allow_session", "deny"] }
+        },
+        "interruptModes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["steer", "cancel", "abort_and_resend"] }
+        },
+        "streamingGranularity": { "type": "string", "enum": ["token-delta", "chunk", "message-only"] },
+        "sessionResume": { "type": "boolean" },
+        "thinkingVisibility": { "type": "string", "enum": ["none", "summary", "raw"] },
+        "sandboxLevels": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["read-only", "workspace-write", "full-access"] }
+        },
+        "usageReporting": { "type": "string", "enum": ["none", "best-effort", "authoritative"] },
+        "billingAttribution": { "type": "string", "enum": ["session", "user_tenant_aggregate"] }
+      },
+      "required": [
+        "protocolVersion", "kernel", "snapshotAt", "tools", "approvalGranularity",
+        "approvalKinds", "approvalDecisionKinds", "interruptModes", "streamingGranularity",
+        "sessionResume", "thinkingVisibility", "usageReporting", "billingAttribution"
+      ],
+      "additionalProperties": false
+    },
+    "WireCapabilityDescriptorPayload": {
+      "type": "object",
+      "description": "evt.capability_changed 专属的 wire 快照类型（D2 v3 v3-r1/r2，消解 codex T-018/T-019）：排除 protocolVersion——该字段已在握手期传输过一次且连接内恒定，逐事件重复既无信息增量也违反 §7.1『不再逐事件重复』规则。反序列化时由适配器用同一连接协商值同时回填事件基字段与本嵌套 descriptor 的 protocolVersion（D2 v3 §4 反序列化重建规则扩展）。",
+      "properties": {
+        "kernel": { "type": "string", "enum": ["openclaw", "hermes"] },
+        "kernelVersion": { "type": "string" },
+        "snapshotAt": { "type": "string", "format": "date-time" },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "discoverable": { "type": "boolean" },
+            "names": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["discoverable"],
+          "additionalProperties": false
+        },
+        "approvalGranularity": { "type": "string", "enum": ["per-tool", "per-command", "batch"] },
+        "approvalKinds": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["exec", "tool", "mcp", "sandbox", "file_write"] }
+        },
+        "approvalDecisionKinds": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["allow_once", "allow_always", "allow_session", "deny"] }
+        },
+        "interruptModes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["steer", "cancel", "abort_and_resend"] }
+        },
+        "streamingGranularity": { "type": "string", "enum": ["token-delta", "chunk", "message-only"] },
+        "sessionResume": { "type": "boolean" },
+        "thinkingVisibility": { "type": "string", "enum": ["none", "summary", "raw"] },
+        "sandboxLevels": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["read-only", "workspace-write", "full-access"] }
+        },
+        "usageReporting": { "type": "string", "enum": ["none", "best-effort", "authoritative"] },
+        "billingAttribution": { "type": "string", "enum": ["session", "user_tenant_aggregate"] }
+      },
+      "required": [
+        "kernel", "snapshotAt", "tools", "approvalGranularity",
+        "approvalKinds", "approvalDecisionKinds", "interruptModes", "streamingGranularity",
+        "sessionResume", "thinkingVisibility", "usageReporting", "billingAttribution"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

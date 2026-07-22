@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common/errors.schema.json",
+  "title": "D2 三层错误模型 + OperationOutcome",
+  "$comment": "三层严格不混淆的失败通道（D1 v3.5 §9.1、D2 v3 §6）：KernelErrorCode（异步运行时错误，经 evt.error 上报）/ KernelPortRejectionCode（方法调用同步/立即拒绝码）/ OperationOutcome（已铸造 operationId 的 operation 终态，经 res.interrupt|res.stop 的 result 与 evt.operation_completed 双通道共享）。另加 D2 专属第四层 ProtocolFailure（消息层协议错误，D1 无对应概念，D2 v3 §7.4）与 queryBilling 专属的 BillingQueryFailure（D1 v3.5 §9.1：billing_query_subject_unresolved 是 queryBilling() 的异步 rejection，不与 KernelPortRejectionCode 共享枚举空间）。",
+  "$defs": {
+    "KernelErrorCode": {
+      "type": "string",
+      "description": "ErrorEvent.code 的唯一契约稳定取值集合（D1 v3-kernel-spec §9，D1 v3.5 §9.1 声明本枚举『保持不变，同 v3.1』）。",
+      "enum": [
+        "rate_limited",
+        "kernel_crashed",
+        "auth_failed",
+        "sandbox_denied",
+        "network_lost",
+        "approval_timeout",
+        "unknown"
+      ]
+    },
+    "KernelPortRejectionCode": {
+      "type": "string",
+      "description": "方法调用同步/立即拒绝码（D1 v3.5 §9.1）。billing_query_subject_unresolved 已于 v3.4 移出本枚举，改列 queryBilling 专属异步失败码，见 BillingQueryFailure。",
+      "enum": [
+        "session_not_found",
+        "session_already_stopped",
+        "unsupported_interrupt_mode",
+        "approval_not_pending",
+        "no_active_run_for_steer",
+        "session_locked",
+        "unsupported_approval_decision",
+        "aggregate_billing_requires_deployment_token"
+      ]
+    },
+    "OperationOutcome": {
+      "type": "string",
+      "description": "已铸造 operationId 的 operation 终态七态（D1 v3.5 §2.4/§9.1）。res.interrupt/res.stop 的 result.outcome 与 evt.operation_completed.outcome 共享同一词汇表；stop() 只可达其中三态子集（succeeded/timed_out/rejected，D1 §2.5），hard abort_and_resend 可达六态子集（全集去掉仅 soft 可达的 submitted，D4 §4.2）——本枚举忠实保留全部七态，子集约束是文档级约束，不在 schema 层面按 method 拆分（同 D2 v3 §3.5 stop() 的既有处理方式）。",
+      "enum": [
+        "succeeded",
+        "submitted",
+        "aborted_no_resend",
+        "aborted_resend_failed",
+        "aborted_effect_unknown",
+        "rejected",
+        "timed_out"
+      ]
+    },
+    "RejectionFailure": {
+      "type": "object",
+      "description": "7 个真正的 KernelPort 方法共用的同步/立即拒绝失败形状（D2 v3 §3）。",
+      "properties": {
+        "code": { "$ref": "#/$defs/KernelPortRejectionCode" },
+        "detail": { "type": "string", "description": "非稳定字段，透传调试信息。" }
+      },
+      "required": ["code"],
+      "additionalProperties": false
+    },
+    "ProtocolFailure": {
+      "type": "object",
+      "description": "D2 专属、不出现在 D1 任何地方的消息层协议错误（D2 v3 §7.4）。unsupported_protocol_version 仅在握手路径触发（res.capabilities 的 failure，D2 v3 §7.2 第 3 步）；malformed_message/unknown_message_type 适用于任意方法的 request 本身损坏或 type 不可辨认的场景。已并入 §3.9 全部 8 个具体方法 response 的 failure 联合以及 res.unknown 的 failure 类型。",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": ["malformed_message", "unsupported_protocol_version", "unknown_message_type"]
+        },
+        "detail": { "type": "string" }
+      },
+      "required": ["code"],
+      "additionalProperties": false
+    },
+    "BillingQueryFailure": {
+      "type": "object",
+      "description": "queryBilling 专属的独立失败类型——不使用 RejectionFailure，不与 KernelPortRejectionCode 共享枚举空间（D1 v3.5 §9.1、D2 v3 §3.8）。",
+      "properties": {
+        "code": { "const": "billing_query_subject_unresolved" },
+        "detail": { "type": "string" }
+      },
+      "required": ["code"],
+      "additionalProperties": false
+    }
+  }
+}

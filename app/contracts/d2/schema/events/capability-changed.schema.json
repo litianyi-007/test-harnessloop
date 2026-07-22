@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "events/capability-changed.schema.json",
+  "title": "evt.capability_changed (CapabilityChangedEvent)",
+  "$comment": "D2 v3 §4 #9 + v3-r1 修复。capabilities 字段用 WireCapabilityDescriptorPayload（排除 protocolVersion，见 common/capability-descriptor.schema.json），不是完整 CapabilityDescriptorPayload——这是 D2 v3 全文唯一需要排除内嵌 protocolVersion 快照的位置（res.capabilities 握手响应本身不受影响，见该 schema 说明）。反序列化时适配器须用同一连接协商值同时回填事件基字段与本嵌套 descriptor 的 protocolVersion（D2 v3 §4 反序列化重建规则扩展），本 schema 只描述 wire 形状，不表达这条运行时回填规则（那是散文不变量，非消息形状）。",
+  "$defs": {
+    "CapabilityChangedPayload": {
+      "type": "object",
+      "properties": {
+        "source": { "type": "string", "enum": ["server_override", "kernel_error_inferred"] },
+        "capabilities": { "$ref": "../common/capability-descriptor.schema.json#/$defs/WireCapabilityDescriptorPayload" },
+        "reason": { "type": "string" }
+      },
+      "required": ["source", "capabilities"],
+      "additionalProperties": false
+    },
+    "CapabilityChangedEventMessage": {
+      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/eventEnvelopeBase" }],
+      "type": "object",
+      "properties": {
+        "type": { "const": "evt.capability_changed" },
+        "payload": { "$ref": "#/$defs/CapabilityChangedPayload" }
+      },
+      "required": ["type", "payload"],
+      "unevaluatedProperties": false
+    }
+  }
+}

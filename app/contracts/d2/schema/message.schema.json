@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "message.schema.json",
+  "title": "Message = RequestMessage | ResponseMessage | EventMessage（部分覆盖，见下方 TODO）",
+  "$comment": "对应 D2 v3 §3.9/§4.1 的封闭判别联合顶层类型 `type Message = RequestMessage | ResponseMessage | EventMessage`。本轮（PRE-②/SG-1）只转录『骨架 + 最关键的几类』，覆盖范围如下，未覆盖处按 D4 §3.5『完整类型闭包要求』的纪律显式标注 TODO + 引用 D2 v3 章节，不臆造字段。\n\n覆盖：\n- 方法 req/resp（3/8）：createSession（§3.1）、interrupt（§3.4）、respondApproval（§3.6）\n- KernelEvent（5/11）：evt.message.delta（§4 #1）、evt.tool_call（§4 #3）、evt.approval_request（§4 #5）、evt.capability_changed（§4 #9）、evt.operation_completed（§4 #10）\n\nTODO（下一轮补齐，不在本轮 schema 范围内，字段定义已在 D2 v3 对应章节钉死，转录时须做 D4 §3.5 要求的『递归闭包』核对，不得只抄类别名）：\n- 方法 req/resp（5/8）：send（D2 v3 §3.2）、subscribe（§3.3，EmptyPayload 两个真封闭空对象实例）、stop（§3.5，OperationOutcome 三态子集）、capabilities（§3.7，CapabilitiesRequestPayload.supportedProtocolVersions）、queryBilling（§3.8，BillingQueryFailure 独立失败类型）\n- res.unknown（UnknownResponseMessage，§3.9，唯一 id 可选的 response 类型，failure 恒为 ProtocolFailure）\n- KernelEvent（6/11）：evt.thinking（§4 #2）、evt.tool_result（§4 #4）、evt.error（§4 #6，KernelErrorCode 已在 common/errors.schema.json 定义，事件 payload 本身未转录）、evt.turn_complete（§4 #7，runId 必填 + degraded/forceResolvedApprovals 字段）、evt.session_end（§4 #8）、evt.approval_buffer_resolved（§4 #11）",
+  "$defs": {
+    "RequestMessage": {
+      "description": "部分覆盖（3/8），见本文件顶层 $comment TODO 清单。",
+      "oneOf": [
+        { "$ref": "methods/create-session.schema.json#/$defs/CreateSessionRequestMessage" },
+        { "$ref": "methods/interrupt.schema.json#/$defs/InterruptRequestMessage" },
+        { "$ref": "methods/respond-approval.schema.json#/$defs/RespondApprovalRequestMessage" }
+      ]
+    },
+    "ResponseMessage": {
+      "description": "部分覆盖（3/8，另缺 res.unknown），见本文件顶层 $comment TODO 清单。",
+      "oneOf": [
+        { "$ref": "methods/create-session.schema.json#/$defs/CreateSessionResponseMessage" },
+        { "$ref": "methods/interrupt.schema.json#/$defs/InterruptResponseMessage" },
+        { "$ref": "methods/respond-approval.schema.json#/$defs/RespondApprovalResponseMessage" }
+      ]
+    },
+    "EventMessage": {
+      "description": "部分覆盖（5/11），见本文件顶层 $comment TODO 清单。",
+      "oneOf": [
+        { "$ref": "events/message-delta.schema.json#/$defs/MessageDeltaEventMessage" },
+        { "$ref": "events/tool-call.schema.json#/$defs/ToolCallEventMessage" },
+        { "$ref": "events/approval-request.schema.json#/$defs/ApprovalRequestEventMessage" },
+        { "$ref": "events/capability-changed.schema.json#/$defs/CapabilityChangedEventMessage" },
+        { "$ref": "events/operation-completed.schema.json#/$defs/OperationCompletedEventMessage" }
+      ]
+    },
+    "Message": {
+      "description": "整条连线上出现的任何一条消息都属于且仅属于这三个封闭判别联合之一（D2 v3 §4.1）——本文件是其部分转录，非完整闭合版本。",
+      "oneOf": [
+        { "$ref": "#/$defs/RequestMessage" },
+        { "$ref": "#/$defs/ResponseMessage" },
+        { "$ref": "#/$defs/EventMessage" }
+      ]
+    }
+  }
+}

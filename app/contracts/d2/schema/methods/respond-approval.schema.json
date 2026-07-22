@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "methods/respond-approval.schema.json",
+  "title": "req.respondApproval / res.respondApproval",
+  "$comment": "D2 v3 §3.6。decision 逐字段对应 D1 ApprovalDecision（D1 v3.5 §2.6）。allow_session 由 capabilities().approvalDecisionKinds 门控——D2 消息 schema 层面不做该项业务前置校验（结构合法即可通过），呼应 D2 v3 §0『D2 不裁决 D1 语义，只管线上形状』的纪律。RespondApprovalResultPayload 复用 EmptyPayload（v3 修复：真封闭空对象，消解 codex T-017 HIGH#2）。sessionId 必填（D2 v3 §3.9）。",
+  "$defs": {
+    "ApprovalDecision": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "outcome": { "const": "allow_once" }, "updatedInput": true },
+          "required": ["outcome"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "outcome": { "const": "allow_always" },
+            "scope": { "type": "string" },
+            "updatedInput": true
+          },
+          "required": ["outcome"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "outcome": { "const": "allow_session" },
+            "scope": { "type": "string" },
+            "updatedInput": true
+          },
+          "required": ["outcome"],
+          "additionalProperties": false,
+          "description": "D1 v3.5 §2.6 新增：由 capabilities().approvalDecisionKinds 门控，未声明支持时实现须同步拒绝 unsupported_approval_decision，不得静默降级为 allow_once。"
+        },
+        {
+          "type": "object",
+          "properties": { "outcome": { "const": "deny" }, "reason": { "type": "string" } },
+          "required": ["outcome"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "RespondApprovalRequestPayload": {
+      "type": "object",
+      "properties": {
+        "reqId": { "type": "string" },
+        "decision": { "$ref": "#/$defs/ApprovalDecision" }
+      },
+      "required": ["reqId", "decision"],
+      "additionalProperties": false
+    },
+    "RespondApprovalResultPayload": { "$ref": "../common/empty-payload.schema.json" },
+    "RespondApprovalRequestMessage": {
+      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/requestEnvelopeBase" }],
+      "type": "object",
+      "properties": {
+        "type": { "const": "req.respondApproval" },
+        "id": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "payload": { "$ref": "#/$defs/RespondApprovalRequestPayload" }
+      },
+      "required": ["type", "id", "sessionId", "payload"],
+      "unevaluatedProperties": false
+    },
+    "RespondApprovalResponseMessage": {
+      "description": "失败：RejectionFailure | ProtocolFailure，可命中 approval_not_pending/unsupported_approval_decision（D1 v3.5 §9.1）。respondApproval 命中 FORCE_DENY_PENDING_KERNEL_ACK 中间态之后到达时的确切行为，D1 未定义——D2 v3 §9.2 第 4 条回指，OPEN/deferred（见 fixtures/README 的 OPEN 登记惯例）。两个分支各自直接内联 sentAt/direction，不用 allOf——规避 json-schema-to-typescript 对『oneOf 分支内嵌 allOf』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.respondApproval" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "result": { "$ref": "#/$defs/RespondApprovalResultPayload" }
+          },
+          "required": ["sentAt", "direction", "type", "id", "result"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.respondApproval" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "failure": {
+              "oneOf": [
+                { "$ref": "../common/errors.schema.json#/$defs/RejectionFailure" },
+                { "$ref": "../common/errors.schema.json#/$defs/ProtocolFailure" }
+              ]
+            }
+          },
+          "required": ["sentAt", "direction", "type", "id", "failure"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "events/approval-request.schema.json",
+  "title": "evt.approval_request (ApprovalRequestEvent)",
+  "$comment": "D2 v3 §4 #5。envelope runId 在本事件类型上从 EventEnvelope 默认可选被收紧为必填（D2 v3 §4 表格『必填（D1 自有字段覆盖 base 的可选性）』），故本 schema 的顶层 required 额外列出 runId。",
+  "$defs": {
+    "ApprovalRequestPayload": {
+      "type": "object",
+      "properties": {
+        "reqId": { "type": "string", "description": "respondApproval() 的关联主键（= 内核 approval id，非 toolCallId）。" },
+        "toolCallId": { "type": "string", "description": "关联到对应 evt.tool_call 的 toolCallId，审计/展示用，非 respondApproval 关联键。" },
+        "kind": { "type": "string", "enum": ["exec", "tool", "mcp", "sandbox", "file_write"] },
+        "payload": true,
+        "proposedDecision": { "type": "string", "enum": ["allow_once", "allow_always", "deny"] },
+        "timeoutMs": { "type": "integer" },
+        "timeoutAuthority": {
+          "type": "string",
+          "enum": ["documented", "best_effort"],
+          "description": "openclaw 'documented'；hermes 'best_effort'（约 60s，非官方承诺）——UI 不得在 'best_effort' 上做精确倒计时。"
+        }
+      },
+      "required": ["reqId", "toolCallId", "kind", "payload", "timeoutMs", "timeoutAuthority"],
+      "additionalProperties": false
+    },
+    "ApprovalRequestEventMessage": {
+      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/eventEnvelopeBase" }],
+      "type": "object",
+      "properties": {
+        "type": { "const": "evt.approval_request" },
+        "runId": { "type": "string" },
+        "payload": { "$ref": "#/$defs/ApprovalRequestPayload" }
+      },
+      "required": ["type", "runId", "payload"],
+      "unevaluatedProperties": false
+    }
+  }
+}

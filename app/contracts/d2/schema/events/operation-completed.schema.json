@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "events/operation-completed.schema.json",
+  "title": "evt.operation_completed (OperationCompletedEvent)",
+  "$comment": "D2 v3 §4 #10。outcome 复用 common/errors.schema.json#/$defs/OperationOutcome（D1 §6.1a 双通道机制：Promise 直接答复 + 本事件旁路镜像，两者共享同一 OperationOutcome 词汇表，仅在线订阅者可见，D1 §9.2/D2 v3 §8）。",
+  "$defs": {
+    "OperationCompletedPayload": {
+      "type": "object",
+      "properties": {
+        "operationId": { "type": "string" },
+        "operationKind": { "type": "string", "enum": ["interrupt", "stop"] },
+        "outcome": { "$ref": "../common/errors.schema.json#/$defs/OperationOutcome" },
+        "affectedRunId": { "type": "string" },
+        "newRunId": { "type": "string" },
+        "detail": { "type": "string" }
+      },
+      "required": ["operationId", "operationKind", "outcome"],
+      "additionalProperties": false
+    },
+    "OperationCompletedEventMessage": {
+      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/eventEnvelopeBase" }],
+      "type": "object",
+      "properties": {
+        "type": { "const": "evt.operation_completed" },
+        "payload": { "$ref": "#/$defs/OperationCompletedPayload" }
+      },
+      "required": ["type", "payload"],
+      "unevaluatedProperties": false
+    }
+  }
+}

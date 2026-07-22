@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "methods/interrupt.schema.json",
+  "title": "req.interrupt / res.interrupt",
+  "$comment": "D2 v3 §3.4（正文标注『同 v1，未受本次修订影响』）。response 是终态而非 ack——D1 interrupt() 的 Promise 在 OperationOutcome 七态之一确定前不会 resolve（D2 v3 §2 方向速查表）。sessionId 在本方法上必填（D2 v3 §3.9 InterruptRequestMessage = RequestEnvelope<...> & { sessionId: string }）。",
+  "$defs": {
+    "KernelInput": {
+      "description": "D1 v3.5 §2 KernelInput 判别联合，逐字对应 D2 v3 §3.2 SendRequestPayload.input 同款结构。",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "kind": { "const": "text" }, "text": { "type": "string" } },
+          "required": ["kind", "text"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "structured" },
+            "parts": {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": { "kind": { "const": "text" }, "text": { "type": "string" } },
+                    "required": ["kind", "text"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": { "const": "file_ref" },
+                      "path": {
+                        "type": "string",
+                        "description": "文件系统坐标空间未裁决——D1 F-15 开放项，D2 已固化字段上线（D2 v3 §9.2 第 7 条）。"
+                      },
+                      "mimeType": { "type": "string" }
+                    },
+                    "required": ["kind", "path"],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            }
+          },
+          "required": ["kind", "parts"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "InterruptRequestPayload": {
+      "type": "object",
+      "properties": {
+        "mode": { "type": "string", "enum": ["steer", "cancel", "abort_and_resend"] },
+        "runId": {
+          "type": "string",
+          "description": "仅在 mode:'abort_and_resend' 且需要精确定向某个 run 时有意义。"
+        },
+        "input": {
+          "allOf": [{ "$ref": "#/$defs/KernelInput" }],
+          "description": "仅 mode:'steer'（新内容）或 mode:'abort_and_resend'（重发内容）时需要；mode:'cancel' 应省略。"
+        }
+      },
+      "required": ["mode"],
+      "additionalProperties": false
+    },
+    "InterruptResultPayload": {
+      "type": "object",
+      "description": "D1 OperationOutcome 七态逐字透传，D2 不裁剪（D2 v3 §3.4）。",
+      "properties": {
+        "operationId": { "type": "string" },
+        "affectedRunId": { "type": "string", "description": "仅确有 active run 被 abort 时出现，不得虚构。" },
+        "outcome": { "$ref": "../common/errors.schema.json#/$defs/OperationOutcome" },
+        "newRunId": { "type": "string", "description": "仅 mode:'abort_and_resend' 且 outcome:'succeeded' 时有意义。" },
+        "interruptedActiveRun": { "type": "boolean", "description": "仅 mode:'abort_and_resend'。" },
+        "status": { "description": "非稳定字段，透传底层 ack 的 status，仅供调试。" },
+        "detail": { "type": "string", "description": "非稳定字段。" }
+      },
+      "required": ["operationId", "outcome"],
+      "additionalProperties": false
+    },
+    "InterruptRequestMessage": {
+      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/requestEnvelopeBase" }],
+      "type": "object",
+      "properties": {
+        "type": { "const": "req.interrupt" },
+        "id": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "payload": { "$ref": "#/$defs/InterruptRequestPayload" }
+      },
+      "required": ["type", "id", "sessionId", "payload"],
+      "unevaluatedProperties": false
+    },
+    "InterruptResponseMessage": {
+      "description": "失败（同步/立即拒绝，operationId 从未铸造）：RejectionFailure | ProtocolFailure，可命中 session_not_found/session_already_stopped/unsupported_interrupt_mode/no_active_run_for_steer/session_locked。interrupt 的 outcome 七态本身不算失败（走 result 通道），仅同步前置拒绝才走 failure 通道（D2 v3 §3）。两个分支各自直接内联 sentAt/direction，不用 allOf——规避 json-schema-to-typescript 对『oneOf 分支内嵌 allOf』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.interrupt" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "result": { "$ref": "#/$defs/InterruptResultPayload" }
+          },
+          "required": ["sentAt", "direction", "type", "id", "result"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.interrupt" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "failure": {
+              "oneOf": [
+                { "$ref": "../common/errors.schema.json#/$defs/RejectionFailure" },
+                { "$ref": "../common/errors.schema.json#/$defs/ProtocolFailure" }
+              ]
+            }
+          },
+          "required": ["sentAt", "direction", "type", "id", "failure"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

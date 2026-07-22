@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "events/tool-call.schema.json",
+  "title": "evt.tool_call (ToolCallEvent)",
+  "$comment": "D2 v3 §4 #3，payload 字段来源 D1 v3 正文。input 是内核原生工具调用参数，D1/D2 均未进一步收紧结构，忠实用 JSON Schema 'true'（任意 JSON 值）表达 TS 的 `unknown`。",
+  "$defs": {
+    "ToolCallPayload": {
+      "type": "object",
+      "properties": {
+        "toolCallId": { "type": "string" },
+        "name": { "type": "string" },
+        "input": true,
+        "status": { "const": "started" }
+      },
+      "required": ["toolCallId", "name", "input", "status"],
+      "additionalProperties": false
+    },
+    "ToolCallEventMessage": {
+      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/eventEnvelopeBase" }],
+      "type": "object",
+      "properties": {
+        "type": { "const": "evt.tool_call" },
+        "payload": { "$ref": "#/$defs/ToolCallPayload" }
+      },
+      "required": ["type", "payload"],
+      "unevaluatedProperties": false
+    }
+  }
+}

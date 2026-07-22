@@ -1,0 +1,78 @@
+{
+  "name": "create-session-subscribe-message-delta",
+  "description": "基础 happy path：createSession 成功 -> subscribe 建流 -> 内核推送一条 evt.message.delta 事件，client 能观察到该事件。展示 fixture DSL（D4 §4.3）的最简形态：client_call + expect_outbound + mock_response + mock_event + 最终对 callOutcomes/observedEvents 的断言。message 字段用 D4 §4.3 定义的 WireResponseShorthand/WireEventShorthand（省略 sentAt/direction/id/seq，由 runner 按虚拟时刻 t 自动补全，本骨架阶段尚无 runner 实现，见下方 fixtures/README.md）。",
+  "timeline": [
+    {
+      "t": 0,
+      "op": "client_call",
+      "id": "c1",
+      "call": "createSession",
+      "args": {
+        "config": {
+          "cwd": "/workspace/demo",
+          "newapiEndpoint": { "baseUrl": "https://newapi.example.local" }
+        }
+      }
+    },
+    {
+      "t": 0,
+      "op": "expect_outbound",
+      "matches": "c1",
+      "pattern": { "type": "req.createSession" }
+    },
+    {
+      "t": 10,
+      "op": "mock_response",
+      "replyTo": "c1",
+      "message": {
+        "type": "res.createSession",
+        "result": {
+          "sessionHandle": {
+            "sessionId": "session-1",
+            "kernel": "openclaw",
+            "createdAt": "2026-07-22T00:00:00Z",
+            "billing": { "tokenRef": "token-session-1" }
+          }
+        }
+      }
+    },
+    {
+      "t": 11,
+      "op": "client_call",
+      "id": "c2",
+      "call": "subscribe",
+      "args": {}
+    },
+    {
+      "t": 11,
+      "op": "expect_outbound",
+      "matches": "c2",
+      "pattern": { "type": "req.subscribe", "sessionId": "session-1" }
+    },
+    {
+      "t": 15,
+      "op": "mock_response",
+      "replyTo": "c2",
+      "message": { "type": "res.subscribe", "result": {} }
+    },
+    {
+      "t": 20,
+      "op": "mock_event",
+      "message": {
+        "type": "evt.message.delta",
+        "sessionId": "session-1",
+        "runId": "run-1",
+        "payload": { "role": "assistant", "delta": "Hello", "index": 0 }
+      }
+    }
+  ],
+  "expected": {
+    "callOutcomes": {
+      "c1": { "status": "resolved" },
+      "c2": { "status": "resolved" }
+    },
+    "observedEvents": [
+      { "type": "evt.message.delta", "payload": { "role": "assistant", "delta": "Hello", "index": 0 } }
+    ]
+  }
+}

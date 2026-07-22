@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common/envelope.schema.json",
+  "title": "D2 Envelope templates (MessageEnvelopeBase / RequestEnvelope / ResponseEnvelope / EventEnvelope)",
+  "$comment": "对应 D2 v3 §2。TS 原文用泛型模板（RequestEnvelope<TType,TPayload> 等），JSON Schema 没有泛型；这里把三个模板拆成可复用的 base fragment（$defs 下），由 schema/methods/*.schema.json、schema/events/*.schema.json 各自 allOf 引用 + 补充 type 字面量/payload/字段覆盖，拼出具体消息类型。闭合规则用 unevaluatedProperties:false（2020-12 关键字）而不是 additionalProperties:false——因为 allOf 跨文件组合时，additionalProperties 无法感知兄弟/引用 schema 已声明的字段，会把 base 字段误判为『多余属性』；unevaluatedProperties 能正确识别 allOf/$ref 链路中已被任意子 schema 校验过的字段，这正是 D2 v3 §2 判别联合『不允许任意扩展』的意图在 JSON Schema 里的对应实现。",
+  "$defs": {
+    "sentAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。"
+    },
+    "requestEnvelopeBase": {
+      "type": "object",
+      "description": "RequestEnvelope<TType,TPayload> 的公共部分（D2 v3 §2）：direction 固定为 'request'，sentAt 为传输层时间戳。id/sessionId/type/payload 由具体方法 schema（schema/methods/*.schema.json）补充。",
+      "properties": {
+        "sentAt": { "$ref": "#/$defs/sentAt" },
+        "direction": { "const": "request" }
+      },
+      "required": ["sentAt", "direction"]
+    },
+    "responseEnvelopeBase": {
+      "type": "object",
+      "description": "ResponseEnvelope<TType,TSuccess,TFailure> 的公共部分（D2 v3 §2）：direction 固定为 'response'。result/failure 互斥判别联合由具体方法 schema 用 oneOf 的 success/failure 两个分支各自补充（呼应 TS 原文 `result: T; failure?: never` / `result?: never; failure: F` 的写法）。",
+      "properties": {
+        "sentAt": { "$ref": "#/$defs/sentAt" },
+        "direction": { "const": "response" }
+      },
+      "required": ["sentAt", "direction"]
+    },
+    "eventEnvelopeBase": {
+      "type": "object",
+      "description": "EventEnvelope<TType,TPayload> 的公共部分（D2 v3 §2）：direction 固定为 'event'，seq/sessionId/ts 全局必填，runId 默认可选——部分事件类型（evt.approval_request/evt.turn_complete）在各自 schema 里把 runId 收紧为必填（D2 v3 §4 表格 envelope runId 列）。",
+      "properties": {
+        "sentAt": { "$ref": "#/$defs/sentAt" },
+        "direction": { "const": "event" },
+        "seq": {
+          "type": "integer",
+          "description": "D1 KernelEventBase.seq 的线上表示，仅同一 runId 内排序、不重放（D1 §9.2、D2 v3 §8）。"
+        },
+        "sessionId": { "type": "string" },
+        "runId": { "type": "string" },
+        "ts": { "$ref": "#/$defs/ts" }
+      },
+      "required": ["sentAt", "direction", "seq", "sessionId", "ts"]
+    }
+  }
+}

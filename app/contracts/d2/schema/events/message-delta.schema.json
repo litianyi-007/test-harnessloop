@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "events/message-delta.schema.json",
+  "title": "evt.message.delta (MessageDeltaEvent)",
+  "$comment": "D2 v3 §4 #1，payload 字段来源 D1 v3 正文（未受 v3.1-v3.5 修订影响）。runId 沿用 EventEnvelope 默认可选。",
+  "$defs": {
+    "MessageDeltaPayload": {
+      "type": "object",
+      "properties": {
+        "role": { "const": "assistant" },
+        "delta": { "type": "string" },
+        "index": { "type": "integer" }
+      },
+      "required": ["role", "delta", "index"],
+      "additionalProperties": false
+    },
+    "MessageDeltaEventMessage": {
+      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/eventEnvelopeBase" }],
+      "type": "object",
+      "properties": {
+        "type": { "const": "evt.message.delta" },
+        "payload": { "$ref": "#/$defs/MessageDeltaPayload" }
+      },
+      "required": ["type", "payload"],
+      "unevaluatedProperties": false
+    }
+  }
+}

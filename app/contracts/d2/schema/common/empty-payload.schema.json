@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common/empty-payload.schema.json",
+  "title": "EmptyPayload",
+  "$comment": "对应 D2 v3 §3 `type EmptyPayload = Record<string, never>`——D2 v3 Changelog 第 2 条：TS 的裸 `{}` 结构类型并不封闭（任意非 null 对象都可赋值），JSON Schema 用 additionalProperties:false + 空 properties 天然精确表达'无字段对象'，不需要 TS 那套 Record<string,never> 技巧（呼应 D4 §3.3 第 1 条：JSON Schema 校验的是真实 JSON 文档，天然没有结构化子类型兼容导致的多余字段泄漏问题）。全文四处复用本类型：StopRequestPayload / SubscribeRequestPayload / SubscribeResultPayload / RespondApprovalResultPayload（D2 v3 §3.3/§3.5/§3.6）。",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}
