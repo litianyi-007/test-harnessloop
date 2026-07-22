@@ -14,18 +14,26 @@ info:
 
     **纪律声明**：本契约只覆盖 D3/D5/D6 已定稿文档里**明确提到**的实体、动作与字段；凡源文档标注"未确认""待冒烟确认""未裁决""D3 未定义具体字段"之处，
     本文件在对应 endpoint/schema 上用 `x-todo` 扩展字段与 description 内联标注，不发明协议未定义的 endpoint 或字段。
-    凡结论依赖 [[d1-kernelport-spec-v3-5]] §11 **C-3**（openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl）
-    探针结果才能最终裁定的地方（尤其 session-token 代理端点组是否在当前部署下实际被调用），标注为
-    **"待 PRE-① C-3 结果裁定"**（对齐 RA-L4 评估的 C-3→D3 同步风险点），不假设 C-3 已通过。
+    C-3（[[d1-kernelport-spec-v3-5]] §11，openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl）
+    已由 **PRE-① 源码核验**（2026-07-22，只读源码核验，见 wiki `research/pre1-openclaw-source-conformance.md`/
+    `research/pre1-hermes-source-conformance.md`）裁定：**session 级归因（path①）对两内核成立**——
+    hermes 原生零改动，openclaw 需一次中等量级 patch（已列实现任务，patch 落地前该内核侧仍走
+    `user_tenant_aggregate` 聚合降级）。session-token 代理端点组、`GET /billing/usage`、
+    `GET /tenant/current/newapi-endpoint-config` 均按 **path① 为默认目标**建模，实际生效的
+    `attribution` 取值仍由部署运行的具体内核/patch 落地状态决定（见各端点 description，不再标注
+    "待 PRE-① C-3 结果裁定"）。
 
     事实源：
     - `server-stack-selection.md`（D3，design_status confirmed，2026-07-21 用户确认方案 A）
     - `d5-4-cost-usage.md`（D5.4，confirmed）
     - `d5-6-account-license.md`（D5.6，confirmed）
     - `d5-5-capabilities.md`（D5.5，仅引用 allowed 层 tenant_features 结论）
-    - `d6-newapi-integration.md`（D6 v2.2，confirmed，2026-07-22 正式定稿）
+    - `d6-newapi-integration.md`（D6 v2.2，confirmed，2026-07-22 正式定稿；v3 收口 PRE-① C-3 源码核验）
     - `d4-cross-platform-arch.md`（D4，confirmed，§7.1a/§8 D4→D3 依赖，§5.1 monorepo 骨架 `contracts/d3/`）
     - `d1-kernelport-spec-v3-5.md`（D1，confirmed，§7 newapi 计费边车 / §11 C-3 / §2.1 createSession newapiEndpoint）
+    - `kernel-ecosystem-facts.md`（PRE-① 源码级核验节，2026-07-22）
+    - `pre1-openclaw-source-conformance.md`（openclaw 只读源码核验，C-3 判定，2026-07-22）
+    - `pre1-hermes-source-conformance.md`（hermes 只读源码核验，C-3 判定，2026-07-22）
   contact:
     name: test-harnessloop app（内部验证项目，非对外产品）
 servers:
@@ -456,10 +464,13 @@ paths:
         D3 依据自己的部署时静态配置决定走哪条分支，响应体 `attribution` 字段告知调用方实际生效的分支；
         `sessionId` 参数在 path②下**仅作报告标签，不是查询过滤条件**（D1 §7 原文）。
 
-        **待 PRE-① C-3 结果裁定**：C-3（openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl）
-        尚未验证，[[d5-4-cost-usage]] §6 第 1 行与 [[d6-newapi-integration]] §2.2/§5.2 均"保守假设当前
-        处于 `'user_tenant_aggregate'` 降级分支"——本端点当前预期只走 path②；C-3 验证通过后才会切到 path①，
-        不改变本端点的请求/响应形状，只改变 `attribution` 的实际取值与 D3 内部实现路径。
+        **PRE-① C-3 已裁定（2026-07-22）**：C-3（openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl）
+        已由只读源码核验裁定——session 级归因（path①）对两内核成立：hermes 原生零改动，openclaw 需一次
+        中等量级 patch（详见 [[kernel-ecosystem-facts]] 新增「PRE-① 源码级核验」节、
+        [[d6-newapi-integration]] §2.2 v3 收口 / [[d5-4-cost-usage]] §2.3 v2 收口）。**path① 现为默认目标**：
+        hermes 部署可直接返回 `attribution:'session'`；openclaw 部署在上方 patch 落地前仍返回
+        `attribution:'user_tenant_aggregate'`——本端点请求/响应形状不变，实际生效的 `attribution` 取值
+        由部署运行的具体内核/patch 落地状态决定，client 不得自行假设，只能读取响应体的 `attribution` 字段。
 
         **强约束（不得违反，见 d5-4-cost-usage.md §4.4）**：失败时不得返回一个字段齐全但数值虚构/为零的
         `SessionBillingSnapshot`——"查询成功但用量为 0"与"查询失败"必须走独立的响应路径。
@@ -517,8 +528,10 @@ paths:
         见 [[d5-00-foundation]] §5.2 已提及、d5-6-account-license.md §7.1 复述的"部署配置问题不应期望
         终端用户 UI 自行修复"这条纪律）。path①下本字段可省略。
 
-        **待 PRE-① C-3 结果裁定**：本端点返回的是 path①还是 path②形状，取决于 C-3 探针结果，
-        本页保守假设当前为 path②（`deploymentTokenRef` 必填）。
+        **PRE-① C-3 已裁定（2026-07-22）**：session 级归因（path①）对两内核成立（详见
+        [[kernel-ecosystem-facts]] 新增「PRE-① 源码级核验」节）。本端点返回 path①还是 path②形状取决于
+        部署运行的具体内核/patch 落地状态——hermes 部署可直接返回 path①形状（`deploymentTokenRef` 可省略）；
+        openclaw 部署在 per-session 凭证 patch 落地前仍返回 path②形状（`deploymentTokenRef` 必填）。
       responses:
         "200":
           description: OK
@@ -546,10 +559,11 @@ paths:
         client-local kernel adapter 拿到后负责执行注入链步骤④（把 key 写入内核 LLM 出口配置，
         这一步发生在 client 本地，D3 不介入，见 D6 §2/§3.1 步骤④）。
 
-        **仅 path①（`billingAttribution:'session'`）下会被调用**——path②（aggregate，当前保守默认）
-        按 [[d6-newapi-integration]] §2.2 应**跳过**本端点（铸造对归因没有收益，却会消耗
-        newapi 侧"每用户 token 数量上限"）。**待 PRE-① C-3 结果裁定**：本端点组在 C-3 验证通过、
-        部署切换到 path①之前，预期不会被 client 实际调用。
+        **仅 path①（`billingAttribution:'session'`）下会被调用**——path②（aggregate，openclaw 侧
+        per-session 凭证 patch 落地前的临时状态）按 [[d6-newapi-integration]] §2.2 应**跳过**本端点
+        （铸造对归因没有收益，却会消耗 newapi 侧"每用户 token 数量上限"）。**PRE-① C-3 已裁定
+        （2026-07-22）**：session 级归因（path①）对两内核成立——hermes 部署可直接调用本端点组；
+        openclaw 部署在 per-session 凭证 patch（已列实现任务）落地前，本端点组预期不会被 client 实际调用。
 
         x-todo（[[d6-newapi-integration]] §3.1 步骤②详注、§7 #11，**实现前阻断性冒烟确认项**）：
         newapi `POST /api/token/` 创建响应仅 `{success:true}`，**不含**新 token 的 `id`，而
@@ -611,8 +625,8 @@ paths:
         x-todo：newapi `DELETE /api/token/:id` 对已不存在的 `:id` 如何响应（404 报错？200 幂等？）
         **未确认**（D6 §3.3），本端点的幂等保证需要 D3 自行在应用层兜底，不能假设 newapi 侧天然幂等。
 
-        **仅 path①下会被调用**；path②按 §2.2 跳过铸造，自然也无需回收。
-        **待 PRE-① C-3 结果裁定**（同 mint 端点）。
+        **仅 path①下会被调用**；path②（openclaw 侧 patch 落地前的临时状态）按 §2.2 跳过铸造，
+        自然也无需回收。**PRE-① C-3 已裁定**（同 mint 端点，2026-07-22，见上方）。
       parameters:
         - name: sessionId
           in: path
@@ -979,7 +993,8 @@ components:
           enum: [session, user_tenant_aggregate]
           description: |
             部署时静态声明，非运行时推断（D1 §4.1）。决定整个用量卡片走哪条呈现分支。
-            **待 PRE-① C-3 结果裁定**：当前保守假设为 `user_tenant_aggregate`。
+            **PRE-① C-3 已裁定（2026-07-22）**：session 级归因（path①）对两内核成立——hermes 部署
+            返回 `session`；openclaw 部署在 per-session 凭证 patch 落地前返回 `user_tenant_aggregate`。
         windowStart:
           type: string
           format: date-time

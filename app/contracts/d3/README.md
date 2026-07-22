@@ -44,18 +44,21 @@ path①/path② 两条归因分支，不拆成两个端点，见该端点 descri
   的明确表述。凡源文档未给出具体字段名/端点形状之处（例如 `usage_ledger` 的 Chat/Turn 关联键、
   newapi 渠道/模型管理的精确 REST 路径、License 的具体角色枚举等），本契约在对应 schema
   property/endpoint description 里用 `x-todo` 前缀内联标注，不写死不存在的字段名。
-- **path①/path② 与 C-3 的关系**：session-token 代理端点组（`POST`/`DELETE
+- **path①/path② 与 C-3 的关系（PRE-① 已裁定，2026-07-22）**：session-token 代理端点组（`POST`/`DELETE
   /sessions/{sessionId}/billing-token`）与 `GET /billing/usage`/`GET
   /tenant/current/newapi-endpoint-config` 的 `attribution`/`deploymentTokenRef` 具体取值，
   取决于 [[d1-kernelport-spec-v3-5]] §11 **C-3**（openclaw/hermes 是否支持 per-session 换模型
-  出口 key/baseUrl）的探针结果，这几处均在 description 里显式标注**"待 PRE-① C-3 结果裁定"**，
-  当前按 D5.4/D6 已确立的"保守假设处于 `user_tenant_aggregate` 降级分支"建模。
+  出口 key/baseUrl）——已由只读源码核验（`research/pre1-openclaw-source-conformance.md`/
+  `research/pre1-hermes-source-conformance.md`）裁定：session 级归因（path①）对两内核成立，
+  hermes 原生零改动，openclaw 需一次中等量级 patch（已列实现任务）。这几处 description 已从
+  **"待 PRE-① C-3 结果裁定"**更新为**"path①为默认目标，实际 `attribution` 取值随部署运行的内核/
+  patch 落地状态而定"**，不再假设默认处于聚合降级分支。
 
 ## TODO / 待裁决清单（按出现位置摘录，非穷尽——完整标注见 `openapi.yaml` 内 `x-todo`/description）
 
 | # | 缺口 | 影响端点 | 来源 |
 |---|---|---|---|
-| 1 | **待 PRE-① C-3 结果裁定**：per-session 换 key 是否可行，决定 session-token 代理端点组是否实际被调用、`attribution` 实际取值 | `POST/DELETE /sessions/{sessionId}/billing-token`、`GET /billing/usage`、`GET /tenant/current/newapi-endpoint-config` | d1 §11 C-3、d6 §2.2/§5.2 |
+| 1 | **PRE-① C-3 已裁定（2026-07-22）**：per-session 换 key 可行——session 级归因（path①）对两内核成立（hermes 原生零改动；openclaw 需中等量级 patch，已列实现任务）。session-token 代理端点组按 path①为默认目标建模；实际生效的 `attribution` 取值由部署运行的内核/patch 落地状态决定 | `POST/DELETE /sessions/{sessionId}/billing-token`、`GET /billing/usage`、`GET /tenant/current/newapi-endpoint-config` | pre1-openclaw-source-conformance.md、pre1-hermes-source-conformance.md、kernel-ecosystem-facts.md「PRE-① 源码级核验」节、d6 §2.2 v3 收口、d5-4-cost-usage.md §2.3 |
 | 2 | newapi `POST /api/token/` 创建响应不含新 token 的 `id`，`GET/DELETE /api/token/:id` 所需 `id` 反查机制未闭合——**实现前阻断性冒烟确认项** | `POST /sessions/{sessionId}/billing-token`、`DELETE /admin/newapi-tokens/{tokenId}` | d6 §3.1 步骤②详注、§7 #11 |
 | 3 | License 离线/吊销/到期执行策略整体（是否设 `grace_period`、宽限范围、强制在线刷新时机）——**待产品+安全决策的开放项**，非仅参数未定 | `GET /license/current`（`status` 枚举含 `grace_period`，已在 schema 内标注为"本页提案，非 D3 confirmed"） | d5-6-account-license.md §4.2 v2.1 收尾 |
 | 4 | License key 直填路径是否单独构成身份，还是必须配合登录 | `POST /auth/license-key/redeem` | d5-6-account-license.md §3.1/§9（消解 T-023 F-07） |

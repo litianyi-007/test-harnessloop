@@ -1,6 +1,6 @@
 # Goal Breakdown
 
-> **状态标注**：本文件原为需求分析（Requirement Analysis）阶段进阶计划，替换此前基于旧业务身份（AgentOps 控制台）的 S1-S7 dev 分解草案。**RA-L3 七议程 D1-D7 已于 2026-07-22 全部 `done/confirmed` 定稿（见下方「RA-L3 议程」表各行），RA-L4 dev-readiness gate 综合评估（PR 设计 wiki `research/ra-l4-dev-readiness-assessment.md`）verdict 为 `READY（附前置计划）`，用户已据此确认 design→dev 转换（2026-07-22）。** 本文件新增「实现阶段（RA-L5 / IMPL）议程」段（见下方同名章节），注入 6 项前置（PRE-1..PRE-6）与首批 5 个开发子目标（SG-1..SG-5）。RA-L1 → RA-L4 需求分析各级历史记录保留不变，供审计追溯。
+> **状态标注**：本文件原为需求分析（Requirement Analysis）阶段进阶计划，替换此前基于旧业务身份（AgentOps 控制台）的 S1-S7 dev 分解草案。**RA-L3 七议程 D1-D7 已于 2026-07-22 全部 `done/confirmed` 定稿（见下方「RA-L3 议程」表各行），RA-L4 dev-readiness gate 综合评估（PR 设计 wiki `research/ra-l4-dev-readiness-assessment.md`）verdict 为 `READY（附前置计划）`，用户已据此确认 design→dev 转换（2026-07-22）。** 本文件新增「实现阶段（RA-L5 / IMPL）议程」段（见下方同名章节），注入 6 项前置（PRE-1..PRE-6）与首批 5 个开发子目标（SG-1..SG-5）。**2026-07-22 追加 PRE-① 源码核验**：C-3（PRE-2）已由只读源码核验裁定 path①对两内核成立（hermes 原生零改动/openclaw 需中等量级 patch），前置扩至 7 项（新增 PRE-7：hermes ACP session/load replay 可靠性）、首批开发子目标扩至 7 项（新增 SG-6：openclaw per-session 凭证 patch；SG-7：hermes per-session key 接线），详见「PRE-① 源码核验部分完成（2026-07-22）」小节。RA-L1 → RA-L4 需求分析各级历史记录保留不变，供审计追溯。
 
 ## Long-Term Goal
 
@@ -61,30 +61,44 @@
 >
 > **执行纪律（既定规则，非本次新增）**：实现类写代码（`code-impl`）绝不派第三方 vendor（codex/grok 仅用于对抗/验收评审与研究），一律由主会话的 claude-sonnet-5 子代理执行。app 代码统一落盘至主仓库 `app/` 目录，遵循 D4（`architecture/d4-cross-platform-arch.md`）已定稿的 monorepo 骨架（各端原生 client + 共享 D2 契约/codegen 产物/金标 parity fixtures）。
 
-### 6 项前置（PRE-1..PRE-6）
+### PRE-① 源码核验部分完成（2026-07-22）
+
+针对 6 项前置中跨设计影响面最广的 **PRE-2/CO-02（C-3）**，以及 T-009 spike 遗留的 openclaw/hermes steer 事实，本轮完成一次**只读源码核验**（非真实环境 live-probe）——对本地 checkout `kernels/openclaw`（HEAD `bb3f6c56cd92348fdcc36d1d0eb1e694b053c964`，origin 确认官方 `openclaw/openclaw`）与 `kernels/hermes`（HEAD `17155e3a`）做定向源码深挖，产出 PR 设计 wiki `research/pre1-openclaw-source-conformance.md`/`research/pre1-hermes-source-conformance.md`：
+
+- **C-3（per-session 换模型出口 key/baseUrl）已解**：session 级归因（path①）对两内核成立——hermes 原生零改动（`gateway/platforms/api_server.py` 的 `model_routes` 特性，若坚持走 `hermes acp` stdio 传输需一个 <50 行的小 patch）；openclaw 不原生，需一次中等量级 patch（详见下方新增 SG-6）。design/architecture wiki 已同步收口：`kernel/kernel-ecosystem-facts.md` 新增「PRE-① 源码级核验」节、`architecture/d6-newapi-integration.md` §2.2/§7 v3 收口（默认目标由 path②改为 path①）、`product/d5-4-cost-usage.md` §2.3/§6 更新、`app/contracts/d3/openapi.yaml`+README 三组"待 PRE-① C-3 裁定"端点已裁定为 session 级（语法校验 `python3 -m openapi_spec_validator` → OK）。
+- **openclaw/hermes steer 事实核验完成**：openclaw `sessions.steer`=abort+resend 经真源码逐行核对（T-009 七条断言 6 条属实/1 条部分，0 条推翻），无需回退。**hermes 有原生 soft steer `AIAgent.steer()`（横跨 CLI/Gateway/ACP 一等公民能力）**——推翻 [[d1-kernelport-spec-v3-5]] INV-5"hermes 无 steer、`interrupt(mode:'steer')` 必须 reject"的假设。**D1 待修正（flag，见下方⑥）**。
+- **剩纯 runtime 项，改列"待构建运行内核后探针"**：C-1（openclaw soft `chat.send`+`queueMode:"steer"` 精确 ack/结果信号语义——源码只证实路径存在，未逐行核对内部 `queued` 三态枚举细节）、**hermes ACP `session/load` 历史 replay 可靠性**（本轮新发现的 runtime 待验项，源码只证明"存在显式降级路径"，高延迟/大历史场景的真实退化边界只能靠真实大会话做一次 live probe，见 `research/pre1-hermes-source-conformance.md` §1.7 项 17，新增为 PRE-7）——均**不是源码核验能回答的问题**，改列"待 SG-4（Mac 最小壳打通 `createSession`/`subscribe`）交付、本项目自建运行内核就绪后现场探针"，而非此前笼统的"待用户安排环境"；C-4（openclaw hard abort error 信号，PRE-3）同样是纯 runtime 项，维持既有 blocked 状态不变，未受本轮核验影响。
+- **新增实现任务（SG-6/SG-7，见下方开发子目标表）**：SG-6 openclaw per-session 凭证 patch（中等量级）；SG-7 hermes per-session key 接线（<50 行或零改动 `model_routes` 路径）。
+- **Flag（D1 待修正，非本轮改动范围）**：hermes 原生支持 soft steer 一事，被源码证伪了 [[d1-kernelport-spec-v3-5]] INV-5"hermes 无 steer"的假设——**D1 需要一次新的局部修订**（**capability-expanding**，扩大能力声明而非收窄，按 D1 既有"能力协商模型天然支持的正常扩展"规则走，不需要重新走完整双轨对抗评审），把 `capabilities().interruptModes` 对 hermes 放宽为包含 `'steer'`、`interrupt(mode:'steer')` 不再对 hermes 恒 reject，映射为"向 ACP 发一条 `/steer <text>` 的 `prompt()` 调用（仅 `state.is_running` 时才是真软注入，空闲时按降级而非拒绝分类）"。**本轮明确不改 D1 spec 正文**——由主会话另行处理，作为独立设计任务；**flag 落点**：`research/pre1-hermes-source-conformance.md` §1.3、`kernel/kernel-ecosystem-facts.md`「PRE-① 源码级核验」节事实②、`architecture/d6-newapi-integration.md` §8 D1 依赖行。
+- **C-3→D3 风险点已解**：RA-L4 评估识别的唯一"延迟同步即返工"风险点（若 C-3 结果为"不支持"须收窄 D3 session-token-proxy 端点范围）**已解除**——PRE-① 裁定为"两内核均支持（path①），非'不支持'"，D3 契约（`app/contracts/d3/openapi.yaml`）维持原有 session-token-proxy 端点范围不收窄，仅更新 description/schema 移除"待裁定"措辞、明确 session 级归因。
+
+### 7 项前置（PRE-1..PRE-7）
 
 | ID | 内容 | 来源 CO | 是否需要真实环境 | 状态 |
 | --- | --- | --- | --- | --- |
-| **PRE-1** | 内核 conformance 探针：openclaw soft `chat.send`+`queueMode:"steer"` 精确 ack/结果信号语义（C-1）——比对"预期成功注入/预期拒收/预期静默 fallback"三种场景响应体差异 | CO-01 | 是（需真实 openclaw gateway 实例） | **blocked-待环境**（待用户安排 openclaw/hermes 真实环境） |
-| **PRE-2** | 内核 conformance 探针：openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl（C-3）——决定 `billingAttribution` 能否取 `'session'`，跨设计影响面最广（同时牵动 D1 计费链语义、D6 实现路径、D5.4/D5.6 UI 粒度、D3 契约范围） | CO-02 | 是（需真实 openclaw/hermes + newapi 部署） | **blocked-待环境**（待用户安排真实环境；结果需**立即同步**给 PRE-6/SG-2，见下方风险点） |
-| **PRE-3** | 内核 conformance 探针：openclaw `sessions.steer` abort 成功但 `chat.send` 失败时，error 响应是否透出 `interruptedActiveRun`（C-4） | CO-03 | 是（需真实 openclaw gateway 实例） | **blocked-待环境**（待用户安排真实环境；与 PRE-1/PRE-2 同批次可一次性跑完） |
-| **PRE-4** | newapi token-id 取法冒烟确认（`POST /api/token/` 创建响应是否可反查 `:id`）+ 渠道/模型管理精确 REST 路径核实——直接阻断 D6 §3 注入链步骤③/⑥字面可执行性 | CO-08 | 是（需真实 newapi 部署） | **blocked-待环境**（待用户安排真实 newapi 环境；与 PRE-1~3 同批次可一次性跑完） |
+| **PRE-1** | 内核 conformance 探针：openclaw soft `chat.send`+`queueMode:"steer"` 精确 ack/结果信号语义（C-1）——比对"预期成功注入/预期拒收/预期静默 fallback"三种场景响应体差异 | CO-01 | 是（需真实 openclaw gateway 实例） | **blocked-待构建运行内核后探针**（原"待用户安排真实环境"细化：待 SG-4 Mac 最小壳+真实 openclaw gateway 打通后，用本项目自建的运行内核实测；PRE-① 源码核验范围不含此项——C-1 是纯 runtime 行为项，源码无法回答，见 `pre1-openclaw-source-conformance.md` §1.3 F5"未重新核验"标注） |
+| **PRE-2** | 内核 conformance 探针：openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl（C-3）——决定 `billingAttribution` 能否取 `'session'`，跨设计影响面最广（同时牵动 D1 计费链语义、D6 实现路径、D5.4/D5.6 UI 粒度、D3 契约范围） | CO-02 | **否（已由 PRE-① 只读源码核验替代，2026-07-22）** | **done（PRE-① 源码核验裁定 path①对两内核成立，见 `kernel/kernel-ecosystem-facts.md` §7、`research/pre1-openclaw-source-conformance.md`/`research/pre1-hermes-source-conformance.md`）**——原定的真实环境 live-probe 验证方法已被源码级核验取代并给出确定结论；已同步给 SG-2（D3 契约，维持范围不收窄，见 §7 #13 条件化更新）；openclaw 侧需落地 SG-6（per-session 凭证 patch）后才能实际启用 path①，hermes 侧 SG-7 完成后即可启用（或走零改动的 `api_server`/`model_routes` 路径） |
+| **PRE-3** | 内核 conformance 探针：openclaw `sessions.steer` abort 成功但 `chat.send` 失败时，error 响应是否透出 `interruptedActiveRun`（C-4） | CO-03 | 是（需真实 openclaw gateway 实例） | **blocked-待构建运行内核后探针**（同 PRE-1，待 SG-4 打通后用自建运行内核实测；PRE-① 源码核验范围不含此项，C-4 仍是纯 runtime 信号观测项，未受本轮核验影响） |
+| **PRE-4** | newapi token-id 取法冒烟确认（`POST /api/token/` 创建响应是否可反查 `:id`）+ 渠道/模型管理精确 REST 路径核实——直接阻断 D6 §3 注入链步骤③/⑥字面可执行性 | CO-08 | 是（需真实 newapi 部署） | **blocked-待环境**（待用户安排真实 newapi 环境；与 PRE-1~3 同批次可一次性跑完，未受本轮核验影响） |
 | **PRE-5** | D2 v3 机器可读 schema 转录（JSON Schema 2020-12，按 D4 §3.5"递归闭包"规则）+ codegen 管线打通——D4 codegen（Swift/C#/TS 三端类型生成）的唯一权威输入源 | CO-06 | 否 | **in-progress（本轮启动）** |
-| **PRE-6** | D3 OpenAPI 契约草案（license/tenant/seat/feature-flags/usage_ledger + D6 新增两项：session-token 代理 API、模型目录 API）——阻断 D5.4/D5.6/D6-session-token-proxy 三个功能面（不阻断 D4 §6 主路径步骤 1-5） | CO-07（含 CO-21 usage_ledger 关联键） | 否 | **in-progress（本轮启动）**；session-token-proxy 端点细节待 PRE-2 结果确认，主体（license/tenant/seat/feature-flags）不受阻 |
+| **PRE-6** | D3 OpenAPI 契约草案（license/tenant/seat/feature-flags/usage_ledger + D6 新增两项：session-token 代理 API、模型目录 API）——阻断 D5.4/D5.6/D6-session-token-proxy 三个功能面（不阻断 D4 §6 主路径步骤 1-5） | CO-07（含 CO-21 usage_ledger 关联键） | 否 | **in-progress（本轮启动）**；session-token-proxy 端点范围已按 PRE-2/PRE-① 结果确认不收窄，description/schema 已同步更新为 path①默认目标（见 `app/contracts/d3/openapi.yaml`+README） |
+| **PRE-7**（新增，2026-07-22） | hermes ACP `session/load` 历史 replay 可靠性——高延迟/大历史场景下 `_replay_session_history` 异常吞噬边界的纯 runtime 行为项，源码只证明"存在显式降级路径"，需构建运行内核后做 live probe 才能确定退化边界 | 新发现，非既有 CO 编号 | 是（需真实 hermes ACP 运行时+大历史会话场景） | **blocked-待构建运行内核后探针**（待 SG-4/SG-7 打通 hermes 运行内核后现场验证，见 `research/pre1-hermes-source-conformance.md` §1.7 项 17） |
 
-**PRE-1~PRE-4 说明**：四项探针成本低（同一台本机 openclaw 实例 + 同一套 newapi 部署即可同批跑完，几小时到 1-2 天），互不依赖，可并行执行；均已有安全降级路径（C-1/C-4 已按保守二态/`aborted_effect_unknown` 设计好安全下界，验证结果只决定未来是否拓宽，不影响当前契约），故不阻塞 PRE-5/PRE-6 启动。**唯一风险点**：若 PRE-2（C-3）探针结果为"不支持 per-session 换 key"，须立即同步给 PRE-6（D3 契约起草）与 SG-2 执行方，收窄 session-token-proxy 端点范围，避免过度设计返工——这是 RA-L4 评估识别的唯一一处"延迟同步即返工"的具体风险。
+**PRE-1/PRE-3/PRE-7 说明**：三项探针成本低，均已有安全降级路径（C-1/C-4 已按保守二态/`aborted_effect_unknown` 设计好安全下界，验证结果只决定未来是否拓宽，不影响当前契约），不阻塞 PRE-5/PRE-6/SG-2 启动，改列**待 SG-4（及 PRE-7 额外待 SG-7）构建运行内核后探针**，而非此前笼统的"待用户安排环境"。**PRE-2（C-3）风险点已解除（2026-07-22）**：PRE-① 只读源码核验裁定 path①对两内核成立，不是此前担心的"不支持"结局——已同步给 PRE-6/SG-2（D3 契约维持 session-token-proxy 端点组范围，不收窄）；新增 SG-6/SG-7 承接 openclaw/hermes 两侧的 patch 落地工作。PRE-4 仍待真实 newapi 环境（未受本轮影响）。
 
-### 首批 5 个开发子目标（SG-1..SG-5）
+### 首批开发子目标（SG-1..SG-7，2026-07-22 由 5 项扩至 7 项，新增 SG-6/SG-7 承接 PRE-① C-3 patch 落地）
 
 | ID | 子目标 | 依赖 | 预期证据/验收 | 状态 |
 | --- | --- | --- | --- | --- |
 | **SG-1** | `contracts/d2` 机器可读 schema + 金标 parity fixtures 骨架落地 | PRE-5（直接产出）；PRE-1/PRE-2/PRE-3 结果可选补充 fixture 场景（不阻塞骨架搭建） | D2 v3 §2-§7 判别联合递归闭包内全部具名类型已转录为 JSON Schema（2020-12）并通过 schema 自检；`parity/fixtures/` 按 D4 §4.3 action/timeline DSL 骨架建立，至少覆盖审批五态 FSM、`OperationOutcome` 全集、`SessionLockState` 四态三组 fixture | pending（待 PRE-5 产出） |
-| **SG-2** | D3 OpenAPI 契约草案 + NestJS 模块骨架（**并行轨**，可与 SG-1 并行） | PRE-6（本子目标即该前置项的执行）；session-token-proxy 端点范围待 PRE-2 结果确认 | `server-stack-selection.md` 六项能力对应 OpenAPI 3.x 文档产出；NestJS `AuthModule`/`TenantModule`/`LicenseModule` 骨架编译通过并挂载路由（暂不要求业务逻辑完整） | pending（待 PRE-6 产出） |
+| **SG-2** | D3 OpenAPI 契约草案 + NestJS 模块骨架（**并行轨**，可与 SG-1 并行） | PRE-6（本子目标即该前置项的执行）；session-token-proxy 端点范围已由 PRE-2/PRE-① 结果确认（path①对两内核成立，不收窄） | `server-stack-selection.md` 六项能力对应 OpenAPI 3.x 文档产出；NestJS `AuthModule`/`TenantModule`/`LicenseModule` 骨架编译通过并挂载路由（暂不要求业务逻辑完整） | pending（待 PRE-6 产出） |
 | **SG-3** | codegen 管线打通：从 D2 JSON Schema 生成 Swift/C#/TS 三端类型 | SG-1 | 三端生成类型分别在各自工具链下编译通过；`EmptyPayload`/`WireCapabilityDescriptorPayload` 精确空对象/排除字段类型在生成产物中保真；CI 新增 codegen 冒烟步骤 | pending |
 | **SG-4** | kernel-client 双端骨架（Swift `KernelClient` 协议手写 + C# `IKernelClient` 接口手写，均引用 SG-3 生成 DTO）+ Mac 最小壳打通 `createSession`/`subscribe` | SG-3；PRE-1/PRE-2/PRE-3 结果用于敲定 `interrupt`/`OperationOutcome` 具体处理逻辑（未完成可先按 D1 已定稿保守降级路径实现） | Mac 最小壳对着手动启动的本地 openclaw gateway 实例完成一次完整 `createSession → send → subscribe 收到 KernelEvent 流 → stop` 闭环；通过 SG-1 fixture 中"审批五态"与"`SessionLockState`"两组金标 parity 测试 | pending |
 | **SG-5** | Windows C# kernel-client parity 追赶 + 金标 parity 回归 | SG-4（复用其 fixture 集合） | Windows C# 客户端复用与 Mac 完全相同的金标 fixture 集合，两端在全部已落地 fixture 上产生逐字段一致的可观察状态 | pending |
+| **SG-6**（新增，2026-07-22，承接 PRE-① C-3） | **openclaw per-session 凭证 patch**（submodule `kernels/openclaw` 作为 fork 追踪上游变更，中等量级）——①扩展 gateway RPC schema（`sessions.create`/`sessions.patch` 新增可写凭证/`authProfileOverride` 字段）；②在 handler 里接住新字段写入 `SessionEntry`；③新增受控的运行时 profile 铸造入口（安全评审焦点：谁可调用、apiKey 是否回显/落盘明文、profile 数量上限、过期回收策略，触及 openclaw `AGENTS.md` 的"Secrets/Config surface bar is high"红线）；④`ProviderPrepareRuntimeAuthContext` 加 `sessionId`/`sessionKey` 字段（公开 Plugin SDK 契约变更，按其既定"新增字段+兼容期"规则，不能直接改签名）；⑤新设计 scope（类比 `operator.admin`） | PRE-2/PRE-①（C-3 源码核验已给出具体改动清单，见 `research/pre1-openclaw-source-conformance.md` §2.4） | 上述改动落地并通过 openclaw 自身单测；新建 session 可携带 per-session 凭证并在真实模型调用里生效（`billingAttribution:'session'` 端到端验证，可与 PRE-2 补充 live-probe 一并完成）；Plugin SDK 新增字段走兼容期公告，不破坏既有调用方 | pending（新增） |
+| **SG-7**（新增，2026-07-22，承接 PRE-① C-3） | **hermes per-session key 接线**——二选一：(a) 采用 `gateway/platforms/api_server.py` 的 `model_routes` 特性，**零内核代码改动**，仅需部署配置为不同 session 池预注册若干 alias（每 alias 携带独立 `api_key`/`base_url`）；(b) 若坚持用 `hermes acp` stdio 传输，需一个 **<50 行小 patch**——接线 `acp_adapter/session.py::_make_agent` 与 `acp_adapter/server.py::set_config_option`，把已存在的 `resolve_runtime_provider(explicit_api_key=,explicit_base_url=)` 参数回填，不改 ACP 协议 schema | PRE-2/PRE-①（C-3 源码核验已定位改动点，见 `research/pre1-hermes-source-conformance.md` §2.3-2.5） | 二选一路径任一端到端验证通过：`api_server`/`model_routes` 部署配置生效（无需代码变更评审），或 ACP 小 patch 落地后 per-session 凭证在真实模型调用里生效 | pending（新增） |
 
-**未纳入首批的说明**：D5 产品 UI 细节、D6 计费注入链完整实现、D7 打包分发均明确不在首批 5 个子目标内——分别依赖 SG-4 跑通后的 kernel-client 能力、PRE-2/PRE-4 探针结果确认后的 D6 具体路径、以及 D7 结转项（CO-25/26/27）收敛后的打包机制，属于第二批开发子目标范围。
+**未纳入首批的说明**：D5 产品 UI 细节、D6 计费注入链完整实现（含 SG-6/SG-7 之外的成本展示/归因查询等剩余部分）、D7 打包分发均明确不在首批开发子目标内——分别依赖 SG-4 跑通后的 kernel-client 能力、SG-6/SG-7 落地后的 D6 完整路径、以及 D7 结转项（CO-25/26/27）收敛后的打包机制，属于第二批开发子目标范围。
 
 ## Discovery Handoffs
 
@@ -101,7 +115,7 @@
 | RA-L3 | 关键设计决策与技术选型：细化为 7 项决策议程 D1-D7（内核抽象接口 / 消息 schema / Server 选型 / Mac→Windows 跟随开发 / 仿 codex app 产品规格 / newapi 集成方式 / 本地内核分发打包，见上「RA-L3 议程」表） | RA-L2（已确认，2026-07-18） | 调研文档（含 hopper research 产物，D3 已授权首战）+ 设计决策记录 | 对抗性设计评审 + 用户确认技术选型 | D3 server 调研为 hopper research 首次实战，产物质量未知；D1/D6/D7 依赖 openclaw/hermas/newapi/codex-app-sdk/claude-code-sdk 真实资料，待用户提供或 hopper 调研，调研完成前禁止臆造能力（见 data-contract.md） |
 | RA-L4 | 需求规格成型：汇总 RA-L1–L3 产出为 dev-ready 规格文档 | RA-L3（用户确认后） | dev-ready 规格文档 | 用户签署 dev-readiness gate | 规格可能存在遗漏或内部不一致，签署前需自洽性检查（见 thresholds.md） |
 
-**dev 分解（原型/编码/集成/收口）**：已于 2026-07-22 依 RA-L4 dev-readiness gate `READY` verdict 注入——见上方「实现阶段（RA-L5 / IMPL）议程」章节，含 6 项前置（PRE-1..PRE-6）与首批 5 个开发子目标（SG-1..SG-5）。
+**dev 分解（原型/编码/集成/收口）**：已于 2026-07-22 依 RA-L4 dev-readiness gate `READY` verdict 注入——见上方「实现阶段（RA-L5 / IMPL）议程」章节，含 7 项前置（PRE-1..PRE-7，同日追加 PRE-7）与首批 7 个开发子目标（SG-1..SG-7，同日追加 SG-6/SG-7，承接 PRE-① C-3 源码核验裁定 path①后的 openclaw/hermes patch 落地工作）。
 
 ## Tasks
 
