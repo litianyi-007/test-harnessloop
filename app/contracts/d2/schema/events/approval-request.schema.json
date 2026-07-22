@@ -23,15 +23,20 @@
       "additionalProperties": false
     },
     "ApprovalRequestEventMessage": {
-      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/eventEnvelopeBase" }],
+      "description": "SG-1 深化：直接内联 sentAt/direction/seq/sessionId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。runId 在本事件类型上必填（D2 v3 §4 表格），与其余 9 个 runId 可选的事件类型不同。",
       "type": "object",
       "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "event" },
+        "seq": { "type": "integer" },
+        "sessionId": { "type": "string" },
+        "ts": { "$ref": "../common/envelope.schema.json#/$defs/ts" },
         "type": { "const": "evt.approval_request" },
         "runId": { "type": "string" },
         "payload": { "$ref": "#/$defs/ApprovalRequestPayload" }
       },
-      "required": ["type", "runId", "payload"],
-      "unevaluatedProperties": false
+      "required": ["sentAt", "direction", "seq", "sessionId", "ts", "type", "runId", "payload"],
+      "additionalProperties": false
     }
   }
 }

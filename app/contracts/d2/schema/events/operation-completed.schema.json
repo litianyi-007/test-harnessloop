@@ -18,14 +18,20 @@
       "additionalProperties": false
     },
     "OperationCompletedEventMessage": {
-      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/eventEnvelopeBase" }],
+      "description": "SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。",
       "type": "object",
       "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "event" },
+        "seq": { "type": "integer" },
+        "sessionId": { "type": "string" },
+        "runId": { "type": "string" },
+        "ts": { "$ref": "../common/envelope.schema.json#/$defs/ts" },
         "type": { "const": "evt.operation_completed" },
         "payload": { "$ref": "#/$defs/OperationCompletedPayload" }
       },
-      "required": ["type", "payload"],
-      "unevaluatedProperties": false
+      "required": ["sentAt", "direction", "seq", "sessionId", "ts", "type", "payload"],
+      "additionalProperties": false
     }
   }
 }

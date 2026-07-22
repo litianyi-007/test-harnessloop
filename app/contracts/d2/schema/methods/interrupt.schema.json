@@ -81,16 +81,18 @@
       "additionalProperties": false
     },
     "InterruptRequestMessage": {
-      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/requestEnvelopeBase" }],
+      "description": "SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
       "type": "object",
       "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "request" },
         "type": { "const": "req.interrupt" },
         "id": { "type": "string" },
         "sessionId": { "type": "string" },
         "payload": { "$ref": "#/$defs/InterruptRequestPayload" }
       },
-      "required": ["type", "id", "sessionId", "payload"],
-      "unevaluatedProperties": false
+      "required": ["sentAt", "direction", "type", "id", "sessionId", "payload"],
+      "additionalProperties": false
     },
     "InterruptResponseMessage": {
       "description": "失败（同步/立即拒绝，operationId 从未铸造）：RejectionFailure | ProtocolFailure，可命中 session_not_found/session_already_stopped/unsupported_interrupt_mode/no_active_run_for_steer/session_locked。interrupt 的 outcome 七态本身不算失败（走 result 通道），仅同步前置拒绝才走 failure 通道（D2 v3 §3）。两个分支各自直接内联 sentAt/direction，不用 allOf——规避 json-schema-to-typescript 对『oneOf 分支内嵌 allOf』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",

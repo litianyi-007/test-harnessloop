@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "events/turn-complete.schema.json",
+  "title": "evt.turn_complete (TurnCompleteEvent)",
+  "$comment": "D2 v3 §4 #7，payload 字段来源 D1 v3/v3.1（degraded.kind 改名的正式来源是 D1 v3.1，见 D2 v3 交叉引用）。envelope runId 在本事件类型上从 EventEnvelope 默认可选被收紧为必填（D2 v3 §4 表格），本 schema 顶层 required 额外列出 runId（同 evt.approval_request 的处理方式，见 events/approval-request.schema.json）。forceResolvedApprovals 语义严格限定于『因本次 stop/cancel 被强制终态化（FORCE_DENIED_ON_STOP）』的 reqId 列表，不含缓冲期终态化（那走 evt.approval_buffer_resolved，见 events/approval-buffer-resolved.schema.json）。usage 为尽力字段，非计费权威来源（权威来源见 methods/query-billing.schema.json）。",
+  "$defs": {
+    "TurnCompletePayload": {
+      "type": "object",
+      "properties": {
+        "stopReason": { "type": "string", "enum": ["completed", "cancelled", "error", "max_turns"] },
+        "degraded": {
+          "type": "object",
+          "description": "openclaw 走原生 sessions.steer 完成 mode:'abort_and_resend' 时同样产出本标注（该 RPC 本质也是 abort+resend）；mode:'steer'（soft，仅 openclaw）不产生 degraded——它是真正的同 run 注入，没有『这次转向丢弃了未产出内容』需要告知。",
+          "properties": { "kind": { "const": "abort_and_resend" } },
+          "required": ["kind"],
+          "additionalProperties": false
+        },
+        "forceResolvedApprovals": { "type": "array", "items": { "type": "string" } },
+        "usage": {
+          "type": "object",
+          "properties": {
+            "inputTokens": { "type": "integer" },
+            "outputTokens": { "type": "integer" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["stopReason"],
+      "additionalProperties": false
+    },
+    "TurnCompleteEventMessage": {
+      "description": "SG-1 深化：直接内联 sentAt/direction/seq/sessionId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。runId 在本事件类型上必填（D2 v3 §4 表格），与其余 9 个 runId 可选的事件类型不同。",
+      "type": "object",
+      "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "event" },
+        "seq": { "type": "integer" },
+        "sessionId": { "type": "string" },
+        "ts": { "$ref": "../common/envelope.schema.json#/$defs/ts" },
+        "type": { "const": "evt.turn_complete" },
+        "runId": { "type": "string" },
+        "payload": { "$ref": "#/$defs/TurnCompletePayload" }
+      },
+      "required": ["sentAt", "direction", "seq", "sessionId", "ts", "type", "runId", "payload"],
+      "additionalProperties": false
+    }
+  }
+}

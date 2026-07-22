@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "methods/query-billing.schema.json",
+  "title": "req.queryBilling / res.queryBilling（\"+1\"，D1 明确其不是 KernelPort 第 8 个方法）",
+  "$comment": "D2 v3 §3.8（同 v1，未受本次修订影响）。失败类型是 queryBilling 专属的 BillingQueryFailure（common/errors.schema.json#/$defs/BillingQueryFailure），不使用 RejectionFailure——D1 v3.4 §9.1 明确把 billing_query_subject_unresolved 移出 KernelPortRejectionCode（该失败不满足『同步/立即拒绝』语义，见 D2 v3 §3.8 全段论证）。sessionId 必填（D2 v3 §3.9）。",
+  "$defs": {
+    "QueryBillingRequestPayload": {
+      "type": "object",
+      "properties": {
+        "window": {
+          "type": "object",
+          "properties": {
+            "from": { "type": "string", "format": "date-time" },
+            "to": { "type": "string", "format": "date-time" }
+          },
+          "required": ["from", "to"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "QueryBillingResultPayload": {
+      "type": "object",
+      "description": "逐字段对应 D1 SessionBillingSnapshot（D1 §7）。correlatable 恒为字面量 false——D1 未来若确认可关联，须走版本升级，本 schema 不预先改变这个字面量类型。",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "tokenRef": { "type": "string" },
+        "attribution": { "type": "string", "enum": ["session", "user_tenant_aggregate"] },
+        "windowStart": { "type": "string", "format": "date-time" },
+        "windowEnd": { "type": "string", "format": "date-time" },
+        "requestCount": { "type": "number" },
+        "totalQuota": { "type": "number" },
+        "rpm": { "type": "number" },
+        "tpm": { "type": "number" },
+        "fetchedAt": { "type": "string", "format": "date-time" },
+        "correlatable": { "const": false }
+      },
+      "required": [
+        "sessionId", "tokenRef", "attribution", "windowStart", "windowEnd",
+        "requestCount", "totalQuota", "rpm", "tpm", "fetchedAt", "correlatable"
+      ],
+      "additionalProperties": false
+    },
+    "QueryBillingRequestMessage": {
+      "description": "SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
+      "type": "object",
+      "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "request" },
+        "type": { "const": "req.queryBilling" },
+        "id": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "payload": { "$ref": "#/$defs/QueryBillingRequestPayload" }
+      },
+      "required": ["sentAt", "direction", "type", "id", "sessionId", "payload"],
+      "additionalProperties": false
+    },
+    "QueryBillingResponseMessage": {
+      "description": "success/failure 互斥判别联合。失败：BillingQueryFailure | ProtocolFailure——不与 RejectionFailure/KernelPortRejectionCode 共享枚举空间（D2 v3 §3.8/§6）。两个分支各自直接内联 sentAt/direction，不用 allOf——规避 json-schema-to-typescript 已知缺陷（见 create-session.schema.json 同处注释）。",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.queryBilling" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "result": { "$ref": "#/$defs/QueryBillingResultPayload" }
+          },
+          "required": ["sentAt", "direction", "type", "id", "result"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.queryBilling" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "failure": {
+              "oneOf": [
+                { "$ref": "../common/errors.schema.json#/$defs/BillingQueryFailure" },
+                { "$ref": "../common/errors.schema.json#/$defs/ProtocolFailure" }
+              ]
+            }
+          },
+          "required": ["sentAt", "direction", "type", "id", "failure"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

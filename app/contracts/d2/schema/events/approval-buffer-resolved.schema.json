@@ -1,21 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "events/tool-call.schema.json",
-  "title": "evt.tool_call (ToolCallEvent)",
-  "$comment": "D2 v3 §4 #3，payload 字段来源 D1 v3 正文。input 是内核原生工具调用参数，D1/D2 均未进一步收紧结构，忠实用 JSON Schema 'true'（任意 JSON 值）表达 TS 的 `unknown`。",
+  "$id": "events/approval-buffer-resolved.schema.json",
+  "title": "evt.approval_buffer_resolved (ApprovalBufferResolvedEvent)",
+  "$comment": "D2 v3 §4 #11，payload 字段来源 D1 v3 正文。仅覆盖『仍在缓冲队列（从未提升为 active pending）的请求被内核判定超时/队列溢出』的终态化——不计入 evt.turn_complete.forceResolvedApprovals（那是『已提升为 active pending 后因 stop/cancel 被强制终态化』的独立通道，见 events/turn-complete.schema.json）。runId 沿用 EventEnvelope 默认可选。",
   "$defs": {
-    "ToolCallPayload": {
+    "ApprovalBufferResolvedPayload": {
       "type": "object",
       "properties": {
-        "toolCallId": { "type": "string" },
-        "name": { "type": "string" },
-        "input": true,
-        "status": { "const": "started" }
+        "reqId": { "type": "string" },
+        "reason": { "type": "string", "enum": ["buffered_timeout", "queue_overflow"] }
       },
-      "required": ["toolCallId", "name", "input", "status"],
+      "required": ["reqId", "reason"],
       "additionalProperties": false
     },
-    "ToolCallEventMessage": {
+    "ApprovalBufferResolvedEventMessage": {
       "description": "SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。",
       "type": "object",
       "properties": {
@@ -25,8 +23,8 @@
         "sessionId": { "type": "string" },
         "runId": { "type": "string" },
         "ts": { "$ref": "../common/envelope.schema.json#/$defs/ts" },
-        "type": { "const": "evt.tool_call" },
-        "payload": { "$ref": "#/$defs/ToolCallPayload" }
+        "type": { "const": "evt.approval_buffer_resolved" },
+        "payload": { "$ref": "#/$defs/ApprovalBufferResolvedPayload" }
       },
       "required": ["sentAt", "direction", "seq", "sessionId", "ts", "type", "payload"],
       "additionalProperties": false

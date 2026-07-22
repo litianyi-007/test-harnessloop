@@ -1,0 +1,23 @@
+<!-- 最小判别测试（C# 端）——不属于 codegen 产物，是验证脚手架（typecheck + 运行验证共用同一个
+     项目）。编译/运行入口见 ../../scripts/typecheck-csharp.mjs、../../scripts/verify-csharp.mjs
+     （二者都只是 `dotnet build`/`dotnet run` 的薄封装，方便 npm run typecheck:csharp /
+     verify:csharp 调用）。项目引用 app/generated/csharp/*.cs（quicktype 生成的叶子 DTO +
+     手写判别联合包装），不拷贝、不复制，直接编译生成产物本身，确保验证的就是真实产物。 -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS8618;CS8601;CS8602;CS8603;CS8625</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../../../generated/csharp/D2.cs" />
+    <Compile Include="../../../../../generated/csharp/DiscriminatedUnions.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+
+</Project>

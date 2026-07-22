@@ -7,37 +7,24 @@
  */
 
 /**
- * 部分覆盖（3/8），见本文件顶层 $comment TODO 清单。
+ * 全覆盖（8/8）：createSession（§3.1）、send（§3.2）、subscribe（§3.3）、interrupt（§3.4）、stop（§3.5）、respondApproval（§3.6）、capabilities（§3.7）、queryBilling（§3.8，"+1"）。
  *
- * This interface was referenced by `MessageRequestMessageResponseMessageEventMessageTODO`'s JSON-Schema
+ * This interface was referenced by `MessageRequestMessageResponseMessageEventMessageSG1`'s JSON-Schema
  * via the `definition` "RequestMessage".
  */
-export type RequestMessage = CreateSessionRequestMessage | InterruptRequestMessage | RespondApprovalRequestMessage;
-export type CreateSessionRequestMessage = RequestEnvelopeBase & {
-  type: 'req.createSession';
-  id: string;
-  /**
-   * 不适用——createSession 尚无 session 可寻址，见上方说明。
-   */
-  sessionId?: string;
-  payload: CreateSessionRequestPayload;
-};
-export type InterruptRequestMessage = RequestEnvelopeBase & {
-  type: 'req.interrupt';
-  id: string;
-  sessionId: string;
-  payload: InterruptRequestPayload;
-};
-export type RespondApprovalRequestMessage = RequestEnvelopeBase & {
-  type: 'req.respondApproval';
-  id: string;
-  sessionId: string;
-  payload: RespondApprovalRequestPayload;
-};
+export type RequestMessage =
+  | CreateSessionRequestMessage
+  | SendRequestMessage
+  | SubscribeRequestMessage
+  | InterruptRequestMessage
+  | StopRequestMessage
+  | RespondApprovalRequestMessage
+  | CapabilitiesRequestMessage
+  | QueryBillingRequestMessage;
 /**
- * 部分覆盖（3/8，另缺 res.unknown），见本文件顶层 $comment TODO 清单。
+ * 全覆盖（8/8 + res.unknown）：8 个具体方法 response + UnknownResponseMessage（§3.9，唯一 id 可选的 response 类型，failure 恒为 ProtocolFailure）。
  *
- * This interface was referenced by `MessageRequestMessageResponseMessageEventMessageTODO`'s JSON-Schema
+ * This interface was referenced by `MessageRequestMessageResponseMessageEventMessageSG1`'s JSON-Schema
  * via the `definition` "ResponseMessage".
  */
 export type ResponseMessage =
@@ -60,6 +47,54 @@ export type ResponseMessage =
           sentAt: string;
           direction: 'response';
           type: 'res.createSession';
+          id: string;
+          sessionId?: string;
+          failure: RejectionFailure | ProtocolFailure;
+        }
+    )
+  | (
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
+          type: 'res.send';
+          id: string;
+          sessionId?: string;
+          result: SendResultPayload;
+        }
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
+          type: 'res.send';
+          id: string;
+          sessionId?: string;
+          failure: RejectionFailure | ProtocolFailure;
+        }
+    )
+  | (
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
+          type: 'res.subscribe';
+          id: string;
+          sessionId?: string;
+          result: EmptyPayload;
+        }
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
+          type: 'res.subscribe';
           id: string;
           sessionId?: string;
           failure: RejectionFailure | ProtocolFailure;
@@ -96,6 +131,30 @@ export type ResponseMessage =
            */
           sentAt: string;
           direction: 'response';
+          type: 'res.stop';
+          id: string;
+          sessionId?: string;
+          result: StopResultPayload;
+        }
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
+          type: 'res.stop';
+          id: string;
+          sessionId?: string;
+          failure: RejectionFailure | ProtocolFailure;
+        }
+    )
+  | (
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
           type: 'res.respondApproval';
           id: string;
           sessionId?: string;
@@ -112,60 +171,101 @@ export type ResponseMessage =
           sessionId?: string;
           failure: RejectionFailure | ProtocolFailure;
         }
-    );
+    )
+  | (
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
+          type: 'res.capabilities';
+          id: string;
+          sessionId?: string;
+          result: CapabilityDescriptorPayload;
+        }
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
+          type: 'res.capabilities';
+          id: string;
+          sessionId?: string;
+          failure: RejectionFailure | ProtocolFailure;
+        }
+    )
+  | (
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
+          type: 'res.queryBilling';
+          id: string;
+          sessionId?: string;
+          result: QueryBillingResultPayload;
+        }
+      | {
+          /**
+           * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+           */
+          sentAt: string;
+          direction: 'response';
+          type: 'res.queryBilling';
+          id: string;
+          sessionId?: string;
+          failure: BillingQueryFailure | ProtocolFailure;
+        }
+    )
+  | UnknownResponseMessage;
 /**
- * 部分覆盖（5/11），见本文件顶层 $comment TODO 清单。
+ * 全覆盖（11/11）：message.delta（#1）、thinking（#2）、tool_call（#3）、tool_result（#4）、approval_request（#5）、error（#6）、turn_complete（#7）、session_end（#8）、capability_changed（#9）、operation_completed（#10）、approval_buffer_resolved（#11）。
  *
- * This interface was referenced by `MessageRequestMessageResponseMessageEventMessageTODO`'s JSON-Schema
+ * This interface was referenced by `MessageRequestMessageResponseMessageEventMessageSG1`'s JSON-Schema
  * via the `definition` "EventMessage".
  */
 export type EventMessage =
   | MessageDeltaEventMessage
+  | ThinkingEventMessage
   | ToolCallEventMessage
+  | ToolResultEventMessage
   | ApprovalRequestEventMessage
+  | ErrorEventMessage
+  | TurnCompleteEventMessage
+  | SessionEndEventMessage
   | CapabilityChangedEventMessage
-  | OperationCompletedEventMessage;
-export type MessageDeltaEventMessage = EventEnvelopeBase & {
-  type: 'evt.message.delta';
-  payload: MessageDeltaPayload;
-};
-export type ToolCallEventMessage = EventEnvelopeBase & {
-  type: 'evt.tool_call';
-  payload: ToolCallPayload;
-};
-export type ApprovalRequestEventMessage = EventEnvelopeBase & {
-  type: 'evt.approval_request';
-  runId: string;
-  payload: ApprovalRequestPayload;
-};
-export type CapabilityChangedEventMessage = EventEnvelopeBase & {
-  type: 'evt.capability_changed';
-  payload: CapabilityChangedPayload;
-};
-export type OperationCompletedEventMessage = EventEnvelopeBase & {
-  type: 'evt.operation_completed';
-  payload: OperationCompletedPayload;
-};
+  | OperationCompletedEventMessage
+  | ApprovalBufferResolvedEventMessage;
 /**
- * 整条连线上出现的任何一条消息都属于且仅属于这三个封闭判别联合之一（D2 v3 §4.1）——本文件是其部分转录，非完整闭合版本。
+ * 整条连线上出现的任何一条消息都属于且仅属于这三个封闭判别联合之一（D2 v3 §4.1）——本文件是其全量转录。
  *
- * This interface was referenced by `MessageRequestMessageResponseMessageEventMessageTODO`'s JSON-Schema
+ * This interface was referenced by `MessageRequestMessageResponseMessageEventMessageSG1`'s JSON-Schema
  * via the `definition` "Message".
  */
 export type Message = RequestMessage | ResponseMessage | EventMessage;
 
-export interface MessageRequestMessageResponseMessageEventMessageTODO {
+export interface MessageRequestMessageResponseMessageEventMessageSG1 {
   [k: string]: unknown;
 }
 /**
- * RequestEnvelope<TType,TPayload> 的公共部分（D2 v3 §2）：direction 固定为 'request'，sentAt 为传输层时间戳。id/sessionId/type/payload 由具体方法 schema（schema/methods/*.schema.json）补充。
+ * SG-1 深化：直接内联 sentAt/direction（不用 allOf 复用 common/envelope.schema.json#/$defs/requestEnvelopeBase）——codegen 工具 quicktype 对『allOf 引用外部 $ref 片段』存在已验证的缺陷（allOf 成员会被直接忽略，字段静默丢失，比 oneOf 坍缩更隐蔽；复现见 CODEGEN-FINDINGS.md），改为直接内联是规避写法，语义与 allOf 版本完全等价，Ajv 校验结果不变。
  */
-export interface RequestEnvelopeBase {
+export interface CreateSessionRequestMessage {
   /**
    * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
    */
   sentAt: string;
   direction: 'request';
+  type: 'req.createSession';
+  id: string;
+  /**
+   * 不适用——createSession 尚无 session 可寻址，见上方说明。
+   */
+  sessionId?: string;
+  payload: CreateSessionRequestPayload;
 }
 /**
  * 逐字段对应 D1 CreateSessionConfig（D1 v3.5 §2.1），无新增/无精简。
@@ -191,6 +291,79 @@ export interface CreateSessionRequestPayload {
       sessionId: string;
     };
   };
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。
+ */
+export interface SendRequestMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'request';
+  type: 'req.send';
+  id: string;
+  sessionId: string;
+  payload: SendRequestPayload;
+}
+/**
+ * 逐字段对应 D1 KernelInput（D1 v3.5 §2），与 §3.4 interrupt 的 input 字段共享同一判别联合结构，无新增/无精简。
+ */
+export interface SendRequestPayload {
+  /**
+   * D1 v3.5 §2 KernelInput 判别联合，逐字对应 D2 v3 §3.2 SendRequestPayload.input 同款结构。
+   */
+  input:
+    | {
+        kind: 'text';
+        text: string;
+      }
+    | {
+        kind: 'structured';
+        parts: (
+          | {
+              kind: 'text';
+              text: string;
+            }
+          | {
+              kind: 'file_ref';
+              /**
+               * 文件系统坐标空间未裁决——D1 F-15 开放项，D2 已固化字段上线（D2 v3 §9.2 第 7 条）。
+               */
+              path: string;
+              mimeType?: string;
+            }
+        )[];
+      };
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。
+ */
+export interface SubscribeRequestMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'request';
+  type: 'req.subscribe';
+  id: string;
+  sessionId: string;
+  payload: EmptyPayload;
+}
+export interface EmptyPayload {}
+/**
+ * SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。
+ */
+export interface InterruptRequestMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'request';
+  type: 'req.interrupt';
+  id: string;
+  sessionId: string;
+  payload: InterruptRequestPayload;
 }
 export interface InterruptRequestPayload {
   mode: 'steer' | 'cancel' | 'abort_and_resend';
@@ -224,6 +397,34 @@ export interface InterruptRequestPayload {
         )[];
       };
 }
+/**
+ * SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。
+ */
+export interface StopRequestMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'request';
+  type: 'req.stop';
+  id: string;
+  sessionId: string;
+  payload: EmptyPayload;
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。
+ */
+export interface RespondApprovalRequestMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'request';
+  type: 'req.respondApproval';
+  id: string;
+  sessionId: string;
+  payload: RespondApprovalRequestPayload;
+}
 export interface RespondApprovalRequestPayload {
   reqId: string;
   decision:
@@ -245,6 +446,49 @@ export interface RespondApprovalRequestPayload {
         outcome: 'deny';
         reason?: string;
       };
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。
+ */
+export interface CapabilitiesRequestMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'request';
+  type: 'req.capabilities';
+  id: string;
+  /**
+   * 可选——D1 capabilities(session?: SessionHandle) 的可选参数，同 createSession 并列为本联合仅有的两个例外。
+   */
+  sessionId?: string;
+  payload: CapabilitiesRequestPayload;
+}
+export interface CapabilitiesRequestPayload {
+  /**
+   * UI 可选声明自己认识的 wire 协议版本集合（如 ["kernelport/1"]），供 §7.2 握手协商流程使用（v3 新增，消解 codex T-017 HIGH#3）。
+   */
+  supportedProtocolVersions?: string[];
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。
+ */
+export interface QueryBillingRequestMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'request';
+  type: 'req.queryBilling';
+  id: string;
+  sessionId: string;
+  payload: QueryBillingRequestPayload;
+}
+export interface QueryBillingRequestPayload {
+  window?: {
+    from: string;
+    to: string;
+  };
 }
 /**
  * 逐字段对应 D1 SessionHandle（D1 v3.5 §2）。kernel 字段的已知张力见 D2 v3 §9.2 第 1 条（S-08 回指，D1 INV-1 未裁决）。
@@ -288,6 +532,9 @@ export interface ProtocolFailure {
   code: 'malformed_message' | 'unsupported_protocol_version' | 'unknown_message_type';
   detail?: string;
 }
+export interface SendResultPayload {
+  runId: string;
+}
 /**
  * D1 OperationOutcome 七态逐字透传，D2 不裁剪（D2 v3 §3.4）。
  */
@@ -327,19 +574,88 @@ export interface InterruptResultPayload {
    */
   detail?: string;
 }
-export interface EmptyPayload {}
 /**
- * EventEnvelope<TType,TPayload> 的公共部分（D2 v3 §2）：direction 固定为 'event'，seq/sessionId/ts 全局必填，runId 默认可选——部分事件类型（evt.approval_request/evt.turn_complete）在各自 schema 里把 runId 收紧为必填（D2 v3 §4 表格 envelope runId 列）。
+ * D1 §2.5：stop() 可达的 OperationOutcome 子集，仅三态——succeeded/timed_out/rejected（其余四态对 stop() 语义上不适用，D2 v2 §3.5 已更正 v1『类型层面允许全部七态通过检查』的自相矛盾表述）。
  */
-export interface EventEnvelopeBase {
+export interface StopResultPayload {
+  operationId: string;
+  outcome: 'succeeded' | 'timed_out' | 'rejected';
+}
+/**
+ * 握手响应 res.capabilities 的成功 result（D2 v3 §7）——protocolVersion 在此出现一次是允许且必要的（§7.1 权威值的唯一来源）。逐字段对应 D1 §4.1，无新增/无精简。
+ */
+export interface CapabilityDescriptorPayload {
+  /**
+   * wire 层单一契约版本标识，握手期确定，唯一权威值（D1 v3.5：连接级契约版本，D2 v3 §7.1）。当前基线 'kernelport/1'。
+   */
+  protocolVersion: string;
+  kernel: 'openclaw' | 'hermes';
+  kernelVersion?: string;
+  snapshotAt: string;
+  tools: {
+    discoverable: boolean;
+    names?: string[];
+  };
+  approvalGranularity: 'per-tool' | 'per-command' | 'batch';
+  approvalKinds: ('exec' | 'tool' | 'mcp' | 'sandbox' | 'file_write')[];
+  approvalDecisionKinds: ('allow_once' | 'allow_always' | 'allow_session' | 'deny')[];
+  interruptModes: ('steer' | 'cancel' | 'abort_and_resend')[];
+  streamingGranularity: 'token-delta' | 'chunk' | 'message-only';
+  sessionResume: boolean;
+  thinkingVisibility: 'none' | 'summary' | 'raw';
+  sandboxLevels?: ('read-only' | 'workspace-write' | 'full-access')[];
+  usageReporting: 'none' | 'best-effort' | 'authoritative';
+  billingAttribution: 'session' | 'user_tenant_aggregate';
+}
+/**
+ * 逐字段对应 D1 SessionBillingSnapshot（D1 §7）。correlatable 恒为字面量 false——D1 未来若确认可关联，须走版本升级，本 schema 不预先改变这个字面量类型。
+ */
+export interface QueryBillingResultPayload {
+  sessionId: string;
+  tokenRef: string;
+  attribution: 'session' | 'user_tenant_aggregate';
+  windowStart: string;
+  windowEnd: string;
+  requestCount: number;
+  totalQuota: number;
+  rpm: number;
+  tpm: number;
+  fetchedAt: string;
+  correlatable: false;
+}
+/**
+ * queryBilling 专属的独立失败类型——不使用 RejectionFailure，不与 KernelPortRejectionCode 共享枚举空间（D1 v3.5 §9.1、D2 v3 §3.8）。
+ */
+export interface BillingQueryFailure {
+  code: 'billing_query_subject_unresolved';
+  detail?: string;
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction，不用 allOf——原写法虽不含 oneOf（本类型只有一种形状），但 SG-1 深化验证发现 quicktype 对『allOf 引用外部 $ref 片段』本身就有独立于 oneOf 坍缩的缺陷（allOf 成员被直接忽略、字段静默丢失，见 CODEGEN-FINDINGS.md），故本类型同样改为直接内联，规避写法，语义与 allOf 版本等价。
+ */
+export interface UnknownResponseMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'response';
+  type: 'res.unknown';
+  /**
+   * 允许缺失——触发条件已收紧为『原 request 本身不可辨认』，天然没有 id 可回填。
+   */
+  id?: string;
+  sessionId?: string;
+  failure: ProtocolFailure;
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（allOf 成员被直接忽略、字段静默丢失，见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。
+ */
+export interface MessageDeltaEventMessage {
   /**
    * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
    */
   sentAt: string;
   direction: 'event';
-  /**
-   * D1 KernelEventBase.seq 的线上表示，仅同一 runId 内排序、不重放（D1 §9.2、D2 v3 §8）。
-   */
   seq: number;
   sessionId: string;
   runId?: string;
@@ -347,17 +663,105 @@ export interface EventEnvelopeBase {
    * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
    */
   ts: string;
+  type: 'evt.message.delta';
+  payload: MessageDeltaPayload;
 }
 export interface MessageDeltaPayload {
   role: 'assistant';
   delta: string;
   index: number;
 }
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。
+ */
+export interface ThinkingEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  runId?: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.thinking';
+  payload: ThinkingPayload;
+}
+export interface ThinkingPayload {
+  delta: string;
+  visibility: 'summary' | 'raw';
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。
+ */
+export interface ToolCallEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  runId?: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.tool_call';
+  payload: ToolCallPayload;
+}
 export interface ToolCallPayload {
   toolCallId: string;
   name: string;
   input: unknown;
   status: 'started';
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。
+ */
+export interface ToolResultEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  runId?: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.tool_result';
+  payload: ToolResultPayload;
+}
+export interface ToolResultPayload {
+  toolCallId: string;
+  output: unknown;
+  isError: boolean;
+  durationMs?: number;
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。runId 在本事件类型上必填（D2 v3 §4 表格），与其余 9 个 runId 可选的事件类型不同。
+ */
+export interface ApprovalRequestEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.approval_request';
+  runId: string;
+  payload: ApprovalRequestPayload;
 }
 export interface ApprovalRequestPayload {
   /**
@@ -376,6 +780,118 @@ export interface ApprovalRequestPayload {
    * openclaw 'documented'；hermes 'best_effort'（约 60s，非官方承诺）——UI 不得在 'best_effort' 上做精确倒计时。
    */
   timeoutAuthority: 'documented' | 'best_effort';
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。
+ */
+export interface ErrorEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  runId?: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.error';
+  payload: ErrorPayload;
+}
+export interface ErrorPayload {
+  /**
+   * ErrorEvent.code 的唯一契约稳定取值集合（D1 v3-kernel-spec §9，D1 v3.5 §9.1 声明本枚举『保持不变，同 v3.1』）。
+   */
+  code:
+    | 'rate_limited'
+    | 'kernel_crashed'
+    | 'auth_failed'
+    | 'sandbox_denied'
+    | 'network_lost'
+    | 'approval_timeout'
+    | 'unknown';
+  message: string;
+  /**
+   * 调试参考，非契约稳定字段，UI 不得对其分支判断。
+   */
+  nativeCode?: string;
+  recoverable: 'run' | 'session' | 'none';
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。runId 在本事件类型上必填（D2 v3 §4 表格），与其余 9 个 runId 可选的事件类型不同。
+ */
+export interface TurnCompleteEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.turn_complete';
+  runId: string;
+  payload: TurnCompletePayload;
+}
+export interface TurnCompletePayload {
+  stopReason: 'completed' | 'cancelled' | 'error' | 'max_turns';
+  /**
+   * openclaw 走原生 sessions.steer 完成 mode:'abort_and_resend' 时同样产出本标注（该 RPC 本质也是 abort+resend）；mode:'steer'（soft，仅 openclaw）不产生 degraded——它是真正的同 run 注入，没有『这次转向丢弃了未产出内容』需要告知。
+   */
+  degraded?: {
+    kind: 'abort_and_resend';
+  };
+  forceResolvedApprovals?: string[];
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+  };
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。
+ */
+export interface SessionEndEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  runId?: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.session_end';
+  payload: SessionEndPayload;
+}
+export interface SessionEndPayload {
+  reason: 'stopped' | 'kernel_exited' | 'transport_closed' | 'error';
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。
+ */
+export interface CapabilityChangedEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  runId?: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.capability_changed';
+  payload: CapabilityChangedPayload;
 }
 export interface CapabilityChangedPayload {
   source: 'server_override' | 'kernel_error_inferred';
@@ -404,6 +920,25 @@ export interface WireCapabilityDescriptorPayload {
   usageReporting: 'none' | 'best-effort' | 'authoritative';
   billingAttribution: 'session' | 'user_tenant_aggregate';
 }
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。
+ */
+export interface OperationCompletedEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  runId?: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.operation_completed';
+  payload: OperationCompletedPayload;
+}
 export interface OperationCompletedPayload {
   operationId: string;
   operationKind: 'interrupt' | 'stop';
@@ -421,4 +956,27 @@ export interface OperationCompletedPayload {
   affectedRunId?: string;
   newRunId?: string;
   detail?: string;
+}
+/**
+ * SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。
+ */
+export interface ApprovalBufferResolvedEventMessage {
+  /**
+   * ISO-8601 UTC，本消息被封套/序列化发出的时刻——纯 D2 传输层字段，非 D1 业务语义（D2 v3 §2 MessageEnvelopeBase.sentAt）。
+   */
+  sentAt: string;
+  direction: 'event';
+  seq: number;
+  sessionId: string;
+  runId?: string;
+  /**
+   * D1 KernelEventBase.ts 的逐字透传位——业务语义：事件发生时刻，与 sentAt（封套发出时刻）是两个独立字段（D2 v3 §2 修复 1）。
+   */
+  ts: string;
+  type: 'evt.approval_buffer_resolved';
+  payload: ApprovalBufferResolvedPayload;
+}
+export interface ApprovalBufferResolvedPayload {
+  reqId: string;
+  reason: 'buffered_timeout' | 'queue_overflow';
 }

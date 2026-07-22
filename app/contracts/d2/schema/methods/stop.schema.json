@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "methods/stop.schema.json",
+  "title": "req.stop / res.stop",
+  "$comment": "D2 v3 §3.5（v2 修复：类型声明与说明文字自相矛盾已消除——StopResultPayload.outcome 类型层面收窄为三态子集，本 schema 用三态字面量枚举、不复用 common/errors.schema.json#/$defs/OperationOutcome 的全七态枚举，三态是唯一判定依据，非文档级弱约束；v3 修复：StopRequestPayload 改用真封闭空对象 EmptyPayload，消解 codex T-017 HIGH#2）。sessionId 必填（D2 v3 §3.9）。",
+  "$defs": {
+    "StopRequestPayload": { "$ref": "../common/empty-payload.schema.json" },
+    "StopResultPayload": {
+      "type": "object",
+      "description": "D1 §2.5：stop() 可达的 OperationOutcome 子集，仅三态——succeeded/timed_out/rejected（其余四态对 stop() 语义上不适用，D2 v2 §3.5 已更正 v1『类型层面允许全部七态通过检查』的自相矛盾表述）。",
+      "properties": {
+        "operationId": { "type": "string" },
+        "outcome": { "type": "string", "enum": ["succeeded", "timed_out", "rejected"] }
+      },
+      "required": ["operationId", "outcome"],
+      "additionalProperties": false
+    },
+    "StopRequestMessage": {
+      "description": "SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
+      "type": "object",
+      "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "request" },
+        "type": { "const": "req.stop" },
+        "id": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "payload": { "$ref": "#/$defs/StopRequestPayload" }
+      },
+      "required": ["sentAt", "direction", "type", "id", "sessionId", "payload"],
+      "additionalProperties": false
+    },
+    "StopResponseMessage": {
+      "description": "失败：RejectionFailure | ProtocolFailure，可命中 session_not_found/session_already_stopped/session_locked（D2 v3 §3.5）。两个分支各自直接内联 sentAt/direction，不用 allOf——规避 json-schema-to-typescript 已知缺陷（见 create-session.schema.json 同处注释）。",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.stop" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "result": { "$ref": "#/$defs/StopResultPayload" }
+          },
+          "required": ["sentAt", "direction", "type", "id", "result"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.stop" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "failure": {
+              "oneOf": [
+                { "$ref": "../common/errors.schema.json#/$defs/RejectionFailure" },
+                { "$ref": "../common/errors.schema.json#/$defs/ProtocolFailure" }
+              ]
+            }
+          },
+          "required": ["sentAt", "direction", "type", "id", "failure"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

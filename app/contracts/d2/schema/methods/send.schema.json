@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "methods/send.schema.json",
+  "title": "req.send / res.send",
+  "$comment": "D2 v3 §3.2（正文标注『同 v1，未受本次修订影响』，字段定义回溯 D2 v1 §3.2）。input 复用 §3.4 interrupt 已定义的 KernelInput 判别联合（D1 v3.5 §2 KernelInput，两个方法逐字共享同一结构，不重复声明——见 methods/interrupt.schema.json#/$defs/KernelInput）。sessionId 必填（D2 v3 §3.9 SendRequestMessage = RequestEnvelope<...> & { sessionId: string }）。",
+  "$defs": {
+    "SendRequestPayload": {
+      "type": "object",
+      "description": "逐字段对应 D1 KernelInput（D1 v3.5 §2），与 §3.4 interrupt 的 input 字段共享同一判别联合结构，无新增/无精简。",
+      "properties": {
+        "input": { "$ref": "interrupt.schema.json#/$defs/KernelInput" }
+      },
+      "required": ["input"],
+      "additionalProperties": false
+    },
+    "SendResultPayload": {
+      "type": "object",
+      "properties": {
+        "runId": { "type": "string" }
+      },
+      "required": ["runId"],
+      "additionalProperties": false
+    },
+    "SendRequestMessage": {
+      "description": "SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
+      "type": "object",
+      "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "request" },
+        "type": { "const": "req.send" },
+        "id": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "payload": { "$ref": "#/$defs/SendRequestPayload" }
+      },
+      "required": ["sentAt", "direction", "type", "id", "sessionId", "payload"],
+      "additionalProperties": false
+    },
+    "SendResponseMessage": {
+      "description": "失败：RejectionFailure | ProtocolFailure，可命中 session_not_found/session_already_stopped/session_locked（D1 §9.1/§9.3）。两个分支各自直接内联 sentAt/direction，不用 allOf——规避 json-schema-to-typescript 对『oneOf 分支内嵌 allOf』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.send" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "result": { "$ref": "#/$defs/SendResultPayload" }
+          },
+          "required": ["sentAt", "direction", "type", "id", "result"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.send" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "failure": {
+              "oneOf": [
+                { "$ref": "../common/errors.schema.json#/$defs/RejectionFailure" },
+                { "$ref": "../common/errors.schema.json#/$defs/ProtocolFailure" }
+              ]
+            }
+          },
+          "required": ["sentAt", "direction", "type", "id", "failure"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "methods/subscribe.schema.json",
+  "title": "req.subscribe / res.subscribe",
+  "$comment": "D2 v3 §3.3（v3 修复：SubscribeRequestPayload/SubscribeResultPayload 改用真封闭空对象 EmptyPayload，消解 codex T-017 HIGH#2 同病项）。subscribe 无终止 response 语义——response 只确认『流已建立』，后续 event 消息在订阅存续期间持续到达，D2 不定义显式 unsubscribe 请求（D1 本身没有 unsubscribe 方法）。sessionId 必填（D2 v3 §3.9）。",
+  "$defs": {
+    "SubscribeRequestPayload": { "$ref": "../common/empty-payload.schema.json" },
+    "SubscribeResultPayload": { "$ref": "../common/empty-payload.schema.json" },
+    "SubscribeRequestMessage": {
+      "description": "SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
+      "type": "object",
+      "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "request" },
+        "type": { "const": "req.subscribe" },
+        "id": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "payload": { "$ref": "#/$defs/SubscribeRequestPayload" }
+      },
+      "required": ["sentAt", "direction", "type", "id", "sessionId", "payload"],
+      "additionalProperties": false
+    },
+    "SubscribeResponseMessage": {
+      "description": "失败：RejectionFailure | ProtocolFailure，可命中 session_not_found（D2 v3 §3.3）。两个分支各自直接内联 sentAt/direction，不用 allOf——规避 json-schema-to-typescript 已知缺陷（见 create-session.schema.json 同处注释）。",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.subscribe" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "result": { "$ref": "#/$defs/SubscribeResultPayload" }
+          },
+          "required": ["sentAt", "direction", "type", "id", "result"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.subscribe" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "failure": {
+              "oneOf": [
+                { "$ref": "../common/errors.schema.json#/$defs/RejectionFailure" },
+                { "$ref": "../common/errors.schema.json#/$defs/ProtocolFailure" }
+              ]
+            }
+          },
+          "required": ["sentAt", "direction", "type", "id", "failure"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

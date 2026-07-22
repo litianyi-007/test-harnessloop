@@ -75,16 +75,18 @@
       "additionalProperties": false
     },
     "CreateSessionRequestMessage": {
-      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/requestEnvelopeBase" }],
+      "description": "SG-1 深化：直接内联 sentAt/direction（不用 allOf 复用 common/envelope.schema.json#/$defs/requestEnvelopeBase）——codegen 工具 quicktype 对『allOf 引用外部 $ref 片段』存在已验证的缺陷（allOf 成员会被直接忽略，字段静默丢失，比 oneOf 坍缩更隐蔽；复现见 CODEGEN-FINDINGS.md），改为直接内联是规避写法，语义与 allOf 版本完全等价，Ajv 校验结果不变。",
       "type": "object",
       "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "request" },
         "type": { "const": "req.createSession" },
         "id": { "type": "string" },
         "sessionId": { "type": "string", "description": "不适用——createSession 尚无 session 可寻址，见上方说明。" },
         "payload": { "$ref": "#/$defs/CreateSessionRequestPayload" }
       },
-      "required": ["type", "id", "payload"],
-      "unevaluatedProperties": false
+      "required": ["sentAt", "direction", "type", "id", "payload"],
+      "additionalProperties": false
     },
     "CreateSessionResponseMessage": {
       "description": "success/failure 互斥判别联合（D2 v3 §2/§3.9）。失败：RejectionFailure | ProtocolFailure，可命中 session_not_found（resume 指向不可续目标）、aggregate_billing_requires_deployment_token。两个分支各自直接内联 sentAt/direction（不用 allOf 复用 common/envelope.schema.json#/$defs/responseEnvelopeBase）——codegen 工具 json-schema-to-typescript 对『oneOf 分支内部再用 allOf 组合』存在已验证的已知缺陷（会把分支特有字段丢失、坍缩成公共基类），改为分支内直接声明是本轮验证后采用的规避写法，语义与 allOf 版本等价，Ajv 校验结果不变。",

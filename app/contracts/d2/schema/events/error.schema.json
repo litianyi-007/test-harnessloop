@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "events/error.schema.json",
+  "title": "evt.error (ErrorEvent)",
+  "$comment": "D2 v3 §4 #6，payload 字段来源 D1 v3 正文。code 复用 common/errors.schema.json#/$defs/KernelErrorCode——PRE-②/SG-1 上一轮只把 KernelErrorCode 定义进 common/errors.schema.json，事件 payload 本身未转录（message.schema.json 顶层 $comment 的 TODO），本轮补齐 payload 转录并接入判别联合。nativeCode 为调试参考、非契约稳定字段，UI 不得对其分支判断（D2 v1 §4 原文强调）。runId 沿用 EventEnvelope 默认可选。",
+  "$defs": {
+    "ErrorPayload": {
+      "type": "object",
+      "properties": {
+        "code": { "$ref": "../common/errors.schema.json#/$defs/KernelErrorCode" },
+        "message": { "type": "string" },
+        "nativeCode": {
+          "type": "string",
+          "description": "调试参考，非契约稳定字段，UI 不得对其分支判断。"
+        },
+        "recoverable": { "type": "string", "enum": ["run", "session", "none"] }
+      },
+      "required": ["code", "message", "recoverable"],
+      "additionalProperties": false
+    },
+    "ErrorEventMessage": {
+      "description": "SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。",
+      "type": "object",
+      "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "event" },
+        "seq": { "type": "integer" },
+        "sessionId": { "type": "string" },
+        "runId": { "type": "string" },
+        "ts": { "$ref": "../common/envelope.schema.json#/$defs/ts" },
+        "type": { "const": "evt.error" },
+        "payload": { "$ref": "#/$defs/ErrorPayload" }
+      },
+      "required": ["sentAt", "direction", "seq", "sessionId", "ts", "type", "payload"],
+      "additionalProperties": false
+    }
+  }
+}

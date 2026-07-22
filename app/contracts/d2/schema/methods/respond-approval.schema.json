@@ -52,16 +52,18 @@
     },
     "RespondApprovalResultPayload": { "$ref": "../common/empty-payload.schema.json" },
     "RespondApprovalRequestMessage": {
-      "allOf": [{ "$ref": "../common/envelope.schema.json#/$defs/requestEnvelopeBase" }],
+      "description": "SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
       "type": "object",
       "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "request" },
         "type": { "const": "req.respondApproval" },
         "id": { "type": "string" },
         "sessionId": { "type": "string" },
         "payload": { "$ref": "#/$defs/RespondApprovalRequestPayload" }
       },
-      "required": ["type", "id", "sessionId", "payload"],
-      "unevaluatedProperties": false
+      "required": ["sentAt", "direction", "type", "id", "sessionId", "payload"],
+      "additionalProperties": false
     },
     "RespondApprovalResponseMessage": {
       "description": "失败：RejectionFailure | ProtocolFailure，可命中 approval_not_pending/unsupported_approval_decision（D1 v3.5 §9.1）。respondApproval 命中 FORCE_DENY_PENDING_KERNEL_ACK 中间态之后到达时的确切行为，D1 未定义——D2 v3 §9.2 第 4 条回指，OPEN/deferred（见 fixtures/README 的 OPEN 登记惯例）。两个分支各自直接内联 sentAt/direction，不用 allOf——规避 json-schema-to-typescript 对『oneOf 分支内嵌 allOf』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",

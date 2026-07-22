@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "methods/capabilities.schema.json",
+  "title": "req.capabilities / res.capabilities",
+  "$comment": "D2 v3 §3.7（v3 修复：CapabilitiesRequestPayload 正式声明 supportedProtocolVersions，消解 codex T-017 HIGH#3 + grok T-016 N-V2-01）。sessionId 可选——与 createSession 并列为 §3.9 判别联合仅有的两个『sessionId 非必填』例外（D1 §2.7 capabilities(session?: SessionHandle)）。Response 成功走完整 CapabilityDescriptorPayload（含 protocolVersion，§7 唯一允许出现处）；失败可命中 session_not_found，以及握手协商专属的 unsupported_protocol_version（D2 v3 §7.2 第 3 步，ProtocolFailure 分支）。",
+  "$defs": {
+    "CapabilitiesRequestPayload": {
+      "type": "object",
+      "properties": {
+        "supportedProtocolVersions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "UI 可选声明自己认识的 wire 协议版本集合（如 [\"kernelport/1\"]），供 §7.2 握手协商流程使用（v3 新增，消解 codex T-017 HIGH#3）。"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CapabilitiesRequestMessage": {
+      "description": "SG-1 深化：直接内联 sentAt/direction，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 create-session.schema.json 同处注释），语义与 allOf 版本等价。",
+      "type": "object",
+      "properties": {
+        "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+        "direction": { "const": "request" },
+        "type": { "const": "req.capabilities" },
+        "id": { "type": "string" },
+        "sessionId": {
+          "type": "string",
+          "description": "可选——D1 capabilities(session?: SessionHandle) 的可选参数，同 createSession 并列为本联合仅有的两个例外。"
+        },
+        "payload": { "$ref": "#/$defs/CapabilitiesRequestPayload" }
+      },
+      "required": ["sentAt", "direction", "type", "id", "payload"],
+      "additionalProperties": false
+    },
+    "CapabilitiesResponseMessage": {
+      "description": "success/failure 互斥判别联合。成功：完整 CapabilityDescriptorPayload（含 protocolVersion，§7.1 权威值的唯一来源）。失败：RejectionFailure | ProtocolFailure，可命中 session_not_found、unsupported_protocol_version（握手版本不兼容拒绝，D2 v3 §7.2 第 3 步）。两个分支各自直接内联 sentAt/direction，不用 allOf——规避 json-schema-to-typescript 已知缺陷（见 create-session.schema.json 同处注释）。",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.capabilities" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "result": { "$ref": "../common/capability-descriptor.schema.json#/$defs/CapabilityDescriptorPayload" }
+          },
+          "required": ["sentAt", "direction", "type", "id", "result"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sentAt": { "$ref": "../common/envelope.schema.json#/$defs/sentAt" },
+            "direction": { "const": "response" },
+            "type": { "const": "res.capabilities" },
+            "id": { "type": "string" },
+            "sessionId": { "type": "string" },
+            "failure": {
+              "oneOf": [
+                { "$ref": "../common/errors.schema.json#/$defs/RejectionFailure" },
+                { "$ref": "../common/errors.schema.json#/$defs/ProtocolFailure" }
+              ]
+            }
+          },
+          "required": ["sentAt", "direction", "type", "id", "failure"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

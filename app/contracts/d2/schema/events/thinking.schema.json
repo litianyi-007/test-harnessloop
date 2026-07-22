@@ -1,21 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "events/tool-call.schema.json",
-  "title": "evt.tool_call (ToolCallEvent)",
-  "$comment": "D2 v3 §4 #3，payload 字段来源 D1 v3 正文。input 是内核原生工具调用参数，D1/D2 均未进一步收紧结构，忠实用 JSON Schema 'true'（任意 JSON 值）表达 TS 的 `unknown`。",
+  "$id": "events/thinking.schema.json",
+  "title": "evt.thinking (ThinkingEvent)",
+  "$comment": "D2 v3 §4 #2，payload 字段来源 D1 v3 正文（同 v1，未受 v3.1-v3.5 修订影响）。visibility 对应 CapabilityDescriptorPayload.thinkingVisibility 协商结果（'none' 时内核不应产出本事件），D2 不在消息 schema 层面强制这层跨方法业务约束（呼应 D2 v3 §0『D2 不裁决 D1 语义』的既有纪律）。runId 沿用 EventEnvelope 默认可选。",
   "$defs": {
-    "ToolCallPayload": {
+    "ThinkingPayload": {
       "type": "object",
       "properties": {
-        "toolCallId": { "type": "string" },
-        "name": { "type": "string" },
-        "input": true,
-        "status": { "const": "started" }
+        "delta": { "type": "string" },
+        "visibility": { "type": "string", "enum": ["summary", "raw"] }
       },
-      "required": ["toolCallId", "name", "input", "status"],
+      "required": ["delta", "visibility"],
       "additionalProperties": false
     },
-    "ToolCallEventMessage": {
+    "ThinkingEventMessage": {
       "description": "SG-1 深化：直接内联 sentAt/direction/seq/sessionId/runId/ts，不用 allOf——规避 quicktype 对『allOf 引用外部 $ref 片段』的已知缺陷（见 methods/create-session.schema.json 同处注释 + CODEGEN-FINDINGS.md），语义与 allOf 版本等价。",
       "type": "object",
       "properties": {
@@ -25,8 +23,8 @@
         "sessionId": { "type": "string" },
         "runId": { "type": "string" },
         "ts": { "$ref": "../common/envelope.schema.json#/$defs/ts" },
-        "type": { "const": "evt.tool_call" },
-        "payload": { "$ref": "#/$defs/ToolCallPayload" }
+        "type": { "const": "evt.thinking" },
+        "payload": { "$ref": "#/$defs/ThinkingPayload" }
       },
       "required": ["sentAt", "direction", "seq", "sessionId", "ts", "type", "payload"],
       "additionalProperties": false
