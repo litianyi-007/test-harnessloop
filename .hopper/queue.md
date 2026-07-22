@@ -44,6 +44,8 @@ Anchor: `.hopper/queue.md::root`
 | T-028 | code-review-adversarial | done | | normal | D4 跨平台架构 v1 双轨复核（codex 轨）：同 T-027 同范围，异构独立视角 | codex |
 | T-029 | code-review-acceptance | done | | normal | D4 v2 定向 re-verify（单 codex，接续 T-028）：F-01..F-07 是否真闭合（fixture DSL/产品行为parity+D4→D3依赖/client stub手写/hard6态/Rust否决理由/capability_changed fixture/9页）+ v2 新编辑无新矛盾 | codex |
 | T-030 | code-review-acceptance | done | | normal | D4 v2.1 最终 re-verify（单 codex，接续 T-029）：F-01/02/03/06 四残留是否真闭合 + v2.1 编辑无新矛盾 → CONFIRMABLE 则 D4 定稿 | codex |
+| T-031 | code-review-adversarial | done | | normal | D6 newapi 集成 v1 双轨复核（grok 轨）：事实保真(有无臆造endpoint)/C-3处理诚实/契约消费正确/client直连vsD3代理叉口/内部自洽 | grok |
+| T-032 | code-review-adversarial | done | | normal | D6 newapi 集成 v1 双轨复核（codex 轨）：同 T-031 同范围，异构独立视角 | codex |
 | 
 ---
 

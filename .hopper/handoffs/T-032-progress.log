@@ -1,0 +1,2 @@
+{"seq":1,"ts":"2026-07-22T04:23:32.886Z","task_id":"T-032","vendor":"codex","phase":"starting","kind":"lifecycle","message":"Background task queued.","source":"runner","terminal":false}
+{"seq":2,"ts":"2026-07-22T04:28:08.980Z","task_id":"T-032","vendor":"codex","phase":"done","kind":"terminal","message":"Task completed successfully.","source":"runner","terminal":true,"status":"done","duration_ms":276022,"exit_code":0,"signal":null,"adapter_status":"success","timed_out":null}

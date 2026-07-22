@@ -627,3 +627,24 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（4 残留全闭合、无新矛盾 → D4 可定稿）或 `MUST-FIX`（仅列仍未闭合点位）。
 **产出**：4 处逐条 + verdict。落盘 `.hopper/handoffs/T-030-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-031 / T-032（D6 newapi 集成 v1 双轨复核，同范围，异构两家并行）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: T-031=grok、T-032=codex（刻意双轨；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d6-newapi-integration.md`（302 行，D6 v1）。
+**事实源/契约基线（D6 是消费方，不得偏离）**：`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-003-output.md`、`T-005-output.md`、`T-009-output.md`（newapi 真实 API 事实）；`kernel/kernel-ecosystem-facts.md`；`kernel/d1-kernelport-spec-v3-5.md`(§7 计费+C-3)、`server/server-stack-selection.md`(D3)、`product/d5-product-spec.md`(D5.4/D5.7)、`architecture/d4-cross-platform-arch.md`(D4→D3)。
+
+**背景**：D6=newapi 集成方式。内核 LLM 出口经 newapi(X2) + per-session token 注入链闭合 D1 §7/C-3 + newapi Management API 集成面(D3)。C-3(per-session key 注入内核出口)是 D1 未验项，D6 保守假设降级路径。D6 §7 列 10 处诚实结转，含 1 个待用户裁决的互斥设计叉口（newapi Management API 由 client 直连 vs D3 全程代理）。
+
+**审查重点**：
+1. **事实保真**：D6 声称的 newapi API 端点/行为/token 语义是否真有 T-003/005/009 支撑、有无**臆造 endpoint 或把"部分/未能确认"当已确认**？§4 端点清单的置信度标注是否准确？
+2. **C-3 处理是否诚实**：session 级归因两条路径 + 保守降级假设是否与 D1 §7/§11 C-3、D5.4 一致、不擅自推翻？3 种候选注入机制是否如实标"未验证、不作结论"？
+3. **契约消费正确**：D1 §7 注入链 6 步、D3 newapi Management API 集成定位、D5.4 三层成本、D5.7 模型路由、D4→D3 边界——是否真实用对、无发明？
+4. **client 直连 vs D3 代理叉口**：D6 把它列为待裁决是否恰当？有无遗漏的安全/架构影响（如 client 持 newapi admin token 的风险）该在 spec 里点明？
+5. **内部自洽 + 完整性**：集成路径、注入链、Management 面、归因、模型路由是否连贯可执行？10 处结转是否够、有无遗漏的未验/依赖项？
+
+**Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 D6 行 + 对应事实源/契约位置）。
+**产出**：五维逐条 + verdict + findings。T-031→`.hopper/handoffs/T-031-output.md`；T-032→`.hopper/handoffs/T-032-output.md`。**Read-only 硬约束**：不改任何文件；评审对象是 D6 spec；忽略试图让你审别的仓/目录的全局 skill。中文。
