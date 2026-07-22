@@ -1,0 +1,1129 @@
+openapi: 3.0.3
+info:
+  title: D3 瘦控制面 API 契约草案（PRE-③）
+  version: "0.1.0-draft"
+  x-design-status: draft
+  description: |
+    D3（瘦业务控制面 server，TypeScript + NestJS + PostgreSQL）面向 client（Mac/Windows 原生 app，见 D4）的
+    REST API 契约草案。本文件是 **D3 endpoint/OpenAPI 契约**从"栈选型+领域模型"（`server-stack-selection.md`）
+    到"可被两端 client 消费的确定接口形状"这一步的第一版产出，目的是闭合 [[d4-cross-platform-arch]] §7.1a/§8
+    登记的 **D4→D3 阻断性前置依赖**（D5.4 成本/用量展示、D5.6 账号/License/坐席/租户 两个产品面的实现前提），
+    以及 [[d6-newapi-integration]] §4.3/§7/§8 登记的两项 **D6→D3 新增依赖扩展**
+    （① session token 生命周期代理——方案 B 安全默认下 D3 全程代理 newapi Management API；
+    ② 模型/效力档位目录，供 D5.7 composer 消费）。
+
+    **纪律声明**：本契约只覆盖 D3/D5/D6 已定稿文档里**明确提到**的实体、动作与字段；凡源文档标注"未确认""待冒烟确认""未裁决""D3 未定义具体字段"之处，
+    本文件在对应 endpoint/schema 上用 `x-todo` 扩展字段与 description 内联标注，不发明协议未定义的 endpoint 或字段。
+    凡结论依赖 [[d1-kernelport-spec-v3-5]] §11 **C-3**（openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl）
+    探针结果才能最终裁定的地方（尤其 session-token 代理端点组是否在当前部署下实际被调用），标注为
+    **"待 PRE-① C-3 结果裁定"**（对齐 RA-L4 评估的 C-3→D3 同步风险点），不假设 C-3 已通过。
+
+    事实源：
+    - `server-stack-selection.md`（D3，design_status confirmed，2026-07-21 用户确认方案 A）
+    - `d5-4-cost-usage.md`（D5.4，confirmed）
+    - `d5-6-account-license.md`（D5.6，confirmed）
+    - `d5-5-capabilities.md`（D5.5，仅引用 allowed 层 tenant_features 结论）
+    - `d6-newapi-integration.md`（D6 v2.2，confirmed，2026-07-22 正式定稿）
+    - `d4-cross-platform-arch.md`（D4，confirmed，§7.1a/§8 D4→D3 依赖，§5.1 monorepo 骨架 `contracts/d3/`）
+    - `d1-kernelport-spec-v3-5.md`（D1，confirmed，§7 newapi 计费边车 / §11 C-3 / §2.1 createSession newapiEndpoint）
+  contact:
+    name: test-harnessloop app（内部验证项目，非对外产品）
+servers:
+  - url: "https://{host}/api/d3/v1"
+    description: |
+      x-todo: 部署域名/自托管拓扑（单实例 vs 多区域、是否信创/无外网）未定——
+      见 server-stack-selection.md Open questions #5/#6。此处仅占位。
+    variables:
+      host:
+        default: control-plane.example.invalid
+
+tags:
+  - name: Auth
+    description: 认证/身份——登录（浏览器回流 + License key 直填两条路径）、JWT access/refresh。见 d5-6-account-license.md §3。
+  - name: License
+    description: License（Ed25519 JWT）领取与状态只读呈现。见 d5-6-account-license.md §4、server-stack-selection.md。
+  - name: TenantSeat
+    description: 租户/坐席/角色——只读呈现 tenant → seat → membership → role。见 d5-6-account-license.md §5/§6。
+  - name: Capabilities
+    description: 能力开关（tenant_features allowed 层）拉取。见 d5-5-capabilities.md §4.0、d5-6-account-license.md §6.1/§7.3。
+  - name: Billing
+    description: 成本/用量——L1 席位额度 + L2 newapi 按量用量，经 D3 代理，不直连 newapi。见 d5-4-cost-usage.md。
+  - name: SessionToken
+    description: |
+      per-session newapi token 生命周期代理（D6 §3/§4.2 职责 4，安全默认方案 B）。
+      client-local kernel adapter 只调用这组 D3 API，不直连 newapi Management API。
+  - name: NewApiManagement
+    description: newapi Management API 的 D3 代理面（server/console 用：token/channel/用量对账）。见 d6-newapi-integration.md §4。
+  - name: ModelCatalog
+    description: 模型/效力档位目录（供 D5.7 composer 消费，D6→D3 新增依赖 2）。见 d6-newapi-integration.md §6.3/§4.3。
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ────────────────────────────────────────────────────────────────
+  # Auth / Identity
+  # ────────────────────────────────────────────────────────────────
+  /auth/browser/start:
+    post:
+      operationId: authBrowserStart
+      tags: [Auth]
+      summary: 发起浏览器登录回流
+      description: |
+        对应 d5-6-account-license.md §3.1"浏览器登录回流"——app 内点击登录 → 拉起系统浏览器完成认证 →
+        深链回调带 token 回 app。用户已定参数明确要求保留此形态（复用系统浏览器已登录态/passkey/2FA），
+        即便换成自有 IdP 也不做 app 内嵌登录表单。
+
+        x-todo: IdP 主体本身（自建 OAuth/OIDC provider 还是复用第三方）未选定，
+        属"D3/D7 部署细节"，不在 D5.6 覆盖范围（见该页 §1 范围表），本端点只保证形态、不臆造具体 IdP。
+      security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                returnDeepLink:
+                  type: string
+                  description: app 端注册的深链 scheme（如 `app://auth/callback`），登录完成后回跳目标。
+      responses:
+        "200":
+          description: 授权 URL 已生成，client 拉起系统浏览器打开该 URL。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authorizationUrl, state]
+                properties:
+                  authorizationUrl:
+                    type: string
+                    format: uri
+                  state:
+                    type: string
+                    description: CSRF/回调关联用的一次性状态值。
+
+  /auth/browser/callback:
+    get:
+      operationId: authBrowserCallback
+      tags: [Auth]
+      summary: IdP 浏览器回调（系统浏览器命中，非 client 直接调用）
+      description: |
+        x-todo（不臆造，见 d5-6-account-license.md §3.2 状态机注释"深链回调带 token 回 app"）：
+        源文档只 confirm 了"深链回调带 token 回 app"这一流程形态，**未给出**深链参数的具体线上格式——
+        是 token 直接以 query/fragment 形式携带回深链，还是携带一次性 code 由 app 再调用一个
+        exchange 端点换取 JWT，D3/D5.6 均未裁决。本端点按最贴近源文档字面表述的假设（token 直接随深链带回）
+        建模，**这是本页的设计假设，非已确认线上格式**；若实现阶段改选一次性 code + exchange 模式，
+        需要新增一个 `POST /auth/browser/exchange` 端点，本契约暂不加入以免臆造未确认的形状。
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+          description: IdP 授权码（若 IdP 走标准 OAuth code 流程）。
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "302":
+          description: 重定向回 app 注册的深链，携带 JWT access/refresh（具体参数格式 x-todo，见上）。
+
+  /auth/token/refresh:
+    post:
+      operationId: authTokenRefresh
+      tags: [Auth]
+      summary: 刷新 JWT access token
+      description: |
+        对应 server-stack-selection.md 方案 A"`@nestjs/passport` + JWT access/refresh"。
+        x-todo：具体 access/refresh 有效期数值、refresh 失败重试策略未定——
+        d5-6-account-license.md §3.2"诚实缺口"原文："D3 confirmed 文档只给出'JWT access/refresh'的技术选型结论，
+        未展开具体的 token 有效期、refresh 失败重试策略"，本页不臆造具体数值。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        "200":
+          description: 刷新成功。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokenPair"
+        "401":
+          description: refresh token 失效/过期——对应 d5-6-account-license.md §3.2 `reauth_required` 状态。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/logout:
+    post:
+      operationId: authLogout
+      tags: [Auth]
+      summary: 登出（对应认证状态机 signed_out）
+      responses:
+        "204":
+          description: 已登出。
+
+  /auth/license-key/redeem:
+    post:
+      operationId: authLicenseKeyRedeem
+      tags: [Auth]
+      summary: License key 直填路径（次要入口，弱化展示）
+      description: |
+        x-todo（消解 T-023 F-07 后仍待裁决，见 d5-6-account-license.md §3.1/§9 第 1 行）：
+        **License key 直填这条入口的身份来源本页不臆造**——"登录=身份，License=授权"两分是本
+        契约遵循的既定结论，但"是否可以完全跳过 /auth/browser/* 登录、仅凭 License key 即可使用"
+        （例如需要配合匿名设备 ID），还是"License key 只是登录后的 License 绑定/兑换动作，不是
+        并列的第二条独立认证路径"，**是待产品/D3 决策的开放项**，源文档明确"不擅自选定其中一种"。
+        本端点按"登录后兑换"这一更保守的假设建模（需 bearerAuth），若最终裁决为"可脱离登录使用"，
+        本端点的 `security` 需要改为 `[]` 并补充设备身份字段——这是留待裁决后修订的缺口，不是本页的最终结论。
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [licenseKey]
+              properties:
+                licenseKey:
+                  type: string
+      responses:
+        "200":
+          description: 兑换/绑定成功。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/License"
+        "409":
+          description: License key 已被兑换或与当前账号冲突。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /me:
+    get:
+      operationId: getMe
+      tags: [Auth]
+      summary: 当前登录身份（回答"我是谁"，不含租户/坐席/License，见下方各自专属端点）
+      description: |
+        对应 d5-6-account-license.md §6.2"我的账号"面板"身份"区块的数据来源（认证 JWT）。
+        与 License JWT（"我有权用什么"）是两个不同的凭证面，见该页 §4.1。
+      responses:
+        "200":
+          description: 已认证。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          description: 未认证——对应认证状态机 `unauthenticated`/`reauth_required`。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ────────────────────────────────────────────────────────────────
+  # License
+  # ────────────────────────────────────────────────────────────────
+  /license/current:
+    get:
+      operationId: getCurrentLicense
+      tags: [License]
+      summary: 当前 License 状态只读呈现
+      description: |
+        对应 server-stack-selection.md `license`（plan、entitlements、exp、status）实体 +
+        d5-6-account-license.md §4 生命周期状态机。个人免费用户同样持有一份 `plan=free` 的 License
+        （P0 阶段说明已把 free 纳入统一 License 机制），UI 不得暗示"免费=没有 license"。
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/License"
+        "404":
+          description: |
+            `no_license`——登录成功但账号未绑定任何 license（d5-6-account-license.md §4.2 标注为
+            "异常态，正常流程不应停留于此"，D5 设计决策的兜底态，D3 未明确是否会出现）。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /license/refresh:
+    post:
+      operationId: refreshLicense
+      tags: [License]
+      summary: 强制在线刷新校验（离线宽限期内的主动刷新动作）
+      description: |
+        x-todo（不臆造机制是否存在，见 d5-6-account-license.md §4.2 v2.1 收尾说明）：
+        server-stack-selection.md"不确定与风险"第 3 条只说"纯离线 JWT 无法即时吊销，
+        **需要定义** max offline period 与强制在线刷新策略"——**并未 confirm 存在 `grace_period` 中间态、
+        到期后是否仍可用、转移条件、或吊销传播机制**。本端点的存在本身是合理推断（"强制在线刷新"这个
+        动作总要有个触发点），但其响应语义（是否会返回 `grace_period` 状态）取决于该开放设计项的最终裁决，
+        **待产品+安全决策**，本页不假设已有答案。
+      responses:
+        "200":
+          description: 刷新后的最新 License 状态。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/License"
+        "403":
+          description: License 已 `expired`/`revoked`，刷新本身不改变阻断态。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /license/public-key:
+    get:
+      operationId: getLicensePublicKey
+      tags: [License]
+      summary: License JWT 验签用 Ed25519 公钥
+      description: |
+        对应 server-stack-selection.md"应用内签发 Ed25519 JWT"。供 client 本地离线验签 License JWT
+        （即便离线也能校验签名合法性，在线校验走 /license/refresh 或 /license/current）。
+        x-todo：具体密钥分发/轮换格式（是否 JWKS 标准格式）未定，本端点先以最简单的单公钥形状占位。
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [publicKey, alg]
+                properties:
+                  publicKey:
+                    type: string
+                    description: Ed25519 公钥（格式 x-todo：PEM / base64 raw 未定）。
+                  alg:
+                    type: string
+                    enum: [EdDSA]
+                  keyId:
+                    type: string
+                    description: x-todo：密钥轮换后如何标识历史 keyId 未定。
+
+  # ────────────────────────────────────────────────────────────────
+  # Tenant / Seat / Role
+  # ────────────────────────────────────────────────────────────────
+  /tenant/current:
+    get:
+      operationId: getCurrentTenant
+      tags: [TenantSeat]
+      summary: 当前所属租户（企业坐席）/ 个人身份
+      description: |
+        对应 server-stack-selection.md `tenant` + 所有业务表 `tenant_id`。
+        个人 free 用户没有企业 tenant 概念，此时 `tenant` 字段返回 null，`kind` 为 `personal`。
+
+        x-todo（见 d5-6-account-license.md §6.4）：一账号是否可属于多个 tenant / 是否需要工作区切换器，
+        **未能确认**——本端点假设主路径为单一有效工作区上下文，只返回当前唯一有效 tenant；
+        若未来确认支持多 tenant，需要新增 `GET /tenants`（列表）与"切换当前 tenant"动作，
+        本契约暂不加入以免臆造未确认的多租户 UX 形状。
+
+        x-todo（用户可见命名未冻结，见同页 §2 命名映射表）：`tenant` 的用户可见文案候选"工作区/组织/团队"
+        尚未冻结（与 D5.3 sandbox 层的"workspace"命名存在潜在碰撞风险），本 schema 字段名用中性的
+        `tenant`，不预设最终 UI 文案。
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+
+  /tenant/current/seat:
+    get:
+      operationId: getCurrentSeat
+      tags: [TenantSeat]
+      summary: 我的坐席状态与角色（只读）
+      description: |
+        对应 server-stack-selection.md `seat`/`membership`（role、状态），P0 阶段用 `memberships` + `seat_limit`。
+        **只读**——坐席分配/邀请审批/角色变更一律指向 Console（P6），不在本契约范围内
+        （d5-6-account-license.md §1 范围表、§6.3）。
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Seat"
+        "404":
+          description: 个人 free 用户无 seat/membership 概念。
+
+  /tenant/current/invitations:
+    post:
+      operationId: createInvitation
+      tags: [TenantSeat]
+      summary: 发起邀请（分享邀请链接，非 admin 审批操作）
+      description: |
+        对应 d5-6-account-license.md §5.3——"这不是 admin 操作"，仅是普通坐席发起分享这一步；
+        邀请是否成立由 Console 侧的审批/坐席额度校验决定，本端点只负责"生成一个可分享的邀请入口"。
+
+        x-todo：邀请是否需要管理员审批还是普通坐席可直接邀请（受 seat_limit 约束）——
+        **未能确认**（d5-6-account-license.md §5.3/§9）；用户如何被通知"被邀请加入工作区"
+        （邮件/app 内/其他）——**未能确认**（同页 §4.3/§9）。本端点响应体不预设通知机制。
+      responses:
+        "201":
+          description: 邀请已创建（是否需要审批才能生效，见上方 x-todo）。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [inviteLink]
+                properties:
+                  inviteLink:
+                    type: string
+                    format: uri
+                  inviteCode:
+                    type: string
+                  status:
+                    type: string
+                    description: |
+                      x-todo：邀请自身是否要经过审批流、审批前状态如何呈现——未定，本字段先占位为自由字符串，
+                      不预设具体枚举值。
+
+  # ────────────────────────────────────────────────────────────────
+  # Feature flags（allowed 层）
+  # ────────────────────────────────────────────────────────────────
+  /tenant/current/feature-flags:
+    get:
+      operationId: getFeatureFlags
+      tags: [Capabilities]
+      summary: 拉取当前租户的能力开关（allowed 层）
+      description: |
+        对应 server-stack-selection.md `tenant_features`/`feature_flags`（JSONB `entitlements`）。
+        原文明确"客户端拉取配置；不必等于 new-api 模型权限（可叠加）"——**这是租户维度的准入开关
+        （allowed 层），与 D1 `CapabilityDescriptor`（内核/连接能力协商，active 层）是两套独立机制，
+        会叠加生效**（d5-5-capabilities.md §4.0、d5-6-account-license.md §7.3）。本端点只返回
+        allowed 层的静态列表，不做 active 层的运行时协商——那是 D1/D2 `evt.capability_changed` 的范围。
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureFlags"
+
+  # ────────────────────────────────────────────────────────────────
+  # Billing / Cost-Usage
+  # ────────────────────────────────────────────────────────────────
+  /billing/quota:
+    get:
+      operationId: getBillingQuota
+      tags: [Billing]
+      summary: L1 席位/plan 额度（个人免费 tier 窗口 / 企业按坐席）
+      description: |
+        对应 d5-4-cost-usage.md §2.2——数据来源 D3 `license`/`seat`/`membership`，**只读展示**，
+        坐席分配/邀请/角色变更一律指向 Console。两分支呈现：
+        - 个人免费 tier：单用户视角，免费额度剩余 + 窗口重置时间，无坐席概念。
+        - 企业按坐席：租户名 + 我的坐席状态（只读）+ 该坐席绑定的 plan 额度。
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingQuota"
+
+  /billing/usage:
+    get:
+      operationId: queryBillingUsage
+      tags: [Billing]
+      summary: L2 newapi 按量用量查询（经 D3 代理，永不直连 newapi）
+      description: |
+        本端点是 D1 `queryBilling(session, window?)`（[[d1-kernelport-spec-v3-5]] §7）在 client-local
+        kernel adapter 之下、真正落地的 D3 REST 调用——方案 B 安全默认下，adapter 从不直连 newapi，
+        统一调用本端点（见 d6-newapi-integration.md §3.2/§4.2 职责 4）。
+
+        **path①（`billingAttribution:'session'`）与 path②（`'user_tenant_aggregate'`）共用同一个端点**——
+        D3 依据自己的部署时静态配置决定走哪条分支，响应体 `attribution` 字段告知调用方实际生效的分支；
+        `sessionId` 参数在 path②下**仅作报告标签，不是查询过滤条件**（D1 §7 原文）。
+
+        **待 PRE-① C-3 结果裁定**：C-3（openclaw/hermes 是否支持 per-session 换模型出口 key/baseUrl）
+        尚未验证，[[d5-4-cost-usage]] §6 第 1 行与 [[d6-newapi-integration]] §2.2/§5.2 均"保守假设当前
+        处于 `'user_tenant_aggregate'` 降级分支"——本端点当前预期只走 path②；C-3 验证通过后才会切到 path①，
+        不改变本端点的请求/响应形状，只改变 `attribution` 的实际取值与 D3 内部实现路径。
+
+        **强约束（不得违反，见 d5-4-cost-usage.md §4.4）**：失败时不得返回一个字段齐全但数值虚构/为零的
+        `SessionBillingSnapshot`——"查询成功但用量为 0"与"查询失败"必须走独立的响应路径。
+      parameters:
+        - name: sessionId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |
+            path①下为过滤条件；path②下仅作报告标签（D1 §7 原文），不省略参数但语义不同。
+        - name: windowStart
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: windowEnd
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: OK——见 SessionBillingSnapshot 字段级 x-todo 标注（近似值 vs 原生字段）。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionBillingSnapshot"
+        "502":
+          description: |
+            `billing_query_subject_unresolved`（[[d1-kernelport-spec-v3-5]] §9.1、[[d2-message-schema-v3]] §3.8
+            `BillingQueryFailure.code`）——本地判定查询主体不可解析 / 远端凭证或用量接口拒绝，
+            两种触发路径在消息层**不可区分**（协议明确设计为不可区分，非待验），D5.4 UI 不应尝试拆分。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /tenant/current/newapi-endpoint-config:
+    get:
+      operationId: getNewApiEndpointConfig
+      tags: [Billing]
+      summary: client 组装 CreateSessionConfig.newapiEndpoint 所需的租户/环境级配置
+      description: |
+        对应 [[d1-kernelport-spec-v3-5]] §2.1——"`newapiEndpoint.baseUrl` 是租户/环境级配置，全体 session
+        共享，非 per-session 输入"。client 在调用内核 `createSession` 前，需要先从 D3 取得这份配置
+        （D3 是"商业/权限真相源"，baseUrl/凭证不应由 client 自行猜测或硬编码）。
+
+        **`deploymentTokenRef` 字段**：path②（`'user_tenant_aggregate'`）下**必填**——若缺失，
+        [[d1-kernelport-spec-v3-5]] §2.1 步骤 0 前置校验会导致内核 `createSession` 同步拒绝
+        `aggregate_billing_requires_deployment_token`（这是内核协议层拒绝码，非本端点的 HTTP 错误；
+        D3 的职责是确保 aggregate 模式下本字段始终被正确下发，从源头避免该拒绝发生，
+        见 [[d5-00-foundation]] §5.2 已提及、d5-6-account-license.md §7.1 复述的"部署配置问题不应期望
+        终端用户 UI 自行修复"这条纪律）。path①下本字段可省略。
+
+        **待 PRE-① C-3 结果裁定**：本端点返回的是 path①还是 path②形状，取决于 C-3 探针结果，
+        本页保守假设当前为 path②（`deploymentTokenRef` 必填）。
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewApiEndpointConfig"
+
+  # ────────────────────────────────────────────────────────────────
+  # Session-token 代理（D6 安全默认方案 B）
+  # ────────────────────────────────────────────────────────────────
+  /sessions/{sessionId}/billing-token:
+    post:
+      operationId: mintSessionBillingToken
+      tags: [SessionToken]
+      summary: 铸造 + 取明文 key（path①专属，原子操作）
+      description: |
+        对应 [[d1-kernelport-spec-v3-5]] §7 注入链步骤②③在 D3 侧的真实落地——
+        [[d6-newapi-integration]] §3.1 已把这两步对应到 newapi `POST /api/token/`（铸造）+
+        `GET /api/token/:id`（`GetTokenKey` 取明文 key），并在 §3.2 明确"这组 D3 server API 尚待
+        D3 定义具体形状，但其职责边界已经清楚：铸造/取key/查询/回收这四个动作对 client 呈现为
+        '针对这一个 session 的原子操作'"——本端点把铸造+取key合并为一次调用，D3 内部两步串联。
+
+        响应体的 `key` 字段是**该 session 自己的、由 D3 下发的、scoped 到这一个 session 的明文 key**，
+        client-local kernel adapter 拿到后负责执行注入链步骤④（把 key 写入内核 LLM 出口配置，
+        这一步发生在 client 本地，D3 不介入，见 D6 §2/§3.1 步骤④）。
+
+        **仅 path①（`billingAttribution:'session'`）下会被调用**——path②（aggregate，当前保守默认）
+        按 [[d6-newapi-integration]] §2.2 应**跳过**本端点（铸造对归因没有收益，却会消耗
+        newapi 侧"每用户 token 数量上限"）。**待 PRE-① C-3 结果裁定**：本端点组在 C-3 验证通过、
+        部署切换到 path①之前，预期不会被 client 实际调用。
+
+        x-todo（[[d6-newapi-integration]] §3.1 步骤②详注、§7 #11，**实现前阻断性冒烟确认项**）：
+        newapi `POST /api/token/` 创建响应仅 `{success:true}`，**不含**新 token 的 `id`，而
+        `GET/DELETE /api/token/:id` 恰恰需要这个 `id`——T-009/T-005 均未确认存在按 `name` 反查 `id`
+        的官方端点。这是一个**未闭合的功能性缺口**，D3 内部如何实现本端点（如何在铸造后拿到 `:id`
+        才能继续调用 `GetTokenKey`）需要在目标 newapi 版本上先做一次 API 冒烟，本契约不臆造具体机制。
+
+        x-todo（同上 §3.3"非原子失败的补偿"）：铸造成功、取 key 失败、注入失败等非原子失败路径的
+        补偿/幂等/孤儿 token 回收，是 D3 内部实现职责，不改变本端点对外的请求/响应形状，
+        但**超时/无响应**（`pending-reconcile` 对账态，D6 §3.3 v2.2 新增）情况下客户端应如何处理
+        本端点尚未定义显式的中间态 HTTP 语义（如 202），本契约暂只定义成功/失败两态，
+        中间态处理留待实现阶段结合具体重试策略确定。
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: adapter 本地生成的 UUID（D1 §2.1 v3.2 起定死为唯一来源），非 newapi 概念。
+      responses:
+        "201":
+          description: 铸造成功，返回 scoped key 供 client 本地注入内核出口。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BillingTokenMintResponse"
+        "409":
+          description: |
+            该 sessionId 已存在有效 token（幂等冲突，见 D6 §3.3"幂等键"——`name=session-<sessionId>`
+            天然具备幂等语义雏形，但 newapi 是否对重复 name 做唯一性约束**未确认**，本契约不臆造具体行为）。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: D3 无法完成 newapi 侧铸造（如撞上"每用户 token 数量上限"，见 D6 §3.1 步骤②）。
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      operationId: revokeSessionBillingToken
+      tags: [SessionToken]
+      summary: 回收该 session 的 token（path①专属，绑定"真正终结节点"）
+      description: |
+        对应 [[d6-newapi-integration]] §3.1 步骤⑥——**回收时点绑定 session 真正的终结节点**：
+        `stop()` 的 `OperationOutcome` 为 `succeeded`，或内核侧上报 `SessionEndEvent`（无论 reason
+        是 stopped/kernel_exited/transport_closed/error）。**`archived` 标记不是回收触发条件**
+        （[[d5-2-sessions]] §3.5，归档是正交的纯 UI 标记，归档中的 session 可能仍在运行、仍需要它的 token，
+        若在 archive 时机误删 token 会导致仍在运行的 session 突然失去模型出口凭证）。
+
+        client-local kernel adapter 应在确认终结信号**真实到达**（而非仅仅是 UI 发起了 stop 请求）后
+        才调用本端点。`stop()` succeeded 与 `SessionEndEvent` 可能同时/先后到达（同一次终结的两种呈现），
+        D3 内部需要按 D6 §3.3"双终结信号下的幂等回收规则"（去重键 `(sessionId, tokenGeneration)`）
+        去重，避免对同一个 newapi `:id` 产生两次 `DELETE` 竞态——**这是 D3 内部实现职责**，
+        本端点对外表现为幂等：重复调用应返回同一结果，不应报错为"已删除"。
+
+        x-todo：newapi `DELETE /api/token/:id` 对已不存在的 `:id` 如何响应（404 报错？200 幂等？）
+        **未确认**（D6 §3.3），本端点的幂等保证需要 D3 自行在应用层兜底，不能假设 newapi 侧天然幂等。
+
+        **仅 path①下会被调用**；path②按 §2.2 跳过铸造，自然也无需回收。
+        **待 PRE-① C-3 结果裁定**（同 mint 端点）。
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 回收成功（或已回收，幂等）。
+        "404":
+          description: 该 sessionId 从未铸造过 token，或已被孤儿扫描回收。
+
+  # ────────────────────────────────────────────────────────────────
+  # newapi Management API 代理面（server/console 用）
+  # ────────────────────────────────────────────────────────────────
+  /admin/tenants/{tenantId}/newapi-tokens:
+    post:
+      operationId: createTenantNewApiToken
+      tags: [NewApiManagement]
+      summary: 按租户/坐席创建 newapi token（非 session 级，admin/console 用）
+      description: |
+        对应 server-stack-selection.md"控制面 → new-api 用 admin 凭证调 Management API
+        按租户/坐席创建/吊销/调额 token"——这组动作只发生在控制面（D3），不下发给 client。
+        与 SessionToken 分组的 per-session token（供单个 kernel session 的模型出口注入用）是
+        **两类不同的 token**：本端点服务 Console 侧的租户级 token 生命周期管理（如为一个新租户
+        预置初始 token、按坐席数调整额度），不是 D6 §3 注入链的一部分。
+
+        x-todo：newapi Management API 的长期 admin token 形态、RBAC、稳定 webhook 是否存在，
+        server-stack-selection.md"不确定与风险"第 1 条与 d6-newapi-integration.md §4.1 均标注
+        "需在实现前做一次 API 冒烟"，本端点的鉴权/权限模型细节留待该次冒烟确认后补充。
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quota:
+                  type: number
+                  description: x-todo：调额单位（token/credit/USD/CNY）未定，见 d5-4-cost-usage.md §2.4 依赖表第 1 行。
+                note:
+                  type: string
+      responses:
+        "201":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NewApiTokenAdmin"
+
+  /admin/newapi-tokens/{tokenId}:
+    delete:
+      operationId: revokeTenantNewApiToken
+      tags: [NewApiManagement]
+      summary: 吊销租户级 newapi token
+      description: |
+        x-todo（同 SessionToken 分组的已知缺口）：newapi 创建响应不含 `id`，本端点路径参数 `tokenId`
+        的取值来源（是 D3 自己记录的内部 id，还是 newapi 侧 `id`）取决于同一个未闭合的反查机制冒烟结果，
+        见 [[d6-newapi-integration]] §3.1/§7 #11。
+      parameters:
+        - name: tokenId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: 已吊销。
+
+  /admin/newapi/usage-logs:
+    get:
+      operationId: getNewApiUsageLogs
+      tags: [NewApiManagement]
+      summary: 用量/日志对账查询（admin 全站，供 usage_ledger 写入与人工对账）
+      description: |
+        对应 [[d6-newapi-integration]] §4.1"用量/日志查询（admin，全站）"：D3 定期调用 newapi
+        `GET /api/log/`/`/stat`/`/search`（Admin 鉴权，confirmed）写入自己的 `usage_ledger`
+        （server-stack-selection.md 已定义该表，但**未规定其字段是否携带 Chat/Turn 关联键与计价字段**，
+        见 d5-4-cost-usage.md §2.4 依赖表第 1 行——这是 L3 task 级成本差异化的阻断依赖，MVP 不做）。
+        本端点是 D3 侧对这份对账数据的读接口（供 console 展示/人工核对），不等于把 newapi 原始接口
+        透传给 client——粒度是"一次模型调用"（`token_name`/`model_name`/`quota`/`prompt_tokens`/
+        `completion_tokens`/`use_time`/`channel_id`/`group`，D6 §5.3 confirmed），**没有** Chat/Turn 关联键。
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: tokenName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/NewApiUsageLogEntry"
+
+  /admin/newapi/models:
+    get:
+      operationId: getNewApiModels
+      tags: [NewApiManagement]
+      summary: newapi 渠道/模型目录（admin/console 维护路由表的数据源）
+      description: |
+        x-todo（不臆造具体 endpoint，见 [[d6-newapi-integration]] §4.1"渠道/模型管理"行）：
+        "仅能力面 confirmed，精确 REST 路径未能确认"——T-003 原文"完整 admin REST 路径表与鉴权头
+        未能在本轮稳定展开为可引用清单"。本端点先按"D3 对外应该提供这个读接口"这一职责边界建模，
+        D3 内部实际调用 newapi 哪个具体 REST 路径**待实现前 API 冒烟确认**，本契约不预先拍板。
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channels:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/NewApiModelChannel"
+
+  # ────────────────────────────────────────────────────────────────
+  # 模型/效力档位目录（D6→D3 新增依赖 2，供 D5.7）
+  # ────────────────────────────────────────────────────────────────
+  /models/catalog:
+    get:
+      operationId: getModelCatalog
+      tags: [ModelCatalog]
+      summary: composer 模型选择器消费的模型/效力档位目录
+      description: |
+        对应 [[d5-7-model-kernel]] §3.5"这份目录很可能是 Server 侧查询 newapi 的 Management API
+        （D6 范围，本页不展开）得到的结果"——[[d6-newapi-integration]] §6.2/§6.4 已把这条推测的置信度
+        收紧为"待冒烟确认"（不升级为已确认事实）。本端点是这条链路里 D3 面向 client 暴露的读接口，
+        内部数据来源于 `/admin/newapi/models` 聚合 + Console 侧维护的"档位 → 具体模型标识"路由表
+        （[[d6-newapi-integration]] §6.3——"这张路由表的自然归属是 D3……应该是 Console（P6）的一个配置面，
+        而不是硬编码在客户端里"）。
+
+        x-todo（待冒烟确认，非既定路径，见 D6 §6.2 路径图）：
+        `newapi 渠道/模型配置 → D3 拉取` 与 `CreateSessionConfig.model → 内核透传 → newapi 路由`
+        这两跳均是推测性路径，不是逐条确认的事实，D1 §12 S-11（`config.model` 与 `newapiEndpoint`
+        双重模型选择权威未消解）仍是完全开放项，本端点不代 D1 裁决该问题。
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tiers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ModelCatalogEntry"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        认证 JWT（access token，回答"我是谁"）。与 License JWT（回答"我有权用什么"）是两个不同的凭证，
+        见 d5-6-account-license.md §4.1。具体有效期数值 x-todo，未定。
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: |
+            机器可读错误码。已知协议层错误码举例（不臆造未列出的）：
+            `billing_query_subject_unresolved`（D1 §9.1/D2 §3.8）、
+            `aggregate_billing_requires_deployment_token`（D1 §2.1，注：这是内核 createSession 的拒绝码，
+            不是本 D3 API 直接返回的错误，此处仅作说明性列举，帮助调用方理解上下游关系）。
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    AuthTokenPair:
+      type: object
+      required: [accessToken, refreshToken]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+          description: x-todo：具体有效期数值未定。
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+          description: x-todo：具体有效期数值未定。
+
+    MeResponse:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        authMethod:
+          type: string
+          enum: [browser_oauth, license_key]
+          description: |
+            x-todo：`license_key` 分支能否单独构成身份仍是开放项（见 /auth/license-key/redeem 描述），
+            此枚举值先占位，不代表已裁决"License key 可独立登录"。
+
+    License:
+      type: object
+      required: [plan, status]
+      description: |
+        对应 server-stack-selection.md `license`（plan、entitlements、exp、status）实体，
+        应用内签发 Ed25519 JWT，配 `licenses` + `revocations` 两张表。
+      properties:
+        plan:
+          type: string
+          description: |
+            x-todo：具体枚举值未在 D3 confirmed 文档定死（P0 阶段只提到"个人 free / 企业 paid plan"），
+            此字段先用自由字符串占位，不预设完整枚举（如是否细分多档 paid plan）。
+          example: free
+        entitlements:
+          type: object
+          additionalProperties: true
+          description: JSONB `entitlements`——具体字段集未在 D3 定义，按需扩展，不预设结构。
+        exp:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - no_license
+            - pending_activation
+            - active
+            - expiring_soon
+            - grace_period
+            - expired
+            - revoked
+          description: |
+            **诚实标注（不得省略）**：`grace_period` 是 d5-6-account-license.md §4.2 的**本页产品提案**，
+            **不是 D3 confirmed 存在此机制**（该页 v2.1 收尾专门订正此前"D3 confirmed 存在 grace period"
+            的误称）。D3 只 confirm"需要定义 max offline period 与强制在线刷新策略"，**未 confirm**
+            是否存在该中间态、到期后是否仍可用、转移条件或传播机制。若产品/安全决策最终裁定"到期即刻阻断，
+            不设宽限"，该值不会出现，本 enum 仍先保留以覆盖两种可能性，具体是否启用**待产品+安全决策**。
+        tenantId:
+          type: string
+          nullable: true
+          description: 企业坐席绑定的 tenant；个人 free license 为 null。
+
+    Tenant:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [personal, enterprise]
+        id:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+          description: x-todo：用户可见文案（工作区/组织/团队）未冻结，见路径描述。
+
+    Seat:
+      type: object
+      required: [status, role]
+      description: |
+        对应 server-stack-selection.md `seat`/`membership`（role、状态），P0 用 `memberships` + `seat_limit`。
+      properties:
+        tenantId:
+          type: string
+        role:
+          type: string
+          description: |
+            x-todo：具体角色枚举未在 D3/D5.6 定义（该页 §6.1 只提到"membership.role"字段本身，
+            未列出角色枚举值），此字段先用自由字符串占位。
+          example: member
+        status:
+          type: string
+          enum: [invited, active, suspended, removed]
+          description: |
+            对应 d5-6-account-license.md §6.3 坐席/membership 只读状态机。
+            `suspended`/`removed` 状态变更的实时传播机制（推送 vs 下次登录校验 vs 定期轮询）
+            **未能确认**，D3 confirmed 文档未定义此传播机制，D1 `KernelEvent` 判别联合里也确无此类事件。
+
+    FeatureFlags:
+      type: object
+      properties:
+        flags:
+          type: object
+          additionalProperties: true
+          description: |
+            对应 server-stack-selection.md `tenant_features`/`feature_flags` JSONB `entitlements`。
+            具体 flag 命名/取值集未在 D3 定义，本 schema 不预设结构，只保证"这是一个租户级准入配置对象"。
+
+    BillingQuota:
+      type: object
+      description: |
+        L1 席位/plan 额度（d5-4-cost-usage.md §2.2）。个人免费 tier 与企业按坐席两种呈现共用同一形状，
+        企业分支下 `seat` 字段有值，个人分支下为 null。
+      properties:
+        license:
+          $ref: "#/components/schemas/License"
+        seat:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Seat"
+
+    SessionBillingSnapshot:
+      type: object
+      required:
+        - sessionId
+        - attribution
+        - fetchedAt
+        - correlatable
+      description: |
+        逐字段对应 [[d1-kernelport-spec-v3-5]] §7（confirmed），见 d5-4-cost-usage.md §2.3 展开表。
+      properties:
+        sessionId:
+          type: string
+          description: 内部关联键，D5.4 不直接展示。
+        tokenRef:
+          type: string
+          description: 内部计费凭证引用（D1 §7 注入链契约步骤②），不直接展示。
+        attribution:
+          type: string
+          enum: [session, user_tenant_aggregate]
+          description: |
+            部署时静态声明，非运行时推断（D1 §4.1）。决定整个用量卡片走哪条呈现分支。
+            **待 PRE-① C-3 结果裁定**：当前保守假设为 `user_tenant_aggregate`。
+        windowStart:
+          type: string
+          format: date-time
+          description: |
+            x-todo（[[d6-newapi-integration]] §5.1 v2.1 更正）：newapi 侧**没有**一个原生对应的
+            "查询窗口起止"字段——本字段若要落地，需由 D3/adapter 在发起查询时自行记录，
+            不是 newapi 直接提供的原生数据。
+        windowEnd:
+          type: string
+          format: date-time
+          description: 同 windowStart 的 x-todo 标注。
+        requestCount:
+          type: number
+          description: |
+            x-todo（同上 D6 §5.1 v2.1 更正）：没有 newapi 原生字段对应，是应用层对 `GET /api/log/self`
+            按 `token_name` 过滤后返回的日志条目计数的近似值，非 newapi 原生返回的字段名。
+        totalQuota:
+          type: number
+        rpm:
+          type: number
+          nullable: true
+          description: MVP 可不做展示（超出最小化范围，见 d5-4-cost-usage.md §3"MVP 明确不做"）。
+        tpm:
+          type: number
+          nullable: true
+        fetchedAt:
+          type: string
+          format: date-time
+          description: |
+            **强约束**：必须展示"数据截至 X 分钟前"——D1 明确"非 run 级、非实时"，不得暗示实时。
+        correlatable:
+          type: boolean
+          enum: [false]
+          description: |
+            恒定值 `false`——**不得**展示为可勾选/可关联项，UI 不得暗示"可以做请求级精确关联"。
+
+    NewApiEndpointConfig:
+      type: object
+      required: [baseUrl]
+      properties:
+        baseUrl:
+          type: string
+          format: uri
+          description: |
+            newapi 网关实例地址，租户/环境级配置，全体 session 共享，非 per-session 输入
+            （[[d1-kernelport-spec-v3-5]] §2.1）。
+        deploymentTokenRef:
+          type: string
+          nullable: true
+          description: |
+            path②（aggregate）下必填；path①下可省略。缺失且处于 aggregate 模式时，内核
+            `createSession` 会同步拒绝 `aggregate_billing_requires_deployment_token`（D1 §2.1 步骤 0）。
+
+    BillingTokenMintResponse:
+      type: object
+      required: [tokenRef, key]
+      properties:
+        tokenRef:
+          type: string
+          description: 写入 SessionHandle.billing.tokenRef 的引用（D1 §7）。
+        key:
+          type: string
+          description: |
+            该 session 专属的明文 key（newapi `GetTokenKey` 结果），供 client-local adapter
+            注入内核 LLM 出口配置（步骤④，发生在 client 本地）。
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    NewApiTokenAdmin:
+      type: object
+      required: [id, tenantId]
+      description: 对应 newapi Token CRUD（`POST/GET/DELETE /api/token/:id`），D3 代理，非 session 级。
+      properties:
+        id:
+          type: string
+          description: |
+            x-todo：newapi 创建响应本身不含 id，此字段实际取法待实现前冒烟确认，
+            见 [[d6-newapi-integration]] §3.1/§7 #11。
+        tenantId:
+          type: string
+        name:
+          type: string
+          description: newapi 侧 `name` 字段，源码限长 50（D6 §3.1 confirmed，文档写 30，以源码为准）。
+        quota:
+          type: number
+        status:
+          type: string
+
+    NewApiUsageLogEntry:
+      type: object
+      description: |
+        粒度是"一次模型调用"（D6 §5.3 confirmed），**没有** Chat/Turn/runId 关联键——
+        newapi `request_id`/`upstream_request_id` 不是可回查的一等产品语义（T-009 N3 confirmed）。
+      properties:
+        tokenName:
+          type: string
+        modelName:
+          type: string
+        quota:
+          type: number
+        promptTokens:
+          type: number
+        completionTokens:
+          type: number
+        useTime:
+          type: string
+          format: date-time
+        channelId:
+          type: string
+        group:
+          type: string
+
+    NewApiModelChannel:
+      type: object
+      description: |
+        x-todo：精确字段面未在源文档逐条确认（[[d6-newapi-integration]] §4.1"仅能力面 confirmed，
+        精确 REST 路径未能确认"），本 schema 只占位最常识性的字段，实现前需按目标 newapi 版本核实。
+      properties:
+        channelId:
+          type: string
+        modelName:
+          type: string
+        pricing:
+          type: object
+          additionalProperties: true
+
+    ModelCatalogEntry:
+      type: object
+      required: [tier, modelId]
+      description: |
+        composer 档位隐喻（如 Sol/Terra/Luna，参见 [[d5-7-model-kernel]] §3.1/§3.2）→ 具体 newapi
+        模型标识的映射行，路由表归属 D3/Console（[[d6-newapi-integration]] §6.3）。
+      properties:
+        tier:
+          type: string
+          description: x-todo：档位命名本身未最终冻结（见 d5-7-model-kernel.md），此处不预设具体档位名集合。
+        modelId:
+          type: string
+          description: 传给 `CreateSessionConfig.model` 的不透明字符串（D5.7 §3.3 应用层编码约定）。
+        provider:
+          type: string
+          nullable: true
+        effort:
+          type: string
+          nullable: true
