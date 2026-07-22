@@ -1,0 +1,18 @@
+# 本地开发用 PostgreSQL——对应 server-stack-selection.md"部署：Docker Compose：
+# api + postgres（+ 可选 redis）"。本骨架阶段只起 postgres（api 本身用 `npm run start:dev`
+# 跑在宿主机上更方便调试），Redis 是该文档标注的"可选"项，本轮未使用，不在此提供。
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: d3_control_plane
+    ports:
+      - '5432:5432'
+    volumes:
+      - d3_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  d3_postgres_data:
