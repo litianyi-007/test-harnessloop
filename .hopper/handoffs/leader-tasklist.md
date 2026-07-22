@@ -700,3 +700,24 @@ hopper 默认 timeout 处理。
 6. **对"开发者非专家、优先 Mac、成本敏感、非 Electron"的适配度排序 + 对 D7 设计的建议**。
 
 **产出**：按上述 6 点分节，每条带来源与置信度（confirmed/部分/未能确认）；末尾「对 D7 设计的建议」——推荐的内核分发/打包/更新方案 + 取舍理由 + 风险。落盘 `.hopper/handoffs/T-035-output.md`。**只读硬约束**：不改任何文件（尤其不写 ~/.llm-wiki/）。中文。
+
+---
+
+## T-036 / T-037（D7 内核分发打包 v1 双轨复核，同范围，异构两家并行）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: T-036=grok、T-037=codex（刻意双轨；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d7-kernel-packaging.md`（300 行，D7 v1）。
+**事实源/契约基线**：`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-035-output.md`（分发/打包调研）、`kernel/kernel-ecosystem-facts.md`、`.hopper/handoffs/T-003-output.md`；`kernel/d1-kernelport-spec-v3-5.md`(内核=独立进程/Gateway)、`kernel/d2-message-schema-v3.md`、`architecture/d4-cross-platform-arch.md`。
+
+**背景**：D7=本地内核分发打包。采用 T-035 推荐范式（native shell+managed runtime prefix+首启/按需下载+监督生命周期，跟随官方 openclaw mac app）。LaunchAgent(openclaw)/子进程(hermes)监督，最终二选一标 live-probe。7 处诚实结转。
+
+**审查重点**：
+1. **T-035 保真**：D7 声称的分发/运行时/启动事实（openclaw Node/hermes Python+uv 非单文件二进制、官方 mac app 首启下载+LaunchAgent、端口 18789、公证 DMG/签名安装器等）是否真有 T-035 支撑、有无**臆造或把"部分/未能确认"当已确认**？
+2. **契约消费正确**：KernelRuntimeLayout 启动命令是否对齐 D1 §5 Transport、D2 通信；与 D4 各端原生 app 的打包关系是否用对；X1 定位是否准确？
+3. **KernelRuntimeLayout/分发/监督 设计是否可执行**：版本钉法/checksum/前缀布局、首启下载、Mac 公证沙箱 spawn 本地进程与端口/Windows 签名防火墙、LaunchAgent vs 子进程两模型、更新回滚状态机、多内核端口/状态隔离——是否连贯、有无遗漏的关键失败/边角（如首启下载失败/离线、内核崩溃、版本不兼容、端口占用）？
+4. **诚实标注是否准确**：7 处结转（Windows Hub payload、hermes pin/rollback、self-update 禁用契约、端口隔离、LaunchAgent-vs-子进程 live-probe、checksum、migration epoch）是否恰当、有无该结转却当已定的、或该定却结转的？
+5. **内部自洽 + 完整性**：整体是否可作为实现输入？有无遗漏面（签名/公证具体流程、内核与 app 首次配对、卸载清理等）？
+
+**Verdict**：PASS | PASS_WITH_NOTE | REWORK | FAIL + 关键 findings（引 D7 行 + 对应 T-035/契约位置）。
+**产出**：五维逐条 + verdict + findings。T-036→`.hopper/handoffs/T-036-output.md`；T-037→`.hopper/handoffs/T-037-output.md`。**Read-only 硬约束**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
