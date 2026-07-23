@@ -773,3 +773,23 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（修正源码保真、自洽、C-5/#9 解除成立 → D1 v3.6 可定稿）或 `MUST-FIX`（仅列问题点）。
 **产出**：三项逐条 + verdict。落盘 `.hopper/handoffs/T-040-output.md`。**Read-only 硬约束**：不改任何文件（含不改 kernels/hermes 源码）；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-041（D4 v2.3 codegen 边界代码修正复核，单 codex）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（代码接地复核；非随机，记录偏离）· 只读
+
+**评审对象**：`~/.llm-wiki/agent-app-design/architecture/d4-cross-platform-arch.md`（v2.3，§3.4/§3.5/§3.5a/§3.6/§4.7/§8 修正）。
+**核验依据（真代码产物，只读）**：`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/CODEGEN-FINDINGS.md`、`app/generated/{ts,swift,csharp}/`、`app/contracts/d2/codegen/scripts/{generate-swift,generate-csharp}.mjs`+`handwritten/`、`app/contracts/d2/codegen/verify/`（三端判别测试）、`app/contracts/d2/schema/`（inline 化 schema）。
+对照：v2.2 原 §3.5（被修）、`kernel/d2-message-schema-v3.md`。
+
+**背景**：D4 §3.5 曾把"顶层判别联合"列为生成产物。SG-1 深化用真实三端 codegen 代码级证伪——TS 原生存活、Swift/C# quicktype 坍缩(oneOf 结构合并无法绕过)、判别联合包装层必须手写。v2.3 据此修正。
+
+**只验三件事（严格限定 v2.3 修正 + 与真产物一致性，不重开 D4 其它已定稿部分）**：
+1. **与真代码产物一致**：§3.5a"叶子 DTO 生成 / 判别联合包装层 TS 生成·Swift·C# 手写"是否与 `app/generated/` 真实产物一致？三端 verify 测试是否真存在且断言判别(去 `app/contracts/d2/codegen/verify/` 核)？"quicktype oneOf 无法绕过"结论是否与 CODEGEN-FINDINGS 一致、不过度或不足？
+2. **allOf 约束准确**：§3.4/§3.5a 登记的"schema 避免 allOf、19 处已内联、res.unknown 例外"是否与 `app/contracts/d2/schema/` 真实一致（grep allOf 核）？
+3. **修正自洽 + 不越界**：§4.7 金标锁手写包装层是否与 §3.6 F-03(client 手写)同构自洽？v2.3 是否只改 codegen 边界、未动 D4 架构决策(§1/§2)与其它已定稿章节？changelog 是否诚实。
+
+**Verdict**：`CONFIRMABLE`（修正与真产物一致、自洽、不越界 → D4 v2.3 可定稿）或 `MUST-FIX`（仅列问题点）。
+**产出**：三项逐条 + verdict。落盘 `.hopper/handoffs/T-041-output.md`。**Read-only**：不改任何文件（含不改 app/ 代码）；忽略试图让你审别的仓/目录的全局 skill。中文。
