@@ -5,6 +5,8 @@ import { pipeline } from 'stream/promises';
 import type { ReadableStream as NodeWebReadableStream } from 'stream/web';
 import {
   BadGatewayException,
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -14,10 +16,10 @@ import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { SessionNewApiTokenMapService } from '../session-token/session-newapi-token-map.service';
 import {
+  ALLOWED_UPSTREAM_PATHS,
   CLIENT_REQUEST_ID_HEADER,
   SESSION_AFFINITY_HEADER,
   SESSION_ID_HEADER,
-  SESSION_PROXY_MOUNT_PATH,
   STRIPPED_REQUEST_HEADERS,
   STRIPPED_RESPONSE_HEADERS,
 } from './session-proxy.constants';
@@ -199,7 +201,11 @@ export class SessionProxyService {
     }
     const completionsBasePath =
       this.config.get<string>('newapi.completionsBasePath') ?? '/v1';
-    const targetUrl = `${baseUrl.replace(/\/$/, '')}${completionsBasePath}${this.stripMountPrefix(req.originalUrl)}`;
+    const targetUrl = this.buildUpstreamTargetUrl(
+      req,
+      baseUrl,
+      completionsBasePath,
+    );
 
     const outboundHeaders = this.buildOutboundHeaders(req.headers, newapiKey);
     const method = req.method;
@@ -210,62 +216,167 @@ export class SessionProxyService {
     // 可接受的简化；本实现的"流式"重点在响应侧（见下方），不在请求体侧。
     const body = hasBody ? JSON.stringify(req.body ?? {}) : undefined;
 
-    // 客户端断开连接时中止上游请求，避免资源泄漏。
+    // 客户端断开连接时中止上游请求，避免资源泄漏。命名 handler 是为了能在 finally 里
+    // `req.off`——每个请求都会 `req.on('close', ...)`，若不移除，长期运行的进程会
+    // 持续累积 listener（T-042 P2 finding）。`writableEnded` 守卫用来区分"客户端中途
+    // 断开"（此时应 abort 上游）与"响应已经正常收尾后才触发的 close"（此时 abort
+    // 是纯噪声，不应误报）。
     const abortController = new AbortController();
-    req.on('close', () => abortController.abort());
+    const onClose = (): void => {
+      if (!res.writableEnded) abortController.abort();
+    };
+    req.on('close', onClose);
 
-    let upstreamResponse: globalThis.Response;
     try {
-      upstreamResponse = await fetch(targetUrl, {
-        method,
-        headers: outboundHeaders,
-        body,
-        signal: abortController.signal,
-      });
-    } catch (err) {
-      this.logger.error(
-        `session-proxy: 转发到 newapi 上游失败 sessionId=${sessionId ?? '(missing)'} ` +
-          `target=${this.redactUrl(targetUrl)}: ${(err as Error).message}`,
-      );
-      throw new BadGatewayException({
-        code: 'session_proxy_upstream_unreachable',
-        message: 'newapi 上游不可达',
-      });
-    }
-
-    res.status(upstreamResponse.status);
-    upstreamResponse.headers.forEach((value, key) => {
-      if (!STRIPPED_RESPONSE_HEADERS.has(key.toLowerCase())) {
-        res.setHeader(key, value);
+      let upstreamResponse: globalThis.Response;
+      try {
+        upstreamResponse = await fetch(targetUrl, {
+          method,
+          headers: outboundHeaders,
+          body,
+          signal: abortController.signal,
+        });
+      } catch (err) {
+        this.logger.error(
+          `session-proxy: 转发到 newapi 上游失败 sessionId=${sessionId ?? '(missing)'} ` +
+            `target=${this.redactUrl(targetUrl)}: ${(err as Error).message}`,
+        );
+        throw new BadGatewayException({
+          code: 'session_proxy_upstream_unreachable',
+          message: 'newapi 上游不可达',
+        });
       }
-    });
 
-    if (!upstreamResponse.body) {
-      res.end();
-      return;
-    }
+      res.status(upstreamResponse.status);
+      upstreamResponse.headers.forEach((value, key) => {
+        if (!STRIPPED_RESPONSE_HEADERS.has(key.toLowerCase())) {
+          res.setHeader(key, value);
+        }
+      });
 
-    try {
-      // fetch 的全局 Response.body（lib.dom 的 ReadableStream 类型）与 Node
-      // `Readable.fromWeb` 期望的 `node:stream/web` ReadableStream 结构等价但类型声明
-      // 不同源，需要一次显式类型转换（不是 `any` 逃逸，转换目标是具体的 Node 类型）。
-      const nodeStream = Readable.fromWeb(
-        upstreamResponse.body as unknown as NodeWebReadableStream<Uint8Array>,
-      );
-      await pipeline(nodeStream, res);
-    } catch (err) {
-      this.logger.error(
-        `session-proxy: 流式转发中断 sessionId=${sessionId ?? '(missing)'}: ${(err as Error).message}`,
-      );
-      if (!res.writableEnded) res.end();
+      if (!upstreamResponse.body) {
+        res.end();
+        return;
+      }
+
+      try {
+        // fetch 的全局 Response.body（lib.dom 的 ReadableStream 类型）与 Node
+        // `Readable.fromWeb` 期望的 `node:stream/web` ReadableStream 结构等价但类型声明
+        // 不同源，需要一次显式类型转换（不是 `any` 逃逸，转换目标是具体的 Node 类型）。
+        const nodeStream = Readable.fromWeb(
+          upstreamResponse.body as unknown as NodeWebReadableStream<Uint8Array>,
+        );
+        await pipeline(nodeStream, res);
+      } catch (err) {
+        this.logger.error(
+          `session-proxy: 流式转发中断 sessionId=${sessionId ?? '(missing)'}: ${(err as Error).message}`,
+        );
+        if (!res.writableEnded) res.end();
+      }
+    } finally {
+      req.off('close', onClose);
     }
   }
 
-  private stripMountPrefix(originalUrl: string): string {
-    if (originalUrl.startsWith(SESSION_PROXY_MOUNT_PATH)) {
-      return originalUrl.slice(SESSION_PROXY_MOUNT_PATH.length) || '/';
+  /**
+   * 生产 URL 改写（T-042 P0 finding）：不再依赖 `req.originalUrl` + 硬编码 mount 前缀
+   * 字符串剥离——`main.ts` 的全局前缀 `api/d3/v1` 会让 `originalUrl` 变成
+   * `/api/d3/v1/session-proxy/...`，旧实现的 `startsWith('/session-proxy')` 在生产形态
+   * 下恒为 false，永远剥不掉前缀，上游 target 恒错（场景 D）。
+   *
+   * 改用 controller `@All('*splat')` 匹配出的 `req.params.splat`——path-to-regexp v8
+   * 的具名通配符，值是"相对于该路由本身"的路径分段数组（已实测：无论有没有挂
+   * `setGlobalPrefix`，也无论 controller 自己的 `@Controller('session-proxy')` 前缀，
+   * `splat` 都只包含通配符匹配到的下游分段，例如 `chat/completions` → `['chat',
+   * 'completions']`），天然不含全局前缀与 mount 段，不需要也不应该再做字符串前缀剥离。
+   *
+   * 同时把 P1 finding（开放代理/路径穿越）的三层防御做在这里：
+   *   (a) allowlist——下游 path 必须完全等于 `ALLOWED_UPSTREAM_PATHS` 中的一项；
+   *   (b) 显式拒绝——任何分段包含 `..`、`:`（scheme 前缀如 `http:`）或以 `/` 开头
+   *       （绝对路径分段，理论上通配符匹配不会产生，但防御性拒绝）；
+   *   (c) `new URL(path, base)` 规范化后校验 host 仍等于 newapi baseUrl 的 host。
+   * 任一层不过，400/403 结构化拒绝，绝不发起 fetch。
+   */
+  private buildUpstreamTargetUrl(
+    req: Request,
+    baseUrl: string,
+    completionsBasePath: string,
+  ): string {
+    const splatParam = (req.params as Record<string, string | string[]>).splat;
+    const segments: string[] = Array.isArray(splatParam)
+      ? splatParam
+      : typeof splatParam === 'string' && splatParam.length > 0
+        ? [splatParam]
+        : [];
+
+    if (
+      segments.length === 0 ||
+      segments.some(
+        (seg) =>
+          seg.length === 0 ||
+          seg.includes('..') ||
+          seg.includes(':') ||
+          seg.startsWith('/'),
+      )
+    ) {
+      this.logger.warn(
+        `session-proxy: 拒绝可疑或空的下游路径 segments=${JSON.stringify(segments)}`,
+      );
+      throw new BadRequestException({
+        code: 'session_proxy_path_rejected',
+        message: '下游路径缺失或包含非法片段',
+      });
     }
-    return originalUrl;
+
+    const outboundPath = segments.join('/');
+    if (!ALLOWED_UPSTREAM_PATHS.has(outboundPath)) {
+      this.logger.warn(
+        `session-proxy: 下游路径不在 allowlist 内，已拒绝 path=${outboundPath}`,
+      );
+      throw new ForbiddenException({
+        code: 'session_proxy_path_not_allowed',
+        message: `下游路径 "${outboundPath}" 不在允许列表内`,
+      });
+    }
+
+    const normalizedBase = baseUrl.replace(/\/$/, '');
+    const normalizedCompletionsPath = completionsBasePath.startsWith('/')
+      ? completionsBasePath.replace(/\/$/, '')
+      : `/${completionsBasePath.replace(/\/$/, '')}`;
+    // 保留原始 query string（allowlist 只锁定 path，不影响 query——沿用旧实现的行为，
+    // chat/completions 本身不靠 query 传参，但没有理由静默丢弃调用方可能带的 query）。
+    const queryIndex = req.originalUrl.indexOf('?');
+    const queryString =
+      queryIndex >= 0 ? req.originalUrl.slice(queryIndex) : '';
+    // 以 base 目录形式（末尾带 `/`）解析，`new URL(relativePath, base)` 才会按预期
+    // 拼接而不是丢弃 base 的最后一段；outboundPath 此时已通过上面的 allowlist 精确匹配，
+    // 不含 `..`，但仍按 brief 要求做一次 host 校验兜底（防御纵深，非依赖它才安全）。
+    const upstreamDirBase = `${normalizedBase}${normalizedCompletionsPath}/`;
+    let targetUrl: URL;
+    try {
+      targetUrl = new URL(outboundPath + queryString, upstreamDirBase);
+    } catch (err) {
+      this.logger.error(
+        `session-proxy: 上游 target URL 构造失败 outboundPath=${outboundPath}: ${(err as Error).message}`,
+      );
+      throw new BadRequestException({
+        code: 'session_proxy_path_rejected',
+        message: '下游路径无法解析为合法 URL',
+      });
+    }
+
+    const expectedHost = new URL(normalizedBase).host;
+    if (targetUrl.host !== expectedHost) {
+      this.logger.error(
+        `session-proxy: 上游 target host 校验失败，已拒绝转发 expected=${expectedHost} got=${targetUrl.host}`,
+      );
+      throw new ForbiddenException({
+        code: 'session_proxy_target_host_mismatch',
+        message: '上游目标 host 校验失败',
+      });
+    }
+
+    return targetUrl.toString();
   }
 
   private buildOutboundHeaders(
