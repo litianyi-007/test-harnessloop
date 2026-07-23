@@ -90,6 +90,24 @@ export class EnvironmentVariables {
   @IsString()
   NEWAPI_ADMIN_TOKEN?: string; // x-todo：长期 admin token 形态/RBAC 未经实现前 API 冒烟确认
 
+  @IsOptional()
+  @IsString()
+  NEWAPI_COMPLETIONS_BASE_PATH?: string; // x-todo：OpenAI 兼容端点路径假设，见 configuration.ts 注释
+
+  // ── D3-proxy session-affinity 计费路由代理（SG-6 path①，
+  //    sg6-openclaw-persession-patch-design.md §5.1/§5.2）──
+  @IsOptional()
+  @IsString()
+  SESSION_PROXY_STATIC_AUTH_KEY?: string; // x-todo：部署时生成，留空则 fail-closed 拒绝
+
+  @IsOptional()
+  @IsIn(['reject', 'aggregate'])
+  SESSION_PROXY_UNMAPPED_SESSION_POLICY?: string;
+
+  @IsOptional()
+  @IsString()
+  SESSION_PROXY_AGGREGATE_FALLBACK_NEWAPI_KEY?: string;
+
   // ── 浏览器登录回流（IdP 主体未选定，x-todo，见 openapi /auth/browser/start）──
   @IsOptional()
   @IsString()

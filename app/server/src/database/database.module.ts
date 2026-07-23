@@ -6,6 +6,7 @@ import {
   LicenseRevocationEntity,
   MembershipEntity,
   SeatEntity,
+  SessionNewApiTokenEntity,
   TenantEntity,
   TenantFeatureEntity,
   UserEntity,
@@ -38,6 +39,7 @@ import {
           TenantFeatureEntity,
           LicenseEntity,
           LicenseRevocationEntity,
+          SessionNewApiTokenEntity,
         ],
         // TODO：生产环境前换成 TypeORM migrations（本轮范围明确留空，见 app/server/README.md）。
         synchronize: config.get<string>('nodeEnv') !== 'production',
@@ -51,6 +53,7 @@ import {
       TenantFeatureEntity,
       LicenseEntity,
       LicenseRevocationEntity,
+      SessionNewApiTokenEntity,
     ]),
   ],
   exports: [TypeOrmModule],
