@@ -56,6 +56,7 @@ Anchor: `.hopper/queue.md::root`
 | T-040 | code-review-acceptance | done | | normal | D1 v3.6 hermes-steer 源码修正复核（单 codex）：源码保真(三入口/无ack)+修正自洽+结果态建模+C-5/#9解除是否成立 → CONFIRMABLE 则 v3.6 定稿 | codex |
 | T-041 | code-review-acceptance | done | | normal | D4 v2.3 codegen 边界代码修正复核（单 codex）：§3.5a 与 app/generated 真产物一致/allOf约束准确/§4.7金标自洽不越界 → CONFIRMABLE 则 D4 v2.3 定稿 | codex |
 | T-042 | code-review-adversarial | done | | high | D3-proxy 换凭证反向代理安全+代理正确性对抗审（单 grok）：凭证不泄漏/剥离完整/fail-closed无旁路/流式正确 → PASS 则 SG-6 安全枢纽收 | grok |
+| T-043 | code-review-adversarial | done | | high | 2 个 openclaw per-session 补丁(4ddcb52 schema + 35f8739 transport 热路径)对抗审（单 grok）：schema精确性/热路径回归/忠实镜像provider版/sessionId透传/安全 → PASS 则补丁validated | grok |
 | 
 ---
 
