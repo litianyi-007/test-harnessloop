@@ -793,3 +793,27 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（修正与真产物一致、自洽、不越界 → D4 v2.3 可定稿）或 `MUST-FIX`（仅列问题点）。
 **产出**：三项逐条 + verdict。落盘 `.hopper/handoffs/T-041-output.md`。**Read-only**：不改任何文件（含不改 app/ 代码）；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-042（D3-proxy session-affinity 计费路由 对抗代码审，单 grok）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: grok（随机池取，异构于 T-041 codex）· 只读
+
+**评审对象**（主仓库 commit `5fcf9de`，只读）：
+- `app/server/src/modules/session-proxy/{session-proxy.service.ts,session-proxy.controller.ts,session-proxy.module.ts,session-proxy.constants.ts,session-proxy.integration.spec.ts}`
+- `app/server/src/modules/session-token/{session-newapi-token-map.service.ts,session-newapi-token-map.service.spec.ts,session-token.module.ts}`
+- `app/server/src/database/entities/session-newapi-token.entity.ts`
+- 关联：`app/server/src/config/{configuration.ts,env.validation.ts}`、`app/server/src/app.module.ts`
+
+**背景**：这是 SG-6（C-3 path① session 级计费归因）的安全枢纽——一个**换凭证的反向代理**。openclaw 出站模型请求带静态 `Authorization`(部署级 openclaw→proxy key) + `x-session-affinity: <sessionId>` 打到本代理；代理校验静态 key → 读 sessionId → 查 D3 自己的 session→newapi-key 映射 → 换成真实 newapi `Authorization` → 流式转发给 newapi 上游。newapi 真凭证只存 D3、绝不回显/入日志。D6 明确把安全列为焦点。写入路径(mint)当前因既有 newapi token-id 反查缺口 501-blocked，映射表生产环境预期为空——这是诚实状态，非本次评审要修。
+
+**对抗核验重点（找真缺陷，给可复现失败场景）**：
+1. **凭证安全**：真实 newapi key 是否可能经任何路径泄漏（日志、错误响应体、回传 header、异常栈）？静态 key 校验 `timingSafeEqual` + fail-closed（未配置即拒）是否真的没有旁路？换凭证时原静态 key 是否确实不透传给 newapi？
+2. **代理 hygiene**：入站/出站 header 剥离清单（`STRIPPED_REQUEST_HEADERS`/`STRIPPED_RESPONSE_HEADERS`）是否完整——`host`/`content-length`/`authorization`/hop-by-hop 是否都处理？body 重序列化后 `content-length` 是否会 mismatch？`x-session-affinity` 等内部路由头转发给 newapi 是否有信息暴露风险？
+3. **fail-closed 完整性**：未命中映射（含 sessionId 缺失、aggregate 兜底未配 key）是否**任何分支**都不会无凭证/错凭证放行？有没有一条路径能让请求带着错误的计费主体溜过去？
+4. **流式正确性**：`Readable.fromWeb`+`pipeline` 是否真流式不缓冲？客户端断开 `req.on('close')` abort 是否有竞态/资源泄漏？SSE 半包/上游中断的错误处理是否会导致 res 悬挂或双写？
+5. **逻辑/边界**：`extractSessionId` 数组头、`stripMountPrefix`、`GET/HEAD` 无 body、上游不可达/非 2xx 的处理是否有 bug？集成测试是否真覆盖了它声称的（分块到达、静态 key 校验、未命中兜底）还是自证性测试？
+
+**Verdict**：`PASS` | `PASS_WITH_NOTE` | `REWORK` | `FAIL`。REWORK/FAIL 逐条给 file:line + 可复现失败场景。
+**产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-042-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。

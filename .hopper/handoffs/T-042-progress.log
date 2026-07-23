@@ -1,0 +1,2 @@
+{"seq":1,"ts":"2026-07-23T04:12:59.891Z","task_id":"T-042","vendor":"grok","phase":"starting","kind":"lifecycle","message":"Background task queued.","source":"runner","terminal":false}
+{"seq":2,"ts":"2026-07-23T04:16:55.803Z","task_id":"T-042","vendor":"grok","phase":"failed","kind":"terminal","message":"Task failed.","source":"runner","terminal":true,"status":"failed","duration_ms":235851,"exit_code":0,"signal":null,"adapter_status":"auth-fail","timed_out":null}
