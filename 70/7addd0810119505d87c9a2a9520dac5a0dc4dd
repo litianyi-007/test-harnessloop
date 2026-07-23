@@ -1,0 +1,36 @@
+.gitmodules
+  0000019f905cf283 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "707addd0810119505d87c9a2a9520dac5a0dc4dd",
+  "prompts": {
+    "s_43162acddd43a8::t_1e7976231f0b03": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1784833437902093000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019f905cf283": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-4-8",
+        "id": "ai-thread-claude-claude-opus-4-8-1784833438339"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 16,
+      "total_deletions": 0,
+      "accepted_lines": 16,
+      "overriden_lines": 0
+    }
+  }
+}
