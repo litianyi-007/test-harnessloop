@@ -1,0 +1,23 @@
+.harnessloop/goals/20260718-002-agent-app/goal-breakdown.md
+  s_c587ecf7bbc3e2::t_9d08f743d5a8a3 24-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "c82d6bdd6f0ac3b31f1dd2d9e0dee73ecc6495cb",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_9d08f743d5a8a3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
