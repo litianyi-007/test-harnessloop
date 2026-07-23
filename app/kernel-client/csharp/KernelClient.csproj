@@ -1,0 +1,25 @@
+<!-- SG-4：C# 侧 IKernelClient 接口骨架的最小构建单元（Library，不是 Exe——本轮 C# 只到接口层，
+     没有具体实现，不需要一个 Program.cs 入口）。项目直接引用 app/generated/csharp/*.cs
+     （quicktype 生成的叶子 DTO + 手写判别联合包装），不拷贝、不复制，确保接口骨架编译时用的
+     就是 SG-1 codegen 产出的真实 D2 DTO 本身——与
+     app/contracts/d2/codegen/verify/csharp/verify-csharp.csproj 的引用方式一致。 -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS8618;CS8601;CS8602;CS8603;CS8625</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>TestHarnessloop.KernelClient</AssemblyName>
+    <RootNamespace>KernelClient</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../generated/csharp/D2.cs" />
+    <Compile Include="../../generated/csharp/DiscriminatedUnions.cs" />
+    <Compile Include="IKernelClient.cs" />
+  </ItemGroup>
+
+</Project>
