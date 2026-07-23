@@ -1,23 +1,19 @@
 app/contracts/d2/schema/methods/unknown-response.schema.json
-  s_c587ecf7bbc3e2::t_ecf80058183ddc 5-5
+  s_c587ecf7bbc3e2::t_ecf80058183ddc 5
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.15",
   "base_commit_sha": "59cf86d09ce21ba36a1023d09d373a91f161d3ae",
-  "prompts": {
-    "s_c587ecf7bbc3e2::t_ecf80058183ddc": {
+  "prompts": {},
+  "sessions": {
+    "s_c587ecf7bbc3e2": {
       "agent_id": {
         "tool": "claude",
         "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
         "model": "claude-fable-5"
       },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
+      "human_author": "litianyi <litianyi@corp.netease.com>"
     }
   }
 }
