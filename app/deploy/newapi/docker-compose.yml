@@ -1,0 +1,22 @@
+# SG-9 new-api 自托管部署（SQLite 单机模式，最小 e2e 配置）
+# 组件性质：D6 定性的 LLM Transport / Metering Sidecar（github.com/QuantumNous/new-api）
+# 部署目标：树莓派 10.244.132.76（hostname olegpi, aarch64, Ubuntu 24.04）
+# 说明：SQLite 模式（不设 SQL_DSN）→ 用挂载卷 /data 下本地 SQLite；单机计费链 e2e 够用，
+#       无需独立 MySQL/Redis。若后续要多实例/生产化，再切 MySQL + Redis（见 README）。
+services:
+  new-api:
+    image: calciumion/new-api:latest
+    container_name: new-api
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      - TZ=Asia/Shanghai
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/status || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

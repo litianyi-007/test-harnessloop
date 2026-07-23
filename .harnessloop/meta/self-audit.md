@@ -421,3 +421,63 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 - Reason: 本轮未发现新框架缺陷；evolution-issue 0010 的修复效果已在本轮得到首次正面验证（round 闭环完整兑现），无需新开 issue，亦不需变更既有 0010 状态（其框架级 dead-reckoning 守卫提案本身仍 open，留待框架侧独立评估）
 - Issue path: 无新增（引用既有 .harnessloop/meta/evolution-issues/0010-impl-phase-round-bypass-state-drift.md）
 - Redaction notes: 无涉密内容
+
+---
+
+# Self Audit
+
+## Audit Metadata
+
+- Audit ID: AUDIT-20260723-ROUND0003-SG9-L1
+- Trigger: round-close rounds/0003
+- Active goal: 20260718-002-agent-app
+- Active round: 0003（SG-9 newapi 自托管部署到树莓派）
+- Auditor: main session（claude-sonnet-5）
+- Timestamp: 2026-07-23
+
+## Loop Health
+
+| Check | Status | Evidence path | Notes |
+| --- | --- | --- | --- |
+| Dead loop risk | pass | rounds/0003/scope-lock.md; rounds/0003/round-summary.md | 无重复无新证据动作——本轮为首次对 SG-9 执行，非重试；延续 rounds/0002 建立的「scope-lock 先于执行」做法 |
+| Self-contradiction | pass | rounds/0003/round-summary.md; rounds/0003/decision.md; goal-breakdown.md SG-9 行 | 无矛盾：SG-9 done 严格限定 L1（部署+管理面就绪），L2（渠道配置）/完整计费链 e2e 均如实标注 defer/结转 SG-8.5，各处表述一致 |
+| Goal drift | pass | rounds/0003/scope-lock.md; goal-breakdown.md | **新增 SG-9 子目标属用户授权范围内，非 drift**——scope-lock Round Objective 明确记录"用户 2026-07-23 决策：newapi 作为本全栈方案的独立组件，部署到自有树莓派"，非主会话自行扩围；执行内容与 scope-lock 授权一致，未偏离 |
+| Evidence drift | pass | state/evidence-index.md E13 | 新增 E13 覆盖 SG-9 L1 交付物，无 stale |
+| Validation drift | pass | rounds/0003/scope-lock.md「Verification Commands Or Checks」 | 验证方法（Pi Docker 就绪/容器起/管理面可达/L2 渠道+token）已在 scope-lock 中显式列出并在 round-summary 中逐项对照回填，非静默变更 |
+| Handoff stagnation | pass |  | 本轮无 hopper 派发（基础设施部署，非对抗/验收评审类任务，未触发 codex/grok 派发），无 open handoff |
+| Cost/context runaway | pass |  | 部署日志/凭证走 `app/deploy/newapi/` 与 gitignored `channel-params.json`，主会话摘要引用 |
+| Recoverable blocker stalled | pass | rounds/0003/decision.md | SG-8.5 的 access-missing blocker（缺 `NEWAPI_UPSTREAM_LLM_KEY`）已如实登记，有明确解除路径（待用户提供凭证），**非 dead-loop**——不是无新证据的重复动作，而是首次遇到该阻断且已止步等待，未反复尝试绕过 |
+
+Status values: `pass`, `warn`, `fail`, `unknown`.
+
+## Deterministic Signals
+
+| Signal | Current value | Previous value | Threshold | Status |
+| --- | --- | --- | --- | --- |
+| Recent feedback sequence | positive（round 0003，SG-9 L1，有证据、收敛） | positive（round 0002，SG-4 L1） | no repeated neutral/negative without new evidence | pass |
+| Repeated next action count | 1（本轮首次执行 SG-9，非重复） | 1（rounds/0002 提议 SG-5/SG-3/SG-7/SG-8） | max 2 identical actions | pass |
+| Scope-lock version | rounds/0003 v1（新建） | rounds/0002 v1 | must change after failed action unless rollback | pass |
+| Goal contract version/hash | goal-breakdown 本批新增 SG-9 行（pending→done，L1 级）+ SG-8.5 依赖行注记 SG-9 就绪，均显式留痕，非静默变更 | 前值（无 SG-9 行） | no silent change | pass |
+| Threshold version/hash | 本批未改动 thresholds.md（SG-9 为基础设施部署轮，验证方法记于 scope-lock，未新增独立阈值行） | 前值 | no silent change | pass |
+| Verification command set | 新增 Pi SSH 探针/curl 管理面/root setup+login 验证序列（记于 rounds/0003/scope-lock.md「Verification Commands Or Checks」与 round-summary.md） | 既有 build/jest/eslint/swiftc/dotnet build 等 | no silent change | pass |
+| Stale evidence count | 0（E13 新鲜） | 0 | 0 for acceptance | pass |
+| Open handoff age | 0 | 0 | project-defined | pass |
+| Main-session raw context risk | 低（部署日志/凭证走 `app/deploy/newapi/` 与 gitignored channel-params，主会话摘要引用） | 低 | raw logs stay in evidence files | pass |
+| Delegation model/effort verified | 本轮为基础设施部署任务，按既定规则由主会话 claude-sonnet-5 子代理执行；未派第三方 vendor（非对抗/验收评审类任务） | 历轮同规则 | required for high-risk delegation | pass |
+| Recoverable blocker next action | SG-8.5 access-missing blocker：待用户提供 `NEWAPI_UPSTREAM_LLM_KEY`，非盲目重试——凭证到位前不主动尝试绕过（如臆造假 key） | 不适用 | read-only investigation before user pause | pass |
+
+## Local Repair Decision
+
+- Required repair: 无——本轮延续 rounds/0002 建立的做法，SG-9 先开 scope-lock（rounds/0003/scope-lock.md）再执行，收盘时完整走 round-summary → decision → state 回写（current.md/evidence-index.md/goal-breakdown.md），闭环完整、无绕开
+- Smallest safe next action: 待用户提供 `NEWAPI_UPSTREAM_LLM_KEY` 后开 SG-8.5（计费链 e2e）；凭证到位前可改推 SG-3/SG-5 等不依赖上游凭证的子目标，继续逐个走 round 闭环
+- Blocker type: access-missing（仅限 SG-8.5 路径；本轮 SG-9 L1 本身无 blocker）
+- Recovery eligible: yes（待用户提供凭证即可解除）
+- Human confirmation required: 是——`NEWAPI_UPSTREAM_LLM_KEY` 需用户提供，SG-8.5 方可启动
+- Block execution until repaired: 否（SG-9 本身已完整交付 L1；不阻塞改推 SG-3/SG-5 等其它子目标）
+
+## Evolution Issue Decision
+
+- Create upstream evolution issue: no
+- Reason: 本轮未发现新框架缺陷；access-missing blocker 的登记与 defer 处理均按既定协议纪律执行（未臆造凭证凑配置，如实上报待用户输入），无需新开 issue
+- Issue path: 无新增
+- Redaction notes: 无涉密内容（仅引用 host/端口/版本号，凭证值未出现在本文件）
