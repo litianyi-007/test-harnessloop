@@ -202,6 +202,9 @@
 | 4. 需求规格成型并达 dev-readiness，用户签署 | dev-readiness 规格文档 + 用户签署记录 | 用户签署门 | 是 |
 | 5. 插件进化 ≥ 5 项发布（横切，不受需求分析进度阻塞） | 各插件版本发布记录（TH-xxxx 编号） | 与插件仓库/CHANGELOG 比对 | 否 |
 | 6. 里程碑文章 ≥ 3 篇成稿至 PR wiki `drafts/`（横切） | ≥ 3 篇文章成稿文件 | 用户发布确认 | 是 |
+| 7. 实现阶段（RA-L5 / IMPL）SG 验收：首批 SG-1..SG-8 各子目标达成（2026-07-23 补） | SG 交付物 + 对应验证命令产出（静态编译/单测/对抗审 + build+run 内核 e2e/runtime 探针） | **以 `goal-breakdown.md`「实现阶段（RA-L5 / IMPL）议程」SG-1..SG-8 议程表为权威**（各行「预期证据/验收」+ 状态 + 「SG-8 验收清单」逐项 build/run + 健康判据）；具体验证命令/pass/fail/evidence path 落 `thresholds.md` SG-1..SG-8 各行 | 否（横切，证据驱动；探索性 goal 按 Success Condition 判成功，否定结论按 feedback-policy 探索性条款仍记 positive） |
+
+> **实现阶段验收权威指向（2026-07-23 补）**：准则 7 的 SG 验收以 `goal-breakdown.md`「实现阶段（RA-L5 / IMPL）议程」SG-1..SG-8 议程表为权威事实源，验证命令/pass/fail/evidence path 统一落 `thresholds.md` Verification/Runtime Thresholds 的 SG-1..SG-8 各行；`feedback-policy.md` 的 Positive 判据（Expected behavior / Required evidence）据此闭合。
 
 ## Required Human Decisions
 
@@ -224,8 +227,8 @@
 
 ## Status
 
-**proposed（2026-07-22，material change：设计阶段收官，进入实现阶段）**
+**实现阶段进行中（RA-L5 / IMPL，2026-07-23 状态归位）**（此前标 `proposed（2026-07-22，material change：设计阶段收官，进入实现阶段）`——但实现阶段已实际交付 SG-1/SG-2/SG-6 + PRE-①/PRE-5/PRE-6，四份 state 契约集体滞后，本次补救批次将状态回写至此）
 
 本 goal 需求分析阶段（RA-L1→RA-L4）已收官：RA-L1 顶层域结构（七支柱 P1–P7，2026-07-18 confirmed）、RA-L2 架构核心 P1-P3（2026-07-18 confirmed，锁定 X1 本地内核优先 / X2 统一经 newapi）、**RA-L3 七议程 D1-D7 全部 `done/confirmed` 定稿（2026-07-21~2026-07-22）**、**RA-L4 dev-readiness gate verdict = `READY`（附前置计划，user-confirmed 2026-07-22）**——详见本文件「RA-L4 dev-readiness gate 评估与 design→dev 转换决策」节。
 
-**当前子阶段：实现阶段（RA-L5 / IMPL）启动**。`goal-breakdown.md` 已注入 6 项前置（PRE-1..PRE-6）与首批 5 个开发子目标（SG-1..SG-5）：无需真实环境的 PRE-5（D2 schema+codegen）、PRE-6（D3 OpenAPI 契约）本轮 in-progress；需真实 openclaw/hermes 环境的内核 conformance 探针批次 PRE-1~PRE-4 处于 blocked-待环境，待用户安排环境后执行。五份契约文件（本文件 + goal-breakdown.md + thresholds.md + data-contract.md + feedback-policy.md）仍无 `rounds/` 目录、无执行轮——具体执行轮/scope-lock 待 SG-1/SG-2 实际启动编码时经 `$harnessloop-continue` 开启。下一步：推进 PRE-5/PRE-6，并与用户协调 PRE-1~PRE-4 所需真实环境的落实方式。
+**当前子阶段：实现阶段（RA-L5 / IMPL）进行中**。`goal-breakdown.md` 已扩至 7 项前置（PRE-1..PRE-7）+ 首批开发子目标 SG-1..SG-8（2026-07-23 新增 SG-8 收编 build+run 内核验收批次）。**已交付（2026-07-23 状态归位）**：PRE-① 源码核验 / PRE-5（D2 schema+codegen）/ PRE-6（D3 OpenAPI）`done`；SG-1（`app/contracts/d2` + 三端 codegen `app/generated/`，commit `0b4b79c`）/ SG-2（NestJS 骨架 `app/server/src`，`da95155`）`done`（静态级）；SG-6（方案B：openclaw 主路径零改 + 辅助小 patch `824adcf` + D3-proxy `5fcf9de`→grok 对抗审 T-042 REWORK→收口 `c69041e`）`done`（限 code + 对抗审级，e2e wire defer build+run）。**待办**：SG-3（增量：CI 冒烟 + 精确类型断言）/ SG-4 / SG-5 / SG-7；PRE-1/PRE-3/PRE-4/PRE-7 与 SG-6/SG-7 的 e2e/runtime 探针统一收编入 **SG-8 build+run 内核验收批次**，待 SG-4 打通运行内核后逐项启动。实现阶段首轮 `rounds/0001`（追认已交付工作 + scope-lock）由本次补救批次补记；验证命令/pass/fail/evidence path 落 `thresholds.md` SG-1..SG-8 各行，验收权威 = `goal-breakdown.md`「实现阶段（RA-L5 / IMPL）议程」SG 议程表（见 Acceptance Criteria 准则 7）。

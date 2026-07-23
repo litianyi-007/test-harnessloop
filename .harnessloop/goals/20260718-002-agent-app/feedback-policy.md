@@ -6,7 +6,7 @@ Positive:
 
 - Expected behavior: 验收标准（见 `goal.md` Acceptance Criteria）达成，或——按本 goal 特有的探索性条款——获得有充分证据支撑的"可行性否定结论"（见下方补充条款）
 - Required evidence: 各验收标准对应的验证方法产出（见 `thresholds.md` Verification Thresholds）
-- Next action: 归档进下一级（按 `goal-breakdown.md` 的 RA-L1→RA-L2→RA-L3→RA-L4→dev-readiness gate 顺序推进；dev-readiness 签署后再次执行 `$harnessloop-goal update` 注入 dev 分解）
+- Next action: **实现阶段（RA-L5 / IMPL，2026-07-23 起当前语境）**——单个 SG 子目标验收通过（证据齐、命令 pass，见 `goal.md` Acceptance Criteria 准则 7 + `goal-breakdown.md` SG-1..SG-8 议程表 + `thresholds.md` SG 各行）后：推进 goal-breakdown 议程表下一待选 SG（SG-3/SG-4/SG-5/SG-7/SG-8），并在交付达成本轮 scope-lock 时**收盘当前 round**（`rounds/NNNN/round-summary.md`）→ 经 `$harnessloop-continue` 开下一轮。（历史语境，保留供审计：需求分析阶段 = 按 RA-L1→RA-L2→RA-L3→RA-L4→dev-readiness gate 逐级归档；dev-readiness 签署后 `$harnessloop-goal update` 注入 dev 分解——已于 2026-07-22 完成。）
 
 Negative:
 

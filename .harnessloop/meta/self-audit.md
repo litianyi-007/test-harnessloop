@@ -300,3 +300,64 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 - Reason: 本次审计为 goal 归档审计，未发现新框架缺陷；TH-0008 仍以既有 open 状态存在，无需重复创建或变更
 - Issue path: 无新增（引用既有 .harnessloop/meta/evolution-issues/0008-verify-rule-b-fragment-citations.md）
 - Redaction notes: 无涉密内容
+
+---
+
+# Self Audit
+
+## Audit Metadata
+
+- Audit ID: AUDIT-20260723-GOAL002-STATE-FRESHNESS
+- Trigger: scheduled（state-freshness / 周期性状态新鲜度巡检——本条为 goal 002 实现阶段状态归位批次的自审）
+- Active goal: 20260718-002-agent-app
+- Active round: 0001（本批补建的实现阶段首轮 · 补记 + 状态归位）
+- Auditor: main session（claude-fable-5）+ round+meta cluster 子代理
+- Timestamp: 2026-07-23
+
+## Loop Health
+
+| Check | Status | Evidence path | Notes |
+| --- | --- | --- | --- |
+| Dead loop risk | pass | goals/20260718-002-agent-app/goal-breakdown.md（RA-L3 D1 行 / T-041）; goal.md「RA-L3 D1 …」各决策节 | 逐项核：D1「五版九轮一 spike」（v1 否决→v2 双轨→v3 双轨→v3.1/3.2/3.3/3.4，每版均有**新证据**（对抗审 findings / spike conformance 事实）且 scope 逐步收窄，最终 codex T-013 confirm-readiness gate PASS(CONFIRMABLE) 收敛）；D4 多轮 re-verify（codex T-041 MUST-FIX→收口 confirmed）亦每轮有新证据且收敛——**均为收敛过程，非死循环**（无「无新证据的重复动作」） |
+| Self-contradiction | warn | goal-breakdown.md SG-1/SG-2 行; state/current.md; state/evidence-index.md; state/self-check.md | **此前存在自相矛盾**：goal-breakdown SG-1/SG-2 标 pending 与实交付 `0b4b79c`/`da95155` done 冲突；current.md 冻在 PRE-①、Active round=无、Next action 仍指 PRE-5/6；四份 state 集体滞后于 SG-1/2/6 实交付。**结构项裁决**：根因＝实现阶段绕开 round→decision→feedback→state 回写通道，致此前无 `rounds/`（见 TH-0010）；**本批已修复**——补建 rounds/0001 + goal-breakdown done 化 + state 回写归位 |
+| Goal drift | pass | goal-breakdown.md「RA-L1 七支柱」「RA-L3 议程」; goal.md | 逐项核：RA-L3 七议程 D1-D7 均定稿且**未偏离 RA-L1 七支柱 P1-P7**——实现阶段 SG-1..SG-8 与七支柱及 X1（本地内核优先）/X2（统一经 newapi）架构决策一致，无目标漂移；SG-8 为收编既有验收空洞（非新目标），SG-1/2/6 done 化为状态归位（非目标变更） |
+| Evidence drift | warn | state/evidence-index.md | **标记缺口**：evidence-index.md 仅 E1-E5（均属已归档 setup-wizard goal），goal 002 从设计到实现**零 evidence 入索引**；本批 state 回写**修复**——补 E6+（SG-1 `0b4b79c` / SG-2 `da95155` / SG-6 `5fcf9de→c69041e`+openclaw `824adcf` / T-041 / T-042 / PRE-① 两页），并刷新 E3 submodule HEAD |
+| Validation drift | pass | goal-breakdown.md SG-8 验收清单; thresholds.md | 验证命令集在实现阶段**显式扩展**（新增 app 侧 build/jest 18-19/eslint + hopper 对抗审 T-041/T-042 + SG-8 各 e2e/探针命令落 thresholds.md），非静默变更；SG-8 把此前悬空的 build+run 验收收编为有 pass/fail + evidence path 的可核清单 |
+| Handoff stagnation | pass | goal-breakdown.md「Discovery Handoffs」（空）; hopper T-041/T-042 | harnessloop discovery handoff 表为空；实现阶段派发走 hopper 通道，T-041/T-042 两次对抗审 handoff 均已闭合（收口 commit 落地），无停滞 |
+| Cost/context runaway | pass |  | 大产物（app/contracts、app/server、codegen、对抗审 transcript）走 `app/` 文件与 hopper handoffs / design-wiki，主会话仅摘要引用；本补记轮无独立执行窗口，成本并入批次 |
+| Recoverable blocker stalled | pass | state/current.md | PRE-1/3/7 blocked-待 SG-4/SG-7 运行内核、PRE-4 blocked-待用户安排 newapi——均有**明确解除路径**（read-only 探针，非停滞的 recoverable blocker）；不阻塞 SG-3/4/5/7/8 推进 |
+
+Status values: `pass`, `warn`, `fail`, `unknown`.
+
+## Deterministic Signals
+
+| Signal | Current value | Previous value | Threshold | Status |
+| --- | --- | --- | --- | --- |
+| Recent feedback sequence | positive（round 0001，补记 + 状态归位，有证据、收敛） | 无（goal 002 首个 round） | no repeated neutral/negative without new evidence | pass |
+| Repeated next action count | 1（补建 rounds/0001 + 归位 state → 待选 SG-3/4/5/7/8） | 无 | max 2 identical actions | pass |
+| Scope-lock version | rounds/0001 v1（新建） | 无 | must change after failed action unless rollback | pass |
+| Goal contract version/hash | goal-breakdown 本批显式修订（SG-1/2 pending→done、新增 SG-8、SG-3 增量边界澄清、SG-6 done 范围限定），**非静默**——已在 goal-breakdown 状态列 + 本条 + decision.md 逐处留痕 | 前值（SG-1/2 pending、无 SG-8） | no silent change | pass |
+| Threshold version/hash | thresholds.md 本批回填 SG-3/4/5/6/7/8 验证/runtime 阈值行（由 goal-contract/state cluster，显式） | 前值（阶段头需求分析、SG 行 TODO） | no silent change | pass |
+| Data contract version/hash | data-contract.md 本批补 hopper handoff→证据桥接 + newapi/app 运行时证据源（显式） | 前值（多处 TODO） | no silent change | pass |
+| Verification command set | 扩展：app build/jest 18-19/eslint + hopper 对抗审 + SG-8 各 e2e/探针命令 + 既有 verify_protocol.py/validate（显式记于 thresholds.md/SG-8 清单） | verify_protocol.py/validate/plugin-* | no silent change | pass |
+| Stale evidence count | goal 002 此前 0 条入索引（**覆盖缺口**，非 stale），本批补 E6+；stale count 仍 0 | 0（但覆盖缺失） | 0 for acceptance | warn |
+| Open handoff age | 0（T-041/T-042 hopper handoff 已闭合；harnessloop discovery handoff 表空） | 0 | project-defined | pass |
+| Main-session raw context risk | 低（app 大产物 + 对抗审 transcript 走文件/handoff，主会话摘要引用） | 低 | raw logs stay in evidence files | pass |
+| Delegation model/effort verified | 实现阶段已实证：SG 写码由主会话 claude-sonnet-5 子代理执行（code-impl 绝不派第三方）；hopper 派 codex（T-041 D4 复核）/ grok（T-042 SG-6 对抗审）已真跑；观察点：grok 尾部 `auth-fail`（XAI_API_KEY 失效），后续 grok 派发需重新登录（已恢复） | 历轮 sonnet 委派（setup-wizard） | required for high-risk delegation | pass |
+| Recoverable blocker next action | PRE-1/3/7＝待 SG-4/SG-7 运行内核后 read-only 探针；PRE-4＝待用户安排 newapi——均为解除前的只读/待环境动作，非盲目重试 | 不适用 | read-only investigation before user pause | pass |
+
+## Local Repair Decision
+
+- Required repair: 补建实现阶段首轮 rounds/0001（补记 + 状态归位）+ 四份 state 回写归位 + goal-breakdown SG-1/2 done 化 + evidence-index 补 E6+ + 新增 SG-8 收编验收空洞（本批已执行；round+meta cluster 负责 rounds/0001 + 本条 self-audit + TH-0010）
+- Smallest safe next action: 本批收盘后待选 SG-3（scope 边界注意与 SG-1 已交付 codegen 不重复）/ SG-4（运行内核底座，优先）/ SG-5 / SG-7 / SG-8，**每个 SG 逐个走 round 闭环**
+- Blocker type: none
+- Recovery eligible: 不适用（无 blocker，本批为主动状态归位）
+- Human confirmation required: 否（追认基于既有 commit + 对抗审证据；PRE-1/3/4/7 的真实环境安排属独立下一步待办，不阻塞本批）
+- Block execution until repaired: 否（本批即修复动作本身）
+
+## Evolution Issue Decision
+
+- Create upstream evolution issue: yes
+- Reason: 实现阶段长期绕开 round/evidence/feedback 机制，致四份 state 集体滞后于实交付，且 harnessloop 全程无机械信号提示「已绕开 round 闭环」——框架级观察（本项目以真实 app 验证 harnessloop 的目的所在）：是否需在 self-audit Deterministic Signals / continue gate 增「距上次 round 收盘 N 个交付物」的 dead-reckoning 守卫
+- Issue path: .harnessloop/meta/evolution-issues/0010-impl-phase-round-bypass-state-drift.md
+- Redaction notes: 无涉密内容（仅引用 commit 短号与 state 文件段落摘要，未粘贴 transcript）

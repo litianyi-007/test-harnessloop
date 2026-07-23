@@ -1,6 +1,6 @@
 # Thresholds
 
-> **阶段标注**：本 goal 当前处于需求分析（Requirement Analysis）阶段。本文件的验证口径按阶段区分——**需求分析阶段（RA-L1–L4）验证 = 用户逐级确认 + 各级规格自洽性检查**；**dev 阶段（原型/编码/集成）具体验证命令待 RA-L4 dev-readiness gate 后定**，技术栈未选型前无法预先写死。
+> **阶段标注**：本 goal 已进入**实现阶段（RA-L5 / IMPL）**（需求分析 RA-L1–L4 于 2026-07-22 收官签署，见 goal.md Status；2026-07-23 状态归位）。本文件验证口径按阶段区分——**需求分析阶段（RA-L1–L4）验证 = 用户逐级确认 + 各级规格自洽性检查**（历史口径，保留供审计）；**实现阶段（RA-L5 / IMPL）验证 = 静态编译/单测（build/jest/eslint/tsc/dotnet/swiftc）+ 对抗审级验收 + build+run 内核运行时探针/e2e（收编入 SG-8，见 goal-breakdown.md「SG-8 验收清单」）**。技术栈已定稿（D3=TypeScript+NestJS+PostgreSQL / D4 monorepo / D2 JSON Schema 2020-12 三端 codegen），下方 Verification/Runtime Thresholds 已回填 SG-1..SG-8 各行的命令/pass/fail/evidence path。
 
 ## Data Thresholds
 
@@ -15,7 +15,13 @@
 | Threshold | Applies to | Command/check | Pass condition | Fail condition | Evidence path |
 | --- | --- | --- | --- | --- | --- |
 | 需求分析阶段验证 | RA-L1–L4 全部 | 用户逐级确认门 + 各级规格自洽性走查（无跨级矛盾、TODO 均有明确 owner、无未标注的臆造能力声称） | 用户明确确认通过，且自洽性走查未发现未解决冲突 | 用户要求修改，或自洽性走查发现矛盾/遗漏/臆造声称 | 各级展开文档 + 用户确认记录 |
-| dev 阶段验证命令 | dev 分解（RA-L4 后注入，原型/编码/集成/收口） | TODO (owner: 待 RA-L4 dev-readiness gate 用户签署后定，属预期而非缺口——技术栈尚未选型，无法预先写死具体命令) | TODO (owner: 待定) | TODO (owner: 待定) | TODO (owner: 命令确定后回填本行) |
+| 实现阶段静态验证（已回填，2026-07-23） | SG-1/SG-2/SG-3/SG-6 静态级交付 | `npm run gen`（codegen 幂等无 diff）+ `tsc --strict`（TS）+ codegen/verify（Swift `swiftc` / C# `dotnet build`）+ `npm run build` + `npm run test`（jest）+ `npm run lint`（eslint） | 相关命令全 exit 0、codegen 无 diff、判别联合三端保真 | 任一命令非 0、codegen 有 diff、或生成类型失真 | `app/contracts/d2/CODEGEN-FINDINGS.md` / `app/generated/` / `app/server/` 各命令输出（commit `0b4b79c`/`da95155`/`c69041e`） |
+| SG-3 codegen 冒烟（增量，主体已随 SG-1 交付） | SG-3 剩余增量 | CI `npm run gen` 后 `git diff --exit-code`（幂等）+ `EmptyPayload`/`WireCapabilityDescriptorPayload` 精确空对象/排除字段类型的 type-level 断言编译过 | 冒烟 job 绿、无 diff、两类精确类型断言编译通过 | 有 diff、断言不编译、或精确类型失真 | CI 日志 + `app/generated/{ts,swift,csharp}/` |
+| SG-4 Mac 最小壳 createSession/subscribe 闭环 | SG-4 | Mac 壳对手动启动的本地 openclaw gateway 完成 `createSession → send → subscribe 收 KernelEvent 流 → stop` 一次闭环 + 通过 SG-1 fixture「审批五态」「SessionLockState」两组金标 parity | 闭环收到完整 KernelEvent 流并正常 stop、两组 parity 逐字段一致 | 闭环任一步失败或 parity 不一致 | `rounds/NNNN/` evidence + parity runner 输出 |
+| SG-5 Windows C# kernel-client parity 追赶 | SG-5 | Windows C# 客户端复用与 Mac 相同金标 fixture 集合运行 parity 回归 | 两端在全部已落地 fixture 上产生逐字段一致的可观察状态 | 任一 fixture 两端状态不一致 | parity runner 报告（Swift/C#/TS 三端，落 `app/parity/`） |
+| SG-6 D3-proxy e2e wire（defer build+run，收编 SG-8.1） | SG-6 方案B e2e | 起真 openclaw（开 `sendSessionAffinityHeaders`）+ D3-proxy + 真 newapi：① `x-session-affinity` header 真到达 proxy；② sessionId 与 openclaw `Agent.sessionId` 逐字节同源；③真 newapi SSE 帧透传；④mint→映射表 `revokedAt IS NULL` 行 + `findActive` 命中 | 四项全达 | 任一项不达 | SG-8.1 evidence（proxy 日志/抓包/DB 查询） |
+| SG-7 hermes per-session key e2e（收编 SG-8.2） | SG-7 | 先定死传输路径（`model_routes` 零改 / ACP <50 行 patch），各 session 查 `/api/log/self?token_name=session-<id>` 互验（D1 §11 C-3 验法） | 各 session 归因隔离、互查不串号 | 归因串号或路径未打通 | SG-8.2 evidence（newapi 日志查询输出） |
+| SG-8 build+run 内核验收批次 | SG-8 七项子项（SG-8.1~SG-8.7） | 见 goal-breakdown.md「SG-8 验收清单」各子项 build/run + 健康判据（端口/健康检查/版本 pin）+ pass/fail | 各子项按其 pass 判据全达 | 任一子项 fail | 各子项 evidence path（见 SG-8 清单）+ CI 日志 |
 | 每轮 adversarial review 引用证据路径 | 每个执行轮（RA-L1 起所有 round） | 对抗性评审走查证据路径是否可达、是否为本 goal 实际产出 | 证据路径存在且可验证，无臆测/未落盘结论 | 证据路径缺失、不可达，或引用未经调研的外部项目能力假设 | 各轮 `rounds/NNNN/reviews/adversarial-review.md` |
 | 连载文章成稿需用户发布确认 | goal.md Acceptance Criteria #6（里程碑文章 ≥ 3 篇） | 用户逐篇确认发布 | 用户明确确认通过 | 用户未确认、要求修改，或未走确认流程即视为发布 | PR wiki `drafts/` 文件 + 用户确认记录（human-confirmation） |
 | 协议门 | 每轮收盘/continue 门 | `verify_protocol.py`（本项目协议门） | exit 0 | 非 0 或协议门报错 | `verify_protocol.py` 命令输出 |
@@ -25,9 +31,10 @@
 | Runtime surface | Validation method | Pass condition | Observation window | Evidence path |
 | --- | --- | --- | --- | --- |
 | `verify_protocol.py` | 本地命令（机械协议门） | exit 0 | 每轮收盘/continue 门 | 脚本输出 |
-| server API（技术栈待 RA-L3 调研选型） | TODO (owner: 待 RA-L4 dev-readiness 后定) | TODO (owner: 待定) | TODO (owner: 待定) | TODO (owner: 待定) |
-| agent app 消息流屏障 / 内核切换（技术栈待 RA-L3 定） | TODO (owner: 待 RA-L4 dev-readiness 后定) | TODO (owner: 待定) | TODO (owner: 待定) | TODO (owner: 待定) |
-| console（技术栈待 RA-L3/RA-L4 定） | TODO (owner: 待 RA-L4 dev-readiness 后定) | TODO (owner: 待定) | TODO (owner: 待定) | TODO (owner: 待定) |
+| server API（NestJS，D3=TS+NestJS+PostgreSQL 已定稿，2026-07-23 回填） | build+run：`npm run start`（app/server）起进程，探 `/health`（或 license/tenant/seat 端点）+ D3-proxy session-affinity 转发探针 | 进程起、端口就绪、`/health` 200、D3-proxy 按 `x-session-affinity` 命中映射并换 Authorization 转发成功 | SG-4/SG-6 e2e 期 + 每次 build+run 内核冒烟 | SG-8.1/SG-8.5 evidence + proxy 日志 |
+| agent app 消息流屏障 / 内核切换（D1 KernelPort v3.6 / D2 v3 已定稿，2026-07-23 回填） | build+run：真实内核 emit 的 wire event 逐条过 D2 JSON Schema + protocolVersion 握手期单传→逐事件回填重建 round-trip 断言 + 两内核（openclaw/hermes ACP）createSession/subscribe 闭环切换 | 全事件 schema-valid、round-trip 重建一致、两内核闭环均收到 KernelEvent 流 | SG-4/SG-8 build+run 内核冒烟 | SG-8.4 evidence + fixture runner 输出 |
+| console 管理端（第二批，依赖 SG-4 kernel-client 与 D3-proxy 就绪） | build+run（第二批开门后定，非首批缺口）：起 console + 对 server API 冒烟 | console 起、对 server 六项能力面读写冒烟通过 | 第二批开门（不阻塞首批 SG-1..SG-8） | 第二批 evidence path（待开门回填） |
+| build+run 内核健康（运行时探针底座，2026-07-23 新增） | 端口就绪探测 + 健康检查 + 版本 pin（openclaw HEAD `824adcf` / hermes HEAD `17155e3`，记于 evidence-index E3；node/pnpm/dotnet/swift 工具链版本 pin） | 内核进程起、监听端口 accept、健康检查通过、运行版本与 pin 一致 | SG-4 打通后每次 build+run + SG-8 各探针前 | SG-8.3 runtime 探针 evidence + `research/pre1-*-source-conformance.md` |
 
 ## Threshold Change Policy
 
