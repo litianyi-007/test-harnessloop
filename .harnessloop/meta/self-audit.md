@@ -481,3 +481,63 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 - Reason: 本轮未发现新框架缺陷；access-missing blocker 的登记与 defer 处理均按既定协议纪律执行（未臆造凭证凑配置，如实上报待用户输入），无需新开 issue
 - Issue path: 无新增
 - Redaction notes: 无涉密内容（仅引用 host/端口/版本号，凭证值未出现在本文件）
+
+---
+
+# Self Audit
+
+## Audit Metadata
+
+- Audit ID: AUDIT-20260723-ROUND0004-SG8.5-E2E
+- Trigger: round-close rounds/0004
+- Active goal: 20260718-002-agent-app
+- Active round: 0004（SG-8.5 计费链 e2e 完整闭合）
+- Auditor: main session（claude-sonnet-5）
+- Timestamp: 2026-07-23
+
+## Loop Health
+
+| Check | Status | Evidence path | Notes |
+| --- | --- | --- | --- |
+| Dead loop risk | pass | rounds/0004/scope-lock.md; rounds/0004/round-summary.md | 无重复无新证据动作——本轮为首次对 SG-8.5 执行，非重试；延续 rounds/0002/0003 建立的「scope-lock 先于执行」做法 |
+| Self-contradiction | pass | rounds/0004/round-summary.md; rounds/0004/decision.md; goal-breakdown.md SG-6/SG-8.5 行 | 无矛盾：SG-8.5 done（完整链 e2e）与此前"defer build+run"表述一致衔接，非推翻；SG-6 原「done（code+对抗审级）」verdict 未被撤销，只是其援引的"零改动"设计前提据实修订为"3 处极小补丁"，两处表述（SG-6 行注记 + SG-6 wiki doc）已同步、无一处仍写"零改动" |
+| Goal drift | pass | rounds/0004/scope-lock.md; rounds/0004/round-summary.md; rounds/0004/decision.md | **本轮 2 次 scope 扩围（schema 补丁 `4ddcb52`、transport 补丁 `35f8739`）属 user-confirmed 的 contract-insufficient blocker 处置，非 drift**——scope-lock 原 Disallowed Changes 明确"不改 kernels/openclaw 源码"，执行中发现该项与"达成真实动态 per-session path①"这一 round objective 直接冲突时，主会话按 control-contract.md「contract-insufficient → Repair contract before execution」的既定路径两次停下、向用户说明、现场获得确认后才落地，未擅自扩围，已在 round-summary/decision 如实记录，非绕过 scope-lock 的静默漂移 |
+| Evidence drift | pass | state/evidence-index.md E14 | 新增 E14 覆盖 SG-8.5 完整链 e2e 交付物，无 stale |
+| Validation drift | pass | rounds/0004/scope-lock.md「Verification Commands Or Checks」；rounds/0004/round-summary.md | 验证方法（Pi Postgres 起/D3 起/D3→newapi→Kimi curl/完整链 kernel-client）已在 scope-lock 中显式列出并在 round-summary 中逐项对照回填，非静默变更；新增的 2 项 openclaw 补丁验证（schema 校验通过 + transport header 注入）虽未预先写入 scope-lock 验证表，但已在 round-summary/decision 中显式记录为本轮 scope 演化的一部分，非隐藏改动 |
+| Handoff stagnation | pass |  | 本轮无 hopper 派发（运行时集成 + 内核补丁均属 code-impl，按既定规则一律主会话执行，不派第三方 vendor），无 open handoff；本轮 2 处新增补丁未经 codex/grok 对抗审已如实记录为 Open Risk，非隐瞒 |
+| Cost/context runaway | pass |  | 运行日志/补丁 diff/seed 脚本走 `app/server`、`kernels/openclaw` submodule、`scratchpad/openclaw-iso3/`，主会话摘要引用，未把大量原始日志灌入本文件 |
+| Recoverable blocker stalled | pass | rounds/0004/round-summary.md; rounds/0004/decision.md | 本轮过程中出现的 2 处 contract-insufficient 情形均在识别后立即停下征求用户确认、随即解除，未反复尝试绕过或空转重试，收盘时无残留 blocker |
+
+Status values: `pass`, `warn`, `fail`, `unknown`.
+
+## Deterministic Signals
+
+| Signal | Current value | Previous value | Threshold | Status |
+| --- | --- | --- | --- | --- |
+| Recent feedback sequence | positive（round 0004，SG-8.5 完整链 e2e，有证据、收敛） | positive（round 0003，SG-9 L1） | no repeated neutral/negative without new evidence | pass |
+| Repeated next action count | 1（本轮首次执行 SG-8.5，非重复） | 1（rounds/0003 提议 SG-8.5 待凭证/SG-3/SG-5） | max 2 identical actions | pass |
+| Scope-lock version | rounds/0004 v1（既有，本轮执行时经 2 次 user 现场授权扩围 Allowed Changes 范围，未新建 v2 文件，扩围决策记于 round-summary/decision） | rounds/0003 v1 | must change after failed action unless rollback | pass（扩围为显式记录的用户现场授权，非"失败后静默重试同一 scope"情形，不触发本阈值） |
+| Goal contract version/hash | goal-breakdown 本批显式修订（SG-8.5 行 pending→done + SG-6 行/实施收口段追加结论修订注记 + 首批目标表头追加 rounds/0004 摘要），均显式留痕，非静默变更 | 前值（SG-8.5 行 pending，SG-6 行无修订注记） | no silent change | pass |
+| Threshold version/hash | 本批未改动 thresholds.md（沿用既有 SG-8.5 验证方法，记于 scope-lock/round-summary，未新增独立阈值行） | 前值 | no silent change | pass |
+| Verification command set | 新增两 session 动态 sessionId 比对 + new-api `/api/log/` 计费日志核对 + openclaw 补丁（schema 校验/transport header 注入）验证序列，显式记于 round-summary.md | 既有 Pi Docker/curl/swiftc/dotnet build 等 | no silent change | pass |
+| Stale evidence count | 0（E14 新鲜） | 0 | 0 for acceptance | pass |
+| Open handoff age | 0 | 0 | project-defined | pass |
+| Main-session raw context risk | 低（补丁 diff/运行日志/seed 脚本走 `kernels/openclaw`/`app/server`/`scratchpad`，主会话摘要引用） | 低 | raw logs stay in evidence files | pass |
+| Delegation model/effort verified | 本轮为 code-impl（D3-proxy 起停/seed 脚本/openclaw 补丁），按既定规则由主会话 claude-sonnet-5 子代理执行，未派第三方 vendor；本轮 2 处新增补丁**未经**第三方对抗审（与 SG-6 原 `824adcf` 经 grok T-042 对抗审不同），已在 round-summary/decision 中如实记录为 Open Risk，非隐瞒未审 | 历轮同规则；SG-6 `824adcf` 曾经 grok T-042 对抗审 | required for high-risk delegation | warn（未审但已如实披露，非隐瞒；是否需补审留待后续决定） |
+| Recoverable blocker next action | 本轮过程中 2 次 contract-insufficient 情形均已现场解除，收盘时无 blocker；后续决策类待办（openclaw bug 上游反馈/是否补审/submodule 指针 commit）均非 blocked，待主会话或用户后续裁定 | 不适用（rounds/0003 为 access-missing，本轮已解除） | read-only investigation before user pause | pass |
+
+## Local Repair Decision
+
+- Required repair: 无——本轮延续 rounds/0002/0003 建立的做法，SG-8.5 先有 scope-lock（rounds/0004/scope-lock.md）再执行，收盘时完整走 round-summary → decision → state 回写（current.md/evidence-index.md/goal-breakdown.md/self-audit.md），闭环完整、无绕开；本轮额外验证了"scope-lock Disallowed Changes 撞线时的既定处置路径（停下→用户现场确认→落地→如实记录）"确实可行，未发生先斩后奏
+- Smallest safe next action: 待选 **SG-5**（Windows C# kernel-client parity 追赶）/ **SG-3**（codegen 增量）/ 决策类待办（2 个 openclaw bug 是否上游 push/开 issue、是否补第三方对抗审、主仓库 submodule 指针 commit）/ 副发现处理（`app/server` body-parser limit、`OPENCLAW-ISOLATED-RUN-RECIPE.md` 补 workspace-dir），继续逐个走 round 闭环
+- Blocker type: none
+- Recovery eligible: 不适用（无 blocker）
+- Human confirmation required: 否（SG-8.5 本身已完整交付；决策类待办待后续与用户或主会话统一裁定，不阻塞本轮收盘）
+- Block execution until repaired: 否
+
+## Evolution Issue Decision
+
+- Create upstream evolution issue: no
+- Reason: 本轮技术层发现（openclaw 两处真实源码 bug 挡住 per-session 动态归因、SG-6 spike"零改动"结论一度证伪）属**项目设计/实现问题**，不是 harnessloop 框架缺陷——round → scope-lock → decision 闭环本身运作正常：scope-lock Disallowed Changes 撞线时，由用户 2 次现场确认扩围，决策留痕于 round-summary/decision.md，非框架失灵。这是继 D4 v2.3（SG-1 codegen 代码级证伪）、D1 hermes-steer 假设证伪等既有记录之后的"下游实现连环证伪上游设计"第 5 例（技术观察，已记于 round-summary/SG-6 wiki doc），非新的框架级缺陷。是否将 2 个 openclaw bug 上游 push 或另开 evolution-issue，以及是否为本轮新增补丁补一轮第三方对抗审，均留待后续决定，不在本轮 self-audit 范围内提前裁定
+- Issue path: 无新增（如需记录"下游连环证伪"模式本身的框架级复现规律，留待后续 self-audit 或专项 evolution-issue 评估，非本轮范围）
+- Redaction notes: 无涉密内容（仅引用 commit 短号、sessionId 示例值、host/端口/版本号；凭证值未出现在本文件）
