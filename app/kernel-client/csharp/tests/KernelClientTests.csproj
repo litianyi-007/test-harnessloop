@@ -1,0 +1,36 @@
+<!-- SG-5 Stage C：C# 侧跨语言 parity 测试——镜像 ../../swift/FrameReplayTests.swift 的"没有
+     XCTest/SwiftPM test target，同一次编译单元里跑测试"风格（该文件头注释原话："这个项目没有
+     XCTest/SwiftPM test target...延续既有风格：每个测试是一个返回 Bool（或 async -> Bool）的普通
+     函数"）。C# 侧对应：不引入 xunit/NuGet（避免网络限制下的 restore 风险，也避免和现有
+     KernelClient.csproj 的"直接编译源文件、不打包"风格不一致），改为一个 Exe 项目，把
+     KernelClient.csproj 的全部源文件（含 generated D2.cs/DiscriminatedUnions.cs）连同本目录的
+     测试文件一起直接编译成同一个可执行程序——`internal`（如 D2.Converter.Settings）因此在同一
+     assembly 内天然可见，不需要 InternalsVisibleTo。 -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS8618;CS8601;CS8602;CS8603;CS8625;CS8619;CS8620</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>TestHarnessloop.KernelClient.Tests</AssemblyName>
+    <RootNamespace>KernelClient.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 与 ../KernelClient.csproj 完全相同的生产源文件集合——直接复用，不复制。 -->
+    <Compile Include="../../../generated/csharp/D2.cs" />
+    <Compile Include="../../../generated/csharp/DiscriminatedUnions.cs" />
+    <Compile Include="../IKernelClient.cs" />
+    <Compile Include="../KernelClientError.cs" />
+    <Compile Include="../OpenclawWire.cs" />
+    <Compile Include="../EventMapping.cs" />
+    <Compile Include="../OpenclawGatewayKernelClient.cs" />
+    <!-- 测试本体。 -->
+    <Compile Include="FrameReplayTests.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+
+</Project>

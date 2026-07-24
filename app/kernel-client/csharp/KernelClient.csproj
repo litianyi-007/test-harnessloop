@@ -20,6 +20,11 @@
     <Compile Include="../../generated/csharp/D2.cs" />
     <Compile Include="../../generated/csharp/DiscriminatedUnions.cs" />
     <Compile Include="IKernelClient.cs" />
+    <!-- SG-5 Stage C：C# 功能实现 + parity 镜像，见各文件头注释对应的 Swift 源。 -->
+    <Compile Include="KernelClientError.cs" />
+    <Compile Include="OpenclawWire.cs" />
+    <Compile Include="EventMapping.cs" />
+    <Compile Include="OpenclawGatewayKernelClient.cs" />
   </ItemGroup>
 
 </Project>
