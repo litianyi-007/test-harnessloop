@@ -1,0 +1,128 @@
+app/kernel-client/csharp/OpenclawWire.cs
+  s_c587ecf7bbc3e2::t_c3893488ac2c98 1-255
+app/kernel-client/csharp/KernelClientError.cs
+  s_c587ecf7bbc3e2::t_477ca712348fb4 1-47
+app/kernel-client/csharp/EventMapping.cs
+  s_c587ecf7bbc3e2::t_640a8771a023bb 1-397
+app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+  s_c587ecf7bbc3e2::t_38640232a00ee2 1-1136
+app/kernel-client/csharp/KernelClient.csproj
+  s_c587ecf7bbc3e2::t_be1669d9299f37 23-27
+app/kernel-client/csharp/tests/KernelClientTests.csproj
+  s_c587ecf7bbc3e2::t_66e2a3b916d342 1-36
+app/kernel-client/csharp/tests/FrameReplayTests.cs
+  s_c587ecf7bbc3e2::t_d06fca3bebea6e 1-1100
+app/kernel-client/csharp/tests/Program.cs
+  s_c587ecf7bbc3e2::t_09532826b2461b 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "3ae6fa81e1d3e188db9b80d29b8fc39f9685451b",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_c3893488ac2c98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 255,
+      "total_deletions": 0,
+      "accepted_lines": 255,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_477ca712348fb4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 47,
+      "total_deletions": 0,
+      "accepted_lines": 47,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_640a8771a023bb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 397,
+      "total_deletions": 0,
+      "accepted_lines": 397,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_38640232a00ee2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1136,
+      "total_deletions": 0,
+      "accepted_lines": 1136,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_be1669d9299f37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_66e2a3b916d342": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 36,
+      "total_deletions": 0,
+      "accepted_lines": 36,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d06fca3bebea6e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1100,
+      "total_deletions": 0,
+      "accepted_lines": 1100,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_09532826b2461b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 0,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    }
+  }
+}
