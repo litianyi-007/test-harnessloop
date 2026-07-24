@@ -1,278 +1,38 @@
-app/contracts/d2/fixtures/csharp-runner/FixtureDsl.cs
-  s_c587ecf7bbc3e2::t_385b1fe3706a5f 1-176
-app/contracts/d2/fixtures/csharp-runner/PartialMatch.cs
-  s_c587ecf7bbc3e2::t_57ff8d68e33637 1-122,124-198
-  s_c587ecf7bbc3e2::t_44ee63a17bae8b 123-123
-app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs
-  s_c587ecf7bbc3e2::t_8bd0015fbb64d8 1-161,163-734,736-1086
-  s_c587ecf7bbc3e2::t_65bd9aaf8800ea 162-162
-  s_c587ecf7bbc3e2::t_2e93745d2e85b2 735-735
-app/contracts/d2/fixtures/csharp-runner/CSharpRunnerMain.cs
-  s_c587ecf7bbc3e2::t_b350732d522924 1-84
-app/contracts/d2/fixtures/csharp-runner/CSharpRunner.csproj
-  s_c587ecf7bbc3e2::t_34d0ff4610fed4 1-38
-app/contracts/d2/fixtures/csharp-runner/obj/CSharpRunner.csproj.nuget.dgspec.json
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-61
-app/contracts/d2/fixtures/csharp-runner/obj/CSharpRunner.csproj.nuget.g.props
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-15
-app/contracts/d2/fixtures/csharp-runner/obj/CSharpRunner.csproj.nuget.g.targets
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-2
-app/contracts/d2/fixtures/csharp-runner/obj/Debug/net7.0/.NETCoreApp,Version=v7.0.AssemblyAttributes.cs
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-4
-app/contracts/d2/fixtures/csharp-runner/obj/Debug/net7.0/CSharpRunner.AssemblyInfo.cs
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-22
-app/contracts/d2/fixtures/csharp-runner/obj/Debug/net7.0/CSharpRunner.AssemblyInfoInputs.cache
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-1
-app/contracts/d2/fixtures/csharp-runner/obj/Debug/net7.0/CSharpRunner.csproj.CoreCompileInputs.cache
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-1
-app/contracts/d2/fixtures/csharp-runner/obj/Debug/net7.0/CSharpRunner.csproj.FileListAbsolute.txt
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-4
-  s_c587ecf7bbc3e2::t_bd6551ee4b023a 5-14
-app/contracts/d2/fixtures/csharp-runner/obj/Debug/net7.0/CSharpRunner.GeneratedMSBuildEditorConfig.editorconfig
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-11
-app/contracts/d2/fixtures/csharp-runner/obj/Debug/net7.0/CSharpRunner.GlobalUsings.g.cs
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-8
-app/contracts/d2/fixtures/csharp-runner/obj/project.assets.json
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-66
-app/contracts/d2/fixtures/csharp-runner/obj/project.nuget.cache
-  s_c587ecf7bbc3e2::t_4f944acfa2c63d 1-8
-app/contracts/d2/fixtures/csharp-runner/bin/Debug/net7.0/TestHarnessloop.Fixtures.CSharpRunner.deps.json
-  s_c587ecf7bbc3e2::t_bd6551ee4b023a 1-23
-app/contracts/d2/fixtures/csharp-runner/bin/Debug/net7.0/TestHarnessloop.Fixtures.CSharpRunner.runtimeconfig.json
-  s_c587ecf7bbc3e2::t_bd6551ee4b023a 1-9
-app/contracts/d2/fixtures/csharp-runner/obj/Debug/net7.0/CSharpRunner.genruntimeconfig.cache
-  s_c587ecf7bbc3e2::t_bd6551ee4b023a 1-1
 app/contracts/d2/fixtures/csharp-runner/.gitignore
   s_c587ecf7bbc3e2::t_58eff5d8fb29e2 1-2
-app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
-  s_c587ecf7bbc3e2::t_7ab8d826cde676 336-336
-  s_c587ecf7bbc3e2::t_26e2e7b801acfa 458-459
 app/contracts/d2/fixtures/README.md
-  s_c587ecf7bbc3e2::t_4f59082750ef98 1-1
-  s_c587ecf7bbc3e2::t_77d1c4b5c63609 13-13,15-15
-  s_c587ecf7bbc3e2::t_9721398dee7fe3 135-139
   s_c587ecf7bbc3e2::t_b9aa7a70a5eb7c 233-307
+  s_c587ecf7bbc3e2::t_9721398dee7fe3 135-139
+  s_c587ecf7bbc3e2::t_77d1c4b5c63609 13,15
+  s_c587ecf7bbc3e2::t_4f59082750ef98 1
   s_c587ecf7bbc3e2::t_3d6a90cb2f9d62 427-495
+app/contracts/d2/fixtures/csharp-runner/FixtureDsl.cs
+  s_c587ecf7bbc3e2::t_385b1fe3706a5f 1-176
+app/contracts/d2/fixtures/csharp-runner/CSharpRunnerMain.cs
+  s_c587ecf7bbc3e2::t_b350732d522924 1-84
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs
+  s_c587ecf7bbc3e2::t_65bd9aaf8800ea 162
+  s_c587ecf7bbc3e2::t_2e93745d2e85b2 735
+  s_c587ecf7bbc3e2::t_8bd0015fbb64d8 1-161,163-734,736-1086
+app/contracts/d2/fixtures/csharp-runner/PartialMatch.cs
+  s_c587ecf7bbc3e2::t_57ff8d68e33637 1-122,124-198
+  s_c587ecf7bbc3e2::t_44ee63a17bae8b 123
+app/contracts/d2/fixtures/csharp-runner/CSharpRunner.csproj
+  s_c587ecf7bbc3e2::t_34d0ff4610fed4 1-38
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.16",
   "base_commit_sha": "505202a55bf91fb0427fbf6e2f84cda4796a9027",
-  "prompts": {
-    "s_c587ecf7bbc3e2::t_385b1fe3706a5f": {
+  "prompts": {},
+  "sessions": {
+    "s_c587ecf7bbc3e2": {
       "agent_id": {
         "tool": "claude",
         "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
         "model": "claude-fable-5"
       },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 176,
-      "total_deletions": 0,
-      "accepted_lines": 176,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_57ff8d68e33637": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 197,
-      "total_deletions": 0,
-      "accepted_lines": 197,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_8bd0015fbb64d8": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 1084,
-      "total_deletions": 0,
-      "accepted_lines": 1084,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_b350732d522924": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 84,
-      "total_deletions": 0,
-      "accepted_lines": 84,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_34d0ff4610fed4": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 38,
-      "total_deletions": 0,
-      "accepted_lines": 38,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_4f944acfa2c63d": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 203,
-      "total_deletions": 0,
-      "accepted_lines": 203,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_bd6551ee4b023a": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 43,
-      "total_deletions": 0,
-      "accepted_lines": 43,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_58eff5d8fb29e2": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 2,
-      "total_deletions": 0,
-      "accepted_lines": 2,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_871ee32f82b17c": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 0,
-      "total_deletions": 0,
-      "accepted_lines": 0,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_7ab8d826cde676": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_4f59082750ef98": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-fable-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_44ee63a17bae8b": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_65bd9aaf8800ea": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_2e93745d2e85b2": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_26e2e7b801acfa": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 2,
-      "total_deletions": 0,
-      "accepted_lines": 2,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_77d1c4b5c63609": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 2,
-      "total_deletions": 0,
-      "accepted_lines": 2,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_9721398dee7fe3": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 5,
-      "total_deletions": 0,
-      "accepted_lines": 5,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_b9aa7a70a5eb7c": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 75,
-      "total_deletions": 0,
-      "accepted_lines": 75,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_3d6a90cb2f9d62": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 69,
-      "total_deletions": 0,
-      "accepted_lines": 69,
-      "overriden_lines": 0
+      "human_author": "litianyi <litianyi@corp.netease.com>"
     }
   }
 }
