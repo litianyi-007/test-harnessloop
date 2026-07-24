@@ -86,11 +86,26 @@ export interface ClientObservableState {
   observedEvents?: Array<{ type: string; payload?: unknown }>;
 }
 
+/** `mock_event` 专属的翻译层驱动控制量——**不属于** D2 wire 事件本身（那是 `message` 字段的职责，
+ *  一个封闭的 `additionalProperties:false` D2 判别联合，容不下任何非 D2 字段）。只在某个 D2 事件在
+ *  真实 openclaw 原生协议里由多条独立 wire 帧联合 join 而成时才需要——D2 `evt.*` 事件本身是已经
+ *  join 完成的单一逻辑事件，没有"到达顺序"这个概念，这类纯翻译层测试控制信息只能作为 TimelineOp
+ *  的兄弟字段单独声明（T-048 REWORK #1/#2 收残：此前 `_openclawJoinOrder` 被非法塞进
+ *  `message`，违反封闭联合的 `additionalProperties:false`，现改用本字段）。TS `MockKernelClient`
+ *  不模拟这层原生 join 细节，完全忽略本字段；只有驱动真实 client 的 runner（Swift/C#）会读取它。 */
+export interface MockEventDriverHint {
+  /** `evt.approval_request` 专属：SG-5 M1 双向 join 逻辑需要联合 `agent(stream:'approval')` 与
+   *  `session.approval(phase:'pending')` 两条独立原生帧才能产出这一条 D2 事件——本字段声明测试
+   *  驱动这两条原生帧的到达顺序，纯粹是"走哪条 join 分支"的翻译层测试控制量，不影响 D2 事件本身
+   *  的内容。 */
+  approvalJoinOrder?: 'agent_first' | 'session_first';
+}
+
 export type TimelineOp =
   | { t: number; op: 'client_call'; id?: string; call: KernelClientMethod; args: unknown }
   | { t: number; op: 'expect_outbound'; matches: string; pattern: Record<string, unknown> }
   | { t: number; op: 'mock_response'; replyTo: string; message: WireResponseShorthand }
-  | { t: number; op: 'mock_event'; message: WireEventShorthand }
+  | { t: number; op: 'mock_event'; message: WireEventShorthand; driverHint?: MockEventDriverHint }
   | { t: number; op: 'disconnect' }
   | { t: number; op: 'reconnect' }
   | { t: number; op: 'advance_clock'; ms: number }

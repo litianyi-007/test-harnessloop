@@ -1,0 +1,23 @@
+{
+  "name": "stop-transport-closed-aborted-effect-unknown",
+  "description": "OperationOutcome 七态之 aborted_effect_unknown：createSession -> subscribe -> send()（产生 run-1）-> stop()，sessions.abort 真实回报 abortedRunId:'run-1'（有 active run，需要等待终态），但在等待期间传输层关闭（`disconnect` timeline op，翻译为真实调用 `testSupportSimulateTransportClosed()`，即 SG-5 `receiveLoop` 真实断线时会走的同一条 `handleTransportClosed` 路径）。真实 SG-5 的 NOTE-1（T-047 grok 复核）：`resolvePendingStopForTransportClose` 在 session_end(transport_closed) 之前补发一条 operation_completed(aborted_effect_unknown) 镜像并唤醒等待中的 stop()；stop() 收到 `.transportClosed` 后如实 throw（不假装 succeeded/timed_out），因此 Promise 侧走 pendingOperations 的兜底路径（swift-runner 从 operation_completed 镜像事件读到权威 outcome，而不是从抛出的异常本身推断）。**T-048 REWORK #1/#2（codex 复现的非法 stop response）**：`res.stop.result.outcome` 此前写了 `aborted_effect_unknown`，但 D2 stop schema（`methods/stop.schema.json`）的 `StopResultPayload.outcome` 类型层面只允许 `succeeded|timed_out|rejected` 三态子集——transport-close 场景本不该伪造一条这样的『成功』D2 stop response；真实 client 是从 transport-close 触发的 `operation_completed` 镜像事件才得到 aborted_effect_unknown 这个七态之一，不是从 `res.stop` 直接拿到。改为 `outcome:\"succeeded\"`（诚实表达『底层 sessions.abort RPC ack 本身成功、存在 active run』这一装饰性事实，非法值同时被删除），最终 aborted_effect_unknown 完全由随后 `disconnect` 触发的真实因果链路产出（Swift：`resolvePendingStopForTransportClose` 的镜像事件；TS：`disconnect` 处理器按同一 D1 §9.2 因果重写，见 ts-runner/mock-kernel-client.ts），两端不再从这条非法 response 直接赋值。",
+  "timeline": [
+    { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+    { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+    { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+    { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
+    { "t": 15, "op": "client_call", "id": "send1", "call": "send", "args": { "kind": "text", "text": "run something interrupted by transport close" } },
+    { "t": 20, "op": "mock_response", "replyTo": "send1", "message": { "type": "res.send", "result": { "runId": "run-1" } } },
+    { "t": 30, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },
+    { "t": 35, "op": "mock_response", "replyTo": "stop1", "message": { "type": "res.stop", "result": { "operationId": "op-placeholder", "outcome": "succeeded" } } },
+    { "t": 40, "op": "disconnect" },
+    { "t": 45, "op": "assert_state", "expected": { "pendingOperations": { "stop1": "aborted_effect_unknown" } } }
+  ],
+  "expected": {
+    "pendingOperations": { "stop1": "aborted_effect_unknown" },
+    "observedEvents": [
+      { "type": "evt.operation_completed", "payload": { "outcome": "aborted_effect_unknown", "operationKind": "stop", "affectedRunId": "run-1" } },
+      { "type": "evt.session_end", "payload": { "reason": "transport_closed" } }
+    ]
+  }
+}

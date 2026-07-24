@@ -1,15 +1,18 @@
 /**
- * 最小 TS fixture runner——D4 §4.4「多语言 runner 架构」里 TS runner 的最初一版：只打通 TS 一端
- * 作样板（任务书原话），Swift/C# runner 见 CODEGEN-FINDINGS.md「TODO」标注，本轮不做。
+ * TS fixture runner——D4 §4.4「多语言 runner 架构」里 TS runner 的权威金标实现，是 Swift/C# runner
+ * 对照的基准 oracle。
  *
  * 职责：读一个 fixture（app/contracts/d2/fixtures/**\/*.json，结构见 ../dsl.ts），按 timeline
- * 顺序对 MockKernelClient（../ts-runner/mock-kernel-client.ts，一个只覆盖本轮两个 fixture 所需
- * 行为的极简假内核）执行 client_call/expect_outbound/mock_response/mock_event/assert_state 等
- * op，最终比对 `expected` 与实际可观察状态。
+ * 顺序对 MockKernelClient（../ts-runner/mock-kernel-client.ts）执行 client_call/expect_outbound/
+ * mock_response/mock_event/advance_clock/disconnect/assert_state 等 op，最终比对 `expected` 与
+ * 实际可观察状态。
  *
- * 已知简化（诚实标注，不冒充完整 D4 §4.4 runner）：
- * - 不实现虚拟时钟推进触发超时（advance_clock 目前只是记录，不触发任何 timed_out 类转移）。
- * - 不实现 disconnect/reconnect 期间事件不可见的语义（D1 §9.2/D2 §8，两个现有 fixture 未涉及）。
+ * **T-048 REWORK #3**：`advance_clock`/`disconnect` 此前只是记录、不触发任何转移——现已接到
+ * `MockKernelClient.advanceClock`/`disconnect`，让 stop() 的 timed_out/aborted_effect_unknown
+ * 两条路径真正可驱动（见 mock-kernel-client.ts 文件头「T-048 REWORK #3 收残的核心原则」）。
+ *
+ * 仍然如实标注的简化（不冒充完整 D4 §4.4 runner）：
+ * - 不实现 reconnect 期间事件不可见的语义（D1 §9.2/D2 §8，本轮 fixture 未涉及）。
  * - expect_outbound 的 pattern 匹配是『actual 是否包含 pattern 声明的全部字段』的子集匹配，
  *   不是完整 JSON Schema 校验（schema 校验层面的自检已由 codegen/scripts/validate-schemas.mjs
  *   覆盖，职责不重复）。
@@ -70,6 +73,10 @@ function deriveState(client: MockKernelClient): ClientObservableState {
     pendingOperations: client.pendingOperations,
     callOutcomes: client.callOutcomes as ClientObservableState['callOutcomes'],
     observedEvents: client.observedEvents,
+    // T-048 REWORK #3：approval/ 组新增 fixture 断言 approvalState，此前 deriveState 完全没有
+    // 暴露这个字段（MockKernelClient 也没有跟踪），导致 12 条新 fixture 里的 2 条 approval fixture
+    // 必然 FAIL——现已补齐，口径对齐 swift-runner 的 `ctx.approvalState`。
+    approvalState: client.approvalState,
   };
 }
 
@@ -134,11 +141,19 @@ export async function runFixture(fixturePath: string): Promise<RunResult> {
         break;
       }
       case 'disconnect':
+        // T-048 REWORK #3：接到 MockKernelClient.disconnect()——若有 stop() 正在等待 active run
+        // 终态确认，按 D1 §9.2 NOTE-1 因果补 aborted_effect_unknown 镜像 + session_end
+        // (transport_closed)；其余断线重连语义仍是 TODO（见 mock-kernel-client.ts 文档注释）。
+        client.disconnect();
+        break;
       case 'reconnect':
-        // TODO（本轮未实现，见文件顶部简化声明）：断线期间事件不可见语义。
+        // TODO（本轮未实现，见文件顶部简化声明）：断线重连语义。
         break;
       case 'advance_clock':
-        // TODO（本轮未实现）：虚拟时钟推进触发超时类转移。
+        // T-048 REWORK #3：接到 MockKernelClient.advanceClock()——若有 stop() 正在等待 active run
+        // 终态确认且 ms 跨越 TEST_STOP_TIMEOUT_MS 阈值，按 D1 §9.3 因果补 timed_out 镜像 +
+        // session_end(stopped)。
+        client.advanceClock(op.ms);
         break;
       case 'assert_state': {
         const diff = partialMatch(deriveState(client), op.expected, `assert_state@t=${op.t}`);
@@ -158,15 +173,30 @@ export async function runFixture(fixturePath: string): Promise<RunResult> {
   return { name: fixture.name, passed: mismatches.length === 0, mismatches };
 }
 
+/** 不带路径参数时的默认清单——与 swift-runner `SwiftRunnerMain.swift` 的 `defaultFixturePaths()`
+ *  对齐（T-048 REWORK 后共 13 条：basic 1 + operation-outcome 6 + session-lock 3 + approval 3）。 */
+function defaultFixturePaths(): string[] {
+  const relativePaths = [
+    ['basic', 'create-session-subscribe-message-delta.json'],
+    ['operation-outcome', 'soft-steer-then-stop.json'],
+    ['operation-outcome', 'stop-no-active-run-succeeded.json'],
+    ['operation-outcome', 'stop-active-run-succeeded.json'],
+    ['operation-outcome', 'stop-timed-out.json'],
+    ['operation-outcome', 'stop-rejected-rpc-failure.json'],
+    ['operation-outcome', 'stop-transport-closed-aborted-effect-unknown.json'],
+    ['session-lock', 'send-in-flight-send-pending.json'],
+    ['session-lock', 'send-in-flight-rejects-concurrent-stop.json'],
+    ['session-lock', 'stop-no-active-run-idle-transitions.json'],
+    ['approval', 'pending-request-agent-first.json'],
+    ['approval', 'pending-request-session-first.json'],
+    ['approval', 'stop-force-denies-pending-approval.json'],
+  ];
+  return relativePaths.map(([dir, file]) => join(__dirname, '..', dir, file));
+}
+
 async function main() {
   const argFixtures = process.argv.slice(2);
-  const fixturePaths =
-    argFixtures.length > 0
-      ? argFixtures.map((p) => resolve(process.cwd(), p))
-      : [
-          join(__dirname, '..', 'basic', 'create-session-subscribe-message-delta.json'),
-          join(__dirname, '..', 'operation-outcome', 'soft-steer-then-stop.json'),
-        ];
+  const fixturePaths = argFixtures.length > 0 ? argFixtures.map((p) => resolve(process.cwd(), p)) : defaultFixturePaths();
 
   let anyFailed = false;
   for (const fixturePath of fixturePaths) {

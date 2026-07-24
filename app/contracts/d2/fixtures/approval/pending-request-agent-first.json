@@ -1,0 +1,35 @@
+{
+  "name": "pending-request-agent-first",
+  "description": "审批五态 FSM 之 PENDING（agent-first 到达顺序）：createSession -> subscribe -> 内核推送一次审批请求。真实 openclaw 这一状态由两条独立 wire 帧联合确定——`agent(stream:'approval',phase:'requested')`（携带精确的 {runId,toolCallId,approvalId}）与 `session.approval(phase:'pending')`（携带 presentation/timeout 等完整字段）——SG-5 的 M1 双向 join 逻辑按 approvalId 把两者拼成一条 D2 evt.approval_request。本 fixture 走『agent 帧先到』方向——到达顺序声明在 `driverHint.approvalJoinOrder`（../dsl.ts 的 `MockEventDriverHint`，DSL 层面显式声明的翻译层驱动量，不在封闭的 D2 `message` 联合里；TS mock-kernel-client 不模拟原生双帧 join，忽略本字段。**T-048 REWORK #1**：此前用非法的 `_openclawJoinOrder` 塞进 `message`，违反 `additionalProperties:false`，现改用本字段）。D1 §6.2 审批状态机全貌是 PENDING + 四个互斥终态（RESOLVED_ALLOW/RESOLVED_DENY/TIMED_OUT_DENY/FORCE_DENIED_ON_STOP）——本 fixture 只覆盖 PENDING，四个终态在 SG-5 当前实现下的可达性见 ../approval/OPEN.md（respondApproval() 是 TODO 桩、审批超时的 session.approval terminal phase 未映射——这两点仍不可达；FORCE_DENIED_ON_STOP 本轮已随 stop() force-deny 补丁落地，见 `stop-force-denies-pending-approval.json`）。`payload.payload` 是 D2 `events/approval-request.schema.json` 要求的必填内部不透明字段（`ApprovalRequestPayload.payload`，schema 声明为 `true` 即接受任意值但必须存在）——此前遗漏，T-048 REWORK #2 补齐。",
+  "timeline": [
+    { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+    { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+    { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+    { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
+    {
+      "t": 15,
+      "op": "mock_event",
+      "message": {
+        "type": "evt.approval_request",
+        "sessionId": "session-1",
+        "runId": "run-approval-1",
+        "payload": {
+          "kind": "exec",
+          "reqId": "req-agent-first-1",
+          "toolCallId": "tool-agent-first-1",
+          "payload": { "commandText": "echo req-agent-first-1" },
+          "timeoutMs": 1800000,
+          "timeoutAuthority": "documented"
+        }
+      },
+      "driverHint": { "approvalJoinOrder": "agent_first" }
+    },
+    { "t": 20, "op": "assert_state", "expected": { "approvalState": { "req-agent-first-1": "pending" } } }
+  ],
+  "expected": {
+    "approvalState": { "req-agent-first-1": "pending" },
+    "observedEvents": [
+      { "type": "evt.approval_request", "payload": { "reqId": "req-agent-first-1", "toolCallId": "tool-agent-first-1", "kind": "exec" } }
+    ]
+  }
+}

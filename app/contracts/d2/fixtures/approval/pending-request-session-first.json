@@ -1,0 +1,35 @@
+{
+  "name": "pending-request-session-first",
+  "description": "审批五态 FSM 之 PENDING（session-first 到达顺序，M1 双向缓冲 join 的另一半）：与 pending-request-agent-first.json 同一目标状态，但 `session.approval(phase:'pending')` 先于 `agent(stream:'approval')` 到达（到达顺序声明在 `driverHint.approvalJoinOrder:'session_first'`——../dsl.ts 的 `MockEventDriverHint`，DSL 层面显式声明的翻译层驱动量，不在封闭的 D2 `message` 联合里；TS mock-kernel-client 忽略本字段。**T-048 REWORK #1**：此前用非法的 `_openclawJoinOrder` 塞进 `message`，违反 `additionalProperties:false`，现改用本字段）。真实 SG-5 在这个顺序下必须先把 session.approval 整条 payload 缓冲（`pendingSessionApprovalByApprovalID`），等 agent 帧补上 {runId,toolCallId} 才补发 evt.approval_request——这正是 T-045 codex 复现过的『session.approval 先到直接丢弃』回归缺陷修复后的行为，本 fixture 是它的金标 parity 覆盖（此前只有 FrameReplayTests.swift 的 `testApprovalPendingFirstIsBufferedNotDropped` 单测覆盖，未纳入跨语言 fixture）。`payload.payload` 是 D2 `events/approval-request.schema.json` 要求的必填内部不透明字段——此前遗漏，T-048 REWORK #2 补齐。",
+  "timeline": [
+    { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+    { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+    { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+    { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
+    {
+      "t": 15,
+      "op": "mock_event",
+      "message": {
+        "type": "evt.approval_request",
+        "sessionId": "session-1",
+        "runId": "run-approval-2",
+        "payload": {
+          "kind": "exec",
+          "reqId": "req-session-first-1",
+          "toolCallId": "tool-session-first-1",
+          "payload": { "commandText": "echo req-session-first-1" },
+          "timeoutMs": 1800000,
+          "timeoutAuthority": "documented"
+        }
+      },
+      "driverHint": { "approvalJoinOrder": "session_first" }
+    },
+    { "t": 20, "op": "assert_state", "expected": { "approvalState": { "req-session-first-1": "pending" } } }
+  ],
+  "expected": {
+    "approvalState": { "req-session-first-1": "pending" },
+    "observedEvents": [
+      { "type": "evt.approval_request", "payload": { "reqId": "req-session-first-1", "toolCallId": "tool-session-first-1", "kind": "exec" } }
+    ]
+  }
+}

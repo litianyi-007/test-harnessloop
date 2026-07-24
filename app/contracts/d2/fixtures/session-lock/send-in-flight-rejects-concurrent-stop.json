@@ -1,0 +1,23 @@
+{
+  "name": "send-in-flight-rejects-concurrent-stop",
+  "description": "SessionLockState 四态之 send_pending 的『转移』面：send() 在途期间，并发到达的 stop() 必须被真实拒绝（session_locked），不得抢占；send() ack 到达后锁释放回 idle。stop() 的 session_locked 拒绝发生在 `currentLock == .idle` 的前置 guard，早于 operationId 铸造（D1 v3.1 §9.1：`KernelPortRejectionCode` 层，不是 `OperationOutcome` 层）——因此这次 stop 调用没有 operation_completed 镜像事件，本 fixture 断言走 callOutcomes（不是 pendingOperations），呼应 D1 v3.1 §9.3 规则 1：'send()/interrupt() 在锁状态为 interrupt_in_progress/stop_in_progress 时一律 reject'；SG-5 的真实实现把这条互斥进一步扩大到 send_pending 状态本身（任何非 idle 状态都拒绝并发的 send/stop），是比 D1 文字更严格但不矛盾的实现选择。",
+  "timeline": [
+    { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+    { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+    { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+    { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
+    { "t": 15, "op": "client_call", "id": "send1", "call": "send", "args": { "kind": "text", "text": "hello" } },
+    { "t": 16, "op": "assert_state", "expected": { "sessionLock": "send_pending" } },
+    { "t": 17, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },
+    { "t": 18, "op": "assert_state", "expected": { "callOutcomes": { "stop1": { "status": "rejected", "failure": { "code": "session_locked" } } } } },
+    { "t": 20, "op": "mock_response", "replyTo": "send1", "message": { "type": "res.send", "result": { "runId": "run-1" } } },
+    { "t": 25, "op": "assert_state", "expected": { "sessionLock": "idle" } }
+  ],
+  "expected": {
+    "sessionLock": "idle",
+    "callOutcomes": {
+      "send1": { "status": "resolved" },
+      "stop1": { "status": "rejected", "failure": { "code": "session_locked" } }
+    }
+  }
+}

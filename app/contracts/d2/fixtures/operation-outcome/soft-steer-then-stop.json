@@ -1,13 +1,17 @@
 {
   "name": "soft-steer-then-stop-waits-not-preempts",
-  "description": "interrupt(mode:'steer') 在途时 stop() 到达——适配器必须等待 steer RPC 返回，不得截断；steer 按二态收敛后锁转 stop_in_progress。逐字转录自 D4 跨平台架构 v2.2 §4.3 的既定金标示例（该 fixture 已在 D4 定稿评审中通过，是 D1 §9.3 session 锁互斥矩阵 + D2 v3 §3.4 interrupt 二态判定的代表性并发场景），展示 DSL 的并发表达方式：两个 client_call 落在同一条『在途窗口』内、assert_state 中途断言。",
+  "description": "interrupt(mode:'steer') 在途时 stop() 到达——适配器必须等待 steer RPC 返回，不得截断；steer 按二态收敛后锁转 stop_in_progress。逐字转录自 D4 跨平台架构 v2.2 §4.3 的既定金标示例（该 fixture 已在 D4 定稿评审中通过，是 D1 §9.3 session 锁互斥矩阵 + D2 v3 §3.4 interrupt 二态判定的代表性并发场景），展示 DSL 的并发表达方式：两个 client_call 落在同一条『在途窗口』内、assert_state 中途断言。**T-048 REWORK #6（codex 复现的独立缺陷）**：此前 timeline 从未 `createSession` 就直接调用 `interrupt`/`stop`——`interrupt()`/`respondApproval()`/`capabilities()` 三个方法本轮仍是 TODO 桩，本 fixture 因此在 swift-runner 上被 `degradeReason(for:)` 静态扫描整条标记 DEGRADED（不计入 PASS/FAIL），这个独立错误此前一直被 DEGRADED 掩盖，未真正暴露；`stop()` 真实实现明确要求已有 `currentSessionHandle`（`performClientCall` 的 `stop` 分支：`guard let handle = await ctx.currentSessionHandle else { throw ... }`），`session-lock/OPEN.md` 此前『interrupt() 落地后本 fixture 无需修改即可通过』的声称并不成立——本轮已补上 `createSession`/`subscribe` 前置步骤，让声称重新成立（该 OPEN.md 段落已同步更正）。",
   "timeline": [
-    { "t": 0, "op": "client_call", "id": "steer1", "call": "interrupt", "args": { "mode": "steer", "input": "..." } },
-    { "t": 0, "op": "expect_outbound", "matches": "steer1", "pattern": { "type": "req.interrupt", "payload": { "mode": "steer" } } },
-    { "t": 10, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },
-    { "t": 10, "op": "assert_state", "expected": { "sessionLock": "interrupt_in_progress" } },
-    { "t": 50, "op": "mock_response", "replyTo": "steer1", "message": { "type": "res.interrupt", "result": { "operationId": "op-steer-1", "outcome": "submitted" } } },
-    { "t": 51, "op": "assert_state", "expected": { "sessionLock": "stop_in_progress" } }
+    { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+    { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+    { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+    { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
+    { "t": 15, "op": "client_call", "id": "steer1", "call": "interrupt", "args": { "mode": "steer", "input": "..." } },
+    { "t": 15, "op": "expect_outbound", "matches": "steer1", "pattern": { "type": "req.interrupt", "payload": { "mode": "steer" } } },
+    { "t": 25, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },
+    { "t": 25, "op": "assert_state", "expected": { "sessionLock": "interrupt_in_progress" } },
+    { "t": 65, "op": "mock_response", "replyTo": "steer1", "message": { "type": "res.interrupt", "result": { "operationId": "op-steer-1", "outcome": "submitted" } } },
+    { "t": 66, "op": "assert_state", "expected": { "sessionLock": "stop_in_progress" } }
   ],
   "expected": { "pendingOperations": { "steer1": "submitted" } }
 }

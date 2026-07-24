@@ -1,0 +1,27 @@
+{
+  "name": "stop-active-run-succeeded",
+  "description": "OperationOutcome 七态之 succeeded（有 active run 的分支）：createSession -> subscribe -> send()（产生 run-1）-> stop()。sessions.abort 真实回报 abortedRunId:'run-1'，stop() 内部等待该 run 的 aborted lifecycle 终态确认；随后一条 mock_event(evt.turn_complete，翻译为 openclaw agent(stream:lifecycle,phase:end,aborted:true) 帧)真实唤醒等待，产出 operation_completed(succeeded) + turn_complete(cancelled) + session_end(stopped) 三件套（D1 v3 §9.3 stop 事件顺序保证）。runId 是 openclaw RPC 响应的纯透传字段，swift-runner 翻译层完全掌控其内容，因此这里可以放心让 'run-1' 字面值真实流过整条链路（不同于 sessionId/operationId 由真实 client 内部铸造随机 UUID，无法预先声明）。**T-048 REWORK**：不再靠非法的 `_openclawAbortAck`/`_openclawLifecycle` 提示字段——『是否存在 active run』从合法 canonical 事实（此前 send() 已经真实 resolve 出 runId）无歧义派生，两端各自独立据此判定需要等待 mock_event 才能收尾（Swift 读 `ctx.currentRunIDValue`；TS 读 `this.currentRunId`），`res.stop.result` 仅表达『底层 RPC ack 本身成功』这一装饰性事实，不代表最终 OperationOutcome（那由 mock_event/advance_clock/disconnect 决定）。",
+  "timeline": [
+    { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+    { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+    { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+    { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
+    { "t": 15, "op": "client_call", "id": "send1", "call": "send", "args": { "kind": "text", "text": "run something long" } },
+    { "t": 15, "op": "expect_outbound", "matches": "send1", "pattern": { "type": "req.send" } },
+    { "t": 20, "op": "mock_response", "replyTo": "send1", "message": { "type": "res.send", "result": { "runId": "run-1" } } },
+    { "t": 30, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },
+    { "t": 30, "op": "expect_outbound", "matches": "stop1", "pattern": { "type": "req.stop" } },
+    { "t": 35, "op": "mock_response", "replyTo": "stop1", "message": { "type": "res.stop", "result": { "operationId": "op-placeholder", "outcome": "succeeded" } } },
+    { "t": 40, "op": "mock_event", "message": { "type": "evt.turn_complete", "sessionId": "session-1", "runId": "run-1", "payload": { "stopReason": "cancelled" } } },
+    { "t": 50, "op": "assert_state", "expected": { "sessionLock": "idle" } }
+  ],
+  "expected": {
+    "pendingOperations": { "stop1": "succeeded" },
+    "sessionLock": "idle",
+    "observedEvents": [
+      { "type": "evt.operation_completed", "payload": { "outcome": "succeeded", "operationKind": "stop", "affectedRunId": "run-1" } },
+      { "type": "evt.turn_complete", "payload": { "stopReason": "cancelled" } },
+      { "type": "evt.session_end", "payload": { "reason": "stopped" } }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "stop-timed-out",
+  "description": "OperationOutcome 七态之 timed_out：createSession -> subscribe -> send()（产生 run-1）-> stop()。sessions.abort 真实回报 abortedRunId:'run-1'，但本 fixture 故意不喂任何 aborted lifecycle 帧——真实 SG-5 内部的 `waitForPendingStopTerminal` 会真的等到超时。swift-runner 全局把生产 5 秒超时收窄为 1 秒（`testSupportSetStopTimeoutSeconds`，SG-5 已提供的测试专用钩子），`advance_clock` 的 ms 声明『要跨越这个超时边界』这个语义，runner 据此真实等到（轮询『任务已结算』，不再固定 sleep 猜时长，见 T-048 REWORK #5）SG-5 内部真实的定时器触发（不是伪造/直接置状态）。产出 operation_completed(timed_out) 镜像 + session_end(stopped)，不产出 turn_complete（真实终态 lifecycle 帧从未到达）。**T-048 REWORK #1/#2**：`mock_response(stop1)` 不再用非法 `_openclawAbortAck`；`result.outcome` 改用『底层 sessions.abort RPC ack 本身成功』这一诚实语义（`succeeded`）——真实 client 从不读这个字段，最终 timed_out 是两端各自独立从『有 active run（`currentRunId`/`ctx.currentRunIDValue` 非空）且等到超时』这一真实因果推出，不是从这个字段直接抄来的（TS mock 同样按此重写，见 ts-runner/mock-kernel-client.ts）。",
+  "timeline": [
+    { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+    { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+    { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+    { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
+    { "t": 15, "op": "client_call", "id": "send1", "call": "send", "args": { "kind": "text", "text": "run something that never confirms cancellation" } },
+    { "t": 20, "op": "mock_response", "replyTo": "send1", "message": { "type": "res.send", "result": { "runId": "run-1" } } },
+    { "t": 30, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },
+    { "t": 35, "op": "mock_response", "replyTo": "stop1", "message": { "type": "res.stop", "result": { "operationId": "op-placeholder", "outcome": "succeeded" } } },
+    { "t": 40, "op": "advance_clock", "ms": 1500 },
+    { "t": 1540, "op": "assert_state", "expected": { "pendingOperations": { "stop1": "timed_out" } } }
+  ],
+  "expected": {
+    "pendingOperations": { "stop1": "timed_out" },
+    "sessionLock": "idle",
+    "observedEvents": [
+      { "type": "evt.operation_completed", "payload": { "outcome": "timed_out", "operationKind": "stop", "affectedRunId": "run-1" } },
+      { "type": "evt.session_end", "payload": { "reason": "stopped" } }
+    ]
+  }
+}

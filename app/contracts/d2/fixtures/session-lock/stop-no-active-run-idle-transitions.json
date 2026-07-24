@@ -1,0 +1,23 @@
+{
+  "name": "stop-no-active-run-idle-transitions",
+  "description": "SessionLockState 四态之 stop_in_progress 的进入/转移/退出：stop() 一发起锁立即转 stop_in_progress（`lockStateBySessionID[sessionID] = .stopInProgress` 是 stop() 方法体的第一件事，早于任何 RPC），sessions.abort 的 mock_response 用 ReplyGate 真实悬挂到 runner 处理该 op 的那一刻，中途 assert_state 断言的是真实状态；ack 到达、stop() 收尾后锁回到 idle。同一条 timeline 顺带验证 stop_in_progress 期间并发 send() 被拒绝（D1 v3.1 §9.3 规则 1）。**T-048 REWORK #1**：不再用非法 `_openclawAbortAck`——本 fixture 从未 send()，两端各自据此判定『没有 active run』（无需等待任何 mock_event 即可收尾）。",
+  "timeline": [
+    { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+    { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+    { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+    { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
+    { "t": 15, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },
+    { "t": 16, "op": "assert_state", "expected": { "sessionLock": "stop_in_progress" } },
+    { "t": 17, "op": "client_call", "id": "send1", "call": "send", "args": { "kind": "text", "text": "should be rejected" } },
+    { "t": 18, "op": "assert_state", "expected": { "callOutcomes": { "send1": { "status": "rejected", "failure": { "code": "session_locked" } } } } },
+    { "t": 20, "op": "mock_response", "replyTo": "stop1", "message": { "type": "res.stop", "result": { "operationId": "op-placeholder", "outcome": "succeeded" } } },
+    { "t": 25, "op": "assert_state", "expected": { "sessionLock": "idle" } }
+  ],
+  "expected": {
+    "sessionLock": "idle",
+    "pendingOperations": { "stop1": "succeeded" },
+    "callOutcomes": {
+      "send1": { "status": "rejected", "failure": { "code": "session_locked" } }
+    }
+  }
+}

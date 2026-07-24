@@ -1,0 +1,21 @@
+{
+  "name": "stop-rejected-rpc-failure",
+  "description": "OperationOutcome 七态之 rejected：createSession -> subscribe -> stop()，底层 sessions.abort RPC 本身抛错（模拟传输失败）。真实 SG-5 stop() 的 M3 catch 分支：释放 stop_in_progress 锁 + 清理 pendingStop + 发一条 operation_completed(rejected) 镜像，再把原始错误重新抛给调用方——Promise 侧因此没有 StopResultPayload（callOutcomes 不适用于 stop，见 dsl.ts 对 pendingOperations/callOutcomes 的职责划分注释：stop/interrupt 走 pendingOperations，不产 operationId 的方法才走 callOutcomes），outcome 只能从 operation_completed 镜像事件读到。message.failure 触发 swift-runner 翻译层让 sessions.abort 的 stub responder 直接 throw。",
+  "timeline": [
+    { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+    { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+    { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+    { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
+    { "t": 15, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },
+    { "t": 15, "op": "expect_outbound", "matches": "stop1", "pattern": { "type": "req.stop" } },
+    { "t": 20, "op": "mock_response", "replyTo": "stop1", "message": { "type": "res.stop", "failure": { "code": "unknown", "detail": "simulated sessions.abort transport failure" } } },
+    { "t": 25, "op": "assert_state", "expected": { "sessionLock": "idle" } }
+  ],
+  "expected": {
+    "pendingOperations": { "stop1": "rejected" },
+    "sessionLock": "idle",
+    "observedEvents": [
+      { "type": "evt.operation_completed", "payload": { "outcome": "rejected", "operationKind": "stop" } }
+    ]
+  }
+}
