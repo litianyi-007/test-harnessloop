@@ -1,88 +1,25 @@
 app/kernel-client/swift/CLIRunner.swift
-  s_c587ecf7bbc3e2::t_949205b4c6d076 23-26
-  s_c587ecf7bbc3e2::t_7837a3cc885f52 74-74
-  s_c587ecf7bbc3e2::t_b1622d5ff89b66 91-96,102-102
+  s_c587ecf7bbc3e2::t_151032a3a6a433 142,147,149,157,162-311
+  s_c587ecf7bbc3e2::t_7837a3cc885f52 74
+  s_c587ecf7bbc3e2::t_b1622d5ff89b66 91-96,102
   s_c587ecf7bbc3e2::t_f3a9652c993f42 122-126
-  s_c587ecf7bbc3e2::t_151032a3a6a433 142-142,147-147,149-149,157-157,160-310
-  s_c587ecf7bbc3e2::t_71ec2900340e87 151-151
-scratchpad/openclaw-iso3/state/openclaw.json
-  s_c587ecf7bbc3e2::t_b829521461acd9 33-33
+  s_c587ecf7bbc3e2::t_949205b4c6d076 23-26
+  s_c587ecf7bbc3e2::t_71ec2900340e87 151
+  s_c587ecf7bbc3e2::t_ed992b6fe89043 312
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.15",
   "base_commit_sha": "02a22c0bebb7e781d2847550ee280e6da5bc7381",
-  "prompts": {
-    "s_c587ecf7bbc3e2::t_949205b4c6d076": {
+  "prompts": {},
+  "sessions": {
+    "s_c587ecf7bbc3e2": {
       "agent_id": {
         "tool": "claude",
         "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
         "model": "claude-opus-4-8"
       },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 4,
-      "total_deletions": 0,
-      "accepted_lines": 4,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_b829521461acd9": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-opus-4-8"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_7837a3cc885f52": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_b1622d5ff89b66": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 7,
-      "total_deletions": 0,
-      "accepted_lines": 7,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_f3a9652c993f42": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 5,
-      "total_deletions": 0,
-      "accepted_lines": 5,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_151032a3a6a433": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 155,
-      "total_deletions": 0,
-      "accepted_lines": 155,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_71ec2900340e87": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
+      "human_author": "litianyi <litianyi@corp.netease.com>"
     }
   }
 }
