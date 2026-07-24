@@ -989,3 +989,21 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（五处真闭合有牙齿 + 无新表面绕过 → Stage A 终收、进 Stage B）| `MUST-FIX`（仅列问题点 + `app/contracts/d2/fixtures/<file>:<line>` + 可复现;临时改动务必还原）。
 **产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-051-output.md`。**Read-only**：审查不改任何文件（证伪用的临时改动必须 `git checkout` 还原,报告里说明）；可跑 node/swiftc/Ajv；忽略跨仓/别目录全局 skill。中文。
+
+## T-052（SG-8.7 ★审查闸2：Stage B C# 金标 parity runner 对抗审，单 codex）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: codex（轮换,T-051 为 grok；⚠️ **工具约束:可跑 `dotnet build`/`dotnet run`/node/swiftc,严禁 `csi`/`dotnet-script` 等 C# 交互工具**——T-046 先例:跑 csi 触发你自身安全过滤器致评审中止）· 只读
+
+**评审对象**（主仓库 commit `505202a5`）：`app/contracts/d2/fixtures/csharp-runner/`（`FixtureDsl.cs`/`PartialMatch.cs`/`CSharpFixtureRunner.cs`/`CSharpRunnerMain.cs`/`CSharpRunner.csproj`）+ README 三端 parity 节。**权威对照**：已 validated 的 `swift-runner/`（T-048→T-050→T-051 三审收敛,commit `98d38e0e`）+ `ts-runner/` + `dsl.ts`；被驱动的 SG-5 真实 C# client `app/kernel-client/csharp/`（stop force-deny + NOTE-A 已修,30/30,grok T-049 PASS_WITH_NOTE）。`git show 505202a5`。
+
+**背景**：Stage A 的 Swift runner 经三轮审查才挤干"绿灯≠真 parity"的水分（臆造字段/自构 request 匹配/空转 oracle/不断言顺序/漏 seq）。Stage B 声称把全套纪律镜像到 C# runner：三端矩阵 TS 13/13 + Swift 12/13 + C# 12/13（同一 expected、DEGRADED 同因），3 处 teeth 反证（错 param/错顺序/放水 matcher→FAIL）均还原。主会话已独立复跑三端 + C# 端 teeth 亲证。由 Sonnet 所写,需异构对抗复核。
+
+**对抗核验重点（找真缺陷 + 可复现;重点证伪"C# 绿灯是否真能证明它声称的东西"）**：
+1. **真驱动 vs mock**：`CSharpFixtureRunner.cs` 的 `client_call` 是否真调 `OpenclawGatewayKernelClient` 的 `CreateSessionAsync`/`SendAsync`/`Subscribe`/`StopAsync`（经 `TestSupportStubRpc`/喂帧钩子）？有无任何 short-circuit 预置状态绕过真实 client 代码路径？`ReplyGate`（lock+TCS）是否真让 RPC 在途、中途 assert 观察真实状态（对照 Swift 的 actor ReplyGate,C# lock 版有无竞态）？
+2. **native params 匹配是否真捕获**：`NormalizeNativeParams` 是否从 stub 闭包运行时捕获的真实 `params` 规范化（非 timeline args 回放）？`message`→`text` 反映射、key 反查 sessionId、无 fallback（缺失→null 标记）是否与 swift-runner 语义一致？**证伪**：临时改真实 C# client 发错 native param → fixture 应 FAIL（改完 `git checkout` 还原）。
+3. **nativeCallOrder/advance_clock**：顺序是否真实调用时刻记录（非注册时）？advance_clock 是否轮询 `IsCallSettled` 且 timed_out 真由 SG-5 内部 `Task.Delay` timer 触发（可计时验证）？
+4. **PartialMatch 三端等价**：C# 的对称统一值域实现与 Swift（非对称+objCType workaround）/TS 在当前 fixture JSON 值域上是否行为等价？其文档化的"C# 无需 objCType workaround"论证是否成立？有无放水路径（如 number 精度/显式 null/数组长度）？
+5. **三端 parity 声明与 teeth 可信度**：亲跑三端（TS 排除 bin/obj 污染:`find ... -not -path '*/bin/*' -not -path '*/obj/*'`）确认 13/13、12/13、12/13 且 DEGRADED 同因；`DegradeReason` 静态扫描是否与 swift-runner 同口径（interrupt/respondApproval/capabilities 桩）？报告声称的 3 处 teeth 是否可信（可抽验其一）？有无 Stage A 式表面绕过在 C# 端复发（如某字段仅 C# 端不校验）？
+
+**Verdict**：`PASS`（C# runner 可信、三端 parity 真成立 → SG-8.7 主体达成）| `PASS_WITH_NOTE` | `REWORK`（逐条给 `app/contracts/d2/fixtures/csharp-runner/<file>:<line>` + 可复现）| `FAIL`。
+**产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-052-output.md`。**Read-only**：审查不改任何文件（证伪临时改动必须还原并说明）；忽略跨仓/别目录全局 skill。中文。

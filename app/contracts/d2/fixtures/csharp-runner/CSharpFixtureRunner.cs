@@ -640,7 +640,12 @@ namespace CSharpRunner
         ///   - `payload`：`params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后剩下的全部
         ///     字段，原样保留原生字段名——仅 `sessions.send` 一项例外：把原生 `message` 反向映射回
         ///     D1 `Input.text` 概念，只为了让这个字段能与 TS/Swift 端 `payload.text` 做跨语言一致的
-        ///     深度匹配；其余字段不改名，如实反映原生协议。
+        ///     深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：`message`→`text`
+        ///     重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——否则若真实
+        ///     client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段会原样
+        ///     留在 payload 里、自证满足 `payload.text` 断言，形成假绿。剥掉之后只有真的捕获到
+        ///     `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
+        ///     `payload.text` 断言必然失败。
         /// </summary>
         private static Dictionary<string, object?> NormalizeNativeParams(string method, JSONObject parameters, string expectedType, RunnerContext ctx)
         {
@@ -651,8 +656,13 @@ namespace CSharpRunner
                 var declared = ctx.DeclaredSessionId(key);
                 outp["sessionId"] = declared != null ? declared : JsonNullMarker.Instance;
             }
-            if (method == "sessions.send" && payload.Remove("message", out var message))
-                payload["text"] = message;
+            if (method == "sessions.send")
+            {
+                var hasMessage = payload.Remove("message", out var message);
+                payload.Remove("text", out _);
+                if (hasMessage)
+                    payload["text"] = message;
+            }
             outp["payload"] = payload;
             return outp;
         }

@@ -604,7 +604,12 @@ let expectOutboundMethodTable: [String: String] = [
 ///   `sessions.send` 一项**例外：把原生 `message` 反向映射回 D1 `Input.text` 概念（对应
 ///   `resolveSendMessageText` 在 Stage A fixture 唯一用到的 `kind:"text"` 场景，不覆盖
 ///   structured/parts），只为了让这个字段能与 TS 端 `payload.text`（直接来自 client_call 的 D1
-///   `args`）做跨语言一致的深度匹配；其余字段不改名，如实反映原生协议。
+///   `args`）做跨语言一致的深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：
+///   `message`→`text` 重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——
+///   否则若真实 client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段
+///   会原样留在 payload 里、自证满足 `payload.text` 断言，形成假绿。剥掉之后只有真的捕获到
+///   `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
+///   `payload.text` 断言必然失败。
 func normalizeNativeParams(
     method: String, params: JSONObject, expectedType: String, ctx: RunnerContext
 ) async -> [String: Any] {
@@ -617,8 +622,12 @@ func normalizeNativeParams(
             out["sessionId"] = NSNull()
         }
     }
-    if method == "sessions.send", let message = payload.removeValue(forKey: "message") {
-        payload["text"] = message
+    if method == "sessions.send" {
+        let message = payload.removeValue(forKey: "message")
+        payload.removeValue(forKey: "text")
+        if let message {
+            payload["text"] = message
+        }
     }
     out["payload"] = payload
     return out
