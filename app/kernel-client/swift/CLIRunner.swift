@@ -66,7 +66,7 @@ func runL1CloseLoop() async throws {
         do {
             for try await event in eventStream {
                 count += 1
-                print("  [event #\(count)] wireType=\(event.wireType)")
+                print("  [event #\(count)] wireType=\(event.wireType) \(describeEventFields(event))")
             }
         } catch {
             print("  事件流结束时携带错误: \(error)")
@@ -109,4 +109,36 @@ func runL1CloseLoop() async throws {
 
     await client.disconnect()
     print("\n=== L1 闭环 CLOSED OK: connect -> createSession -> subscribe -> stop ===")
+}
+
+/// SG-5 rework：codex 对抗审 T-044 指出上一轮 CLIRunner 只打印 `event.wireType`，看不到
+/// `runId/seq/ts/toolCallId/output/usage/stopReason` 这些真正能暴露字段级缺陷（seq 倒退、approval
+/// 串号、正常 end 误报 error、重复 operation terminal 等）的关键字段——本函数按事件种类逐一取出
+/// 这些字段格式化，让 e2e 输出本身就足以肉眼核验映射正确性，不再只证明"有事件流过"。
+func describeEventFields(_ event: EventMessageUnion) -> String {
+    switch event {
+    case .messageDelta(let e):
+        return "runId=\(e.runID ?? "-") seq=\(e.seq) ts=\(e.ts) delta=\(String(e.payload.delta.prefix(60)).debugDescription)"
+    case .thinking(let e):
+        return "runId=\(e.runID ?? "-") seq=\(e.seq) ts=\(e.ts) visibility=\(e.payload.visibility.rawValue) delta=\(String(e.payload.delta.prefix(60)).debugDescription)"
+    case .toolCall(let e):
+        return "runId=\(e.runID ?? "-") seq=\(e.seq) ts=\(e.ts) toolCallId=\(e.payload.toolCallID) name=\(e.payload.name)"
+    case .toolResult(let e):
+        let outputPreview = String(describing: e.payload.output.value)
+        return "runId=\(e.runID ?? "-") seq=\(e.seq) ts=\(e.ts) toolCallId=\(e.payload.toolCallID) isError=\(e.payload.isError) durationMs=\(e.payload.durationMS.map(String.init) ?? "-") output=\(String(outputPreview.prefix(80)))"
+    case .approvalRequest(let e):
+        return "runId=\(e.runID) seq=\(e.seq) ts=\(e.ts) reqId=\(e.payload.reqID) toolCallId=\(e.payload.toolCallID) kind=\(e.payload.kind.rawValue) timeoutMs=\(e.payload.timeoutMS)"
+    case .error(let e):
+        return "runId=\(e.runID ?? "-") seq=\(e.seq) ts=\(e.ts) code=\(e.payload.code.rawValue) message=\(e.payload.message.debugDescription) recoverable=\(e.payload.recoverable.rawValue)"
+    case .turnComplete(let e):
+        return "runId=\(e.runID) seq=\(e.seq) ts=\(e.ts) stopReason=\(e.payload.stopReason.rawValue) usage=\(e.payload.usage.map { "in=\($0.inputTokens ?? -1),out=\($0.outputTokens ?? -1)" } ?? "-")"
+    case .sessionEnd(let e):
+        return "runId=\(e.runID ?? "-") seq=\(e.seq) ts=\(e.ts) reason=\(e.payload.reason.rawValue)"
+    case .capabilityChanged(let e):
+        return "runId=\(e.runID ?? "-") seq=\(e.seq) ts=\(e.ts) source=\(e.payload.source.rawValue)"
+    case .operationCompleted(let e):
+        return "runId=\(e.runID ?? "-") seq=\(e.seq) ts=\(e.ts) operationId=\(e.payload.operationID) outcome=\(e.payload.outcome.rawValue) affectedRunId=\(e.payload.affectedRunID ?? "-")"
+    case .approvalBufferResolved(let e):
+        return "runId=\(e.runID ?? "-") seq=\(e.seq) ts=\(e.ts) reqId=\(e.payload.reqID) reason=\(e.payload.reason.rawValue)"
+    }
 }
