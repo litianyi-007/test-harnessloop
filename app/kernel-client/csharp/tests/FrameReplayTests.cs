@@ -835,6 +835,77 @@ namespace KernelClient.Tests
             return Pass(name, "stop() 收尾后 lock/pendingStop/terminal 标记/未匹配的 approval 缓冲全部清理干净");
         }
 
+        /// <summary>
+        /// NOTE-1（T-047 grok 复核 SG-5 rounds/0005 主 NOTE，真挂起 bug 回归守卫）。
+        ///
+        /// **修前 fail / 修后 pass**：stop() 发起 sessions.abort 得到非空 abortedRunId 后进入
+        /// WaitForPendingStopTerminalAsync 等待——此时 transport 关闭（HandleTransportClosed ->
+        /// FailAllPending -> ClearSessionDerivedCaches）。修前 ClearSessionDerivedCaches 直接
+        /// `_pendingStops.Remove(sessionId)`，完全不管条目里还挂着一个活的 Waiter；随后无论是超时
+        /// 定时器触发 ResolvePendingStopWaiter，还是任何别的路径，都会因为
+        /// `_pendingStops.TryGetValue` 失败而 early-return——TaskCompletionSource 永不 TrySetResult，
+        /// `await tcs.Task` 永久悬挂，StopAsync 这次调用永远不返回（本测试用
+        /// `Task.WhenAny(stopTask, Task.Delay(2000))` 证伪：修前会在 2 秒边界触发 Fail，而不是等到
+        /// 真正的测试超时——如果不设这个有界护栏，修前版本会把整个测试进程挂死）。
+        ///
+        /// 修后：ResolvePendingStopForTransportClose 在 HandleTransportClosed 的 sessionEnd 之前、
+        /// FailAllPending 把 channel TryComplete 之前，为这个仍在等待的 pendingStop 补发一条
+        /// operation_completed(aborted_effect_unknown) 镜像 + 唤醒 Waiter；StopAsync 收到
+        /// StopWaitOutcome.TransportClosed 之后如实抛 KernelClientException(Transport)，不假装
+        /// succeeded/timed_out。
+        /// </summary>
+        private static async Task<bool> TestStopTransportClosedWhileWaitingDoesNotHangAndEmitsMirror()
+        {
+            var name = "NOTE-1 (T-047) stop() transport closes while awaiting aborted-run terminal -> no permanent hang, operation_completed(aborted_effect_unknown) mirror before session_end(transport_closed)";
+            var client = FreshClient();
+            var sessionId = "sess-stop-transport-closed-midwait";
+            var kernelKey = "kernel-key-stop-transport-closed-midwait";
+            var runId = "run-transport-closed-1";
+            var channel = client.TestSupportRegisterSession(sessionId, kernelKey);
+            // 生产默认超时（5 秒）——刻意不缩短，用来证明 stop() 是被 transport-close 路径主动唤醒的，
+            // 不是靠超时兜底"侥幸"返回。
+            client.TestSupportSetStopTimeoutSeconds(5);
+            client.TestSupportStubRpc("sessions.abort", _ => Task.FromResult(new JSONObject { ["ok"] = true, ["abortedRunId"] = runId, ["status"] = "aborted" }));
+            var handle = TestHandle(sessionId, kernelKey);
+
+            var stopTask = client.StopAsync(handle);
+            await Task.Delay(60); // 足够 stop() 真实拿到 abortedRunId、进入 WaitForPendingStopTerminalAsync 等待
+
+            client.TestSupportSimulateTransportClosed();
+
+            // 有界护栏（远小于 5 秒生产超时）：修前版本这里会一直等到 stopTask 都不会完成。
+            var completed = await Task.WhenAny(stopTask, Task.Delay(2000));
+            if (completed != stopTask)
+                return Fail(name, "stop() 在 transport 关闭后 2 秒内仍未返回/抛错——永久挂起复现（修前的确切 bug，NOTE-1 描述的场景）");
+
+            try
+            {
+                var result = await stopTask;
+                return Fail(name, $"expected stop() to throw a transport error after transport closed mid-wait, got a result instead (outcome={result.Outcome})");
+            }
+            catch (KernelClientException ex) when (ex.Kind == KernelClientErrorKind.Transport)
+            {
+                // 期望路径——StopWaitOutcome.TransportClosed 分支如实抛错，不静默、不假装终态。
+            }
+            catch (Exception ex)
+            {
+                return Fail(name, $"expected KernelClientException(Transport), got {ex}");
+            }
+
+            var events = await CollectUpToAsync(channel.Reader, 3, 500);
+            if (events.Count != 2)
+                return Fail(name, $"expected 2 events (operation_completed(aborted_effect_unknown) mirror + session_end(transport_closed)), got {events.Count} — 修前这条路径完全没有镜像（Waiter 从未被 resolve，channel 也没收到任何 operation_completed）");
+            if (events[0] is not OperationCompletedEventMessageCase op || op.Value.Payload.Outcome != PayloadOutcome.AbortedEffectUnknown || op.Value.Payload.AffectedRunId != runId)
+                return Fail(name, $"expected first event operation_completed(aborted_effect_unknown) affectedRunId={runId}, got {events[0].WireType}");
+            if (events[1] is not SessionEndEventMessageCase end || end.Value.Payload.Reason != PurpleReason.TransportClosed)
+                return Fail(name, "expected second event sessionEnd(reason:.transport_closed) — operation_completed 镜像必须先于 session_end,对应 D1 §9.3 既有顺序约定");
+
+            if (client.TestSupportHasPendingStop(sessionId))
+                return Fail(name, "expected pendingStop to be cleaned up after transport-closed cleanup");
+
+            return Pass(name, $"transport 在等待窗口内关闭: stop() 未永久挂起,如实抛出 transport 错误,operation_completed(aborted_effect_unknown affectedRunId={runId}) 镜像先于 session_end(transport_closed) 发出,pendingStop 清理干净");
+        }
+
         // MARK: - F2：attachment-only（附件编码成 openclaw 期望的 content 形状，纯函数，回归覆盖）
 
         private static bool TestAttachmentOnlyEncodesContent()
@@ -1084,6 +1155,7 @@ namespace KernelClient.Tests
                 await TestStopDeleteFailureDoesNotContradictAlreadyEmittedOutcome(),
                 await TestStopAbortRpcThrowReleasesLockAndEmitsRejectedMirror(),
                 await TestStopCleansUpAllSessionCaches(),
+                await TestStopTransportClosedWhileWaitingDoesNotHangAndEmitsMirror(),
                 TestAttachmentOnlyEncodesContent(),
                 TestRedactionCoversPluralsAndCommonVariants(),
                 TestRedactionExcludesTokenCountingFields(),

@@ -822,6 +822,132 @@ func testStopCleansUpAllSessionCaches() async -> Bool {
     return pass(name, "stop() 收尾后 lock/pendingStop/terminal 标记/未匹配的 approval 缓冲全部清理干净")
 }
 
+/// NOTE-1（T-047 grok 复核 SG-5 rounds/0005 主 NOTE，真挂起 bug 回归守卫）。
+///
+/// **修前 fail / 修后 pass**：stop() 发起 sessions.abort 得到非空 abortedRunId 后进入
+/// `waitForPendingStopTerminal` 等待——此时 transport 关闭（`handleTransportClosed` ->
+/// `failAllPending` -> `clearSessionDerivedCaches`）。修前 `clearSessionDerivedCaches` 直接
+/// `pendingStops.removeValue(forKey:)`，完全不管条目里还挂着一个活的 waiter；随后无论是超时定时器
+/// 触发 `resolvePendingStopWaiter`，还是任何别的路径，都会因为 `pendingStops[sessionID]` 查不到而
+/// `guard` 提前 return——`CheckedContinuation` 永不 resume，`await` 永久悬挂，`stop()` 这次调用永远
+/// 不返回（本测试用"跟 2 秒护栏赛跑"证伪：修前会在 2 秒边界判定失败，而不是等到真正的测试超时——
+/// 如果不设这个有界护栏，修前版本会把整个测试进程挂死）。
+///
+/// 修后：`resolvePendingStopForTransportClose` 在 `handleTransportClosed` 的 sessionEnd 之前、
+/// `failAllPending` 把 continuation `finish(throwing:)` 之前，为这个仍在等待的 pendingStop 补发一条
+/// `operation_completed(aborted_effect_unknown)` 镜像 + 唤醒 waiter；`stop()` 收到
+/// `StopWaitOutcome.transportClosed` 之后如实抛 `KernelClientError.transport`，不假装
+/// succeeded/timed_out。
+/// stop()（真实驱动，可能永久挂起）与一个有界超时护栏之间的"谁先报告谁赢"竞态盒——**故意不用**
+/// `withTaskGroup`：task group 的 `body` 在返回前会隐式等待全部子任务真正结束（`cancelAll()` 只是
+/// 请求协作式取消，`withCheckedContinuation` 不参与协作取消），如果 `stop()` 真的（修前）永久卡在
+/// 一个从不会被 resume 的 `CheckedContinuation` 上，`withTaskGroup` 本身就会跟着永远不返回——
+/// 那样就测不出"修前会挂起"这件事本身，只会把整个测试进程一起拖死。这里改用两个非结构化的
+/// `Task { }`：谁先调用 `report` 谁的结果被采纳，另一个（修前场景里就是那个永久卡住的 stop()）
+/// 继续作为被遗弃的孤儿 task 在后台挂着，不阻塞测试函数返回。
+private final class RaceBox<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: T?
+    private var waiter: CheckedContinuation<T, Never>?
+
+    func report(_ v: T) {
+        lock.lock()
+        guard value == nil else { lock.unlock(); return }
+        value = v
+        let w = waiter
+        waiter = nil
+        lock.unlock()
+        w?.resume(returning: v)
+    }
+
+    func wait() async -> T {
+        lock.lock()
+        if let v = value {
+            lock.unlock()
+            return v
+        }
+        return await withCheckedContinuation { (cont: CheckedContinuation<T, Never>) in
+            self.waiter = cont
+            lock.unlock()
+        }
+    }
+}
+
+func testStopTransportClosedWhileWaitingDoesNotHangAndEmitsMirror() async -> Bool {
+    let name = "NOTE-1 (T-047) stop() transport closes while awaiting aborted-run terminal -> no permanent hang, operation_completed(aborted_effect_unknown) mirror before session_end(transport_closed)"
+    let client = freshClient()
+    let sessionID = "sess-stop-transport-closed-midwait"
+    let kernelKey = "kernel-key-stop-transport-closed-midwait"
+    let runID = "run-transport-closed-1"
+    let stream = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+    // 生产默认超时（5 秒）——刻意不缩短，用来证明 stop() 是被 transport-close 路径主动唤醒的，不是
+    // 靠超时兜底"侥幸"返回。
+    await client.testSupportSetStopTimeoutSeconds(5)
+    await client.testSupportStubRPC(method: "sessions.abort") { _ in
+        ["ok": true, "abortedRunId": runID, "status": "aborted"] as JSONObject
+    }
+    let handle = testHandle(sessionID: sessionID, kernelKey: kernelKey)
+
+    enum RaceResult {
+        case completed(Result<StopResultPayload, Error>)
+        case timedOut
+    }
+
+    let box = RaceBox<RaceResult>()
+
+    // Task A：真实驱动 stop()——修前这个 task 会在 transport 关闭后永久卡住，从此再也不会调用
+    // box.report(...)，永远是孤儿 task，但不阻塞下面 box.wait()。
+    Task {
+        do {
+            let result = try await client.stop(session: handle)
+            box.report(.completed(.success(result)))
+        } catch {
+            box.report(.completed(.failure(error)))
+        }
+    }
+    // Task B：40ms 后触发 transport 关闭——独立于下面的护栏 task，保证无论调度顺序如何都会真的
+    // 触发这次关闭。
+    Task {
+        try? await Task.sleep(nanoseconds: 40_000_000) // 足够 stop() 真实拿到 abortedRunId、进入 waitForPendingStopTerminal 等待
+        await client.testSupportSimulateTransportClosed()
+    }
+    // Task C：2 秒有界护栏（远小于 5 秒生产超时）——修前 Task A 永久挂起时，由这个 task 兜底让
+    // box.wait() 有限时间内返回，而不是把测试也一起拖死。
+    Task {
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        box.report(.timedOut)
+    }
+
+    let raceResult = await box.wait()
+
+    switch raceResult {
+    case .timedOut:
+        return fail(name, "stop() 在 transport 关闭后 2 秒内仍未返回/抛错——永久挂起复现（修前的确切 bug，NOTE-1 描述的场景）")
+    case .completed(.success(let result)):
+        return fail(name, "expected stop() to throw a transport error after transport closed mid-wait, got a result instead (outcome=\(result.outcome))")
+    case .completed(.failure(let error)):
+        guard case KernelClientError.transport = error else {
+            return fail(name, "expected KernelClientError.transport, got \(error)")
+        }
+    }
+
+    let events = await collectUpTo(stream, maxCount: 3, timeoutMs: 500)
+    guard events.count == 2 else {
+        return fail(name, "expected 2 events (operation_completed(aborted_effect_unknown) mirror + session_end(transport_closed)), got \(events.count) — 修前这条路径完全没有镜像（waiter 从未被 resume，continuation 也没收到任何 operation_completed）")
+    }
+    guard case .operationCompleted(let op) = events[0], op.payload.outcome == .abortedEffectUnknown, op.payload.affectedRunID == runID else {
+        return fail(name, "expected first event operation_completed(aborted_effect_unknown) affectedRunID=\(runID), got \(events[0].wireType)")
+    }
+    guard case .sessionEnd(let end) = events[1], end.payload.reason == .transportClosed else {
+        return fail(name, "expected second event sessionEnd(reason:.transportClosed) — operation_completed 镜像必须先于 session_end,对应 D1 §9.3 既有顺序约定")
+    }
+
+    let hasPendingStopAfter = await client.testSupportHasPendingStop(sessionID: sessionID)
+    guard !hasPendingStopAfter else { return fail(name, "expected pendingStop to be cleaned up after transport-closed cleanup") }
+
+    return pass(name, "transport 在等待窗口内关闭: stop() 未永久挂起,如实抛出 transport 错误,operation_completed(aborted_effect_unknown affectedRunID=\(runID)) 镜像先于 session_end(transport_closed) 发出,pendingStop 清理干净")
+}
+
 // MARK: - F2：attachment-only（附件编码成 openclaw 期望的 content 形状，纯函数，回归覆盖）
 
 func testAttachmentOnlyEncodesContent() -> Bool {
@@ -1020,6 +1146,7 @@ public func runFrameReplayTests() async -> Bool {
     results.append(await testStopDeleteFailureDoesNotContradictAlreadyEmittedOutcome())
     results.append(await testStopAbortRpcThrowReleasesLockAndEmitsRejectedMirror())
     results.append(await testStopCleansUpAllSessionCaches())
+    results.append(await testStopTransportClosedWhileWaitingDoesNotHangAndEmitsMirror())
     results.append(testAttachmentOnlyEncodesContent())
     results.append(testRedactionCoversPluralsAndCommonVariants())
     results.append(testRedactionExcludesTokenCountingFields())

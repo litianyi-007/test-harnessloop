@@ -74,13 +74,34 @@ namespace KernelClient
 
         // MARK: F6/M3 — stop() 的 pending 状态
 
+        /// <summary>
+        /// NOTE-1（T-047 grok 复核，真挂起 bug 修复）：<see cref="WaitForPendingStopTerminalAsync"/>
+        /// 里 await 着的 <see cref="PendingStop.Waiter"/> 现在有三种可能的唤醒结果，不再是单纯的
+        /// bool「是否超时」——旧代码只区分 true/false 两态，导致"transport 关闭"这个第三种场景
+        /// 无法被安全表达：要么被误当成"没超时"（继续假装 succeeded），要么干脆没有任何值可以
+        /// resolve（旧 bug：pendingStop 被直接 Remove，Waiter 从此没人 resolve，stop() 永久挂起）。
+        /// </summary>
+        private enum StopWaitOutcome
+        {
+            /// <summary>由 handleAgentEvent 观察到对应的 aborted lifecycle 帧，正常终态确认。</summary>
+            TerminalObserved,
+            /// <summary>等待窗口耗尽（生产默认 5 秒），诚实报超时，继续走 delete 收尾。</summary>
+            TimedOut,
+            /// <summary>
+            /// 等待过程中 transport 关闭——ResolvePendingStopForTransportClose 已经代发
+            /// operation_completed(aborted_effect_unknown) 镜像、标记 TerminalEmitted，并清理了全部
+            /// 派生状态。StopAsync 见到这个值必须如实抛错，不能假装 succeeded/timed_out。
+            /// </summary>
+            TransportClosed,
+        }
+
         private sealed class PendingStop
         {
             public readonly string OperationId;
             /// <summary>M3：发起 sessions.abort 之后必须用其权威返回值 abortedRunId 覆盖，见 StopAsync。</summary>
             public string? AffectedRunId;
             public bool TerminalEmitted;
-            public TaskCompletionSource<bool>? Waiter;
+            public TaskCompletionSource<StopWaitOutcome>? Waiter;
 
             public PendingStop(string operationId, string? affectedRunId)
             {
@@ -187,8 +208,18 @@ namespace KernelClient
         public void Disconnect()
         {
             _receiveLoopCts.Cancel();
-            try { _socket?.Abort(); } catch { /* best-effort teardown */ }
+            // NOTE-3（整洁度）：先取出局部引用再置空字段——Abort() 唤醒任何仍在飞行的
+            // ReceiveAsync（走 HandleTransportClosed 的正常收尾路径），随后 Dispose() 真正释放
+            // ClientWebSocket 持有的底层资源（Abort 本身不释放，只中断挂起的 IO）。CancellationToken
+            // 沿用同一个 _receiveLoopCts——它已经贯穿 ReceiveLoopAsync 的 ReceiveAsync 调用，这里不
+            // 需要另起一份。
+            var socket = _socket;
             _socket = null;
+            if (socket != null)
+            {
+                try { socket.Abort(); } catch { /* best-effort teardown */ }
+                socket.Dispose();
+            }
         }
 
         // MARK: - KernelClient conformance
@@ -377,10 +408,34 @@ namespace KernelClient
                     lock (_sync) { if (_pendingStops.TryGetValue(session.SessionId, out var p)) p.AffectedRunId = actuallyAbortedRunId; }
                     int timeoutSeconds;
                     lock (_sync) { timeoutSeconds = _testStopTimeoutSecondsOverride ?? 5; }
-                    timedOut = await WaitForPendingStopTerminalAsync(session.SessionId, timeoutSeconds);
-                    if (timedOut)
+                    var waitOutcome = await WaitForPendingStopTerminalAsync(session.SessionId, timeoutSeconds);
+                    switch (waitOutcome)
                     {
-                        EmitOperationCompletedMirror(session.SessionId, operationId, actuallyAbortedRunId, PayloadOutcome.TimedOut);
+                        case StopWaitOutcome.TransportClosed:
+                            // NOTE-1（T-047 grok 复核，真挂起 bug 修复）：等待过程中 transport 已经
+                            // 关闭——ResolvePendingStopForTransportClose（见 HandleTransportClosed）
+                            // 已经代发 operation_completed(aborted_effect_unknown) 镜像、标记
+                            // TerminalEmitted，且 ClearSessionDerivedCaches 已经清理了包括本函数
+                            // stop_in_progress 锁在内的全部派生状态。这里绝不能假装
+                            // succeeded/timed_out 继续往下走——sessions.delete 在 transport 已断的
+                            // 情况下多半也会失败，即使侥幸命中测试桩"成功"了，也会跟已经发出的镜像
+                            // 终态矛盾（M3 修的正是 Promise/Event 矛盾这类问题）。如实抛错，交给下面
+                            // 的 catch 统一收尾——此时 pendingStop/lock 已经是空的，catch 里的清理调用
+                            // 都是安全的 no-op。
+                            throw new KernelClientException(KernelClientErrorKind.Transport,
+                                "stop() aborted: transport closed while waiting for aborted-run terminal confirmation");
+                        case StopWaitOutcome.TimedOut:
+                            EmitOperationCompletedMirror(session.SessionId, operationId, actuallyAbortedRunId, PayloadOutcome.TimedOut);
+                            // NOTE-2：超时路径也要标记 TerminalEmitted——否则迟到的 aborted lifecycle
+                            // 帧仍可能在 ClearSessionDerivedCaches 清缓存前，被 HandleAgentEvent 的
+                            // `!pendingForRun.TerminalEmitted` 判断当成"还没发过 terminal"又发一组。
+                            lock (_sync) { if (_pendingStops.TryGetValue(session.SessionId, out var p2)) p2.TerminalEmitted = true; }
+                            timedOut = true;
+                            break;
+                        case StopWaitOutcome.TerminalObserved:
+                        default:
+                            timedOut = false;
+                            break;
                     }
                 }
                 else
@@ -410,9 +465,37 @@ namespace KernelClient
             {
                 // M3：sessions.abort/sessions.delete 抛错——释放锁 + 清理 pendingStop + 发一条
                 // operation_completed(rejected) 镜像，再把原始错误重新抛出。
+                //
+                // NOTE-1 订正（写 NOTE-1 回归测试时坐实的竞态）：只有当"这次 stop() 还没有为任何
+                // 其它路径发过终态镜像"时才在这里补发 rejected——否则会跟已经发出的镜像互相矛盾。
+                // 两个具体场景都会走到这里却已经发过别的镜像：① NOTE-1 的 transport-closed 路径
+                // （ResolvePendingStopForTransportClose 已经标记 TerminalEmitted=true 并发出
+                // aborted_effect_unknown，StopAsync 随后如实 throw，落进这个 catch）；②
+                // "无 active run"分支已经移除 pendingStop 并发出 succeeded，之后 sessions.delete 才
+                // 抛错。两种情况都不该再补一条 rejected——那会让同一次 stop() 在事件流里出现两条互相
+                //打架的终态。
+                bool alreadyTerminalEmitted;
                 string? affectedRunId;
-                lock (_sync) { affectedRunId = _pendingStops.TryGetValue(session.SessionId, out var p) ? p.AffectedRunId : affectedRunIdBeforeAbort; }
-                EmitOperationCompletedMirror(session.SessionId, operationId, affectedRunId, PayloadOutcome.Rejected);
+                lock (_sync)
+                {
+                    if (_pendingStops.TryGetValue(session.SessionId, out var p))
+                    {
+                        alreadyTerminalEmitted = p.TerminalEmitted;
+                        affectedRunId = p.AffectedRunId;
+                    }
+                    else
+                    {
+                        // entry 已经不在——要么是"无 active run"分支已经移除并发过 succeeded 镜像，
+                        // 要么是 NOTE-1 的 transport-closed 清理路径已经移除并发过
+                        // aborted_effect_unknown 镜像；两种情况都已经诚实报过终态，这里不重复。
+                        alreadyTerminalEmitted = true;
+                        affectedRunId = affectedRunIdBeforeAbort;
+                    }
+                }
+                if (!alreadyTerminalEmitted)
+                {
+                    EmitOperationCompletedMirror(session.SessionId, operationId, affectedRunId, PayloadOutcome.Rejected);
+                }
                 lock (_sync)
                 {
                     _pendingStops.Remove(session.SessionId);
@@ -461,33 +544,78 @@ namespace KernelClient
             lock (_sync) { _kernelKeyBySessionId.Remove(session.SessionId); }
         }
 
-        private async Task<bool> WaitForPendingStopTerminalAsync(string sessionId, int timeoutSeconds)
+        private async Task<StopWaitOutcome> WaitForPendingStopTerminalAsync(string sessionId, int timeoutSeconds)
         {
-            TaskCompletionSource<bool> tcs;
+            TaskCompletionSource<StopWaitOutcome> tcs;
             lock (_sync)
             {
-                if (!_pendingStops.TryGetValue(sessionId, out var pending) || pending.TerminalEmitted) return false;
-                tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                if (!_pendingStops.TryGetValue(sessionId, out var pending))
+                {
+                    // NOTE-1：entry 已经不在——这只可能是 transport 关闭清理路径
+                    // （ClearSessionDerivedCaches）抢在我们拿到这把锁之前就跑完了（例如
+                    // sessions.abort RPC 返回、和这里拿锁之间那个极窄的窗口内 transport 关闭）。这种
+                    // 情况不能假装"没超时、一切正常"地往下走（旧 bug 的窄化版本）——如实报
+                    // TransportClosed，交由 StopAsync 统一走 rethrow 分支。
+                    return StopWaitOutcome.TransportClosed;
+                }
+                if (pending.TerminalEmitted) return StopWaitOutcome.TerminalObserved;
+                tcs = new TaskCompletionSource<StopWaitOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
                 pending.Waiter = tcs;
             }
             _ = Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromSeconds(timeoutSeconds));
-                ResolvePendingStopWaiter(sessionId, timedOut: true);
+                ResolvePendingStopWaiter(sessionId, StopWaitOutcome.TimedOut);
             });
             return await tcs.Task;
         }
 
-        private void ResolvePendingStopWaiter(string sessionId, bool timedOut)
+        private void ResolvePendingStopWaiter(string sessionId, StopWaitOutcome outcome)
         {
-            TaskCompletionSource<bool>? waiter;
+            TaskCompletionSource<StopWaitOutcome>? waiter;
             lock (_sync)
             {
                 if (!_pendingStops.TryGetValue(sessionId, out var pending) || pending.Waiter == null) return;
                 waiter = pending.Waiter;
                 pending.Waiter = null;
             }
-            waiter.TrySetResult(timedOut);
+            waiter.TrySetResult(outcome);
+        }
+
+        /// <summary>
+        /// NOTE-1（T-047 grok 复核，真挂起 bug 修复）：transport 关闭时，若该 session 有一个仍在
+        /// 等待 aborted-run 终态确认的 pendingStop（Waiter 非空、尚未 TerminalEmitted），必须在它
+        /// 被 <see cref="ClearSessionDerivedCaches"/> 移除之前做两件事：(a) 补发一条
+        /// operation_completed(aborted_effect_unknown) 镜像——语义是"我们已经请求了 abort，但
+        /// transport 断在确认之前，效果未知"，且必须赶在 FailAllPending 把这个 session 的 channel
+        /// TryComplete 之前调用（之后 TryWrite 恒为 false、静默丢弃，不抛异常，镜像会永久丢失）；
+        /// (b) 唤醒 WaitForPendingStopTerminalAsync 里 await 着的那个 Waiter，让 StopAsync 不再
+        /// 永久挂起（旧 bug：ClearSessionDerivedCaches 直接 Remove pendingStop 却不 resolve
+        /// Waiter，随后超时任务 ResolvePendingStopWaiter 发现条目已经不在，early-return，TCS 永不
+        /// 完成）。调用方（HandleTransportClosed）必须保证本方法先于该 session 的 channel 被
+        /// TryComplete 调用。
+        /// </summary>
+        private void ResolvePendingStopForTransportClose(string sessionId)
+        {
+            TaskCompletionSource<StopWaitOutcome>? waiter;
+            string operationId;
+            string? affectedRunId;
+            lock (_sync)
+            {
+                if (!_pendingStops.TryGetValue(sessionId, out var pending) || pending.Waiter == null)
+                {
+                    // 没有正在等待的 stop()——多半是终态已经被 handleAgentEvent 观察到，或者超时
+                    // 定时器已经先一步 resolve 过了；这是正常竞态，不是 bug，无事可做。
+                    return;
+                }
+                waiter = pending.Waiter;
+                pending.Waiter = null;
+                pending.TerminalEmitted = true; // 先标记再唤醒——resolve 与 remove 之间不留竞态窗口。
+                operationId = pending.OperationId;
+                affectedRunId = pending.AffectedRunId;
+            }
+            EmitOperationCompletedMirror(sessionId, operationId, affectedRunId, PayloadOutcome.AbortedEffectUnknown);
+            waiter.TrySetResult(StopWaitOutcome.TransportClosed);
         }
 
         public Task RespondApprovalAsync(SessionHandle session, string reqId, Decision decision, CancellationToken cancellationToken = default)
@@ -563,6 +691,21 @@ namespace KernelClient
                 }
                 _approvalIdsBySessionId.Remove(sessionId);
 
+                // NOTE-1 防御性兜底：任何调用路径都不应该在 pendingStop 仍有存活 Waiter 时直接
+                // Remove——那样等待中的 stop() 永远等不到 resolve（T-047 复现的真挂起 bug）。正常
+                // 情况下这里已经是 null（transport 关闭路径已经由 HandleTransportClosed ->
+                // ResolvePendingStopForTransportClose 提前 resolve 过，且那条路径还会带上
+                // operation_completed 镜像）；这几行只是最后一道防线——没有 channel 引用发不出镜像，
+                // 但至少唤醒等待者，绝不留永久挂起。TrySetResult 在锁内调用是安全的：Waiter 由
+                // TaskCreationOptions.RunContinuationsAsynchronously 创建，续体调度到线程池执行，
+                // 不会同步重入。
+                if (_pendingStops.TryGetValue(sessionId, out var stillPending) && stillPending.Waiter != null)
+                {
+                    var danglingWaiter = stillPending.Waiter;
+                    stillPending.Waiter = null;
+                    stillPending.TerminalEmitted = true;
+                    danglingWaiter.TrySetResult(StopWaitOutcome.TransportClosed);
+                }
                 _pendingStops.Remove(sessionId);
                 _lockStateBySessionId.Remove(sessionId);
                 _sessionTerminalEmitted.Remove(sessionId);
@@ -674,6 +817,15 @@ namespace KernelClient
             lock (_sync) { sessionIds = _eventChannels.Keys.ToList(); }
             foreach (var sessionId in sessionIds)
             {
+                // NOTE-1（T-047 grok 复核，真挂起 bug 修复）：若这个 session 有一个仍在等待
+                // aborted-run 终态确认的 pendingStop，必须先把它的 operation_completed
+                // (aborted_effect_unknown) 镜像写进 channel、唤醒等待中的 stop()，再产出
+                // sessionEnd(transportClosed)——顺序对应 D1 §9.3"先终态、后 session_end"的既有约定
+                // （stop() 成功路径同样是先 EmitOperationCompletedMirror 再
+                // EmitStopSessionEndAndFinish），也必须赶在下面 FailAllPending 把 channel
+                // TryComplete 之前做（之后 TryWrite 恒为 false、静默丢弃）。
+                ResolvePendingStopForTransportClose(sessionId);
+
                 bool already;
                 lock (_sync)
                 {
@@ -956,7 +1108,7 @@ namespace KernelClient
                                 data, ourSessionId, runId, pendingForRun.OperationId, originTs, cachedUsage, NextSeqForRun);
                             foreach (var e in events) Yield(ourSessionId, e);
                             lock (_sync) { pendingForRun.TerminalEmitted = true; _lastUsageByRunId.Remove(runId); }
-                            ResolvePendingStopWaiter(ourSessionId, timedOut: false);
+                            ResolvePendingStopWaiter(ourSessionId, StopWaitOutcome.TerminalObserved);
                         }
                         else if (noOwner)
                         {

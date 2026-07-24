@@ -67,6 +67,22 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     }
     private var lockStateBySessionID: [String: SessionLockState] = [:]
 
+    /// NOTE-1（T-047 grok 复核，真挂起 bug 修复）：`waitForPendingStopTerminal` 里 await 着的
+    /// `PendingStop.waiter` 现在有三种可能的唤醒结果，不再是单纯的 `Bool`「是否超时」——旧代码只
+    /// 区分 true/false 两态，导致"transport 关闭"这个第三种场景无法被安全表达：要么被误当成"没
+    /// 超时"（继续假装 succeeded），要么干脆没有任何值可以 resume（旧 bug：pendingStop 被直接从
+    /// `pendingStops` 移除，waiter 从此没人 resume，`stop()` 永久挂起）。
+    enum StopWaitOutcome {
+        /// 由 `handleAgentEvent` 观察到对应的 aborted lifecycle 帧，正常终态确认。
+        case terminalObserved
+        /// 等待窗口耗尽（生产默认 5 秒），诚实报超时，继续走 delete 收尾。
+        case timedOut
+        /// 等待过程中 transport 关闭——`resolvePendingStopForTransportClose` 已经代发
+        /// `operation_completed(aborted_effect_unknown)` 镜像、标记 `terminalEmitted`，并清理了
+        /// 全部派生状态。`stop()` 见到这个值必须如实抛错，不能假装 succeeded/timed_out。
+        case transportClosed
+    }
+
     // MARK: F6/M3 — stop() 的 pending 状态（adapter 铸造的唯一 operationId + 等待终态确认）
     private struct PendingStop {
         let operationID: String
@@ -74,7 +90,7 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         // stop() 的文档注释），不能一直沿用发起 abort 前可能陈旧的本地缓存值。
         var affectedRunID: String?
         var terminalEmitted: Bool = false
-        var waiter: CheckedContinuation<Bool, Never>?
+        var waiter: CheckedContinuation<StopWaitOutcome, Never>?
     }
     private var pendingStops: [String: PendingStop] = [:]
 
@@ -191,6 +207,11 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         return lastHandshakeScopes
     }
 
+    /// NOTE-3（整洁度，两端核对一致）：C# 侧 `Disconnect()` 原来只 `Abort()` 了 `ClientWebSocket`
+    /// 却没有 `Dispose()`（未释放底层非托管资源），已在 C# 侧补上。Swift 这里的等价物是
+    /// `URLSessionWebSocketTask.cancel(with:reason:)`——它同时中断挂起的 IO 并让 URLSession 释放
+    /// 该 task 的底层资源，是 Foundation 侧“Abort+Dispose”合一的正确收尾调用；`task = nil` 之后
+    /// ARC 释放最后一个引用。核对结论：两端在这个方法里语义已经一致，Swift 侧不需要额外改动。
     public func disconnect() {
         receiveLoopTask?.cancel()
         task?.cancel(with: .normalClosure, reason: nil)
@@ -425,14 +446,33 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                 // M3：用权威值覆盖，不再信任 abort 前的本地缓存（见函数文档注释）。
                 pendingStops[session.sessionID]?.affectedRunID = actuallyAbortedRunID
                 let timeoutSeconds = testSupportStopTimeoutSecondsOverride ?? 5
-                timedOut = await waitForPendingStopTerminal(sessionID: session.sessionID, timeoutSeconds: timeoutSeconds)
-                if timedOut {
+                let waitOutcome = await waitForPendingStopTerminal(sessionID: session.sessionID, timeoutSeconds: timeoutSeconds)
+                switch waitOutcome {
+                case .transportClosed:
+                    // NOTE-1（T-047 grok 复核，真挂起 bug 修复）：等待过程中 transport 已经关闭——
+                    // `resolvePendingStopForTransportClose`（见 `handleTransportClosed`）已经代发
+                    // `operation_completed(aborted_effect_unknown)` 镜像、标记 `terminalEmitted`，
+                    // 且 `clearSessionDerivedCaches` 已经清理了包括本函数 `stopInProgress` 锁在内的
+                    // 全部派生状态。这里绝不能假装 succeeded/timed_out 继续往下走——`sessions.delete`
+                    // 在 transport 已断的情况下多半也会失败，即使侥幸命中测试桩"成功"了，也会跟已经
+                    // 发出的镜像终态矛盾（M3 修的正是 Promise/Event 矛盾这类问题）。如实抛错，交给
+                    // 下面的 catch 统一收尾——此时 pendingStop/lock 已经是空的，catch 里的清理调用
+                    // 都是安全的 no-op。
+                    throw KernelClientError.transport("stop() aborted: transport closed while waiting for aborted-run terminal confirmation")
+                case .timedOut:
                     // M3：等待超时也必须给事件流补一条 operation_completed 镜像——上一轮只有 Promise
                     // 知道超时了，只订阅事件流的观察者永远看不到这个 run 的终态。
                     emitOperationCompletedMirror(
                         sessionID: session.sessionID, operationID: operationID,
                         affectedRunID: actuallyAbortedRunID, outcome: .timedOut
                     )
+                    // NOTE-2：超时路径也要标记 terminalEmitted——否则迟到的 aborted lifecycle 帧仍
+                    // 可能在 clearSessionDerivedCaches 清缓存前，被 handleAgentEvent 的
+                    // `!pendingForRun.terminalEmitted` 判断当成"还没发过 terminal"又发一组。
+                    pendingStops[session.sessionID]?.terminalEmitted = true
+                    timedOut = true
+                case .terminalObserved:
+                    timedOut = false
                 }
             } else {
                 // M3：这次 stop() 生效时该 run 早已自然结束（sessions.abort 诚实回报
@@ -468,11 +508,22 @@ public actor OpenclawGatewayKernelClient: KernelClient {
             // operation_completed(outcome:.rejected) 镜像，再把原始错误重新抛出。不清理这三样状态
             // 会让该 session 永久卡在 stop_in_progress（复现：第一次 stop 抛错后锁不释放，第二次
             // stop 被 session_locked 拒绝，即使第一次调用早已结束）。
+            //
+            // NOTE-1 订正（写 NOTE-1 回归测试时坐实的竞态）：只有当"这次 stop() 还没有为任何其它
+            // 路径发过终态镜像"时才在这里补发 rejected——否则会跟已经发出的镜像互相矛盾。两个具体
+            // 场景都会走到这里却已经发过别的镜像：① NOTE-1 的 transport-closed 路径
+            // （resolvePendingStopForTransportClose 已经标记 terminalEmitted=true 并发出
+            // aborted_effect_unknown，stop() 随后如实 throw，落进这个 catch）；②"无 active
+            // run"分支已经移除 pendingStop 并发出 succeeded，之后 sessions.delete 才抛错。两种情况
+            // 都不该再补一条 rejected——那会让同一次 stop() 在事件流里出现两条互相打架的终态。
+            let alreadyTerminalEmitted = pendingStops[session.sessionID]?.terminalEmitted ?? true
             let affectedRunID = pendingStops[session.sessionID]?.affectedRunID ?? affectedRunIDBeforeAbort
-            emitOperationCompletedMirror(
-                sessionID: session.sessionID, operationID: operationID,
-                affectedRunID: affectedRunID, outcome: .rejected
-            )
+            if !alreadyTerminalEmitted {
+                emitOperationCompletedMirror(
+                    sessionID: session.sessionID, operationID: operationID,
+                    affectedRunID: affectedRunID, outcome: .rejected
+                )
+            }
             pendingStops.removeValue(forKey: session.sessionID)
             lockStateBySessionID.removeValue(forKey: session.sessionID)
             throw error
@@ -518,25 +569,61 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     }
 
     /// 等待 `pendingStops[sessionID]` 对应的 run 终态（operation_completed + turn_complete）已被
-    /// `handleAgentEvent` 观察并 yield——由该处理器调用 `resolvePendingStopWaiter(timedOut:false)`
-    /// 唤醒；超时（`timeoutSeconds`）则由本函数内部起的定时器调用 `resolvePendingStopWaiter
-    /// (timedOut:true)` 唤醒。`resolvePendingStopWaiter` 内部先取出并清空 waiter 再 resume，保证
-    /// 无论两条路径谁先到，`CheckedContinuation` 都只会被 resume 恰好一次。
-    private func waitForPendingStopTerminal(sessionID: String, timeoutSeconds: Int) async -> Bool {
-        guard let pending = pendingStops[sessionID], !pending.terminalEmitted else { return false }
-        return await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+    /// `handleAgentEvent` 观察并 yield——由该处理器调用
+    /// `resolvePendingStopWaiter(outcome:.terminalObserved)` 唤醒；超时（`timeoutSeconds`）则由本
+    /// 函数内部起的定时器调用 `resolvePendingStopWaiter(outcome:.timedOut)` 唤醒；NOTE-1：若等待期间
+    /// transport 关闭，`resolvePendingStopForTransportClose` 会用 `.transportClosed` 唤醒（见该方法
+    /// 文档注释）。`resolvePendingStopWaiter`/`resolvePendingStopForTransportClose` 内部都先取出并
+    /// 清空 waiter 再 resume，保证无论哪条路径先到，`CheckedContinuation` 都只会被 resume 恰好一次。
+    private func waitForPendingStopTerminal(sessionID: String, timeoutSeconds: Int) async -> StopWaitOutcome {
+        guard let pending = pendingStops[sessionID] else {
+            // NOTE-1：entry 已经不在——这只可能是 transport 关闭清理路径
+            // （clearSessionDerivedCaches）抢在我们拿到 actor 隔离之前就跑完了（例如 sessions.abort
+            // RPC 返回、和这里执行之间那个极窄的窗口内 transport 关闭）。这种情况不能假装"没超时、
+            // 一切正常"地往下走（旧 bug 的窄化版本）——如实报 .transportClosed，交由 stop() 统一走
+            // rethrow 分支。
+            return .transportClosed
+        }
+        guard !pending.terminalEmitted else { return .terminalObserved }
+        return await withCheckedContinuation { (continuation: CheckedContinuation<StopWaitOutcome, Never>) in
             self.pendingStops[sessionID]?.waiter = continuation
             Task {
                 try? await Task.sleep(nanoseconds: UInt64(timeoutSeconds) * 1_000_000_000)
-                await self.resolvePendingStopWaiter(sessionID: sessionID, timedOut: true)
+                await self.resolvePendingStopWaiter(sessionID: sessionID, outcome: .timedOut)
             }
         }
     }
 
-    private func resolvePendingStopWaiter(sessionID: String, timedOut: Bool) {
+    private func resolvePendingStopWaiter(sessionID: String, outcome: StopWaitOutcome) {
         guard let waiter = pendingStops[sessionID]?.waiter else { return }
         pendingStops[sessionID]?.waiter = nil
-        waiter.resume(returning: timedOut)
+        waiter.resume(returning: outcome)
+    }
+
+    /// NOTE-1（T-047 grok 复核，真挂起 bug 修复）：transport 关闭时，若该 session 有一个仍在等待
+    /// aborted-run 终态确认的 pendingStop（waiter 非空、尚未 terminalEmitted），必须在它被
+    /// `clearSessionDerivedCaches` 移除之前做两件事：(a) 补发一条
+    /// `operation_completed(aborted_effect_unknown)` 镜像——语义是"我们已经请求了 abort，但
+    /// transport 断在确认之前，效果未知"，且必须赶在 `failAllPending` 把这个 session 的
+    /// continuation `finish(throwing:)` 之前调用（之后 `yield` 静默丢弃，不抛异常，镜像会永久
+    /// 丢失）；(b) 唤醒 `waitForPendingStopTerminal` 里 await 着的那个 waiter，让 `stop()` 不再
+    /// 永久挂起（旧 bug：`clearSessionDerivedCaches` 直接 `removeValue` 却不 resume waiter，随后
+    /// 超时任务 `resolvePendingStopWaiter` 发现条目已经不在，`guard` 提前 return，continuation
+    /// 永不 resume）。调用方（`handleTransportClosed`）必须保证本方法先于该 session 的
+    /// continuation 被 `finish` 调用。
+    private func resolvePendingStopForTransportClose(sessionID: String) {
+        guard let pending = pendingStops[sessionID], let waiter = pending.waiter else {
+            // 没有正在等待的 stop()——多半是终态已经被 handleAgentEvent 观察到，或者超时定时器已经
+            // 先一步 resolve 过了；这是正常竞态，不是 bug，无事可做。
+            return
+        }
+        pendingStops[sessionID]?.waiter = nil
+        pendingStops[sessionID]?.terminalEmitted = true // 先标记再唤醒——resolve 与 remove 之间不留竞态窗口。
+        emitOperationCompletedMirror(
+            sessionID: sessionID, operationID: pending.operationID,
+            affectedRunID: pending.affectedRunID, outcome: .abortedEffectUnknown
+        )
+        waiter.resume(returning: .transportClosed)
     }
 
     public func respondApproval(session: SessionHandle, reqID: String, decision: Decision) async throws {
@@ -588,6 +675,17 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         }
         approvalIDsBySessionID.removeValue(forKey: sessionID)
 
+        // NOTE-1 防御性兜底：任何调用路径都不应该在 pendingStop 仍有存活 waiter 时直接
+        // removeValue——那样等待中的 stop() 永远等不到 resume（T-047 复现的真挂起 bug）。正常情况下
+        // 这里已经是 nil（transport 关闭路径已经由 handleTransportClosed ->
+        // resolvePendingStopForTransportClose 提前 resolve 过，且那条路径还会带上 operation_completed
+        // 镜像）；这几行只是最后一道防线——没有 continuation 引用发不出镜像，但至少唤醒等待者，绝不
+        // 留永久挂起。
+        if let danglingWaiter = pendingStops[sessionID]?.waiter {
+            pendingStops[sessionID]?.waiter = nil
+            pendingStops[sessionID]?.terminalEmitted = true
+            danglingWaiter.resume(returning: .transportClosed)
+        }
         pendingStops.removeValue(forKey: sessionID)
         lockStateBySessionID.removeValue(forKey: sessionID)
         sessionTerminalEmitted.remove(sessionID)
@@ -667,6 +765,15 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// 那样用两次同样的 shutdown 帧代替）。
     private func handleTransportClosed(error: Error) {
         for (ourSessionID, continuation) in eventContinuations {
+            // NOTE-1（T-047 grok 复核，真挂起 bug 修复）：若这个 session 有一个仍在等待
+            // aborted-run 终态确认的 pendingStop，必须先把它的
+            // operation_completed(aborted_effect_unknown) 镜像 yield 进 continuation、唤醒等待中的
+            // stop()，再产出 sessionEnd(transportClosed)——顺序对应 D1 §9.3"先终态、后
+            // session_end"的既有约定（stop() 成功路径同样是先 emitOperationCompletedMirror 再
+            // emitStopSessionEndAndFinish），也必须赶在下面 failAllPending 把 continuation
+            // finish(throwing:) 之前做（之后 yield 静默丢弃）。
+            resolvePendingStopForTransportClose(sessionID: ourSessionID)
+
             guard !sessionTerminalEmitted.contains(ourSessionID) else { continue }
             sessionTerminalEmitted.insert(ourSessionID)
             continuation.yield(makeSessionEndEventForTransportClosed(
@@ -913,7 +1020,7 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                     pendingForRun.terminalEmitted = true
                     pendingStops[ourSessionID] = pendingForRun
                     lastUsageByRunID.removeValue(forKey: runID)
-                    resolvePendingStopWaiter(sessionID: ourSessionID, timedOut: false)
+                    resolvePendingStopWaiter(sessionID: ourSessionID, outcome: .terminalObserved)
                 } else if pendingStops[ourSessionID] == nil {
                     // 理论上不会出现——interrupt() 本轮未实现，没有别的方法会产生 aborted:true 且
                     // 没有对应 pendingStop 的 lifecycle 帧。防御性兜底：自己派生一个 operationId，
