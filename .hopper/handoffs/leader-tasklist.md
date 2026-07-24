@@ -840,3 +840,24 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`PASS` | `PASS_WITH_NOTE` | `REWORK` | `FAIL`。REWORK/FAIL 逐条给 `kernels/openclaw/<path>:<line>` + 可复现失败场景。
 **产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-043-output.md`。**Read-only**：不改任何文件;忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-044（SG-5 Stage A：Swift kernel-client send + 事件适配 对抗审，单 codex）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: codex（随机池；main 仓 Swift 代码）· 只读 · **codex 三项强制核对**（审查对象=commit a07dc67 / 产物落 `.hopper/handoffs/T-044-output.md` / findings 独立复现，不仅凭 exit0）
+
+**评审对象**（主仓库 commit `a07dc67`，只读）：`app/kernel-client/swift/`（`OpenclawGatewayKernelClient.swift` 的 `send` + event dispatch、`EventMapping.swift` 11 变体映射、`KernelClient.swift`、`CLIRunner.swift`）。`git show a07dc67` 看 diff。
+**契约基准**：D1 KernelPort `~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-6.md`（11 KernelEvent 语义 + `SendResultPayload`）；D2 事件 schema `app/contracts/d2/schema/events/` + 生成 `app/generated/swift/D2.swift`（`EventMessageUnion`）；openclaw 事件源 `kernels/openclaw/src/gateway/server-session-events.ts`（真实 `session.message`/`agent`/`session.approval`/`shutdown` 帧形状）。
+
+**背景**：SG-5 Stage A 把 Swift kernel-client 的 `send`（原 notImplemented 桩）做实 + EventMapping 从 1/11 补到 11/11（8/11 抓真实样本 grounding、thinking 源码级、3 个 `error`/`capabilityChanged`/`approvalBufferResolved` 诚实标 blocker 未接 dispatch，依赖未实现的 `capabilities()`/`respondApproval`）。已 swiftc exit0 + 编译产物对 live openclaw+D3+真 Kimi 跑通事件时序。由 Claude/Sonnet 子代理所写,需异构对抗复核。
+
+**对抗核验重点（找真缺陷 + 可复现失败场景）**：
+1. **send 正确性**：`send`→`sessions.send` 的 params/返回处理是否对？把返回当 ack（runId）、真实输出走 subscribe 流的异步语义，是否与 D1 `SendResultPayload` 一致？runId 缓存/复用有无并发/串号问题（actor 内）？
+2. **8/11 事件映射正确性（最重）**：逐个已映射变体——openclaw 真实帧字段 → D2 `EventMessageUnion` 变体的映射是否**字段级正确、无错映/漏字段/变体张冠李戴**？尤其 `approvalRequest` 的 `toolCallID` 用"时间相关"填（openclaw payload 无此字段）这个 caveat 是否 sound、有无误配风险？toolResult 只覆盖 exec 工具族、非 exec 工具是否会落空/误映？
+3. **3 个 blocker 的 defer 是否恰当**：`error`/`capabilityChanged`/`approvalBufferResolved` 真的依赖 `capabilities()`/`respondApproval`（分离范围）而无法在本轮 grounding 吗？还是其中有本轮就该接的？构造器已建未接 dispatch 会不会留下"看起来支持实则死代码"的隐患？
+4. **e2e 证据充分性**：观测到的 `message.delta→tool_call→tool_result→turn_complete` 时序是否**真的验证了映射正确**,还是只证明了"有事件流过"？
+5. **安全/健壮**：event dispatch 分发（session.message/agent/session.approval/shutdown）有无遗漏/错分；未知帧处理；凭证不经 client 泄漏。
+
+**Verdict**：`PASS` | `PASS_WITH_NOTE` | `REWORK` | `FAIL`。REWORK/FAIL 逐条给 `app/kernel-client/swift/<file>:<line>` + 可复现失败场景。
+**产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-044-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
