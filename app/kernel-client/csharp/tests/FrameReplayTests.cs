@@ -153,7 +153,7 @@ namespace KernelClient.Tests
             var name = "F6 no-stopReason end -> completed (not error)";
             var data = new JSONObject { ["phase"] = "end" };
             long counter = 0;
-            var evt = EventMapping.MapOpenclawAgentLifecycleToTurnComplete(data, "s1", "run-1", DateTimeOffset.UtcNow, null, () => ++counter);
+            var evt = EventMapping.MapOpenclawAgentLifecycleToTurnComplete(data, "s1", "run-1", DateTimeOffset.UtcNow, null, null, () => ++counter);
             if (evt is not TurnCompleteEventMessageCase tc) return Fail(name, "expected .turnComplete case");
             if (tc.Value.Payload.StopReason != StopReason.Completed)
                 return Fail(name, $"expected stopReason=.completed, got {tc.Value.Payload.StopReason}");
@@ -165,7 +165,7 @@ namespace KernelClient.Tests
             var name = "F6 unrecognized stopReason(toolUse) -> completed";
             var data = new JSONObject { ["phase"] = "end", ["stopReason"] = "toolUse" };
             long counter = 0;
-            var evt = EventMapping.MapOpenclawAgentLifecycleToTurnComplete(data, "s1", "run-1", DateTimeOffset.UtcNow, null, () => ++counter);
+            var evt = EventMapping.MapOpenclawAgentLifecycleToTurnComplete(data, "s1", "run-1", DateTimeOffset.UtcNow, null, null, () => ++counter);
             if (evt is not TurnCompleteEventMessageCase tc || tc.Value.Payload.StopReason != StopReason.Completed)
                 return Fail(name, "expected .completed");
             return Pass(name, $"stopReason={tc.Value.Payload.StopReason}");
@@ -182,7 +182,7 @@ namespace KernelClient.Tests
             var name = "M2 mapper: phase=='error' maps stopReason=.error regardless of stopReason field";
             var data = new JSONObject { ["phase"] = "error", ["stopReason"] = "rpc", ["error"] = "boom" };
             long counter = 0;
-            var evt = EventMapping.MapOpenclawAgentLifecycleToTurnComplete(data, "s1", "run-1", DateTimeOffset.UtcNow, null, () => ++counter);
+            var evt = EventMapping.MapOpenclawAgentLifecycleToTurnComplete(data, "s1", "run-1", DateTimeOffset.UtcNow, null, null, () => ++counter);
             if (evt is not TurnCompleteEventMessageCase e) return Fail(name, "expected .turnComplete");
             if (e.Value.Payload.StopReason != StopReason.Error)
                 return Fail(name, $"expected stopReason=.error, got {e.Value.Payload.StopReason} — 修前默认折叠成 .completed");
@@ -735,6 +735,474 @@ namespace KernelClient.Tests
             return Pass(name, $"operationId={result.OperationId}: Promise=.succeeded, Event.outcome=.succeeded 一致,即使 sessions.delete 报告 deleted:false");
         }
 
+        // MARK: - M3（D1 §6.2）：stop() 强制定序——pending approval 必须先 force-deny 再 abort
+
+        /// <summary>
+        /// 镜像 Swift <c>testStopForceDeniesPendingApprovalBeforeAbort</c>。**修前（SG-8.7 形式化 parity
+        /// 复核揪出）fail / 修后 pass**：D1 §6.2 M3 定序要求 stop() 在发起 sessions.abort 之前，若该
+        /// run 存在 pending approval，必须先把它强制 deny 掉并确认内核已接受，再发起 abort；被强制
+        /// 终态化的 reqId 还要同步列进该 run TurnCompleteEvent.forceResolvedApprovals。修前 StopAsync
+        /// 完全没有这一步——直接发 sessions.abort，forceResolvedApprovals 两处硬编码 null。本测试驱动
+        /// 真实 StopAsync 方法体（不是 seed 内部状态）：先用真实 agent/session.approval 帧走完整的 M1
+        /// 双向 join 产出一条 approvalRequest（这个 reqId 因此真正进入"pending 等待决策"态），再调用
+        /// StopAsync，用一个调用顺序日志断言 approval.resolve 确实先于 sessions.abort 被调用，且
+        /// TurnCompleteEvent.forceResolvedApprovals 确实带上了这个 reqId。
+        /// </summary>
+        private static async Task<bool> TestStopForceDeniesPendingApprovalBeforeAbort()
+        {
+            var name = "M3 (D1 §6.2) stop() force-denies pending approval BEFORE sessions.abort; TurnCompleteEvent.forceResolvedApprovals lists it";
+            var client = FreshClient();
+            var sessionId = "sess-stop-force-deny";
+            var kernelKey = "kernel-key-stop-force-deny";
+            var runId = "run-force-deny-1";
+            var approvalId = "approval-force-deny-1";
+            var toolCallId = "tool-force-deny-1";
+            var channel = client.TestSupportRegisterSession(sessionId, kernelKey);
+
+            var callLogLock = new object();
+            var callLog = new List<string>();
+            void RecordCall(string method) { lock (callLogLock) { callLog.Add(method); } }
+
+            // 1) 用真实 agent(stream:"approval") + session.approval(phase:"pending") 两条帧走完整
+            // M1 双向 join——这是这次审批真正"产出给调用方"的唯一路径，只有走完这条路径，reqId 才会
+            // 进入 M3 新增的 pending-awaiting-decision 态。
+            client.TestSupportFeedFrame(new JSONObject
+            {
+                ["type"] = "event",
+                ["event"] = "agent",
+                ["payload"] = new JSONObject
+                {
+                    ["runId"] = runId, ["sessionKey"] = kernelKey, ["stream"] = "approval",
+                    ["data"] = new JSONObject { ["phase"] = "requested", ["toolCallId"] = toolCallId, ["approvalId"] = approvalId },
+                    ["ts"] = 1_784_872_000_000L,
+                },
+            });
+            client.TestSupportFeedFrame(new JSONObject
+            {
+                ["type"] = "event",
+                ["event"] = "session.approval",
+                ["payload"] = new JSONObject
+                {
+                    ["sessionKey"] = kernelKey, ["updatedAtMs"] = 1_784_872_000_100L, ["phase"] = "pending",
+                    ["approval"] = new JSONObject
+                    {
+                        ["id"] = approvalId, ["status"] = "pending",
+                        ["presentation"] = new JSONObject { ["kind"] = "exec", ["commandText"] = "echo force-deny-me" },
+                        ["createdAtMs"] = 1_784_872_000_100L, ["expiresAtMs"] = 1_784_873_800_100L,
+                    },
+                },
+            });
+
+            if (!client.TestSupportHasPendingApprovalAwaitingDecision(approvalId))
+                return Fail(name, "expected approvalId to be registered as pending-awaiting-decision after the approvalRequest join");
+
+            // 2) 三个 RPC 桩——都记录调用顺序；approval.resolve 额外校验 params 形状 + 回一个真实的
+            // denied 终态响应（不是随便什么 ok:true）。
+            client.TestSupportStubRpc("approval.resolve", parameters =>
+            {
+                RecordCall("approval.resolve");
+                if ((parameters.Get("id") as string) != approvalId || (parameters.Get("decision") as string) != "deny")
+                    throw new KernelClientException(KernelClientErrorKind.ProtocolMismatch, $"unexpected approval.resolve params: {parameters}");
+                return Task.FromResult(new JSONObject
+                {
+                    ["applied"] = true,
+                    ["approval"] = new JSONObject { ["id"] = approvalId, ["status"] = "denied", ["decision"] = "deny", ["reason"] = "user" },
+                });
+            });
+            client.TestSupportStubRpc("sessions.abort", _ =>
+            {
+                RecordCall("sessions.abort");
+                return Task.FromResult(new JSONObject { ["ok"] = true, ["abortedRunId"] = runId, ["status"] = "aborted" });
+            });
+            client.TestSupportStubRpc("sessions.delete", _ =>
+            {
+                RecordCall("sessions.delete");
+                return Task.FromResult(new JSONObject { ["deleted"] = true });
+            });
+            var handle = TestHandle(sessionId, kernelKey);
+
+            var stopTask = client.StopAsync(handle);
+            // stop() 此刻应该已经完成 force-deny、发起了 sessions.abort、正在等待该 run 的 aborted
+            // lifecycle 终态——喂一条真实形状的 aborted lifecycle 帧唤醒等待。
+            await Task.Delay(60);
+            client.TestSupportFeedFrame(new JSONObject
+            {
+                ["type"] = "event",
+                ["event"] = "agent",
+                ["payload"] = new JSONObject
+                {
+                    ["runId"] = runId, ["sessionKey"] = kernelKey, ["stream"] = "lifecycle",
+                    ["data"] = new JSONObject { ["phase"] = "end", ["status"] = "cancelled", ["aborted"] = true, ["stopReason"] = "rpc" },
+                    ["ts"] = 1_784_872_000_500L,
+                },
+            });
+
+            StopResultPayload result;
+            try { result = await stopTask; }
+            catch { return Fail(name, "stop() unexpectedly threw"); }
+            if (result.Outcome != StopResultPayloadOutcome.Succeeded)
+                return Fail(name, $"expected Promise outcome=.succeeded, got {result.Outcome}");
+
+            // 3) 调用顺序——M3 定序的核心断言：force-deny 必须先于 abort（修前压根没有 approval.resolve
+            // 这一条调用，这条断言在修前会直接 fail）。
+            List<string> order;
+            lock (callLogLock) { order = new List<string>(callLog); }
+            if (!order.SequenceEqual(new[] { "approval.resolve", "sessions.abort", "sessions.delete" }))
+                return Fail(name, $"expected RPC call order [approval.resolve, sessions.abort, sessions.delete], got [{string.Join(", ", order)}] — 修前 approval.resolve 从未被调用");
+
+            // 4) 事件流：approvalRequest（步骤 1 产出）-> operation_completed(succeeded) -> turn_complete
+            // (cancelled, forceResolvedApprovals 含 approvalId) -> session_end(stopped)——turn_complete
+            // 先于 session_end 沿用既有 D1 §9.3 顺序保证。
+            var events = await CollectUpToAsync(channel.Reader, 5);
+            if (events.Count != 4)
+                return Fail(name, $"expected 4 events (approvalRequest + operation_completed + turn_complete + session_end), got {events.Count}");
+            if (events[0] is not ApprovalRequestEventMessageCase approvalEvent || approvalEvent.Value.Payload.ReqId != approvalId)
+                return Fail(name, $"expected first event approvalRequest(reqId={approvalId})");
+            if (events[1] is not OperationCompletedEventMessageCase op || op.Value.Payload.Outcome != PayloadOutcome.Succeeded)
+                return Fail(name, "expected second event operation_completed(succeeded)");
+            if (events[2] is not TurnCompleteEventMessageCase turn || turn.Value.Payload.StopReason != StopReason.Cancelled)
+                return Fail(name, "expected third event turn_complete(cancelled)");
+            var forceResolved = turn.Value.Payload.ForceResolvedApprovals;
+            if (forceResolved == null || !forceResolved.SequenceEqual(new[] { approvalId }))
+                return Fail(name, $"expected turn_complete.forceResolvedApprovals == [{approvalId}], got {(forceResolved == null ? "null" : "[" + string.Join(",", forceResolved) + "]")} — 修前这两处硬编码 null");
+            if (events[3] is not SessionEndEventMessageCase end || end.Value.Payload.Reason != PurpleReason.Stopped)
+                return Fail(name, "expected fourth event session_end(stopped) — must come AFTER turn_complete (D1 §9.3)");
+
+            // 5) reqId 不再残留在"pending 等待决策"态——force-deny 序列必须把它清掉。
+            if (client.TestSupportHasPendingApprovalAwaitingDecision(approvalId))
+                return Fail(name, "expected approvalId to no longer be pending-awaiting-decision after stop() force-denied it");
+
+            return Pass(name, $"approval.resolve 先于 sessions.abort 被调用(调用顺序=[{string.Join(", ", order)}]),TurnCompleteEvent.forceResolvedApprovals=[{approvalId}],turn_complete 先于 session_end");
+        }
+
+        /// <summary>
+        /// 镜像 Swift <c>testStopWithNoPendingApprovalLeavesForceResolvedApprovalsNil</c>。**回归/parity
+        /// 检查**：没有 pending approval 的普通 stop() 不应该触发任何 approval.resolve 调用（没 stub
+        /// 该方法时如果真的调用会因为"没有真实连接也没有测试桩"而抛 NotConnected，直接让 stop() 失败
+        /// ——本测试因此隐式覆盖"M3 新逻辑不会在无 pending approval 时误触发 RPC"这条要求），且该 run 的
+        /// TurnCompleteEvent.forceResolvedApprovals 保持 null，不因为新增了 M3 逻辑就意外冒出一个空
+        /// 数组或别的值。
+        /// </summary>
+        private static async Task<bool> TestStopWithNoPendingApprovalLeavesForceResolvedApprovalsNil()
+        {
+            var name = "M3 (D1 §6.2) stop() with no pending approval: no approval.resolve call, forceResolvedApprovals stays nil";
+            var client = FreshClient();
+            var sessionId = "sess-stop-no-pending-approval";
+            var kernelKey = "kernel-key-stop-no-pending-approval";
+            var runId = "run-no-pending-approval-1";
+            var channel = client.TestSupportRegisterSession(sessionId, kernelKey);
+
+            client.TestSupportFeedFrame(new JSONObject
+            {
+                ["type"] = "event",
+                ["event"] = "agent",
+                ["payload"] = new JSONObject { ["runId"] = runId, ["sessionKey"] = kernelKey, ["stream"] = "run_status", ["data"] = new JSONObject() },
+            });
+            // 故意不 stub "approval.resolve"——如果 stop() 意外调用了它，会因为没有测试桩/真实连接而
+            // 抛 NotConnected，下面的 try/catch 会拿到异常，测试直接 fail。
+            client.TestSupportStubRpc("sessions.abort", _ => Task.FromResult(new JSONObject { ["ok"] = true, ["abortedRunId"] = runId, ["status"] = "aborted" }));
+            client.TestSupportStubRpc("sessions.delete", _ => Task.FromResult(new JSONObject { ["deleted"] = true }));
+            var handle = TestHandle(sessionId, kernelKey);
+
+            var stopTask = client.StopAsync(handle);
+            await Task.Delay(60);
+            client.TestSupportFeedFrame(new JSONObject
+            {
+                ["type"] = "event",
+                ["event"] = "agent",
+                ["payload"] = new JSONObject
+                {
+                    ["runId"] = runId, ["sessionKey"] = kernelKey, ["stream"] = "lifecycle",
+                    ["data"] = new JSONObject { ["phase"] = "end", ["status"] = "cancelled", ["aborted"] = true, ["stopReason"] = "rpc" },
+                    ["ts"] = 1_784_872_100_000L,
+                },
+            });
+
+            StopResultPayload result;
+            try { result = await stopTask; }
+            catch { return Fail(name, "stop() unexpectedly threw — 若因为误触发 approval.resolve(无 stub) 而抛 NotConnected 也会落到这里"); }
+            if (result.Outcome != StopResultPayloadOutcome.Succeeded) return Fail(name, $"expected outcome=.succeeded, got {result.Outcome}");
+
+            var events = await CollectUpToAsync(channel.Reader, 4);
+            if (events.Count != 3)
+                return Fail(name, $"expected 3 events (operation_completed + turn_complete + session_end), got {events.Count}");
+            if (events[1] is not TurnCompleteEventMessageCase turn)
+                return Fail(name, "expected second event turn_complete");
+            if (turn.Value.Payload.ForceResolvedApprovals != null)
+                return Fail(name, $"expected forceResolvedApprovals == null when there was no pending approval, got [{string.Join(",", turn.Value.Payload.ForceResolvedApprovals)}]");
+            return Pass(name, "无 pending approval 时: 未触发 approval.resolve, forceResolvedApprovals 保持 null");
+        }
+
+        // MARK: - NOTE-A（T-049 grok 对抗审复核）：force-deny drain 循环闭合 await 窗口逃逸
+
+        /// <summary>
+        /// 镜像 Swift <c>testStopForceDeniesLateArrivingApprovalDuringDrainAwaitWindow</c>。**修前 fail
+        /// / 修后 pass**：修前 ForceDenyPendingApprovalsBeforeStopAsync 只对 pending reqId 取一次快照
+        /// ——若某个 approval 在 approval.resolve 的 await 窗口内新到（这里在 approval-A 的
+        /// approval.resolve 响应闭包**返回前**同步调用 TestSupportFeedFrame，确定性地模拟"drain 在途"
+        /// 这个窗口——C# 的 RPC 桩闭包本身是纯同步执行到 <c>Task.FromResult</c> 才返回，不需要 Swift
+        /// 那样借助 actor 重入性，直接同步调用即可），会逃过这一轮快照、永远不会被 force-deny，随后
+        /// sessions.abort 仍会照发——修前这条测试会在"调用顺序断言"处直接 fail（call log 里只有
+        /// approval.resolve:approvalA，没有 approvalB）。本轮改为 drain-loop：每一轮结束后重新检查该
+        /// session 是否有新到的 pending 审批，直到某轮检查为空才允许 StopAsync 继续发 sessions.abort
+        /// ——approvalB 因此在第二轮被同样地 force-deny 并确认，且两次 approval.resolve 都先于
+        /// sessions.abort。
+        /// </summary>
+        private static async Task<bool> TestStopForceDeniesLateArrivingApprovalDuringDrainAwaitWindow()
+        {
+            var name = "NOTE-A (T-049) stop() force-deny drain closes await-window escape: approval joined WHILE approval.resolve(A) is in flight is also force-denied before sessions.abort";
+            var client = FreshClient();
+            var sessionId = "sess-stop-force-deny-late-arrival";
+            var kernelKey = "kernel-key-stop-force-deny-late-arrival";
+            var runId = "run-force-deny-late-1";
+            var approvalA = "approval-force-deny-late-A";
+            var approvalB = "approval-force-deny-late-B";
+            var toolCallA = "tool-force-deny-late-A";
+            var toolCallB = "tool-force-deny-late-B";
+            var channel = client.TestSupportRegisterSession(sessionId, kernelKey);
+
+            var callLogLock = new object();
+            var callLog = new List<string>();
+            void RecordCall(string method) { lock (callLogLock) { callLog.Add(method); } }
+
+            // 1) 先让 approval-A 走完整 M1 双向 join，进入 pending-awaiting-decision 态——这是
+            // force-deny drain 循环第一轮快照会看到的唯一 reqId。
+            client.TestSupportFeedFrame(new JSONObject
+            {
+                ["type"] = "event",
+                ["event"] = "agent",
+                ["payload"] = new JSONObject
+                {
+                    ["runId"] = runId, ["sessionKey"] = kernelKey, ["stream"] = "approval",
+                    ["data"] = new JSONObject { ["phase"] = "requested", ["toolCallId"] = toolCallA, ["approvalId"] = approvalA },
+                    ["ts"] = 1_784_900_000_000L,
+                },
+            });
+            client.TestSupportFeedFrame(new JSONObject
+            {
+                ["type"] = "event",
+                ["event"] = "session.approval",
+                ["payload"] = new JSONObject
+                {
+                    ["sessionKey"] = kernelKey, ["updatedAtMs"] = 1_784_900_000_100L, ["phase"] = "pending",
+                    ["approval"] = new JSONObject
+                    {
+                        ["id"] = approvalA, ["status"] = "pending",
+                        ["presentation"] = new JSONObject { ["kind"] = "exec", ["commandText"] = "echo late-arrival-A" },
+                        ["createdAtMs"] = 1_784_900_000_100L, ["expiresAtMs"] = 1_784_901_800_100L,
+                    },
+                },
+            });
+
+            if (!client.TestSupportHasPendingApprovalAwaitingDecision(approvalA))
+                return Fail(name, "expected approvalA to be registered as pending-awaiting-decision before stop()");
+
+            // 2) approval.resolve 的响应闭包在 RequestAsync 里被 `await` 之前，先同步调用
+            // TestSupportFeedFrame 注入 approval-B 的两条真实帧，精确复现 NOTE-A 描述的"drain await
+            // 窗口内新到"场景。`reqId == approvalA` 这个分支只会命中一次——approvalA 一旦被这次 RPC
+            // 处理完就从 pending 表移除，不会再出现在后续任何一轮的快照里。
+            client.TestSupportStubRpc("approval.resolve", parameters =>
+            {
+                var reqId = (parameters.Get("id") as string) ?? "?";
+                RecordCall($"approval.resolve:{reqId}");
+                if (reqId == approvalA)
+                {
+                    client.TestSupportFeedFrame(new JSONObject
+                    {
+                        ["type"] = "event",
+                        ["event"] = "agent",
+                        ["payload"] = new JSONObject
+                        {
+                            ["runId"] = runId, ["sessionKey"] = kernelKey, ["stream"] = "approval",
+                            ["data"] = new JSONObject { ["phase"] = "requested", ["toolCallId"] = toolCallB, ["approvalId"] = approvalB },
+                            ["ts"] = 1_784_900_000_200L,
+                        },
+                    });
+                    client.TestSupportFeedFrame(new JSONObject
+                    {
+                        ["type"] = "event",
+                        ["event"] = "session.approval",
+                        ["payload"] = new JSONObject
+                        {
+                            ["sessionKey"] = kernelKey, ["updatedAtMs"] = 1_784_900_000_300L, ["phase"] = "pending",
+                            ["approval"] = new JSONObject
+                            {
+                                ["id"] = approvalB, ["status"] = "pending",
+                                ["presentation"] = new JSONObject { ["kind"] = "exec", ["commandText"] = "echo late-arrival-B" },
+                                ["createdAtMs"] = 1_784_900_000_300L, ["expiresAtMs"] = 1_784_901_900_300L,
+                            },
+                        },
+                    });
+                }
+                return Task.FromResult(new JSONObject
+                {
+                    ["applied"] = true,
+                    ["approval"] = new JSONObject { ["id"] = reqId, ["status"] = "denied", ["decision"] = "deny", ["reason"] = "user" },
+                });
+            });
+            client.TestSupportStubRpc("sessions.abort", _ =>
+            {
+                RecordCall("sessions.abort");
+                return Task.FromResult(new JSONObject { ["ok"] = true, ["abortedRunId"] = runId, ["status"] = "aborted" });
+            });
+            client.TestSupportStubRpc("sessions.delete", _ =>
+            {
+                RecordCall("sessions.delete");
+                return Task.FromResult(new JSONObject { ["deleted"] = true });
+            });
+            var handle = TestHandle(sessionId, kernelKey);
+
+            var stopTask = client.StopAsync(handle);
+            await Task.Delay(60);
+            client.TestSupportFeedFrame(new JSONObject
+            {
+                ["type"] = "event",
+                ["event"] = "agent",
+                ["payload"] = new JSONObject
+                {
+                    ["runId"] = runId, ["sessionKey"] = kernelKey, ["stream"] = "lifecycle",
+                    ["data"] = new JSONObject { ["phase"] = "end", ["status"] = "cancelled", ["aborted"] = true, ["stopReason"] = "rpc" },
+                    ["ts"] = 1_784_900_001_000L,
+                },
+            });
+
+            StopResultPayload result;
+            try { result = await stopTask; }
+            catch { return Fail(name, "stop() unexpectedly threw"); }
+            if (result.Outcome != StopResultPayloadOutcome.Succeeded)
+                return Fail(name, $"expected Promise outcome=.succeeded, got {result.Outcome}");
+
+            // 3) 核心断言——修前：approvalB 会逃过快照，call log 里永远只有 approvalA 一条
+            // approval.resolve；修后：两次 approval.resolve 都先于 sessions.abort。
+            List<string> order;
+            lock (callLogLock) { order = new List<string>(callLog); }
+            var abortIndex = order.IndexOf("sessions.abort");
+            var aIndex = order.IndexOf($"approval.resolve:{approvalA}");
+            var bIndex = order.IndexOf($"approval.resolve:{approvalB}");
+            if (abortIndex < 0 || aIndex < 0 || bIndex < 0 || aIndex >= abortIndex || bIndex >= abortIndex)
+                return Fail(name, $"expected both approval.resolve(A) and approval.resolve(B) before sessions.abort, got order=[{string.Join(", ", order)}] — 修前 approvalB 永远不会出现在这里（逃过 force-deny）");
+
+            if (client.TestSupportHasPendingApprovalAwaitingDecision(approvalA))
+                return Fail(name, "expected approvalA to no longer be pending-awaiting-decision after stop()");
+            if (client.TestSupportHasPendingApprovalAwaitingDecision(approvalB))
+                return Fail(name, "expected approvalB (late arrival) to no longer be pending-awaiting-decision after stop() — 修前这里会是 true，即 NOTE-A 描述的逃逸");
+
+            // 4) forceResolvedApprovals 必须同时列出 A 和 B——这是"内核已确认 both denied"的事件流侧
+            // 证据。
+            var events = await CollectUpToAsync(channel.Reader, 6);
+            if (events.Count != 5)
+                return Fail(name, $"expected 5 events (approvalRequest(A) + approvalRequest(B) + operation_completed + turn_complete + session_end), got {events.Count}");
+            if (events[0] is not ApprovalRequestEventMessageCase firstApproval || firstApproval.Value.Payload.ReqId != approvalA)
+                return Fail(name, $"expected first event approvalRequest(reqId={approvalA})");
+            if (events[1] is not ApprovalRequestEventMessageCase secondApproval || secondApproval.Value.Payload.ReqId != approvalB)
+                return Fail(name, $"expected second event approvalRequest(reqId={approvalB}) — late arrival must still be delivered to the caller before being force-denied");
+            if (events[2] is not OperationCompletedEventMessageCase op || op.Value.Payload.Outcome != PayloadOutcome.Succeeded)
+                return Fail(name, "expected third event operation_completed(succeeded)");
+            if (events[3] is not TurnCompleteEventMessageCase turn || turn.Value.Payload.StopReason != StopReason.Cancelled)
+                return Fail(name, "expected fourth event turn_complete(cancelled)");
+            var forceResolved = turn.Value.Payload.ForceResolvedApprovals;
+            if (forceResolved == null || !new HashSet<string>(forceResolved).SetEquals(new[] { approvalA, approvalB }))
+                return Fail(name, $"expected turn_complete.forceResolvedApprovals to contain both {approvalA} and {approvalB}, got {(forceResolved == null ? "null" : "[" + string.Join(",", forceResolved) + "]")} — 修前只有 {approvalA}，approvalB 逃逸");
+            if (events[4] is not SessionEndEventMessageCase end || end.Value.Payload.Reason != PurpleReason.Stopped)
+                return Fail(name, "expected fifth event session_end(stopped)");
+
+            return Pass(name, $"late-arriving approvalB(在 approval.resolve(A) 的 await 窗口内新到)也被 force-deny,调用顺序=[{string.Join(", ", order)}],forceResolvedApprovals 含两者");
+        }
+
+        /// <summary>
+        /// 镜像 Swift <c>testStopForceDenyDrainExceedsRoundCapThrowsAndReleasesLock</c>。**有界性回归**：
+        /// force-deny drain 循环必须有迭代轮次上限兜底——构造一个"持续不断产生新 pending 审批"的极端
+        /// 场景（每次 approval.resolve 响应返回前都再注入一个新的），把
+        /// TestSupportSetForceDenyDrainMaxRounds 调到很小的值（2），断言 StopAsync 在超过这个上限时
+        /// **如实 throw**（不是静默截断继续 abort，也不是无限循环挂起），且既有 M3 catch 分支的收尾
+        /// （锁释放 + pendingStop 清理 + operation_completed(rejected) 镜像）依然生效。
+        /// </summary>
+        private static async Task<bool> TestStopForceDenyDrainExceedsRoundCapThrowsAndReleasesLock()
+        {
+            var name = "NOTE-A (T-049) stop() force-deny drain exceeding round cap throws honestly (not a silent infinite loop); lock released + pendingStop cleaned";
+            var client = FreshClient();
+            var sessionId = "sess-stop-force-deny-drain-cap";
+            var kernelKey = "kernel-key-stop-force-deny-drain-cap";
+            var runId = "run-force-deny-drain-cap-1";
+            client.TestSupportRegisterSession(sessionId, kernelKey);
+            client.TestSupportSetForceDenyDrainMaxRounds(2);
+
+            var counterLock = new object();
+            var counter = 0;
+            string FeedNext()
+            {
+                int n;
+                lock (counterLock) { n = ++counter; }
+                var approvalId = $"approval-drain-cap-{n}";
+                var toolCallId = $"tool-drain-cap-{n}";
+                client.TestSupportFeedFrame(new JSONObject
+                {
+                    ["type"] = "event",
+                    ["event"] = "agent",
+                    ["payload"] = new JSONObject
+                    {
+                        ["runId"] = runId, ["sessionKey"] = kernelKey, ["stream"] = "approval",
+                        ["data"] = new JSONObject { ["phase"] = "requested", ["toolCallId"] = toolCallId, ["approvalId"] = approvalId },
+                        ["ts"] = 1_784_900_100_000L + n * 100L,
+                    },
+                });
+                client.TestSupportFeedFrame(new JSONObject
+                {
+                    ["type"] = "event",
+                    ["event"] = "session.approval",
+                    ["payload"] = new JSONObject
+                    {
+                        ["sessionKey"] = kernelKey, ["updatedAtMs"] = 1_784_900_100_050L + n * 100L, ["phase"] = "pending",
+                        ["approval"] = new JSONObject
+                        {
+                            ["id"] = approvalId, ["status"] = "pending",
+                            ["presentation"] = new JSONObject { ["kind"] = "exec", ["commandText"] = $"echo drain-cap-{n}" },
+                            ["createdAtMs"] = 1_784_900_100_050L, ["expiresAtMs"] = 1_784_901_900_050L,
+                        },
+                    },
+                });
+                return approvalId;
+            }
+            FeedNext(); // 种下第一个 pending 审批——stop() 调用前就已存在。
+
+            // 每次 approval.resolve 响应返回前都再注入一个新的 pending 审批——模拟"run 持续不断请求
+            // 审批"的极端场景，逼迫 drain 循环一直发现非空快照。故意不 stub sessions.abort/
+            // sessions.delete——drain 理应在到达轮次上限时就 throw，压根不会发出 sessions.abort。
+            client.TestSupportStubRpc("approval.resolve", parameters =>
+            {
+                FeedNext();
+                var reqId = (parameters.Get("id") as string) ?? "?";
+                return Task.FromResult(new JSONObject
+                {
+                    ["applied"] = true,
+                    ["approval"] = new JSONObject { ["id"] = reqId, ["status"] = "denied", ["decision"] = "deny", ["reason"] = "user" },
+                });
+            });
+            var handle = TestHandle(sessionId, kernelKey);
+
+            try
+            {
+                await client.StopAsync(handle);
+                return Fail(name, "expected stop() to throw once force-deny drain exceeds the round cap, but it returned a result — 未设上限时会在这里静默挂起或无限循环");
+            }
+            catch (KernelClientException ex)
+            {
+                if (ex.Kind != KernelClientErrorKind.ProtocolMismatch || !ex.Message.Contains("drain"))
+                    return Fail(name, $"expected KernelClientException(ProtocolMismatch) mentioning the drain bound, got {ex.Kind}: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                return Fail(name, $"expected KernelClientException(ProtocolMismatch), got {ex}");
+            }
+
+            if (client.TestSupportLockState(sessionId) != "idle")
+                return Fail(name, "expected session lock released back to idle after drain-cap failure — 不能重蹈 codex 复现的 second-stop session_locked 类锁泄漏");
+            if (client.TestSupportHasPendingStop(sessionId))
+                return Fail(name, "expected pendingStop to be cleaned up after drain-cap failure");
+
+            return Pass(name, "force-deny drain 在持续新到审批下于第 3 轮(上限=2)如实 throw,未静默死循环,session 锁/pendingStop 收尾干净");
+        }
+
         private static async Task<bool> TestStopAbortRpcThrowReleasesLockAndEmitsRejectedMirror()
         {
             var name = "M3 stop() sessions.abort throws -> lock released + pendingStop cleaned + operation_completed(rejected) mirror; second stop() not falsely session_locked";
@@ -1153,6 +1621,10 @@ namespace KernelClient.Tests
                 await TestStopNoActiveRunEmitsOperationCompletedMirror(),
                 await TestStopTimeoutEmitsOperationCompletedMirror(),
                 await TestStopDeleteFailureDoesNotContradictAlreadyEmittedOutcome(),
+                await TestStopForceDeniesPendingApprovalBeforeAbort(),
+                await TestStopWithNoPendingApprovalLeavesForceResolvedApprovalsNil(),
+                await TestStopForceDeniesLateArrivingApprovalDuringDrainAwaitWindow(),
+                await TestStopForceDenyDrainExceedsRoundCapThrowsAndReleasesLock(),
                 await TestStopAbortRpcThrowReleasesLockAndEmitsRejectedMirror(),
                 await TestStopCleansUpAllSessionCaches(),
                 await TestStopTransportClosedWhileWaitingDoesNotHangAndEmitsMirror(),

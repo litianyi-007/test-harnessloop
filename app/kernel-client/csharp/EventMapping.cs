@@ -193,7 +193,7 @@ namespace KernelClient
 
         public static EventMessageUnion MapOpenclawAgentLifecycleToTurnComplete(
             JSONObject data, string ourSessionId, string runId, DateTimeOffset originTs,
-            (long Input, long Output)? cachedUsage, Func<long> nextSeq)
+            (long Input, long Output)? cachedUsage, string[]? forceResolvedApprovals, Func<long> nextSeq)
         {
             var phase = OpenclawWire.JsonString(data.Get("phase"));
             var rawStopReason = OpenclawWire.JsonString(data.Get("stopReason"));
@@ -214,7 +214,11 @@ namespace KernelClient
             Usage? usage = cachedUsage.HasValue
                 ? new Usage { InputTokens = cachedUsage.Value.Input, OutputTokens = cachedUsage.Value.Output }
                 : null;
-            var turnPayload = new TurnCompleteEventMessagePayload { Degraded = null, ForceResolvedApprovals = null, StopReason = stopReason, Usage = usage };
+            // M3（D1 §6.2，本轮新增）：调用方（OpenclawGatewayKernelClient.HandleAgentEvent）只在这个
+            // run 恰好也是当前 stop() 正在处理、且确实强制 deny 过审批的那个 run 时才会传非 null
+            // 值——这是罕见的"aborted:false 分支恰好赶上了 stop() 的 force-deny 竞态窗口"场景，绝大多数
+            // 正常回合结束都会传 null，不是本函数自己判断的。
+            var turnPayload = new TurnCompleteEventMessagePayload { Degraded = null, ForceResolvedApprovals = forceResolvedApprovals, StopReason = stopReason, Usage = usage };
             return new TurnCompleteEventMessage
             {
                 Direction = MessageDeltaEventMessageDirection.Event, Payload = turnPayload, RunId = runId,
@@ -224,7 +228,7 @@ namespace KernelClient
 
         public static List<EventMessageUnion> MapOpenclawAgentLifecycleToAbortTerminalEvents(
             JSONObject data, string ourSessionId, string runId, string operationId, DateTimeOffset originTs,
-            (long Input, long Output)? cachedUsage, Func<long> nextSeq)
+            (long Input, long Output)? cachedUsage, string[]? forceResolvedApprovals, Func<long> nextSeq)
         {
             var phase = OpenclawWire.JsonString(data.Get("phase"));
             var outcome = phase == "end" ? PayloadOutcome.Succeeded : PayloadOutcome.AbortedEffectUnknown;
@@ -243,7 +247,12 @@ namespace KernelClient
             Usage? usage = cachedUsage.HasValue
                 ? new Usage { InputTokens = cachedUsage.Value.Input, OutputTokens = cachedUsage.Value.Output }
                 : null;
-            var turnPayload = new TurnCompleteEventMessagePayload { Degraded = null, ForceResolvedApprovals = null, StopReason = StopReason.Cancelled, Usage = usage };
+            // M3（D1 §6.2，本轮新增）：forceResolvedApprovals 由调用方（stop() 铸造的
+            // PendingStop.ForceResolvedApprovalReqIds，见
+            // OpenclawGatewayKernelClient.ForceDenyPendingApprovalsBeforeStopAsync）传入——这个 run
+            // 被 stop() 强制取消之前，如果有 pending 审批被强制 deny 掉，reqId 就会出现在这里；上一轮
+            // 这里硬编码 null，是 SG-8.7 形式化 parity 复核揪出的缺口（D1 §6.2 M3 定序完全没有落地）。
+            var turnPayload = new TurnCompleteEventMessagePayload { Degraded = null, ForceResolvedApprovals = forceResolvedApprovals, StopReason = StopReason.Cancelled, Usage = usage };
             var turnCompleteEvent = new TurnCompleteEventMessage
             {
                 Direction = MessageDeltaEventMessageDirection.Event, Payload = turnPayload, RunId = runId,

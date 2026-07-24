@@ -385,6 +385,7 @@ func mapOpenclawAgentLifecycleToTurnComplete(
     runID: String,
     originTS: Date,
     cachedUsage: (input: Int, output: Int)?,
+    forceResolvedApprovals: [String]?,
     nextSeq: () -> Int
 ) -> EventMessageUnion {
     let phase = jsonString(data["phase"])
@@ -405,8 +406,12 @@ func mapOpenclawAgentLifecycleToTurnComplete(
         }
     }
     let usage = cachedUsage.map { Usage(inputTokens: $0.input, outputTokens: $0.output) }
+    // M3（D1 §6.2，本轮新增）：调用方（`OpenclawGatewayKernelClient.handleAgentEvent`）只在这个 run
+    // 恰好也是当前 stop() 正在处理、且确实强制 deny 过审批的那个 run 时才会传非 nil 值——这是罕见的
+    // "aborted:false 分支恰好赶上了 stop() 的 force-deny 竞态窗口"场景（见调用点文档注释），绝大多数
+    // 正常回合结束都会传 nil，不是本函数自己判断的。
     let turnPayload = TurnCompleteEventMessagePayload(
-        degraded: nil, forceResolvedApprovals: nil, stopReason: stopReason, usage: usage
+        degraded: nil, forceResolvedApprovals: forceResolvedApprovals, stopReason: stopReason, usage: usage
     )
     return .turnComplete(TurnCompleteEventMessage(
         direction: .event, payload: turnPayload, runID: runID,
@@ -440,6 +445,7 @@ func mapOpenclawAgentLifecycleToAbortTerminalEvents(
     operationID: String,
     originTS: Date,
     cachedUsage: (input: Int, output: Int)?,
+    forceResolvedApprovals: [String]?,
     nextSeq: () -> Int
 ) -> [EventMessageUnion] {
     let phase = jsonString(data["phase"])
@@ -455,8 +461,13 @@ func mapOpenclawAgentLifecycleToAbortTerminalEvents(
     ))
 
     let usage = cachedUsage.map { Usage(inputTokens: $0.input, outputTokens: $0.output) }
+    // M3（D1 §6.2，本轮新增）：`forceResolvedApprovals` 由调用方（`stop()` 铸造的 `PendingStop.
+    // forceResolvedApprovalReqIDs`，见 `OpenclawGatewayKernelClient.forceDenyPendingApprovalsBeforeStop`）
+    // 传入——这个 run 被 stop() 强制取消之前，如果有 pending 审批被强制 deny 掉，reqId 就会出现在
+    // 这里；上一轮这里硬编码 nil，是 SG-8.7 形式化 parity 复核揪出的缺口（D1 §6.2 M3 定序完全没有
+    // 落地）。
     let turnPayload = TurnCompleteEventMessagePayload(
-        degraded: nil, forceResolvedApprovals: nil, stopReason: .cancelled, usage: usage
+        degraded: nil, forceResolvedApprovals: forceResolvedApprovals, stopReason: .cancelled, usage: usage
     )
     let turnCompleteEvent = EventMessageUnion.turnComplete(TurnCompleteEventMessage(
         direction: .event, payload: turnPayload, runID: runID,

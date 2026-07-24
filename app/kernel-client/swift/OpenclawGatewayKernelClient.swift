@@ -91,12 +91,26 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         var affectedRunID: String?
         var terminalEmitted: Bool = false
         var waiter: CheckedContinuation<StopWaitOutcome, Never>?
+        // D1 §6.2 M3（stop-path 强制 deny rework）：这次 stop() 在发起 sessions.abort 之前、强制 deny
+        // 掉的 reqId 列表——由 `forceDenyPendingApprovalsBeforeStop` 在 sessions.abort 之前填好（见
+        // stop() 方法体），供 `handleAgentEvent` 的 lifecycle(aborted) 分支把它们塞进这个 run 的
+        // `TurnCompleteEvent.forceResolvedApprovals`。空数组（没有 pending approval 需要强制处理）是
+        // 绝大多数 stop() 调用的常态，不是遗漏。
+        var forceResolvedApprovalReqIDs: [String] = []
     }
     private var pendingStops: [String: PendingStop] = [:]
 
     /// M3：测试专用的 stop() 等待超时覆盖（秒）——生产默认 5 秒（D1 v3 §9.3），测试用一个短得多的
     /// 值验证"超时"这条路径，不用真的等 5 秒。`nil` 时 stop() 使用生产默认值。
     private var testSupportStopTimeoutSecondsOverride: Int?
+
+    /// NOTE-A（T-049 grok 对抗审复核揪出的中等竞态，本轮修复）：`forceDenyPendingApprovalsBeforeStop`
+    /// 现在是一个 drain 循环（见该函数文档注释）——每轮结束后重新检查该 session 是否有新到的 pending
+    /// 审批，直到某轮检查为空才允许 stop() 继续发 sessions.abort。为防止（理论上不该出现，但不能假装
+    /// 不可能）一个持续产生审批请求的 run 让这个循环无限跑下去，加一个迭代轮次上限——生产默认
+    /// `forceDenyDrainDefaultMaxRounds`，测试用这个覆盖值验证"超过上限如实 throw、不静默死循环"这条
+    /// 路径，不用真的喂 50 轮。`nil` 时使用生产默认值。
+    private var testSupportForceDenyDrainMaxRoundsOverride: Int?
 
     // MARK: F8 — 三条 sessionEnd 路径（shutdown/transportClosed/stop）共享的去重标记
     private var sessionTerminalEmitted: Set<String> = []
@@ -140,6 +154,33 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// 上面两张按 approvalId 键控的缓存本身不是 per-session 键，session 结束时要靠这张反向索引才
     /// 知道该批量清哪些 approvalId（M5：避免漏配对的条目永久残留）。
     private var approvalIDsBySessionID: [String: Set<String>] = [:]
+
+    // MARK: M3（D1 §6.2 stop-path 强制 deny）—— approval_request 已经真正产出给调用方之后的"pending，
+    // 等待人工决策"态
+    //
+    // 上面 `agentApprovalInfoByApprovalID`/`pendingSessionApprovalByApprovalID` 只是 join 之前的临时
+    // 缓冲区——一旦 join 成功、`emitApprovalRequestIfPossible` 把 approvalRequest 真正 yield 给调用方，
+    // 这两张表的条目就被移除了，不再追踪"这个 reqId 现在处于 pending、还没人给出决策"这件事。
+    // `respondApproval()` 本轮仍是 TODO 桩（见 KernelClient.swift 头注释），永远不会有真实决策落地，
+    // 因此这个态一旦进入就会一直 pending，直到 stop() 强制介入（D1 §6.2 M3 定序 + §6.3 stop 黑名单批量
+    // deny）——这里新增的这张表就是 stop() 用来"知道该 session 名下当前还有哪些审批在 pending"的唯一
+    // 权威来源。`openclawKind` 存真实的 openclaw 侧 kind（"exec"/"plugin"/"system-agent"，不是 D2 收窄
+    // 后的 KindElement）——见 `forceDenyPendingApprovalsBeforeStop` 的文档注释。
+    private struct PendingApprovalAwaitingDecision {
+        let runID: String
+        let openclawKind: String
+    }
+    private var pendingApprovalsByReqID: [String: PendingApprovalAwaitingDecision] = [:]
+    /// 反向索引：session 结束时批量清理上面这张表——同款模式，仿 `approvalIDsBySessionID`（M5）。
+    private var pendingApprovalReqIDsBySessionID: [String: Set<String>] = [:]
+
+    /// NOTE-A（T-049 grok 对抗审复核）：force-deny drain 循环（见 `forceDenyPendingApprovalsBeforeStop`）
+    /// 的迭代轮次上限——防御性兜底，不是 D1 协议要求的具体数值。D1 §9 一 session 一次一个 active run +
+    /// stop() 已经把该 session 锁进 `stopInProgress`（阻塞新 `send()`，不会有新 run）的前提下，drain
+    /// 循环每一轮只可能因为"仍在这个即将被 abort 的、唯一的 run"持续产生新的审批请求而继续——正常场景
+    /// 一两轮内必然收敛为空；这里选 50 只是给"理论上不该出现但不能假装不可能"的极端场景（比如一个
+    /// bug 让某个 run 疯狂连续请求审批）一个诚实的上限，超限时如实 throw，不是静默死循环。
+    private static let forceDenyDrainDefaultMaxRounds = 50
 
     // MARK: - Test-only：拦截 RPC（不需要真实 WebSocket 连接）
     //
@@ -424,6 +465,15 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         pendingStops[session.sessionID] = PendingStop(operationID: operationID, affectedRunID: affectedRunIDBeforeAbort)
 
         do {
+            // D1 §6.2 M3（强制定序，rework）：取消当前 run 之前，若该 session 名下存在 pending
+            // 审批，必须先把它们强制 deny 掉、确认内核已接受，才能发起 sessions.abort——见
+            // `forceDenyPendingApprovalsBeforeStop` 文档注释。这一步必须在 `sessions.abort` 之前
+            // 完成，且失败时（RPC 抛错/内核未确认 denied）不能继续往下发 abort——直接落进下面的
+            // catch 统一收尾（锁释放+pendingStop 清理+operation_completed(rejected) 镜像），不能
+            // 假装"反正等会儿再看"。
+            let forceResolvedApprovalReqIDs = try await forceDenyPendingApprovalsBeforeStop(sessionID: session.sessionID)
+            pendingStops[session.sessionID]?.forceResolvedApprovalReqIDs = forceResolvedApprovalReqIDs
+
             let abortResult = try await request(method: "sessions.abort", params: ["key": kernelKey])
             prettyPrint("RECV sessions.abort result", abortResult)
 
@@ -528,6 +578,131 @@ public actor OpenclawGatewayKernelClient: KernelClient {
             lockStateBySessionID.removeValue(forKey: session.sessionID)
             throw error
         }
+    }
+
+    /// D1 §6.2 M3 + §6.3（stop-path 强制 deny，本轮新增）：在 `stop()` 发起 `sessions.abort` 之前，把
+    /// 该 session 当前所有仍处于 pending 的审批（由 `emitApprovalRequestIfPossible` 登记进
+    /// `pendingApprovalsByReqID`）逐个强制 deny。
+    ///
+    /// **openclaw wire grounding（只读参考，未改该文件）**：
+    /// `kernels/openclaw/src/gateway/server-methods/approval.ts` 的 `"approval.resolve"` handler——
+    /// 这是 openclaw 统一的、kind-agnostic 的审批解决 RPC（`packages/sdk/src/client.ts:943`
+    /// `ApprovalsNamespace.respond` 走的也是这一条，只是 SDK 包了一层 `exec.approval.resolve` 别名）。
+    /// params schema（`packages/gateway-protocol/src/schema/approvals.ts:245`
+    /// `ApprovalResolveParamsSchema`）：`{id, kind, decision}`；成功响应体
+    /// （`ApprovalResolveResultSchema`）：`{applied: Bool, approval: {status, ...}}`。**"确认①的
+    /// deny 已生效（内核侧确认接受，而非仅适配器本地标记）"由这次 RPC 的 `await` 本身构成**：`await
+    /// request(...)` 只有等到 openclaw 真正处理完这条 `approval.resolve` 请求、回一个 `ok:true` 的
+    /// 响应帧之后才会返回；`ok:false`（`handleIncoming` 的 "res" 分支）会被 `request()` 转成
+    /// `KernelClientError.rpcRejected` 抛出——这里不吞掉这个错误，调用方（`stop()`）会因此中止、
+    /// 落进它自己的 catch 分支统一收尾，绝不会在没有真正拿到内核确认的情况下继续往下发
+    /// `sessions.abort`（那正是 M3 定序要防止的竞态：deny 还没被内核接受，abort 已经发出去了）。
+    /// 拿到 `ok:true` 响应后，本函数还要求 `approval.status == "denied"`——只有这个字段真的是
+    /// "denied" 才算数，见下方 guard。
+    ///
+    /// `approval.resolve` 对 `id` 的路由（`record.kind === "exec" ? execApprovalManager : ...`，见
+    /// `approval.ts:492-518`）本身按**服务端已持久化的 record.kind** 选择 manager，不依赖客户端传的
+    /// `kind` 字段是否精确匹配——传错 `kind` 只会让服务端把这次决议记成
+    /// `reason:"malformed-verdict"`（`applyForcedDeny`）而不是 `"user"`，两者都会落地成
+    /// `status:"denied"`。本函数仍然传本地缓存的真实 `openclawKind`（见
+    /// `emitApprovalRequestIfPossible`）——如实转发协议要求的字段，不是"反正传错也能过就随便填"。
+    ///
+    /// 返回值是这一批被强制终态化的 reqId 列表，供调用方（`stop()`）塞进该 run
+    /// `TurnCompleteEvent.forceResolvedApprovals`（D1 §6.2 M3："步骤①的强制终态化须同步在该 run 的
+    /// `TurnCompleteEvent.forceResolvedApprovals` 中列出"）。没有任何 pending 审批时直接返回空数组、
+    /// **不发起任何 RPC**——绝大多数 stop() 调用都会走这条空路径，这也是为什么这个函数不会打破既有的
+    /// 26 个 frame-replay 测试（它们都没有 stub `approval.resolve`，真打了这条 RPC 会因为没有测试桩、
+    /// 也没有真实连接而 `throw KernelClientError.notConnected`）。
+    ///
+    /// **NOTE-A（T-049 grok 对抗审复核，本轮修复）drain-loop rework**：上一轮只对 pending reqId 取
+    /// **一次快照**再逐个 await deny——若某个 approval 在这 N 个 `approval.resolve` RPC 往返组成的
+    /// await 窗口内新到（`emitApprovalRequestIfPossible` 在 actor 重入期间登记进
+    /// `pendingApprovalReqIDsBySessionID`），会逃过本轮快照、仍处于 pending 就被随后的
+    /// `sessions.abort` 甩下——这正是 D1 §6.2 力保的 exactly-once 想避免的"cancel 已生效、审批还
+    /// pending、内核对即将消失的 run 又异步接受一个人工决策"的变体。
+    ///
+    /// **选型：drain-loop（而非 freeze 登记 + deny late arrival）**。两个方向都能关闭这个窗口，选
+    /// drain-loop 的理由：
+    /// - **正确性等价，改动面更小**：freeze 方向要求 `emitApprovalRequestIfPossible`（当前是
+    ///   `handleAgentEvent`/`handleSessionApprovalEvent`/`consumeApprovalReplay` 这几个纯同步 wire
+    ///   dispatch 方法内部的同步调用）在 `stopInProgress` 期间对新到的 approval 立即发一次
+    ///   `await request("approval.resolve", ...)`——但这几个 dispatch 方法本身是从 `handleIncoming`
+    ///   同步调用的（`receiveLoop` 的热路径），要嵌入一次真正的 RPC await 就必须让它们要么整体变成
+    ///   `async`（连锁改动 `handleIncoming`/`receiveLoop` 的调用形状），要么用 `Task { await ... }`
+    ///   fire-and-forget——而后者恰好**重新引入同一类竞态**：`stop()` 完全不知道这个 detached Task
+    ///   有没有跑完 deny 就已经继续发 `sessions.abort` 了，为了堵住这个新洞，还是得让 `stop()` 在
+    ///   abort 前等所有"在途 late-deny"收尾——这就是把 drain-loop 拆成两个协作的地方重新实现一遍，
+    ///   状态更分散、更难论证，C# 那边还要多一层"锁外调度 detached 任务"的心智负担。
+    /// - **有界性论证**（D1 §9：一个 session 同一时刻只有一个 active run；`stop()` 进入
+    ///   `stopInProgress` 早于本函数被调用，`send()` 在锁不是 `idle` 时一律 reject——因此这个 session
+    ///   在整段 drain 期间**不会有新 run 被创建**）：drain 期间还能继续冒出新 pending 审批的唯一来源
+    ///   是"这次 stop() 即将 abort 的、唯一的那个 run"自己的 agent 事件流仍在正常产出（`sessions.abort`
+    ///   要等 drain 完全收敛成空之后才发出，所以这个 run 在 drain 期间确实还活着、还能请求审批）——
+    ///   正常场景下这类审批请求本就是有限的一个序列（run 早晚会耗尽待办的 tool call 或自己走向
+    ///   lifecycle 结束），drain 循环每一轮重新快照都会把新到的一并收进下一轮，若干轮内必然收敛为空。
+    ///   为"理论上不该出现但不能假装不可能"的极端场景（例如一个 bug 让 run 持续不断请求审批）兜底：
+    ///   加一个迭代轮次上限（`forceDenyDrainDefaultMaxRounds`/`testSupportForceDenyDrainMaxRoundsOverride`），
+    ///   超限**如实 throw**（不是静默截断、也不是假装 succeeded 继续往下 abort），落进 `stop()` 既有
+    ///   的 catch 分支统一收尾（锁释放 + pendingStop 清理 + operation_completed(rejected) 镜像）。
+    /// - **不重蹈 NOTE-1**：drain 循环增加的是"更多轮的 `approval.resolve` await"，跟 NOTE-1 修的
+    ///   "`sessions.abort` 之后等待 aborted lifecycle 终态"是完全不同的 await 点；若 transport 在
+    ///   drain 期间关闭，正在等待中的 `approval.resolve` continuation 会被 `failAllPending` 唤醒抛
+    ///   transport 错误（此时 `waitForPendingStopTerminal` 的 waiter 还没登记——那是 abort **之后**
+    ///   才会 setup 的），错误沿 `await request(...)` 向上抛出，直接落进 `stop()` 的 catch 分支
+    ///   （锁释放、pendingStop 清理），不会有任何新的挂起路径。
+    ///
+    /// **正确性要求**：只有当某一轮开始时重新读取的 `pendingApprovalReqIDsBySessionID[sessionID]`
+    /// 恰好为空，才 `break` 出循环、把 `forceResolved` 返回给 `stop()` 去发 `sessions.abort`——这次
+    /// "为空"的读取和函数返回之间没有任何 `await`（actor 隔离保证两次挂起点之间对同一个 actor 是
+    /// 原子的），因此不存在"检查完为空、返回前又冒出一个新的"这个子窗口。（残留、且是任何设计都无法
+    /// 免除的更窄窗口：本函数 `return` 之后、`stop()` 真正把 `sessions.abort` 帧写上线之前那几行
+    /// 同步代码之间，理论上仍有一个远小于本函数所修的"N 轮 RPC 往返"窗口——这与"abort 已发出、内核
+    /// 尚未真正处理"这类网络延迟本质相同，不是本函数能够或应该负责关闭的范围，见交付报告。）
+    private func forceDenyPendingApprovalsBeforeStop(sessionID: String) async throws -> [String] {
+        var forceResolved: [String] = []
+        var round = 0
+        let maxRounds = testSupportForceDenyDrainMaxRoundsOverride ?? Self.forceDenyDrainDefaultMaxRounds
+
+        while true {
+            let reqIDs = pendingApprovalReqIDsBySessionID[sessionID] ?? []
+            if reqIDs.isEmpty {
+                // 这一刻的快照为空——drain 收敛，没有任何 await 会介入到下面的 break/return 之间，
+                // 之后 stop() 才能安全地发 sessions.abort（见函数文档注释"正确性要求"）。
+                break
+            }
+            round += 1
+            guard round <= maxRounds else {
+                throw KernelClientError.protocolMismatch(
+                    "forceDenyPendingApprovalsBeforeStop: exceeded \(maxRounds) drain round(s) for session " +
+                    "\(sessionID) while still observing \(reqIDs.count) newly-arrived pending approval(s) " +
+                    "during force-deny — refusing to loop indefinitely (NOTE-A drain bound)"
+                )
+            }
+
+            // 排序只是让每一轮内部"同一 session 存在多个 pending 审批"这种边缘情况下 RPC 发起顺序在
+            // 测试里可预测——不是协议要求的顺序。
+            for reqID in reqIDs.sorted() {
+                guard let info = pendingApprovalsByReqID[reqID] else { continue }
+                let result = try await request(method: "approval.resolve", params: [
+                    "id": reqID, "kind": info.openclawKind, "decision": "deny",
+                ])
+                prettyPrint("RECV approval.resolve result (M3 stop-path force-deny, drain round \(round))", result)
+                let approvalStatus = jsonString(jsonObject(result["approval"])?["status"])
+                guard approvalStatus == "denied" else {
+                    // 内核没有把这次强制 deny 落地成 denied 终态——如实抛错，不能假装"已确认生效"（M3
+                    // 的核心要求就是"确认"，不是"发了请求就当数"）。respondApproval() 本轮仍是 TODO
+                    // 桩，真实环境里目前没有任何别的路径能在这之前把这个 reqId 变成其它终态，这条防线
+                    // 现阶段只有测试桩能触发。
+                    throw KernelClientError.protocolMismatch(
+                        "approval.resolve did not confirm denied status for reqId \(reqID) during stop() force-deny (got status: \(approvalStatus ?? "nil"))"
+                    )
+                }
+                forceResolved.append(reqID)
+                pendingApprovalsByReqID.removeValue(forKey: reqID)
+                pendingApprovalReqIDsBySessionID[sessionID]?.remove(reqID)
+            }
+        }
+        return forceResolved
     }
 
     /// M3：为 stop() 不会经过 `handleAgentEvent` 真实 aborted lifecycle 帧的路径（无 active run、
@@ -674,6 +849,14 @@ public actor OpenclawGatewayKernelClient: KernelClient {
             pendingSessionApprovalByApprovalID.removeValue(forKey: approvalID)
         }
         approvalIDsBySessionID.removeValue(forKey: sessionID)
+
+        // M3：session 结束时同样清掉"已产出、仍在 pending 等待决策"的审批表——不清理的话，一个从未被
+        // stop() 强制处理过的孤儿 reqId（例如 session 走 shutdown/transportClosed 终结，而不是走
+        // stop()）会永久残留在 pendingApprovalsByReqID 里。
+        for reqID in pendingApprovalReqIDsBySessionID[sessionID] ?? [] {
+            pendingApprovalsByReqID.removeValue(forKey: reqID)
+        }
+        pendingApprovalReqIDsBySessionID.removeValue(forKey: sessionID)
 
         // NOTE-1 防御性兜底：任何调用路径都不应该在 pendingStop 仍有存活 waiter 时直接
         // removeValue——那样等待中的 stop() 永远等不到 resume（T-047 复现的真挂起 bug）。正常情况下
@@ -1012,9 +1195,14 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                     // 唯一 operationId，且对同一次 pendingStop 只做一次（后续同 run 的收尾帧，如
                     // 真实样本里 phase:"end" 之后常跟的 phase:"error","This operation was
                     // aborted" 帧，被下面 else 分支丢弃）。
+                    // M3：这次 stop() 在发起 sessions.abort 之前强制 deny 掉的 reqId（如有）——D1
+                    // §6.2 M3 要求同步列进这个 run 的 TurnCompleteEvent.forceResolvedApprovals。
+                    let forceResolvedApprovals = pendingForRun.forceResolvedApprovalReqIDs.isEmpty
+                        ? nil : pendingForRun.forceResolvedApprovalReqIDs
                     let events = mapOpenclawAgentLifecycleToAbortTerminalEvents(
                         data, ourSessionID: ourSessionID, runID: runID, operationID: pendingForRun.operationID,
-                        originTS: originTS, cachedUsage: lastUsageByRunID[runID], nextSeq: nextSeqForRun
+                        originTS: originTS, cachedUsage: lastUsageByRunID[runID],
+                        forceResolvedApprovals: forceResolvedApprovals, nextSeq: nextSeqForRun
                     )
                     for event in events { continuation.yield(event) }
                     pendingForRun.terminalEmitted = true
@@ -1026,18 +1214,32 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                     // 没有对应 pendingStop 的 lifecycle 帧。防御性兜底：自己派生一个 operationId，
                     // 保持"至少不丢事件"的旧行为，同时如实标注这是非预期路径。
                     let fallbackOperationID = "\(ourSessionID)-abort-\(runID)-unowned"
+                    // 这条防御性兜底路径本来就没有关联到任何 stop() 的 pendingStop——不存在"这次
+                    // stop() 强制 deny 过谁"的信息可以塞，forceResolvedApprovals 如实传 nil。
                     let events = mapOpenclawAgentLifecycleToAbortTerminalEvents(
                         data, ourSessionID: ourSessionID, runID: runID, operationID: fallbackOperationID,
-                        originTS: originTS, cachedUsage: lastUsageByRunID[runID], nextSeq: nextSeqForRun
+                        originTS: originTS, cachedUsage: lastUsageByRunID[runID],
+                        forceResolvedApprovals: nil, nextSeq: nextSeqForRun
                     )
                     for event in events { continuation.yield(event) }
                     lastUsageByRunID.removeValue(forKey: runID)
                 }
                 // else：已经为这次 stop() 发过 terminal——如实丢弃这条收尾帧，不重复产出。
             } else {
+                // M3：极罕见竞态——force-deny 已经生效、sessions.abort 尚未真正让这个 run 落地
+                // aborted 状态之前，run 自己先自然完成（这条 lifecycle 帧走的是 aborted:false 分支）。
+                // 即便如此，仍要把已经强制 deny 掉的 reqId 挂到这条 TurnCompleteEvent 上——不能因为
+                // 走的是"正常结束"分支就丢失这个信息（D1 §6.2 M3 只要求"该 run 的 TurnCompleteEvent"
+                // 带上 forceResolvedApprovals，没有区分它是从 aborted 分支还是正常分支产出的）。
+                let forceResolvedApprovals: [String]? = {
+                    guard let pendingForRun = pendingStops[ourSessionID], pendingForRun.affectedRunID == runID,
+                          !pendingForRun.forceResolvedApprovalReqIDs.isEmpty else { return nil }
+                    return pendingForRun.forceResolvedApprovalReqIDs
+                }()
                 let event = mapOpenclawAgentLifecycleToTurnComplete(
                     data, ourSessionID: ourSessionID, runID: runID, originTS: originTS,
-                    cachedUsage: lastUsageByRunID[runID], nextSeq: nextSeqForRun
+                    cachedUsage: lastUsageByRunID[runID], forceResolvedApprovals: forceResolvedApprovals,
+                    nextSeq: nextSeqForRun
                 )
                 continuation.yield(event)
                 lastUsageByRunID.removeValue(forKey: runID)
@@ -1098,6 +1300,20 @@ public actor OpenclawGatewayKernelClient: KernelClient {
             payload, ourSessionID: ourSessionID, runIDHint: runID, toolCallIDForApprovalID: toolCallID,
             nextSeq: { self.nextSeq(runID: runID, sessionID: sid) }
         ) {
+            // M3（D1 §6.2 stop-path 强制 deny）：approvalRequest 真正产出的这一刻，这个 reqId 进入
+            // "pending，等待决策"态——respondApproval() 本轮仍是 TODO 桩，唯一会消费这个态的是
+            // stop() 的强制 deny 序列（见 pendingApprovalsByReqID 的文档注释）。openclawKind 取
+            // 这条 session.approval payload 自己的 `approval.presentation.kind`（真实值，不是 D2
+            // 收窄后的 KindElement），缺失时兜底 "exec"（openclaw 现场样本里唯一验证过的取值，见
+            // EventMapping.swift `mapOpenclawSessionApprovalToKernelEvent` 文档注释）。
+            if case .approvalRequest(let approvalRequestMessage) = event {
+                let reqID = approvalRequestMessage.payload.reqID
+                let approvalObj = jsonObject(payload["approval"]) ?? [:]
+                let presentation = jsonObject(approvalObj["presentation"]) ?? [:]
+                let openclawKind = jsonString(presentation["kind"]) ?? "exec"
+                pendingApprovalsByReqID[reqID] = PendingApprovalAwaitingDecision(runID: runID, openclawKind: openclawKind)
+                pendingApprovalReqIDsBySessionID[sid, default: []].insert(reqID)
+            }
             continuation.yield(event)
         }
     }
@@ -1198,6 +1414,13 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         agentApprovalInfoByApprovalID[approvalID] != nil || pendingSessionApprovalByApprovalID[approvalID] != nil
     }
 
+    /// M3（D1 §6.2 stop-path 强制 deny 新增）：读取某个 reqId 当前是否仍处于"approval_request 已经
+    /// 产出、respondApproval() 尚未落地"的 pending 态——用于验证 stop() 的强制 deny 序列确实把这个
+    /// reqId 从 pending 转成了终态（`forceDenyPendingApprovalsBeforeStop` 成功后会把它从这张表移除）。
+    func testSupportHasPendingApprovalAwaitingDecision(reqID: String) -> Bool {
+        pendingApprovalsByReqID[reqID] != nil
+    }
+
     /// M3/M6：按 RPC method 名注册一个"被调用时应该返回什么/抛什么错"的闭包——供测试真实驱动
     /// `send()`/`stop()` 方法体本身（含它们发起的 `sessions.send`/`sessions.abort`/
     /// `sessions.delete` RPC），不需要一个真实的 WebSocket 连接。见 `request()` 的调用点。
@@ -1209,6 +1432,12 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// 真的等 5 秒。
     func testSupportSetStopTimeoutSeconds(_ seconds: Int) {
         testSupportStopTimeoutSecondsOverride = seconds
+    }
+
+    /// NOTE-A：缩短 force-deny drain 循环的迭代轮次上限（生产默认 50），供"超过上限如实 throw、不
+    /// 静默死循环"这条路径的测试使用，不用真的喂 50 轮 late-arrival 才能触发。
+    func testSupportSetForceDenyDrainMaxRounds(_ rounds: Int) {
+        testSupportForceDenyDrainMaxRoundsOverride = rounds
     }
 
     /// M6：直接触发 `handleTransportClosed`（真实 WS 断开时 `receiveLoop` 走的同一条路径）——供

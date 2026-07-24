@@ -139,7 +139,7 @@ func testNoStopReasonEndMapsToCompleted() -> Bool {
     var counter = 0
     let event = mapOpenclawAgentLifecycleToTurnComplete(
         data, ourSessionID: "s1", runID: "run-1", originTS: Date(),
-        cachedUsage: nil, nextSeq: { counter += 1; return counter }
+        cachedUsage: nil, forceResolvedApprovals: nil, nextSeq: { counter += 1; return counter }
     )
     guard case .turnComplete(let turnComplete) = event else {
         return fail(name, "expected .turnComplete case")
@@ -156,7 +156,7 @@ func testUnknownStopReasonAlsoMapsToCompleted() -> Bool {
     var counter = 0
     let event = mapOpenclawAgentLifecycleToTurnComplete(
         data, ourSessionID: "s1", runID: "run-1", originTS: Date(),
-        cachedUsage: nil, nextSeq: { counter += 1; return counter }
+        cachedUsage: nil, forceResolvedApprovals: nil, nextSeq: { counter += 1; return counter }
     )
     guard case .turnComplete(let turnComplete) = event, turnComplete.payload.stopReason == .completed else {
         return fail(name, "expected .completed")
@@ -177,7 +177,7 @@ func testLifecyclePhaseErrorMapsToErrorStopReasonPureMapper() -> Bool {
     var counter = 0
     let event = mapOpenclawAgentLifecycleToTurnComplete(
         data, ourSessionID: "s1", runID: "run-1", originTS: Date(), cachedUsage: nil,
-        nextSeq: { counter += 1; return counter }
+        forceResolvedApprovals: nil, nextSeq: { counter += 1; return counter }
     )
     guard case .turnComplete(let e) = event else { return fail(name, "expected .turnComplete") }
     guard e.payload.stopReason == .error else {
@@ -729,6 +729,432 @@ func testStopDeleteFailureDoesNotContradictAlreadyEmittedOutcome() async -> Bool
     return pass(name, "operationId=\(result.operationID): Promise=.succeeded, Event.outcome=.succeeded 一致,即使 sessions.delete 报告 deleted:false")
 }
 
+// MARK: - M3（D1 §6.2）：stop() 强制定序——pending approval 必须先 force-deny 再 abort
+
+/// 供下面两个新测试记录 RPC 调用顺序的最小线程安全日志——用 `actor` 而不是 `NSLock`（避免重蹈本文件
+/// 里 `RaceBox` 已经踩过的"Swift 6 里 NSLock 在 async 上下文不可用"警告）。
+actor CallOrderLog {
+    private(set) var entries: [String] = []
+    func record(_ method: String) { entries.append(method) }
+}
+
+/// **修前（SG-8.7 形式化 parity 复核揪出）fail / 修后 pass**：D1 §6.2 M3 定序要求 stop() 在发起
+/// `sessions.abort` 之前，若该 run 存在 pending approval，必须先把它强制 deny 掉并确认内核已接受，
+/// 再发起 abort；被强制终态化的 reqId 还要同步列进该 run `TurnCompleteEvent.forceResolvedApprovals`。
+/// 修前 `stop()` 完全没有这一步——直接发 `sessions.abort`，`forceResolvedApprovals` 两处硬编码 nil。
+/// 本测试驱动真实 `stop()` 方法体（不是 seed 内部状态）：先用真实 agent/session.approval 帧走完整的
+/// M1 双向 join 产出一条 approvalRequest（这个 reqId 因此真正进入"pending 等待决策"态），再调用
+/// `stop()`，用一个调用顺序日志断言 `approval.resolve` 确实先于 `sessions.abort` 被调用，且
+/// `TurnCompleteEvent.forceResolvedApprovals` 确实带上了这个 reqId。
+func testStopForceDeniesPendingApprovalBeforeAbort() async -> Bool {
+    let name = "M3 (D1 §6.2) stop() force-denies pending approval BEFORE sessions.abort; TurnCompleteEvent.forceResolvedApprovals lists it"
+    let client = freshClient()
+    let sessionID = "sess-stop-force-deny"
+    let kernelKey = "kernel-key-stop-force-deny"
+    let runID = "run-force-deny-1"
+    let approvalID = "approval-force-deny-1"
+    let toolCallID = "tool-force-deny-1"
+    let stream = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+    let callLog = CallOrderLog()
+
+    // 1) 用真实 agent(stream:"approval") + session.approval(phase:"pending") 两条帧走完整 M1 双向
+    // join——这是这次审批真正"产出给调用方"的唯一路径,只有走完这条路径,reqId 才会进入 M3 新增的
+    // pendingApprovalsByReqID 态。
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": [
+            "runId": runID, "sessionKey": kernelKey, "stream": "approval",
+            "data": ["phase": "requested", "toolCallId": toolCallID, "approvalId": approvalID] as JSONObject,
+            "ts": 1_784_872_000_000,
+        ] as JSONObject,
+    ])
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "session.approval",
+        "payload": [
+            "sessionKey": kernelKey, "updatedAtMs": 1_784_872_000_100, "phase": "pending",
+            "approval": [
+                "id": approvalID, "status": "pending",
+                "presentation": ["kind": "exec", "commandText": "echo force-deny-me"] as JSONObject,
+                "createdAtMs": 1_784_872_000_100, "expiresAtMs": 1_784_873_800_100,
+            ] as JSONObject,
+        ] as JSONObject,
+    ])
+
+    guard await client.testSupportHasPendingApprovalAwaitingDecision(reqID: approvalID) else {
+        return fail(name, "expected approvalID to be registered as pending-awaiting-decision after the approvalRequest join")
+    }
+
+    // 2) 三个 RPC 桩——都记录调用顺序;approval.resolve 额外校验 params 形状 + 回一个真实的 denied
+    // 终态响应(不是随便什么 ok:true)。
+    await client.testSupportStubRPC(method: "approval.resolve") { params in
+        await callLog.record("approval.resolve")
+        guard (params["id"] as? String) == approvalID, (params["decision"] as? String) == "deny" else {
+            throw KernelClientError.protocolMismatch("unexpected approval.resolve params: \(params)")
+        }
+        return ["applied": true, "approval": ["id": approvalID, "status": "denied", "decision": "deny", "reason": "user"] as JSONObject] as JSONObject
+    }
+    await client.testSupportStubRPC(method: "sessions.abort") { _ in
+        await callLog.record("sessions.abort")
+        return ["ok": true, "abortedRunId": runID, "status": "aborted"] as JSONObject
+    }
+    await client.testSupportStubRPC(method: "sessions.delete") { _ in
+        await callLog.record("sessions.delete")
+        return ["deleted": true] as JSONObject
+    }
+    let handle = testHandle(sessionID: sessionID, kernelKey: kernelKey)
+
+    async let stopResult = client.stop(session: handle)
+    // stop() 此刻应该已经完成 force-deny、发起了 sessions.abort、正在等待该 run 的 aborted lifecycle
+    // 终态——喂一条真实形状的 aborted lifecycle 帧唤醒等待。
+    try? await Task.sleep(nanoseconds: 60_000_000)
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": [
+            "runId": runID, "sessionKey": kernelKey, "stream": "lifecycle",
+            "data": ["phase": "end", "status": "cancelled", "aborted": true, "stopReason": "rpc"] as JSONObject,
+            "ts": 1_784_872_000_500,
+        ] as JSONObject,
+    ])
+
+    guard let result = try? await stopResult else { return fail(name, "stop() unexpectedly threw") }
+    guard result.outcome == .succeeded else {
+        return fail(name, "expected Promise outcome=.succeeded, got \(result.outcome)")
+    }
+
+    // 3) 调用顺序——M3 定序的核心断言：force-deny 必须先于 abort（修前压根没有 approval.resolve 这
+    // 一条调用，这条断言在修前会直接 fail）。
+    let order = await callLog.entries
+    guard order == ["approval.resolve", "sessions.abort", "sessions.delete"] else {
+        return fail(name, "expected RPC call order [approval.resolve, sessions.abort, sessions.delete], got \(order) — 修前 approval.resolve 从未被调用")
+    }
+
+    // 4) 事件流：approvalRequest（步骤 1 产出）-> operation_completed(succeeded) -> turn_complete
+    // (cancelled, forceResolvedApprovals 含 approvalID) -> session_end(stopped)——turn_complete 先于
+    // session_end 沿用既有 D1 §9.3 顺序保证。
+    let events = await collectUpTo(stream, maxCount: 5)
+    guard events.count == 4 else {
+        return fail(name, "expected 4 events (approvalRequest + operation_completed + turn_complete + session_end), got \(events.count)")
+    }
+    guard case .approvalRequest(let approvalEvent) = events[0], approvalEvent.payload.reqID == approvalID else {
+        return fail(name, "expected first event approvalRequest(reqID=\(approvalID))")
+    }
+    guard case .operationCompleted(let op) = events[1], op.payload.outcome == .succeeded else {
+        return fail(name, "expected second event operation_completed(succeeded)")
+    }
+    guard case .turnComplete(let turn) = events[2], turn.payload.stopReason == .cancelled else {
+        return fail(name, "expected third event turn_complete(cancelled)")
+    }
+    guard let forceResolved = turn.payload.forceResolvedApprovals, forceResolved == [approvalID] else {
+        return fail(name, "expected turn_complete.forceResolvedApprovals == [\(approvalID)], got \(turn.payload.forceResolvedApprovals.map { "\($0)" } ?? "nil") — 修前这两处硬编码 nil")
+    }
+    guard case .sessionEnd(let end) = events[3], end.payload.reason == .stopped else {
+        return fail(name, "expected fourth event session_end(stopped) — must come AFTER turn_complete (D1 §9.3)")
+    }
+
+    // 5) reqId 不再残留在"pending 等待决策"态——force-deny 序列必须把它清掉。
+    guard await client.testSupportHasPendingApprovalAwaitingDecision(reqID: approvalID) == false else {
+        return fail(name, "expected approvalID to no longer be pending-awaiting-decision after stop() force-denied it")
+    }
+
+    return pass(name, "approval.resolve 先于 sessions.abort 被调用(调用顺序=\(order)),TurnCompleteEvent.forceResolvedApprovals=[\(approvalID)],turn_complete 先于 session_end")
+}
+
+/// **回归/parity 检查**：没有 pending approval 的普通 stop() 不应该触发任何 `approval.resolve` 调用
+/// （没 stub 该方法时如果真的调用会因为"没有真实连接也没有测试桩"而 `throw
+/// KernelClientError.notConnected`,直接让 stop() 失败——本测试因此隐式覆盖"M3 新逻辑不会在无 pending
+/// approval 时误触发 RPC"这条要求),且该 run 的 `TurnCompleteEvent.forceResolvedApprovals` 保持 nil,
+/// 不因为新增了 M3 逻辑就意外冒出一个空数组或别的值。
+func testStopWithNoPendingApprovalLeavesForceResolvedApprovalsNil() async -> Bool {
+    let name = "M3 (D1 §6.2) stop() with no pending approval: no approval.resolve call, forceResolvedApprovals stays nil"
+    let client = freshClient()
+    let sessionID = "sess-stop-no-pending-approval"
+    let kernelKey = "kernel-key-stop-no-pending-approval"
+    let runID = "run-no-pending-approval-1"
+    let stream = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": ["runId": runID, "sessionKey": kernelKey, "stream": "run_status", "data": [:] as JSONObject] as JSONObject,
+    ])
+    // 故意不 stub "approval.resolve"——如果 stop() 意外调用了它,会因为没有测试桩/真实连接而抛
+    // notConnected,下面的 `try? await stopResult` 会拿到 nil,测试直接 fail。
+    await client.testSupportStubRPC(method: "sessions.abort") { _ in
+        ["ok": true, "abortedRunId": runID, "status": "aborted"] as JSONObject
+    }
+    await client.testSupportStubRPC(method: "sessions.delete") { _ in ["deleted": true] as JSONObject }
+    let handle = testHandle(sessionID: sessionID, kernelKey: kernelKey)
+
+    async let stopResult = client.stop(session: handle)
+    try? await Task.sleep(nanoseconds: 60_000_000)
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": [
+            "runId": runID, "sessionKey": kernelKey, "stream": "lifecycle",
+            "data": ["phase": "end", "status": "cancelled", "aborted": true, "stopReason": "rpc"] as JSONObject,
+            "ts": 1_784_872_100_000,
+        ] as JSONObject,
+    ])
+
+    guard let result = try? await stopResult else {
+        return fail(name, "stop() unexpectedly threw — 若因为误触发 approval.resolve(无 stub) 而抛 notConnected 也会落到这里")
+    }
+    guard result.outcome == .succeeded else { return fail(name, "expected outcome=.succeeded, got \(result.outcome)") }
+
+    let events = await collectUpTo(stream, maxCount: 4)
+    guard events.count == 3, case .operationCompleted = events[0], case .turnComplete(let turn) = events[1] else {
+        return fail(name, "expected 3 events (operation_completed + turn_complete + session_end), got \(events.count)")
+    }
+    guard turn.payload.forceResolvedApprovals == nil else {
+        return fail(name, "expected forceResolvedApprovals == nil when there was no pending approval, got \(turn.payload.forceResolvedApprovals ?? [])")
+    }
+    return pass(name, "无 pending approval 时: 未触发 approval.resolve, forceResolvedApprovals 保持 nil")
+}
+
+// MARK: - NOTE-A（T-049 grok 对抗审复核）：force-deny drain 循环闭合 await 窗口逃逸
+
+/// **修前 fail / 修后 pass**：修前 `forceDenyPendingApprovalsBeforeStop` 只对 pending reqId 取一次
+/// 快照——若某个 approval 在 `approval.resolve` 的 await 窗口内新到（这里用真实的
+/// `agent(stream:"approval")` + `session.approval(phase:"pending")` 两条帧、在 approval-A 的
+/// `approval.resolve` 响应闭包**返回前**同步 feed 给 client，借助 actor 重入性确定性地模拟"drain
+/// 在途"这个窗口，不依赖任何 sleep/时序竞速），会逃过这一轮快照、永远不会被 force-deny，随后
+/// `sessions.abort` 仍会照发——修前这条测试会在"调用顺序断言"处直接 fail（call log 里只有
+/// `approval.resolve:\(approvalA)`，没有 approvalB）。本轮改为 drain-loop：每一轮结束后重新检查该
+/// session 是否有新到的 pending 审批，直到某轮检查为空才允许 `stop()` 继续发 `sessions.abort`——
+/// approvalB 因此在第二轮被同样地 force-deny 并确认，且两次 `approval.resolve` 都先于
+/// `sessions.abort`。
+func testStopForceDeniesLateArrivingApprovalDuringDrainAwaitWindow() async -> Bool {
+    let name = "NOTE-A (T-049) stop() force-deny drain closes await-window escape: approval joined WHILE approval.resolve(A) is in flight is also force-denied before sessions.abort"
+    let client = freshClient()
+    let sessionID = "sess-stop-force-deny-late-arrival"
+    let kernelKey = "kernel-key-stop-force-deny-late-arrival"
+    let runID = "run-force-deny-late-1"
+    let approvalA = "approval-force-deny-late-A"
+    let approvalB = "approval-force-deny-late-B"
+    let toolCallA = "tool-force-deny-late-A"
+    let toolCallB = "tool-force-deny-late-B"
+    let stream = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+    let callLog = CallOrderLog()
+
+    // 1) 先让 approval-A 走完整 M1 双向 join，进入 pending-awaiting-decision 态——这是 force-deny
+    // drain 循环第一轮快照会看到的唯一 reqId。
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": [
+            "runId": runID, "sessionKey": kernelKey, "stream": "approval",
+            "data": ["phase": "requested", "toolCallId": toolCallA, "approvalId": approvalA] as JSONObject,
+            "ts": 1_784_900_000_000,
+        ] as JSONObject,
+    ])
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "session.approval",
+        "payload": [
+            "sessionKey": kernelKey, "updatedAtMs": 1_784_900_000_100, "phase": "pending",
+            "approval": [
+                "id": approvalA, "status": "pending",
+                "presentation": ["kind": "exec", "commandText": "echo late-arrival-A"] as JSONObject,
+                "createdAtMs": 1_784_900_000_100, "expiresAtMs": 1_784_901_800_100,
+            ] as JSONObject,
+        ] as JSONObject,
+    ])
+    guard await client.testSupportHasPendingApprovalAwaitingDecision(reqID: approvalA) else {
+        return fail(name, "expected approvalA to be registered as pending-awaiting-decision before stop()")
+    }
+
+    // 2) approval.resolve 的响应闭包本身是在 forceDenyPendingApprovalsBeforeStop 的 `await
+    // request(...)` 里被调用——这次响应返回之前，借助 actor 重入性直接调用 `testSupportFeedFrame`
+    // 注入 approval-B 的两条真实帧，精确复现 NOTE-A 描述的"drain await 窗口内新到"场景。`reqID ==
+    // approvalA` 这个分支只会命中一次——approvalA 一旦被这次 RPC 处理完就从 pending 表移除，不会
+    // 再出现在后续任何一轮的快照里，因此不需要额外的"只注入一次"标记（避免捕获可变 var 触发 Swift
+    // 6 并发检查）。
+    await client.testSupportStubRPC(method: "approval.resolve") { params in
+        let reqID = (params["id"] as? String) ?? "?"
+        await callLog.record("approval.resolve:\(reqID)")
+        if reqID == approvalA {
+            await client.testSupportFeedFrame([
+                "type": "event", "event": "agent",
+                "payload": [
+                    "runId": runID, "sessionKey": kernelKey, "stream": "approval",
+                    "data": ["phase": "requested", "toolCallId": toolCallB, "approvalId": approvalB] as JSONObject,
+                    "ts": 1_784_900_000_200,
+                ] as JSONObject,
+            ])
+            await client.testSupportFeedFrame([
+                "type": "event", "event": "session.approval",
+                "payload": [
+                    "sessionKey": kernelKey, "updatedAtMs": 1_784_900_000_300, "phase": "pending",
+                    "approval": [
+                        "id": approvalB, "status": "pending",
+                        "presentation": ["kind": "exec", "commandText": "echo late-arrival-B"] as JSONObject,
+                        "createdAtMs": 1_784_900_000_300, "expiresAtMs": 1_784_901_900_300,
+                    ] as JSONObject,
+                ] as JSONObject,
+            ])
+        }
+        return ["applied": true, "approval": ["id": reqID, "status": "denied", "decision": "deny", "reason": "user"] as JSONObject] as JSONObject
+    }
+    await client.testSupportStubRPC(method: "sessions.abort") { _ in
+        await callLog.record("sessions.abort")
+        return ["ok": true, "abortedRunId": runID, "status": "aborted"] as JSONObject
+    }
+    await client.testSupportStubRPC(method: "sessions.delete") { _ in
+        await callLog.record("sessions.delete")
+        return ["deleted": true] as JSONObject
+    }
+    let handle = testHandle(sessionID: sessionID, kernelKey: kernelKey)
+
+    async let stopResult = client.stop(session: handle)
+    try? await Task.sleep(nanoseconds: 60_000_000)
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": [
+            "runId": runID, "sessionKey": kernelKey, "stream": "lifecycle",
+            "data": ["phase": "end", "status": "cancelled", "aborted": true, "stopReason": "rpc"] as JSONObject,
+            "ts": 1_784_900_001_000,
+        ] as JSONObject,
+    ])
+
+    guard let result = try? await stopResult else { return fail(name, "stop() unexpectedly threw") }
+    guard result.outcome == .succeeded else {
+        return fail(name, "expected Promise outcome=.succeeded, got \(result.outcome)")
+    }
+
+    // 3) 核心断言——修前：approvalB 会逃过快照，call log 里永远只有 approvalA 一条 approval.resolve；
+    // 修后：两次 approval.resolve 都先于 sessions.abort。
+    let order = await callLog.entries
+    guard let abortIndex = order.firstIndex(of: "sessions.abort"),
+          let aIndex = order.firstIndex(of: "approval.resolve:\(approvalA)"),
+          let bIndex = order.firstIndex(of: "approval.resolve:\(approvalB)"),
+          aIndex < abortIndex, bIndex < abortIndex
+    else {
+        return fail(name, "expected both approval.resolve(A) and approval.resolve(B) before sessions.abort, got order=\(order) — 修前 approvalB 永远不会出现在这里（逃过 force-deny）")
+    }
+
+    guard await client.testSupportHasPendingApprovalAwaitingDecision(reqID: approvalA) == false else {
+        return fail(name, "expected approvalA to no longer be pending-awaiting-decision after stop()")
+    }
+    guard await client.testSupportHasPendingApprovalAwaitingDecision(reqID: approvalB) == false else {
+        return fail(name, "expected approvalB (late arrival) to no longer be pending-awaiting-decision after stop() — 修前这里会是 true，即 NOTE-A 描述的逃逸")
+    }
+
+    // 4) forceResolvedApprovals 必须同时列出 A 和 B——这是"内核已确认 both denied"的事件流侧证据。
+    let events = await collectUpTo(stream, maxCount: 6)
+    guard events.count == 5 else {
+        return fail(name, "expected 5 events (approvalRequest(A) + approvalRequest(B) + operation_completed + turn_complete + session_end), got \(events.count)")
+    }
+    guard case .approvalRequest(let firstApproval) = events[0], firstApproval.payload.reqID == approvalA else {
+        return fail(name, "expected first event approvalRequest(reqID=\(approvalA))")
+    }
+    guard case .approvalRequest(let secondApproval) = events[1], secondApproval.payload.reqID == approvalB else {
+        return fail(name, "expected second event approvalRequest(reqID=\(approvalB)) — late arrival must still be delivered to the caller before being force-denied")
+    }
+    guard case .operationCompleted(let op) = events[2], op.payload.outcome == .succeeded else {
+        return fail(name, "expected third event operation_completed(succeeded)")
+    }
+    guard case .turnComplete(let turn) = events[3], turn.payload.stopReason == .cancelled else {
+        return fail(name, "expected fourth event turn_complete(cancelled)")
+    }
+    guard let forceResolved = turn.payload.forceResolvedApprovals, Set(forceResolved) == Set([approvalA, approvalB]) else {
+        return fail(name, "expected turn_complete.forceResolvedApprovals to contain both \(approvalA) and \(approvalB), got \(turn.payload.forceResolvedApprovals.map { "\($0)" } ?? "nil") — 修前只有 \(approvalA)，approvalB 逃逸")
+    }
+    guard case .sessionEnd(let end) = events[4], end.payload.reason == .stopped else {
+        return fail(name, "expected fifth event session_end(stopped)")
+    }
+
+    return pass(name, "late-arriving approvalB（在 approval.resolve(A) 的 await 窗口内新到）也被 force-deny，调用顺序=\(order)，forceResolvedApprovals 含两者")
+}
+
+/// **有界性回归**：force-deny drain 循环必须有迭代轮次上限兜底——构造一个"持续不断产生新 pending
+/// 审批"的极端场景（每次 `approval.resolve` 响应返回前都再注入一个新的），把
+/// `testSupportSetForceDenyDrainMaxRounds` 调到很小的值（2），断言 `stop()` 在超过这个上限时**如实
+/// throw**（不是静默截断继续 abort，也不是无限循环挂起），且既有 M3 catch 分支的收尾（锁释放 +
+/// pendingStop 清理 + operation_completed(rejected) 镜像）依然生效——这条新的失败路径不能绕开既有
+/// 收尾逻辑。
+func testStopForceDenyDrainExceedsRoundCapThrowsAndReleasesLock() async -> Bool {
+    let name = "NOTE-A (T-049) stop() force-deny drain exceeding round cap throws honestly (not a silent infinite loop); lock released + pendingStop cleaned"
+    let client = freshClient()
+    let sessionID = "sess-stop-force-deny-drain-cap"
+    let kernelKey = "kernel-key-stop-force-deny-drain-cap"
+    let runID = "run-force-deny-drain-cap-1"
+    _ = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+    await client.testSupportSetForceDenyDrainMaxRounds(2)
+
+    // 用一个 actor 承载"持续产生新 pending 审批"的计数器——避免在 `@Sendable` RPC 响应闭包里捕获
+    // 可变 var（Swift 6 并发检查会拒绝）。
+    actor DrainCapFeeder {
+        let client: OpenclawGatewayKernelClient
+        let sessionID: String
+        let kernelKey: String
+        let runID: String
+        private var counter = 0
+        init(client: OpenclawGatewayKernelClient, sessionID: String, kernelKey: String, runID: String) {
+            self.client = client
+            self.sessionID = sessionID
+            self.kernelKey = kernelKey
+            self.runID = runID
+        }
+        @discardableResult
+        func feedNext() async -> String {
+            counter += 1
+            let approvalID = "approval-drain-cap-\(counter)"
+            let toolCallID = "tool-drain-cap-\(counter)"
+            await client.testSupportFeedFrame([
+                "type": "event", "event": "agent",
+                "payload": [
+                    "runId": runID, "sessionKey": kernelKey, "stream": "approval",
+                    "data": ["phase": "requested", "toolCallId": toolCallID, "approvalId": approvalID] as JSONObject,
+                    "ts": 1_784_900_100_000 + Int64(counter) * 100,
+                ] as JSONObject,
+            ])
+            await client.testSupportFeedFrame([
+                "type": "event", "event": "session.approval",
+                "payload": [
+                    "sessionKey": kernelKey, "updatedAtMs": 1_784_900_100_050 + Int64(counter) * 100, "phase": "pending",
+                    "approval": [
+                        "id": approvalID, "status": "pending",
+                        "presentation": ["kind": "exec", "commandText": "echo drain-cap-\(counter)"] as JSONObject,
+                        "createdAtMs": 1_784_900_100_050, "expiresAtMs": 1_784_901_900_050,
+                    ] as JSONObject,
+                ] as JSONObject,
+            ])
+            return approvalID
+        }
+    }
+    let feeder = DrainCapFeeder(client: client, sessionID: sessionID, kernelKey: kernelKey, runID: runID)
+    _ = await feeder.feedNext() // 种下第一个 pending 审批——stop() 调用前就已存在。
+
+    await client.testSupportStubRPC(method: "approval.resolve") { params in
+        // 每次 approval.resolve 响应返回前都再注入一个新的 pending 审批——模拟"run 持续不断请求
+        // 审批"的极端场景，逼迫 drain 循环一直发现非空快照。
+        await feeder.feedNext()
+        let reqID = (params["id"] as? String) ?? "?"
+        return ["applied": true, "approval": ["id": reqID, "status": "denied", "decision": "deny", "reason": "user"] as JSONObject] as JSONObject
+    }
+    // 故意不 stub sessions.abort/sessions.delete——drain 理应在到达轮次上限时就 throw，压根不会
+    // 发出 sessions.abort；如果它错误地继续往下走，会因为没有 stub 而 notConnected，同样能让下面的
+    // "expected .protocolMismatch" 断言失败，暴露出这条回归本身出了问题。
+    let handle = testHandle(sessionID: sessionID, kernelKey: kernelKey)
+
+    do {
+        _ = try await client.stop(session: handle)
+        return fail(name, "expected stop() to throw once force-deny drain exceeds the round cap, but it returned a result — 未设上限时会在这里静默挂起或无限循环")
+    } catch let error as KernelClientError {
+        guard case .protocolMismatch(let message) = error, message.contains("drain") else {
+            return fail(name, "expected KernelClientError.protocolMismatch mentioning the drain bound, got \(error)")
+        }
+    } catch {
+        return fail(name, "expected KernelClientError.protocolMismatch, got \(error)")
+    }
+
+    guard await client.testSupportLockState(sessionID: sessionID) == "idle" else {
+        return fail(name, "expected session lock released back to idle after drain-cap failure — 不能重蹈 codex 复现的 second-stop session_locked 类锁泄漏")
+    }
+    guard await client.testSupportHasPendingStop(sessionID: sessionID) == false else {
+        return fail(name, "expected pendingStop to be cleaned up after drain-cap failure")
+    }
+
+    return pass(name, "force-deny drain 在持续新到审批下于第 3 轮（上限=2）如实 throw，未静默死循环，session 锁/pendingStop 收尾干净")
+}
+
 /// **修前 fail / 修后 pass**：`sessions.abort` 抛错时上一轮直接向上抛出，`stopInProgress` 锁和
 /// `pendingStops` 条目永远不释放——第二次 stop() 会被误判成"另一个 stop 正在进行"而拒绝
 /// （`session_locked`），即使第一次调用早就已经失败结束（codex 复现：
@@ -1144,6 +1570,10 @@ public func runFrameReplayTests() async -> Bool {
     results.append(await testStopNoActiveRunEmitsOperationCompletedMirror())
     results.append(await testStopTimeoutEmitsOperationCompletedMirror())
     results.append(await testStopDeleteFailureDoesNotContradictAlreadyEmittedOutcome())
+    results.append(await testStopForceDeniesPendingApprovalBeforeAbort())
+    results.append(await testStopWithNoPendingApprovalLeavesForceResolvedApprovalsNil())
+    results.append(await testStopForceDeniesLateArrivingApprovalDuringDrainAwaitWindow())
+    results.append(await testStopForceDenyDrainExceedsRoundCapThrowsAndReleasesLock())
     results.append(await testStopAbortRpcThrowReleasesLockAndEmitsRejectedMirror())
     results.append(await testStopCleansUpAllSessionCaches())
     results.append(await testStopTransportClosedWhileWaitingDoesNotHangAndEmitsMirror())

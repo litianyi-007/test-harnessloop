@@ -102,6 +102,14 @@ namespace KernelClient
             public string? AffectedRunId;
             public bool TerminalEmitted;
             public TaskCompletionSource<StopWaitOutcome>? Waiter;
+            /// <summary>
+            /// D1 §6.2 M3（stop-path 强制 deny rework）：这次 stop() 在发起 sessions.abort 之前、强制
+            /// deny 掉的 reqId 列表——由 <see cref="ForceDenyPendingApprovalsBeforeStopAsync"/> 在
+            /// sessions.abort 之前填好，供 HandleAgentEvent 的 lifecycle(aborted) 分支把它们塞进这个
+            /// run 的 TurnCompleteEvent.ForceResolvedApprovals。空列表（没有 pending approval 需要
+            /// 强制处理）是绝大多数 stop() 调用的常态，不是遗漏。
+            /// </summary>
+            public List<string> ForceResolvedApprovalReqIds = new();
 
             public PendingStop(string operationId, string? affectedRunId)
             {
@@ -114,6 +122,17 @@ namespace KernelClient
 
         /// <summary>M3：测试专用的 stop() 等待超时覆盖（秒）——生产默认 5 秒。</summary>
         private int? _testStopTimeoutSecondsOverride;
+
+        /// <summary>
+        /// NOTE-A（T-049 grok 对抗审复核揪出的中等竞态，本轮修复）：
+        /// <see cref="ForceDenyPendingApprovalsBeforeStopAsync"/> 现在是一个 drain 循环（见该方法文档
+        /// 注释）——每轮结束后重新检查该 session 是否有新到的 pending 审批，直到某轮检查为空才允许
+        /// StopAsync 继续发 sessions.abort。为防止（理论上不该出现，但不能假装不可能）一个持续产生
+        /// 审批请求的 run 让这个循环无限跑下去，加一个迭代轮次上限——生产默认
+        /// <see cref="ForceDenyDrainDefaultMaxRounds"/>，测试用这个覆盖值验证"超过上限如实 throw、不
+        /// 静默死循环"这条路径，不用真的喂 50 轮。`null` 时使用生产默认值。
+        /// </summary>
+        private int? _testForceDenyDrainMaxRoundsOverride;
 
         // MARK: F8 — 三条 sessionEnd 路径（shutdown/transportClosed/stop）共享的去重标记
         private readonly HashSet<string> _sessionTerminalEmitted = new();
@@ -144,6 +163,38 @@ namespace KernelClient
 
         /// <summary>M5：按 approvalId 键控的两张缓存本身不是 per-session 键，session 结束时靠这张反向索引批量清理。</summary>
         private readonly Dictionary<string, HashSet<string>> _approvalIdsBySessionId = new();
+
+        // MARK: M3（D1 §6.2 stop-path 强制 deny）—— approval_request 已经真正产出给调用方之后的
+        // "pending，等待人工决策"态。
+        //
+        // 上面 `_agentApprovalInfoByApprovalId`/`_pendingSessionApprovalByApprovalId` 只是 join 之前
+        // 的临时缓冲区——一旦 join 成功、EmitApprovalRequestIfPossible 把 approvalRequest 真正写进
+        // channel，这两张表的条目就被移除了，不再追踪"这个 reqId 现在处于 pending、还没人给出决策"
+        // 这件事。RespondApprovalAsync() 本轮仍是 TODO 桩，永远不会有真实决策落地，因此这个态一旦
+        // 进入就会一直 pending，直到 stop() 强制介入（D1 §6.2 M3 定序 + §6.3 stop 黑名单批量
+        // deny）——这里新增的这张表是 stop() 用来"知道该 session 名下当前还有哪些审批在 pending"的
+        // 唯一权威来源。OpenclawKind 存真实的 openclaw 侧 kind（"exec"/"plugin"/"system-agent"，不是
+        // D2 收窄后的 KindElement）——见 ForceDenyPendingApprovalsBeforeStopAsync 的文档注释。
+        private sealed class PendingApprovalAwaitingDecision
+        {
+            public readonly string RunId;
+            public readonly string OpenclawKind;
+            public PendingApprovalAwaitingDecision(string runId, string openclawKind) { RunId = runId; OpenclawKind = openclawKind; }
+        }
+        private readonly Dictionary<string, PendingApprovalAwaitingDecision> _pendingApprovalsByReqId = new();
+        /// <summary>反向索引：session 结束时批量清理上面这张表——同款模式，仿 `_approvalIdsBySessionId`（M5）。</summary>
+        private readonly Dictionary<string, HashSet<string>> _pendingApprovalReqIdsBySessionId = new();
+
+        /// <summary>
+        /// NOTE-A（T-049 grok 对抗审复核）：force-deny drain 循环（见
+        /// <see cref="ForceDenyPendingApprovalsBeforeStopAsync"/>）的迭代轮次上限——防御性兜底，不是
+        /// D1 协议要求的具体数值。D1 §9 一 session 一次一个 active run + StopAsync 已经把该 session
+        /// 锁进 StopInProgress（阻塞新 send()，不会有新 run）的前提下，drain 循环每一轮只可能因为
+        /// "仍在这个即将被 abort 的、唯一的 run"持续产生新的审批请求而继续——正常场景一两轮内必然
+        /// 收敛为空；这里选 50 只是给"理论上不该出现但不能假装不可能"的极端场景（比如一个 bug 让某个
+        /// run 疯狂连续请求审批）一个诚实的上限，超限时如实 throw，不是静默死循环。
+        /// </summary>
+        private const int ForceDenyDrainDefaultMaxRounds = 50;
 
         // MARK: Test-only：拦截 RPC（不需要真实 WebSocket 连接）
         private readonly Dictionary<string, Func<JSONObject, Task<JSONObject>>> _testSupportRpcResponders = new();
@@ -396,6 +447,15 @@ namespace KernelClient
 
             try
             {
+                // D1 §6.2 M3（强制定序，rework）：取消当前 run 之前，若该 session 名下存在 pending
+                // 审批，必须先把它们强制 deny 掉、确认内核已接受，才能发起 sessions.abort——见
+                // ForceDenyPendingApprovalsBeforeStopAsync 文档注释。这一步必须在 sessions.abort 之前
+                // 完成，且失败时（RPC 抛错/内核未确认 denied）不能继续往下发 abort——直接落进下面的
+                // catch 统一收尾（锁释放+pendingStop 清理+operation_completed(rejected) 镜像），不能
+                // 假装"反正等会儿再看"。
+                var forceResolvedApprovalReqIds = await ForceDenyPendingApprovalsBeforeStopAsync(session.SessionId);
+                lock (_sync) { if (_pendingStops.TryGetValue(session.SessionId, out var p0)) p0.ForceResolvedApprovalReqIds = forceResolvedApprovalReqIds; }
+
                 var abortResult = await RequestAsync("sessions.abort", new JSONObject { ["key"] = kernelKey });
                 OpenclawWire.PrettyPrint("RECV sessions.abort result", abortResult);
 
@@ -503,6 +563,163 @@ namespace KernelClient
                 }
                 throw;
             }
+        }
+
+        /// <summary>
+        /// D1 §6.2 M3 + §6.3（stop-path 强制 deny，本轮新增）：在 StopAsync 发起 sessions.abort 之前，
+        /// 把该 session 当前所有仍处于 pending 的审批（由 EmitApprovalRequestIfPossible 登记进
+        /// <see cref="_pendingApprovalsByReqId"/>）逐个强制 deny。
+        ///
+        /// <para>
+        /// **openclaw wire grounding（只读参考，未改该文件）**：
+        /// `kernels/openclaw/src/gateway/server-methods/approval.ts` 的 "approval.resolve" handler——
+        /// openclaw 统一的、kind-agnostic 的审批解决 RPC（`packages/sdk/src/client.ts:943`
+        /// `ApprovalsNamespace.Respond` 走的也是这一条，只是 SDK 包了一层 `exec.approval.resolve`
+        /// 别名）。params schema（`packages/gateway-protocol/src/schema/approvals.ts:245`
+        /// `ApprovalResolveParamsSchema`）：`{id, kind, decision}`；成功响应体
+        /// （`ApprovalResolveResultSchema`）：`{applied: bool, approval: {status, ...}}`。**"确认①
+        /// 的 deny 已生效（内核侧确认接受，而非仅适配器本地标记）"由这次 RPC 的 `await` 本身构成**：
+        /// `await RequestAsync(...)` 只有等到 openclaw 真正处理完这条 approval.resolve 请求、回一个
+        /// ok:true 的响应帧之后才会返回；ok:false（HandleIncoming 的 "res" 分支）会被 RequestAsync
+        /// 转成 <see cref="KernelClientException"/>（RpcRejected）抛出——这里不吞掉这个错误，调用方
+        /// （StopAsync）会因此中止、落进它自己的 catch 分支统一收尾，绝不会在没有真正拿到内核确认的
+        /// 情况下继续往下发 sessions.abort（那正是 M3 定序要防止的竞态：deny 还没被内核接受，abort
+        /// 已经发出去了）。拿到 ok:true 响应后，本函数还要求 `approval.status == "denied"`——只有
+        /// 这个字段真的是 "denied" 才算数，见下方检查。
+        /// </para>
+        /// <para>
+        /// approval.resolve 对 id 的路由（`record.kind === "exec" ? execApprovalManager : ...`，见
+        /// `approval.ts:492-518`）本身按**服务端已持久化的 record.kind** 选择 manager，不依赖客户端
+        /// 传的 kind 字段是否精确匹配——传错 kind 只会让服务端把这次决议记成
+        /// `reason:"malformed-verdict"`（applyForcedDeny）而不是 "user"，两者都会落地成
+        /// `status:"denied"`。本函数仍然传本地缓存的真实 OpenclawKind（见
+        /// EmitApprovalRequestIfPossible）——如实转发协议要求的字段，不是"反正传错也能过就随便填"。
+        /// </para>
+        /// <para>
+        /// 返回值是这一批被强制终态化的 reqId 列表，供调用方（StopAsync）塞进该 run
+        /// TurnCompleteEvent.ForceResolvedApprovals（D1 §6.2 M3："步骤①的强制终态化须同步在该 run 的
+        /// TurnCompleteEvent.forceResolvedApprovals 中列出"）。没有任何 pending 审批时直接返回空
+        /// 列表、**不发起任何 RPC**——绝大多数 stop() 调用都会走这条空路径，这也是为什么这个函数不会
+        /// 打破既有的 26 个 frame-replay 测试（它们都没有 stub approval.resolve，真打了这条 RPC 会
+        /// 因为没有测试桩、也没有真实连接而抛 NotConnected）。
+        /// </para>
+        /// <para>
+        /// **NOTE-A（T-049 grok 对抗审复核，本轮修复）drain-loop rework**：上一轮只对 pending reqId
+        /// 取**一次快照**再逐个 await deny——若某个 approval 在这 N 个 approval.resolve RPC 往返组成
+        /// 的 await 窗口内新到（EmitApprovalRequestIfPossible 在锁外 await 期间登记进
+        /// _pendingApprovalReqIdsBySessionId），会逃过本轮快照、仍处于 pending 就被随后的
+        /// sessions.abort 甩下——这正是 D1 §6.2 力保的 exactly-once 想避免的"cancel 已生效、审批还
+        /// pending、内核对即将消失的 run 又异步接受一个人工决策"的变体（与 Swift actor 重入同构，
+        /// 见 T-049 handoff §2b/§4）。
+        /// </para>
+        /// <para>
+        /// **选型：drain-loop（而非 freeze 登记 + deny late arrival）**，与 Swift 侧同一份论证：
+        /// freeze 方向要求 EmitApprovalRequestIfPossible（当前是 HandleAgentEvent/
+        /// HandleSessionApprovalEvent/ConsumeApprovalReplay 这几个纯同步 wire dispatch 方法内部的
+        /// 同步调用）在 StopInProgress 期间对新到的 approval 立即发一次 `await RequestAsync(
+        /// "approval.resolve", ...)`——但这几个 dispatch 方法本身是从 HandleIncoming 同步调用的
+        /// （ReceiveLoopAsync 的热路径），要嵌入一次真正的 RPC await 就必须让它们要么整体变成 async
+        /// （连锁改动 HandleIncoming/ReceiveLoopAsync 的调用形状），要么用 `Task.Run(async () =>
+        /// ...)` fire-and-forget——而后者恰好**重新引入同一类竞态**：StopAsync 完全不知道这个后台
+        /// Task 有没有跑完 deny 就已经继续发 sessions.abort 了，为了堵住这个新洞，还是得让 StopAsync
+        /// 在 abort 前等所有"在途 late-deny"收尾——这就是把 drain-loop 拆成两个协作的地方重新实现一
+        /// 遍，状态更分散、更难论证，且 C# 这边额外要求"锁外调度后台任务 + 事后汇合"不引入新 race，
+        /// 比本函数内部一个单纯的 while 循环更难保证。
+        /// </para>
+        /// <para>
+        /// **有界性论证**（D1 §9：一个 session 同一时刻只有一个 active run；StopAsync 进入
+        /// StopInProgress 早于本方法被调用，SendAsync 在锁不是 Idle 时一律 reject——因此这个 session
+        /// 在整段 drain 期间**不会有新 run 被创建**）：drain 期间还能继续冒出新 pending 审批的唯一
+        /// 来源是"这次 stop() 即将 abort 的、唯一的那个 run"自己的 agent 事件流仍在正常产出
+        /// （sessions.abort 要等 drain 完全收敛成空之后才发出，所以这个 run 在 drain 期间确实还活着、
+        /// 还能请求审批）——正常场景下这类审批请求本就是有限的一个序列，drain 循环每一轮重新快照都会
+        /// 把新到的一并收进下一轮，若干轮内必然收敛为空。为"理论上不该出现但不能假装不可能"的极端
+        /// 场景兜底：加一个迭代轮次上限（<see cref="ForceDenyDrainDefaultMaxRounds"/>/
+        /// <see cref="_testForceDenyDrainMaxRoundsOverride"/>），超限**如实 throw**（不是静默截断、
+        /// 也不是假装 succeeded 继续往下 abort），落进 StopAsync 既有的 catch 分支统一收尾（锁释放 +
+        /// pendingStop 清理 + operation_completed(rejected) 镜像）。
+        /// </para>
+        /// <para>
+        /// **不重蹈 NOTE-1**：drain 循环增加的是"更多轮的 approval.resolve await"，跟 NOTE-1 修的
+        /// "sessions.abort 之后等待 aborted lifecycle 终态"是完全不同的 await 点；若 transport 在
+        /// drain 期间关闭，正在等待中的 approval.resolve TaskCompletionSource 会被 FailAllPending
+        /// 唤醒抛 transport 错误（此时 WaitForPendingStopTerminalAsync 的 waiter 还没登记——那是
+        /// abort **之后**才会 setup 的），错误沿 `await RequestAsync(...)` 向上抛出，直接落进
+        /// StopAsync 的 catch 分支（锁释放、pendingStop 清理），不会有任何新的挂起路径。
+        /// </para>
+        /// <para>
+        /// **正确性要求 + 残留窗口（诚实标注）**：只有当某一轮开始时重新读取的
+        /// _pendingApprovalReqIdsBySessionId[sessionId] 恰好为空，才 break 出循环、把 forceResolved
+        /// 返回给 StopAsync 去发 sessions.abort。C# 没有 Swift actor 那种"两次挂起点之间对同一隔离域
+        /// 原子"的编译器保证——这里改用 `lock (_sync)` 做同一件事：读空快照的那次 `lock` 块结束、方法
+        /// 返回、调用方真正把 sessions.abort 帧写上线之间，理论上仍有一个远小于本方法所修的"N 轮 RPC
+        /// 往返"窗口的残留缝隙（另一个线程上的 HandleIncoming 恰好在这几行同步代码之间登记了一个新
+        /// approval）。这与"abort 已发出、内核尚未真正处理"这类网络延迟本质相同，不是本方法能够或
+        /// 应该负责关闭的范围（两个候选方向都无法免除，见交付报告）。
+        /// </para>
+        /// </summary>
+        private async Task<List<string>> ForceDenyPendingApprovalsBeforeStopAsync(string sessionId)
+        {
+            var forceResolved = new List<string>();
+            var round = 0;
+            int maxRounds;
+            lock (_sync) { maxRounds = _testForceDenyDrainMaxRoundsOverride ?? ForceDenyDrainDefaultMaxRounds; }
+
+            while (true)
+            {
+                List<string> reqIds;
+                lock (_sync)
+                {
+                    reqIds = _pendingApprovalReqIdsBySessionId.TryGetValue(sessionId, out var set) ? set.ToList() : new List<string>();
+                }
+                if (reqIds.Count == 0)
+                {
+                    // 这一刻的快照为空——drain 收敛（残留的极窄锁外窗口见方法文档注释"正确性要求"）。
+                    break;
+                }
+                round += 1;
+                if (round > maxRounds)
+                {
+                    throw new KernelClientException(KernelClientErrorKind.ProtocolMismatch,
+                        $"ForceDenyPendingApprovalsBeforeStopAsync: exceeded {maxRounds} drain round(s) for session {sessionId} " +
+                        $"while still observing {reqIds.Count} newly-arrived pending approval(s) during force-deny — " +
+                        "refusing to loop indefinitely (NOTE-A drain bound)");
+                }
+
+                // 排序只是让每一轮内部"同一 session 存在多个 pending 审批"这种边缘情况下 RPC 发起顺序
+                // 在测试里可预测——不是协议要求的顺序。
+                foreach (var reqId in reqIds.OrderBy(x => x, StringComparer.Ordinal))
+                {
+                    PendingApprovalAwaitingDecision? info;
+                    lock (_sync) { _pendingApprovalsByReqId.TryGetValue(reqId, out info); }
+                    if (info == null) continue;
+
+                    var result = await RequestAsync("approval.resolve", new JSONObject
+                    {
+                        ["id"] = reqId,
+                        ["kind"] = info.OpenclawKind,
+                        ["decision"] = "deny",
+                    });
+                    OpenclawWire.PrettyPrint($"RECV approval.resolve result (M3 stop-path force-deny, drain round {round})", result);
+                    var approvalStatus = OpenclawWire.JsonString(OpenclawWire.JsonObj(result.Get("approval")).Get("status"));
+                    if (approvalStatus != "denied")
+                    {
+                        // 内核没有把这次强制 deny 落地成 denied 终态——如实抛错，不能假装"已确认生效"
+                        // （M3 的核心要求就是"确认"，不是"发了请求就当数"）。RespondApprovalAsync() 本轮
+                        // 仍是 TODO 桩，真实环境里目前没有任何别的路径能在这之前把这个 reqId 变成其它
+                        // 终态，这条防线现阶段只有测试桩能触发。
+                        throw new KernelClientException(KernelClientErrorKind.ProtocolMismatch,
+                            $"approval.resolve did not confirm denied status for reqId {reqId} during stop() force-deny (got status: {approvalStatus ?? "null"})");
+                    }
+                    forceResolved.Add(reqId);
+                    lock (_sync)
+                    {
+                        _pendingApprovalsByReqId.Remove(reqId);
+                        if (_pendingApprovalReqIdsBySessionId.TryGetValue(sessionId, out var set2)) set2.Remove(reqId);
+                    }
+                }
+            }
+            return forceResolved;
         }
 
         /// <summary>M3：为 stop() 不会经过真实 aborted lifecycle 帧的路径补一条 operation_completed 镜像。</summary>
@@ -690,6 +907,15 @@ namespace KernelClient
                     }
                 }
                 _approvalIdsBySessionId.Remove(sessionId);
+
+                // M3：session 结束时同样清掉"已产出、仍在 pending 等待决策"的审批表——不清理的话，
+                // 一个从未被 stop() 强制处理过的孤儿 reqId（例如 session 走 shutdown/transportClosed
+                // 终结，而不是走 stop()）会永久残留在 _pendingApprovalsByReqId 里。
+                if (_pendingApprovalReqIdsBySessionId.TryGetValue(sessionId, out var pendingApprovalReqIds))
+                {
+                    foreach (var reqId in pendingApprovalReqIds) _pendingApprovalsByReqId.Remove(reqId);
+                }
+                _pendingApprovalReqIdsBySessionId.Remove(sessionId);
 
                 // NOTE-1 防御性兜底：任何调用路径都不应该在 pendingStop 仍有存活 Waiter 时直接
                 // Remove——那样等待中的 stop() 永远等不到 resolve（T-047 复现的真挂起 bug）。正常
@@ -1102,10 +1328,16 @@ namespace KernelClient
 
                         if (pendingForRun != null)
                         {
+                            // M3：这次 stop() 在发起 sessions.abort 之前强制 deny 掉的 reqId（如
+                            // 有）——D1 §6.2 M3 要求同步列进这个 run 的
+                            // TurnCompleteEvent.forceResolvedApprovals。
+                            string[]? forceResolvedApprovals = pendingForRun.ForceResolvedApprovalReqIds.Count == 0
+                                ? null : pendingForRun.ForceResolvedApprovalReqIds.ToArray();
                             // F6：单个 operation_completed + turn_complete(cancelled)，用 stop() 铸造的
                             // 唯一 operationId，且对同一次 pendingStop 只做一次。
                             var events = EventMapping.MapOpenclawAgentLifecycleToAbortTerminalEvents(
-                                data, ourSessionId, runId, pendingForRun.OperationId, originTs, cachedUsage, NextSeqForRun);
+                                data, ourSessionId, runId, pendingForRun.OperationId, originTs, cachedUsage,
+                                forceResolvedApprovals, NextSeqForRun);
                             foreach (var e in events) Yield(ourSessionId, e);
                             lock (_sync) { pendingForRun.TerminalEmitted = true; _lastUsageByRunId.Remove(runId); }
                             ResolvePendingStopWaiter(ourSessionId, StopWaitOutcome.TerminalObserved);
@@ -1113,10 +1345,12 @@ namespace KernelClient
                         else if (noOwner)
                         {
                             // 理论上不会出现——interrupt() 本轮未实现。防御性兜底：自己派生一个
-                            // operationId，保持"至少不丢事件"的行为。
+                            // operationId，保持"至少不丢事件"的行为。这条路径没有关联到任何 stop() 的
+                            // pendingStop——不存在"这次 stop() 强制 deny 过谁"的信息可以塞，
+                            // forceResolvedApprovals 如实传 null。
                             var fallbackOperationId = $"{ourSessionId}-abort-{runId}-unowned";
                             var events = EventMapping.MapOpenclawAgentLifecycleToAbortTerminalEvents(
-                                data, ourSessionId, runId, fallbackOperationId, originTs, cachedUsage, NextSeqForRun);
+                                data, ourSessionId, runId, fallbackOperationId, originTs, cachedUsage, null, NextSeqForRun);
                             foreach (var e in events) Yield(ourSessionId, e);
                             lock (_sync) { _lastUsageByRunId.Remove(runId); }
                         }
@@ -1124,7 +1358,24 @@ namespace KernelClient
                     }
                     else
                     {
-                        var evt = EventMapping.MapOpenclawAgentLifecycleToTurnComplete(data, ourSessionId, runId, originTs, cachedUsage, NextSeqForRun);
+                        // M3：极罕见竞态——force-deny 已经生效、sessions.abort 尚未真正让这个 run 落地
+                        // aborted 状态之前，run 自己先自然完成（这条 lifecycle 帧走的是 aborted:false
+                        // 分支）。即便如此，仍要把已经强制 deny 掉的 reqId 挂到这条 TurnCompleteEvent
+                        // 上——不能因为走的是"正常结束"分支就丢失这个信息（D1 §6.2 M3 只要求"该 run 的
+                        // TurnCompleteEvent"带上 forceResolvedApprovals，没有区分它是从 aborted 分支
+                        // 还是正常分支产出的）。
+                        string[]? forceResolvedApprovals = null;
+                        lock (_sync)
+                        {
+                            if (_pendingStops.TryGetValue(ourSessionId, out var pendingForNormalCompletion) &&
+                                pendingForNormalCompletion.AffectedRunId == runId &&
+                                pendingForNormalCompletion.ForceResolvedApprovalReqIds.Count > 0)
+                            {
+                                forceResolvedApprovals = pendingForNormalCompletion.ForceResolvedApprovalReqIds.ToArray();
+                            }
+                        }
+                        var evt = EventMapping.MapOpenclawAgentLifecycleToTurnComplete(
+                            data, ourSessionId, runId, originTs, cachedUsage, forceResolvedApprovals, NextSeqForRun);
                         Yield(ourSessionId, evt);
                         lock (_sync) { _lastUsageByRunId.Remove(runId); }
                     }
@@ -1180,7 +1431,28 @@ namespace KernelClient
             lock (_sync) { hasChannel = _eventChannels.ContainsKey(ourSessionId); }
             if (!hasChannel) return;
             var evt = EventMapping.MapOpenclawSessionApprovalToKernelEvent(payload, ourSessionId, runId, toolCallId, () => NextSeq(runId, ourSessionId));
-            if (evt != null) Yield(ourSessionId, evt);
+            if (evt == null) return;
+
+            // M3（D1 §6.2 stop-path 强制 deny）：approvalRequest 真正产出的这一刻，这个 reqId 进入
+            // "pending，等待决策"态——RespondApprovalAsync() 本轮仍是 TODO 桩，唯一会消费这个态的是
+            // StopAsync 的强制 deny 序列（见 _pendingApprovalsByReqId 的文档注释）。OpenclawKind 取
+            // 这条 session.approval payload 自己的 approval.presentation.kind（真实值，不是 D2 收窄
+            // 后的 KindElement），缺失时兜底 "exec"（openclaw 现场样本里唯一验证过的取值）。
+            if (evt is ApprovalRequestEventMessageCase approvalRequestCase)
+            {
+                var reqId = approvalRequestCase.Value.Payload.ReqId;
+                var approvalObj = OpenclawWire.JsonObj(payload.Get("approval")) ?? new JSONObject();
+                var presentation = OpenclawWire.JsonObj(approvalObj.Get("presentation")) ?? new JSONObject();
+                var openclawKind = OpenclawWire.JsonString(presentation.Get("kind")) ?? "exec";
+                lock (_sync)
+                {
+                    _pendingApprovalsByReqId[reqId] = new PendingApprovalAwaitingDecision(runId, openclawKind);
+                    if (!_pendingApprovalReqIdsBySessionId.TryGetValue(ourSessionId, out var set))
+                        _pendingApprovalReqIdsBySessionId[ourSessionId] = set = new HashSet<string>();
+                    set.Add(reqId);
+                }
+            }
+            Yield(ourSessionId, evt);
         }
 
         /// <summary>M1：消费 sessions.messages.subscribe 响应里的 approvalReplay.approvals。</summary>
@@ -1269,6 +1541,17 @@ namespace KernelClient
             lock (_sync) { return _agentApprovalInfoByApprovalId.ContainsKey(approvalId) || _pendingSessionApprovalByApprovalId.ContainsKey(approvalId); }
         }
 
+        /// <summary>
+        /// M3（D1 §6.2 stop-path 强制 deny 新增）：读取某个 reqId 当前是否仍处于"approval_request 已经
+        /// 产出、RespondApprovalAsync() 尚未落地"的 pending 态——用于验证 stop() 的强制 deny 序列确实把
+        /// 这个 reqId 从 pending 转成了终态（ForceDenyPendingApprovalsBeforeStopAsync 成功后会把它从
+        /// 这张表移除）。
+        /// </summary>
+        public bool TestSupportHasPendingApprovalAwaitingDecision(string reqId)
+        {
+            lock (_sync) { return _pendingApprovalsByReqId.ContainsKey(reqId); }
+        }
+
         public void TestSupportStubRpc(string method, Func<JSONObject, Task<JSONObject>> responder)
         {
             lock (_sync) { _testSupportRpcResponders[method] = responder; }
@@ -1277,6 +1560,15 @@ namespace KernelClient
         public void TestSupportSetStopTimeoutSeconds(int seconds)
         {
             lock (_sync) { _testStopTimeoutSecondsOverride = seconds; }
+        }
+
+        /// <summary>
+        /// NOTE-A：缩短 force-deny drain 循环的迭代轮次上限（生产默认 50），供"超过上限如实 throw、
+        /// 不静默死循环"这条路径的测试使用，不用真的喂 50 轮 late-arrival 才能触发。
+        /// </summary>
+        public void TestSupportSetForceDenyDrainMaxRounds(int rounds)
+        {
+            lock (_sync) { _testForceDenyDrainMaxRoundsOverride = rounds; }
         }
 
         /// <summary>M6：直接触发 HandleTransportClosed（真实 WS 断开时 ReceiveLoopAsync 走的同一条路径）。</summary>
