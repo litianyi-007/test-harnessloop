@@ -1,0 +1,36 @@
+.harnessloop/state/current.md
+  0000019f9319033e 1-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "d78fc4a5db3a72ccdb26328680010e5785bc4009",
+  "prompts": {
+    "s_e266eff853151b::t_4763747163f16a": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1784879317456538000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019f9319033e": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-4-8",
+        "id": "ai-thread-claude-claude-opus-4-8-1784879317822"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 16,
+      "total_deletions": 0,
+      "accepted_lines": 16,
+      "overriden_lines": 0
+    }
+  }
+}
