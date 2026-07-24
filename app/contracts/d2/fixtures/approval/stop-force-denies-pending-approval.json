@@ -1,13 +1,13 @@
 {
   "name": "stop-force-denies-pending-approval",
-  "description": "审批五态 FSM 之 FORCE_DENIED_ON_STOP（本轮新增能力，T-048 REWORK「新增能力」一节）：D1 §6.2 M3 要求 stop() 在发起 sessions.abort 之前，若该 session/run 仍有 pending 审批，必须先把它强制 deny 掉、确认内核已接受，才能继续中止 run；同一 reqId 须出现在该 run 的 TurnCompleteEvent.forceResolvedApprovals。approval/OPEN.md 此前记录『真实 stop() 完全没有实现这一步骤』的一致性缺口——本轮 SG-5 已补上该补丁（复用 openclaw 统一 approval.resolve RPC），approval/OPEN.md 对应段落已同步更正，本 fixture 是该能力落地后的金标 parity 覆盖。timeline：createSession -> subscribe -> send()（产生 run-1）-> 内核推送一次审批请求（PENDING）-> stop()（真实驱动 `forceDenyPendingApprovalsBeforeStop`：先对 pending 的 reqId 发 `approval.resolve`(deny) 并等待内核确认，再发 `sessions.abort`）-> aborted lifecycle 帧唤醒等待终态 -> 断言 TurnCompleteEvent.forceResolvedApprovals 含这个 reqId。swift-runner 通过在 `stop` client_call 分支为 `approval.resolve` 注册一个默认『内核已确认 denied』的背景桩（对没有 pending 审批的其余 fixture 是安全的 no-op，因为 `forceDenyPendingApprovalsBeforeStop` 在空列表上提前返回、根本不会发起该 RPC）驱动真实 `stop()` 方法体本身完整走一遍这条新分支。",
+  "description": "审批五态 FSM 之 FORCE_DENIED_ON_STOP（本轮新增能力，T-048 REWORK「新增能力」一节）：D1 §6.2 M3 要求 stop() 在发起 sessions.abort 之前，若该 session/run 仍有 pending 审批，必须先把它强制 deny 掉、确认内核已接受，才能继续中止 run；同一 reqId 须出现在该 run 的 TurnCompleteEvent.forceResolvedApprovals。approval/OPEN.md 此前记录『真实 stop() 完全没有实现这一步骤』的一致性缺口——本轮 SG-5 已补上该补丁（复用 openclaw 统一 approval.resolve RPC），approval/OPEN.md 对应段落已同步更正，本 fixture 是该能力落地后的金标 parity 覆盖。timeline：createSession -> subscribe -> send()（产生 run-1）-> 内核推送一次审批请求（PENDING）-> stop()（真实驱动 `forceDenyPendingApprovalsBeforeStop`：先对 pending 的 reqId 发 `approval.resolve`(deny) 并等待内核确认，再发 `sessions.abort`）-> aborted lifecycle 帧唤醒等待终态 -> 断言 TurnCompleteEvent.forceResolvedApprovals 含这个 reqId。swift-runner 通过在 `stop` client_call 分支为 `approval.resolve` 注册一个默认『内核已确认 denied』的背景桩（对没有 pending 审批的其余 fixture 是安全的 no-op，因为 `forceDenyPendingApprovalsBeforeStop` 在空列表上提前返回、根本不会发起该 RPC）驱动真实 `stop()` 方法体本身完整走一遍这条新分支。**T-050 REWORK #1/#2/#3（confirming 再审 MUST-FIX 收残）**：(1) `send1`/`stop1` 的 `expect_outbound` pattern 补上 `payload.text`/`sessionId` 深度断言，swift-runner 侧从真实捕获的原生 RPC params 规范化而来，不是 fixture 声明值；(2) ts-runner 的 `MockKernelClient` 不再把这里声明的 `forceResolvedApprovals` 原样转发——`call()` 处理 'stop' 时独立对本地 `approvalState` 执行 force-deny、自己算出被强制 deny 的 reqId 列表，`evt.turn_complete` 转发时用这份自算列表覆盖 payload（此前是纯回显，T-050 confirming 再审判定 TS parity 在这里空转）；(3) 新增 `expected.nativeCallOrder` 断言 `approval.resolve` 先于 `sessions.abort`——两端各自独立记录（swift-runner 在真实 native RPC stub 被调用的那一刻 append；ts-runner 在 `call()` 的代码顺序里 push），此前只注册了背景 stub、从未暴露给任何断言，若实现回归成先 abort 后 resolve 不会被抓到，现在会。",
   "timeline": [
     { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
     { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
     { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
     { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
     { "t": 15, "op": "client_call", "id": "send1", "call": "send", "args": { "kind": "text", "text": "run with a pending approval" } },
-    { "t": 15, "op": "expect_outbound", "matches": "send1", "pattern": { "type": "req.send" } },
+    { "t": 15, "op": "expect_outbound", "matches": "send1", "pattern": { "type": "req.send", "payload": { "text": "run with a pending approval" } } },
     { "t": 20, "op": "mock_response", "replyTo": "send1", "message": { "type": "res.send", "result": { "runId": "run-1" } } },
     {
       "t": 25,
@@ -28,7 +28,8 @@
     },
     { "t": 30, "op": "assert_state", "expected": { "approvalState": { "req-force-deny-1": "pending" } } },
     { "t": 35, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },
-    { "t": 35, "op": "expect_outbound", "matches": "stop1", "pattern": { "type": "req.stop" } },
+    { "t": 35, "op": "expect_outbound", "matches": "stop1", "pattern": { "type": "req.stop", "sessionId": "session-1" } },
+    { "t": 36, "op": "assert_state", "expected": { "nativeCallOrder": ["approval.resolve", "sessions.abort"] } },
     { "t": 40, "op": "mock_response", "replyTo": "stop1", "message": { "type": "res.stop", "result": { "operationId": "op-placeholder", "outcome": "succeeded" } } },
     { "t": 45, "op": "mock_event", "message": { "type": "evt.turn_complete", "sessionId": "session-1", "runId": "run-1", "payload": { "stopReason": "cancelled", "forceResolvedApprovals": ["req-force-deny-1"] } } },
     { "t": 55, "op": "assert_state", "expected": { "sessionLock": "idle" } }
@@ -36,6 +37,7 @@
   "expected": {
     "pendingOperations": { "stop1": "succeeded" },
     "sessionLock": "idle",
+    "nativeCallOrder": ["approval.resolve", "sessions.abort"],
     "observedEvents": [
       { "type": "evt.approval_request", "payload": { "reqId": "req-force-deny-1", "toolCallId": "tool-force-deny-1", "kind": "exec" } },
       { "type": "evt.operation_completed", "payload": { "outcome": "succeeded", "operationKind": "stop", "affectedRunId": "run-1" } },

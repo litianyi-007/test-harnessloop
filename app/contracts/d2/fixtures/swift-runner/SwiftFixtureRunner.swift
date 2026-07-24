@@ -33,25 +33,40 @@
 //   `throw .notImplemented`，没有任何 RPC/wire 交互可翻译。任何 timeline 用到这三个方法的 fixture，
 //   本 runner 在执行前就静态扫描发现并标记 DEGRADED（跳过，不计入 PASS/FAIL），见
 //   `degradeReason(for:)`。
-// - `expect_outbound`（T-048 REWORK #4 收残）：先校验『真实 client 是否调用了这个 D2 方法对应的
-//   正确 openclaw RPC 方法名』（`expectOutboundMethodTable`，真实 client 的 outbound wire 从来
-//   就不是 D2 req.* 形状，这一步是翻译诚实能保证的最基础粒度），方法名匹配后再对一个『规范化请求』
-//   （`type` + 可选 `sessionId` + `payload`）做与 `ts-runner/runner.ts` 的 `partialMatch` 等价的
-//   完整子集深度匹配——不再像上一轮那样只查方法名、把 pattern 里其余字段全部丢弃。规范化请求的
-//   `payload` 直接是这次 `client_call` 的原始 `args`（真实传给了 KernelPort 方法本身，如实反映）；
-//   `sessionId` 用 `declaredSessionID`（下面这条单独说明），不是真实 client 内部铸造的随机
-//   `SessionHandle.sessionID`。
+// - `expect_outbound`（T-048 REWORK #4 收残；**T-050 REWORK #1 治根**）：先校验『真实 client 是否
+//   调用了这个 D2 方法对应的正确 openclaw RPC 方法名』（`expectOutboundMethodTable`，真实 client 的
+//   outbound wire 从来就不是 D2 req.* 形状，这一步是翻译诚实能保证的最基础粒度），方法名匹配后再对
+//   一个『规范化请求』（`type` + 可选 `sessionId` + `payload`）做与 `ts-runner/runner.ts` 的
+//   `partialMatch` 等价的完整子集深度匹配。**T-048 REWORK #4 曾经的残留问题**：那一轮虽然调了完整
+//   `partialMatch`，但被匹配的『规范化请求』其实是把 timeline 的 `args` 原样放回 `payload` + 把
+//   `sessionId` 直接取 `declaredSessionID`（fixture 声明值）——`params`（真实 client 调用
+//   `testSupportStubRPC` 时同步传入的原生 RPC 参数）虽然存进了 `capturedOutbound`，却从没有代码读
+//   它做字段映射，等于『只验证了方法名，pattern 其余字段验证的是 fixture 自己声明的东西』，真实
+//   client 把 `sessions.send.params.message`/`sessions.messages.subscribe.params.key`/
+//   `sessions.abort.params.key` 发错也不会被抓到。**本轮改法**：`normalizeNativeParams` 直接从
+//   `capturedParams(for:)`（真实捕获的原生 `params`，而不是 fixture 的 `args`）规范化——
+//   `sessionId` 通过反查『哪个已声明 session 拥有这个原生 `key`』得到（`kernelKeyToDeclaredSessionID`，
+//   在 `res.createSession` 处理时登记），查不到就显式置 `NSNull()`，不 fallback 回
+//   fixture 声明值；`payload` 是 `params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后的
+//   剩余字段，`send` 一项把原生 `message` 反向映射回 D1 `Input.text` 概念（仅覆盖 Stage A 用到的
+//   `kind:"text"` 场景）以便与 TS 端可比较，其余字段原样保留原生字段名，不臆造新映射。这样真实
+//   client 把这几个字段发错，`expect_outbound` 才会真的 FAIL——不再是『调了 partialMatch 但验证的
+//   还是自己声明的东西』这种表面绕过。
 // - `sessionId`/`operationId` 是真实 client 内部铸造的随机 UUID（`createSession()`/`stop()`
 //   各自 `UUID().uuidString`），fixture 无法预先声明字面值——本 runner 因此不断言真实 client 内部
 //   状态查询（`testSupportLockState` 等）之外场景下这两个字段的具体取值。`pendingOperations` 改用
-//   dsl.ts 注释里明确允许的『client_call 的 id』做键（不是内部 operationId）。`expect_outbound` 的
-//   规范化请求改用 `declaredSessionID`——即 fixture 自己在 `res.createSession` mock_response 里
-//   声明过的 `sessionHandle.sessionId`（如 "session-1"），不是真实随机 UUID：这是 runner 自己的
-//   记账值，只用于校验『同一 fixture 内前后请求引用的是同一个已声明会话』这条内部一致性，不代表
-//   真实 client 内部真的用这个字符串做寻址（它用的是 kernelKey，见 `kernelKeyBySessionID`）。
-//   `runId` 例外：它是 openclaw RPC 响应里的纯透传字段，翻译层完全掌控其内容，因此 fixture 可以
-//   放心声明字面 runId 并让它真实流过整条链路，`ctx.currentRunIDValue` 也因此可以直接拿来判定
-//   『stop() 发起时是否存在 active run』（见下一条）。
+//   dsl.ts 注释里明确允许的『client_call 的 id』做键（不是内部 operationId）。`runId` 例外：它是
+//   openclaw RPC 响应里的纯透传字段，翻译层完全掌控其内容，因此 fixture 可以放心声明字面 runId 并
+//   让它真实流过整条链路，`ctx.currentRunIDValue` 也因此可以直接拿来判定『stop() 发起时是否存在
+//   active run』（见下一条）。
+// - `nativeCallOrder`（**T-050 REWORK #3 新增**）：`stop-force-denies-pending-approval.json` 此前
+//   只断言 `req.stop` 本身，`approval.resolve` 只注册了一个立即成功的背景 stub、从未被记录或暴露给
+//   任何断言——若真实 `stop()` 回归成先 `sessions.abort` 再 `approval.resolve`（D1 §6.2 M3 定序
+//   要求的反面），该 fixture 当时不会 FAIL。本轮在 `RunnerContext` 上加一个 `nativeCallOrder: [String]`
+//   ——在 `approval.resolve`/`sessions.abort` 两个 stub 闭包**真正被真实 client 调用的那一刻**
+//   （不是 stub 注册的时刻）各自 append 一次，随 `snapshot()` 暴露给 `expected.nativeCallOrder`
+//   断言。这忠实反映真实调用顺序：`request(method:params:)` 对已注册的 stub 是同步直接调用
+//   responder（见 `OpenclawGatewayKernelClient.swift`），不是『谁先注册谁先跑』。
 // - `mock_response(stop)`/`mock_event(evt.turn_complete)` 不再依赖 fixture 里任何非 D2 私有提示
 //   字段（T-048 REWORK #1 收残：删除了 `_openclawAbortAck`/`_openclawLifecycle`）——sessions.abort
 //   原生 ack 该携带的 `abortedRunId`/`status`，从『此前是否有一个 send() 已经真实 resolve 出一个
@@ -186,12 +201,14 @@ actor RunnerContext {
     var currentKernelKey: String?
     var currentRunID: String?
 
-    /// fixture 自己在 `res.createSession` mock_response 里声明过的 `sessionHandle.sessionId`
-    /// （如 "session-1"）——**不是**真实 client 内部铸造的随机 `SessionHandle.sessionID`（那个是
-    /// `currentSessionID`，真实状态查询如 `testSupportLockState` 必须用它）。只用于
-    /// `expect_outbound` 规范化请求里的 `sessionId` 字段，校验『同一 fixture 内前后请求引用同一个
-    /// 已声明会话』这条内部一致性（T-048 REWORK #4）。
-    var declaredSessionID: String?
+    /// 原生 `kernelKey` → fixture 在 `res.createSession` 里声明过的 `sessionHandle.sessionId`
+    /// （如 "session-1"）——**T-050 REWORK #1**：取代旧版 `declaredSessionID`（单值、被
+    /// `expect_outbound` 直接当作『真实发出的 sessionId』使用，与真实捕获到的原生 `params.key`
+    /// 完全无关，是 T-048 REWORK #4 残留的表面绕过）。本表在 `res.createSession` 处理时登记，供
+    /// `normalizeNativeParams` 从**真实捕获的原生 `key`** 反查『这把 key 对应哪个已声明 session』，
+    /// 查不到就不 fallback——让真实 client 把 `key` 发错时 `expect_outbound` 的 `sessionId` 断言
+    /// 真的失败。
+    var kernelKeyToDeclaredSessionID: [String: String] = [:]
 
     /// 当前是否有一个 `stop()` client_call 正在等待 SG-5 内部终态确认（`hasStopWaitingForTerminal`
     /// 为 true 期间）——记录是*哪一个* client_call id，供 `advance_clock`/`disconnect` 轮询
@@ -200,10 +217,18 @@ actor RunnerContext {
 
     var callKindByID: [String: String] = [:]
     var replyGates: [String: ReplyGate] = [:]
-    /// `normalizedRequest`：T-048 REWORK #4 新增——`expect_outbound` 用于完整 pattern 匹配的规范化
-    /// 请求（`type` + 可选 `sessionId` + `payload`），在 stub 闭包捕获真实 outbound 的同一时刻构造，
-    /// 见 `performClientCall`。
-    var capturedOutbound: [String: (method: String, params: JSONObject, normalizedRequest: [String: Any])] = [:]
+    /// 真实捕获到的原生 RPC 调用——`(method, params)`，`params` 是 `testSupportStubRPC` 闭包收到的
+    /// 原始入参（真实 client 同步传入，不是 fixture 声明值）。**T-050 REWORK #1**：不再在捕获时就
+    /// 顺手构造一份『规范化请求』（那份构造用的是 timeline 的 `args`，等于验证 fixture 自己声明的
+    /// 东西）——规范化改成 `checkExpectOutbound` 需要断言时才从这里的原始 `params` 现算
+    /// （`normalizeNativeParams`），保证断言对象是真实发出的东西。
+    var capturedOutbound: [String: (method: String, params: JSONObject)] = [:]
+
+    /// 真实原生 RPC 调用顺序——只登记 Stage A 需要断言顺序的这几个特定调用（目前只有
+    /// `approval.resolve`/`sessions.abort`，`stop-force-denies-pending-approval.json` 用它断言
+    /// D1 §6.2 M3 定序，T-050 REWORK #3 新增），不是完整调用日志。在 stub 闭包**真正被调用的那一刻**
+    /// （不是注册的时刻）append，因此忠实反映真实 client 的调用顺序。
+    var nativeCallOrder: [String] = []
 
     /// `client_call` 的 id → OperationOutcome（interrupt/stop 铸造的 operation 通道）——dsl.ts 明确
     /// 允许键是『operationId 或 client_call 的 id』，本 runner 一律用后者（真实 operationId 是运行时
@@ -221,28 +246,42 @@ actor RunnerContext {
         self.client = client
     }
 
-    func recordOutbound(id: String, method: String, params: JSONObject, normalizedRequest: [String: Any]) {
-        capturedOutbound[id] = (method, params, normalizedRequest)
+    func recordOutbound(id: String, method: String, params: JSONObject) {
+        capturedOutbound[id] = (method, params)
     }
 
     func capturedOutboundMethod(for id: String) -> String? {
         capturedOutbound[id]?.method
     }
 
-    func capturedNormalizedRequest(for id: String) -> [String: Any]? {
-        capturedOutbound[id]?.normalizedRequest
+    func capturedParams(for id: String) -> JSONObject? {
+        capturedOutbound[id]?.params
+    }
+
+    /// `res.createSession` 处理时登记——见 `kernelKeyToDeclaredSessionID` 文档注释。
+    func registerDeclaredSession(kernelKey: String, sessionID: String) {
+        kernelKeyToDeclaredSessionID[kernelKey] = sessionID
+    }
+
+    /// 从真实捕获的原生 `key` 反查已声明 session——查不到返回 nil（调用方据此显式置 `NSNull()`，
+    /// 不 fallback，见 `normalizeNativeParams`）。
+    func declaredSessionID(forKernelKey key: String) -> String? {
+        kernelKeyToDeclaredSessionID[key]
+    }
+
+    /// 见 `nativeCallOrder` 文档注释——在真实调用发生的那一刻 append。
+    func appendNativeCall(_ name: String) {
+        nativeCallOrder.append(name)
     }
 
     func gate(for id: String) -> ReplyGate? { replyGates[id] }
     func callKind(for id: String) -> String? { callKindByID[id] }
     func setCurrentKernelKey(_ key: String) { currentKernelKey = key }
-    func setDeclaredSessionID(_ id: String) { declaredSessionID = id }
     func setHasStopWaitingForTerminal(_ value: Bool) { hasStopWaitingForTerminal = value }
     func setWaitingStopCallID(_ id: String?) { waitingStopCallID = id }
     var hasStopWaitingForTerminalValue: Bool { hasStopWaitingForTerminal }
     var currentKernelKeyValue: String? { currentKernelKey }
     var currentRunIDValue: String? { currentRunID }
-    var declaredSessionIDValue: String? { declaredSessionID }
     var waitingStopCallIDValue: String? { waitingStopCallID }
 
     /// T-048 REWORK #5：`advance_clock`/`disconnect` 用来判定『这次 stop() 的最终结果是否已经
@@ -357,7 +396,12 @@ actor RunnerContext {
                 }
                 guard let event = next else { break }
                 let entry = eventToObservedEntry(event)
-                await self.appendEvent(entry)
+                // T-050 REWORK（附带修复 codex 提的 warning）：`Task { ... }` 在 `startDraining`
+                // （`RunnerContext` 的一个 actor-isolated 方法）内部创建，闭包继承同一 actor 隔离——
+                // `self.appendEvent` 因此是同一 actor 内的直接调用，不跨隔离域，没有真实挂起点，
+                // 不需要 `await`（编译器警告『no async operations occur within await expression』
+                // 正是这个意思，不是别的隐患）。
+                self.appendEvent(entry)
             }
         }
         pendingTasks.append(task)
@@ -369,6 +413,9 @@ actor RunnerContext {
         out["callOutcomes"] = callOutcomes
         out["approvalState"] = approvalState
         out["observedEvents"] = drainedEvents
+        // T-050 REWORK #3：暴露给 `expected.nativeCallOrder` 断言（目前只有
+        // stop-force-denies-pending-approval.json 用它防 force-deny/abort 顺序回归）。
+        out["nativeCallOrder"] = nativeCallOrder
         return out
     }
 
@@ -400,8 +447,10 @@ func performClientCall(_ op: TimelineOp, ctx: RunnerContext) async throws {
         let gate = ReplyGate()
         await ctx.setGate(id: id, gate: gate)
         await client.testSupportStubRPC(method: "sessions.create") { params in
-            let normalized: [String: Any] = ["type": "req.createSession", "payload": argsAny]
-            await ctx.recordOutbound(id: id, method: "sessions.create", params: params, normalizedRequest: normalized)
+            // T-050 REWORK #1：只记录真实捕获的原生 params——不再在这里顺手拼一份『规范化请求』
+            // （那份是从 timeline 的 `argsAny` 抄的，等于验证 fixture 自己声明的东西）。规范化留给
+            // `checkExpectOutbound` 断言时从这份原始 params 现算（`normalizeNativeParams`）。
+            await ctx.recordOutbound(id: id, method: "sessions.create", params: params)
             return try await gate.wait()
         }
         let task = Task<Void, Never> {
@@ -422,9 +471,7 @@ func performClientCall(_ op: TimelineOp, ctx: RunnerContext) async throws {
         let gate = ReplyGate()
         await ctx.setGate(id: id, gate: gate)
         await client.testSupportStubRPC(method: "sessions.send") { params in
-            var normalized: [String: Any] = ["type": "req.send", "payload": argsAny]
-            if let sessionID = await ctx.declaredSessionIDValue { normalized["sessionId"] = sessionID }
-            await ctx.recordOutbound(id: id, method: "sessions.send", params: params, normalizedRequest: normalized)
+            await ctx.recordOutbound(id: id, method: "sessions.send", params: params)
             return try await gate.wait()
         }
         let task = Task<Void, Never> {
@@ -451,9 +498,7 @@ func performClientCall(_ op: TimelineOp, ctx: RunnerContext) async throws {
         let gate = ReplyGate()
         await ctx.setGate(id: id, gate: gate)
         await client.testSupportStubRPC(method: "sessions.messages.subscribe") { params in
-            var normalized: [String: Any] = ["type": "req.subscribe", "payload": argsAny]
-            if let sessionID = await ctx.declaredSessionIDValue { normalized["sessionId"] = sessionID }
-            await ctx.recordOutbound(id: id, method: "sessions.messages.subscribe", params: params, normalizedRequest: normalized)
+            await ctx.recordOutbound(id: id, method: "sessions.messages.subscribe", params: params)
             do {
                 let json = try await gate.wait()
                 await ctx.setCallOutcomeResolved(id: id)
@@ -473,9 +518,15 @@ func performClientCall(_ op: TimelineOp, ctx: RunnerContext) async throws {
         let gate = ReplyGate()
         await ctx.setGate(id: id, gate: gate)
         await client.testSupportStubRPC(method: "sessions.abort") { params in
-            var normalized: [String: Any] = ["type": "req.stop", "payload": argsAny]
-            if let sessionID = await ctx.declaredSessionIDValue { normalized["sessionId"] = sessionID }
-            await ctx.recordOutbound(id: id, method: "sessions.abort", params: params, normalizedRequest: normalized)
+            // T-050 REWORK #3：append 发生在这条 stub **真正被真实 client 调用**的这一刻——不是
+            // stub 注册的时刻——所以 `nativeCallOrder` 里 "sessions.abort" 相对 "approval.resolve"
+            // 的先后顺序，反映的是真实 `stop()` 方法体里两个 `request(...)` 调用的真实先后顺序
+            // （见 `OpenclawGatewayKernelClient.stop()`：`forceDenyPendingApprovalsBeforeStop` 内部
+            // 的 `request(method:"approval.resolve",...)` 早于随后的
+            // `request(method:"sessions.abort",...)`），不是本文件两行 `testSupportStubRPC` 的
+            // 书写顺序（那只是注册顺序，与调用顺序无关）。
+            await ctx.appendNativeCall("sessions.abort")
+            await ctx.recordOutbound(id: id, method: "sessions.abort", params: params)
             return try await gate.wait()
         }
         await client.testSupportStubRPC(method: "sessions.delete") { _ in ["deleted": true] }
@@ -487,7 +538,12 @@ func performClientCall(_ op: TimelineOp, ctx: RunnerContext) async throws {
         // 列表上提前返回、根本不会发起这条 RPC（这条 stub 是安全的默认背景桩，不影响其余 fixture）；
         // 只有 `approval/stop-force-denies-pending-approval.json` 会真正命中。
         await client.testSupportStubRPC(method: "approval.resolve") { _ in
-            ["applied": true, "approval": ["status": "denied"]]
+            // T-050 REWORK #3：同上，append 在真实调用发生的这一刻——若 `forceDenyPendingApprovalsBeforeStop`
+            // 回归成在 `sessions.abort` 之后才调用（或压根不调用），`nativeCallOrder` 就不会是
+            // `["approval.resolve", "sessions.abort"]`，`stop-force-denies-pending-approval.json`
+            // 的 `expected.nativeCallOrder` 断言会真的 FAIL。
+            await ctx.appendNativeCall("approval.resolve")
+            return ["applied": true, "approval": ["status": "denied"]]
         }
         let eventsCountAtStart = await ctx.drainedEventsCount()
         let task = Task<Void, Never> {
@@ -533,6 +589,41 @@ let expectOutboundMethodTable: [String: String] = [
     "req.stop": "sessions.abort",
 ]
 
+/// T-050 REWORK #1（治根）：把真实捕获到的 openclaw 原生 RPC `params`（`performClientCall` 的
+/// `testSupportStubRPC` 闭包同步收到的原始入参，真实 client 传的，不是 fixture 声明值）规范化成一个
+/// 可与 `expect_outbound` 的 `pattern` 做完整深度匹配的『规范化请求』——见文件头「已知的『无法翻译』
+/// 边界」一节对本函数存在理由的完整说明。
+///
+/// - `sessionId`：从捕获到的原生 `key` 反查『哪个已声明 session 拥有这个 kernelKey』
+///   （`ctx.declaredSessionID(forKernelKey:)`）。`key` 不存在于 `params`（如 createSession，session
+///   尚不存在）就不设置这个字段；`key` 存在但查不到对应的已声明 session（真实 client 把 key 发错、
+///   或发了一个从未声明过的 key）就显式置 `NSNull()`——不 fallback 到任何 fixture 声明值，让 pattern
+///   里的 `sessionId` 断言在这种情况下真的失败。
+/// - `payload`：`params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后剩下的全部字段，原样
+///   保留原生字段名（`label`/`model`/`timeoutMs`/`attachments`/`includeApprovals` 等）——**仅
+///   `sessions.send` 一项**例外：把原生 `message` 反向映射回 D1 `Input.text` 概念（对应
+///   `resolveSendMessageText` 在 Stage A fixture 唯一用到的 `kind:"text"` 场景，不覆盖
+///   structured/parts），只为了让这个字段能与 TS 端 `payload.text`（直接来自 client_call 的 D1
+///   `args`）做跨语言一致的深度匹配；其余字段不改名，如实反映原生协议。
+func normalizeNativeParams(
+    method: String, params: JSONObject, expectedType: String, ctx: RunnerContext
+) async -> [String: Any] {
+    var out: [String: Any] = ["type": expectedType]
+    var payload = params
+    if let key = payload.removeValue(forKey: "key") as? String {
+        if let sessionID = await ctx.declaredSessionID(forKernelKey: key) {
+            out["sessionId"] = sessionID
+        } else {
+            out["sessionId"] = NSNull()
+        }
+    }
+    if method == "sessions.send", let message = payload.removeValue(forKey: "message") {
+        payload["text"] = message
+    }
+    out["payload"] = payload
+    return out
+}
+
 func checkExpectOutbound(_ op: TimelineOp, ctx: RunnerContext) async throws {
     guard let matches = op.matches else {
         throw RunnerError.malformed("expect_outbound 缺少 matches（t=\(op.t)）")
@@ -556,12 +647,14 @@ func checkExpectOutbound(_ op: TimelineOp, ctx: RunnerContext) async throws {
         )
         return
     }
-    // T-048 REWORK #4：方法名匹配之后，不再到此为止——继续对一个『规范化请求』
-    // （`performClientCall` 在捕获真实 outbound 的同一时刻构造，见该函数与 RunnerContext.
-    // capturedOutbound 的文档注释）做与 `ts-runner/runner.ts` 的 `partialMatch` 等价的完整子集深度
-    // 匹配，让 pattern 里 `type` 之外的字段（如 basic fixture 的 `sessionId`、interrupt 的
-    // `payload.mode`）也真正生效，不再被静默丢弃。
-    let normalized = await ctx.capturedNormalizedRequest(for: matches) ?? ["type": expectedType]
+    // T-048 REWORK #4 / T-050 REWORK #1（治根）：方法名匹配之后，不再到此为止——继续对一个『规范化
+    // 请求』做与 `ts-runner/runner.ts` 的 `partialMatch` 等价的完整子集深度匹配，让 pattern 里
+    // `type` 之外的字段（如 basic fixture 的 `sessionId`、interrupt 的 `payload.mode`）也真正生效。
+    // **T-050 治根**：规范化对象改从 `capturedParams(for:)`——真实捕获的原生 `params`——现算
+    // （`normalizeNativeParams`），不再是 T-048 REWORK #4 那版『捕获时顺手拿 timeline 的 args 拼一份』
+    // 的规范化请求（那份验证的是 fixture 自己声明的东西，不是真实发出的东西）。
+    let params = await ctx.capturedParams(for: matches) ?? [:]
+    let normalized = await normalizeNativeParams(method: expectedMethod, params: params, expectedType: expectedType, ctx: ctx)
     let diff = partialMatch(actual: normalized, expected: patternAny, path: "expect_outbound(\(matches))")
     for d in diff { await ctx.appendMismatch(d) }
 }
@@ -595,11 +688,11 @@ func applyMockResponse(_ op: TimelineOp, ctx: RunnerContext) async throws {
         let sessionId = (result["sessionHandle"] as? [String: Any])?["sessionId"] as? String
         let key = "openclaw-key-\(sessionId ?? UUID().uuidString)"
         await ctx.setCurrentKernelKey(key)
-        if let sessionId = sessionId {
-            // T-048 REWORK #4：记下 fixture 自己声明的 sessionId，供后续请求的 expect_outbound
-            // 规范化用（不是真实随机 UUID，见 RunnerContext.declaredSessionID 文档注释）。
-            await ctx.setDeclaredSessionID(sessionId)
-        }
+        // T-050 REWORK #1：登记『这把 key 对应哪个已声明 session』——真实 client 之后每次
+        // send/subscribe/stop 都会在原生 `params.key` 里带上这把 key（原样回显，不会自己再编码
+        // sessionId），`expect_outbound` 断言时反查这张表，从真实捕获的 key 算出 sessionId，而不是
+        // 直接信任 fixture 声明值（见 RunnerContext.kernelKeyToDeclaredSessionID 文档注释）。
+        await ctx.registerDeclaredSession(kernelKey: key, sessionID: sessionId ?? key)
         await gate.resolve(.success(["key": key, "sessionId": sessionId ?? key]))
 
     case "send":

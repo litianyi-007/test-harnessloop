@@ -77,20 +77,39 @@ function deriveState(client: MockKernelClient): ClientObservableState {
     // 暴露这个字段（MockKernelClient 也没有跟踪），导致 12 条新 fixture 里的 2 条 approval fixture
     // 必然 FAIL——现已补齐，口径对齐 swift-runner 的 `ctx.approvalState`。
     approvalState: client.approvalState,
+    // T-050 REWORK #3：暴露给 `expected.nativeCallOrder` 断言（目前只有
+    // stop-force-denies-pending-approval.json 用它防 force-deny/abort 顺序回归）。
+    nativeCallOrder: client.nativeCallOrder,
   };
 }
 
 /** 展开 mock_response/mock_event 的 shorthand——补全 runner 负责补全的传输元数据字段
- *  （D4 §4.3 v2.2 收残：T-030 F-01 第二项 shorthand 自动补全规则）。 */
-function expandResponseShorthand(
+ *  （D4 §4.3 v2.2 收残：T-030 F-01 第二项 shorthand 自动补全规则）。**导出**（T-050 REWORK #5）：
+ *  供一次性 Ajv 严格校验脚本直接复用同一份展开逻辑，不再手工另写一份可能与 runner 本身漂移的复刻。 */
+export function expandResponseShorthand(
   shorthand: Record<string, unknown>,
   t: number,
   outboundId: string,
 ): Record<string, unknown> {
   return { ...shorthand, sentAt: tToIso(t), direction: 'response', id: outboundId };
 }
-function expandEventShorthand(shorthand: Record<string, unknown>, t: number): Record<string, unknown> {
-  return { ts: tToIso(t), ...shorthand, sentAt: tToIso(t), direction: 'event' };
+
+/** T-050 REWORK #5（治根）：`EventMessage` 判别联合的每个分支都把 `seq` 列为 required
+ *  （`common/envelope.schema.json#/$defs/eventEnvelopeBase`），DSL/README 也明确规定 runner 负责
+ *  按『该 session 已推送事件数递增』补全——上一版只补了 `ts`/`sentAt`/`direction`，漏掉 `seq`，
+ *  之所以此前仍然 13/13 PASS，是因为 `MockKernelClient.applyEvent` 从未读取/校验这个 envelope
+ *  字段，绿灯掩盖了 canonical-wire 不完整这件事。改为按 `sessionId`（shorthand 自带，事件级必填
+ *  字段）分桶维护一个递增计数器，每次该 session 推一个事件就 +1（从 1 开始）；没有 `sessionId`
+ *  字段的异常输入退化到一个共享桶，不让函数崩溃。 */
+export function expandEventShorthand(
+  shorthand: Record<string, unknown>,
+  t: number,
+  seqBySession: Map<string, number>,
+): Record<string, unknown> {
+  const sessionKey = typeof shorthand.sessionId === 'string' ? shorthand.sessionId : '__no_session__';
+  const seq = (seqBySession.get(sessionKey) ?? 0) + 1;
+  seqBySession.set(sessionKey, seq);
+  return { ts: tToIso(t), ...shorthand, sentAt: tToIso(t), direction: 'event', seq };
 }
 
 export interface RunResult {
@@ -107,6 +126,10 @@ export async function runFixture(fixturePath: string): Promise<RunResult> {
   if (fixture.initialState?.sessionLock) client.sessionLock = fixture.initialState.sessionLock;
 
   const mismatches: Mismatch[] = [];
+  // T-050 REWORK #5：每条 fixture 一个独立的按-session seq 计数器——不能用模块级共享状态，否则
+  // 同一进程里连续跑多条 fixture（`main()` 的循环）会让后一条 fixture 的 seq 从上一条的残留值继续
+  // 累加，不是『该 session 已推事件数递增』（每条 fixture 从零开始才对）。
+  const seqBySession = new Map<string, number>();
 
   for (const op of fixture.timeline as TimelineOp[]) {
     switch (op.op) {
@@ -136,7 +159,7 @@ export async function runFixture(fixturePath: string): Promise<RunResult> {
         break;
       }
       case 'mock_event': {
-        const expanded = expandEventShorthand(op.message as unknown as Record<string, unknown>, op.t);
+        const expanded = expandEventShorthand(op.message as unknown as Record<string, unknown>, op.t, seqBySession);
         client.applyEvent(expanded);
         break;
       }

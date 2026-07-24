@@ -22,9 +22,13 @@ REWORK 后的收残，见文末「T-048 REWORK 收残记录」一节）删除了
 缺失的必填字段、把 TS 金标 oracle 从"只覆盖 2 条样例"扩到覆盖全部 13 条（含新增的
 `stop-force-denies-pending-approval.json`，覆盖本轮新落地的 D1 §6.2 force-deny 能力）、修正了
 Swift `PartialMatch`/`expect_outbound` 与 TS 不等价的假阴性、把 `advance_clock` 的确定性从"固定
-sleep 猜调度"改成"轮询任务已结算"的同步钩子。握手协商、`capability_changed` 边界、断线重连（除
-`disconnect` 触发 transport-closed 外的完整语义）、三层错误模型、`res.unknown` 分流、`EmptyPayload`
-边界、C# runner（D4 §4.4）仍是后续轮次交付物，不在本轮范围内。
+sleep 猜调度"改成"轮询任务已结算"的同步钩子。**T-050 REWORK 轮**（confirming 再审 MUST-FIX 收残，
+见文末「T-050 REWORK 收残记录」一节）把 `expect_outbound` 从"顺手拿 timeline 的 args 拼一份规范化
+请求"改成直接从真实捕获的原生 RPC `params` 现算；把 TS 的 D1 §6.2 force-deny 从"回显 fixture 声明的
+`forceResolvedApprovals`"改成自己独立计算；新增 `nativeCallOrder` 断言 force-deny 必须先于 abort；
+修了最后一条非法 D2 message；补齐 TS event shorthand 遗漏的 `seq`。握手协商、`capability_changed`
+边界、断线重连（除 `disconnect` 触发 transport-closed 外的完整语义）、三层错误模型、`res.unknown`
+分流、`EmptyPayload` 边界、C# runner（D4 §4.4）仍是后续轮次交付物，不在本轮范围内。
 
 ## fixture DSL 结构（引 D4 §4.3，摘要）
 
@@ -161,11 +165,20 @@ D2 事件是 `EventMapping.swift` 的映射**产物**，wire 上从不直接出�
   `evt.approval_request` 的原生双帧到达顺序改读 DSL 层面显式声明的 `driverHint.approvalJoinOrder`
   （见上文「DSL 正式化」一节），不在封闭的 D2 `message` 联合里。
 - `expect_outbound` 此前只比对 `pattern.type`（底层 openclaw RPC 方法名），完全丢弃其余断言字段——
-  现在方法名匹配后，继续对一个『规范化请求』（`type` + 可选 `sessionId` + `payload`，在捕获真实
-  outbound 的同一时刻构造）做与 TS `runner.ts` 的 `partialMatch` **等价**的完整子集深度匹配，让
-  basic fixture 的 `sessionId` 等断言在 Swift 端也真正生效。`sessionId` 用 fixture 自己在
-  `res.createSession` 里声明过的值（如 "session-1"），不是真实 client 内部铸造的随机
-  `SessionHandle.sessionID`（那个仍然不可断言，原因不变，见下一段）。
+  T-048 REWORK 这一轮改成方法名匹配后继续对一个『规范化请求』做与 TS `runner.ts` 的 `partialMatch`
+  等价的完整子集深度匹配，但那份『规范化请求』其实是把 timeline 的 `args` 原样放回 `payload`、
+  `sessionId` 直接取 fixture 声明值——**T-050 REWORK（confirming 再审 MUST-FIX 治根）**指出这仍是
+  表面绕过：真实捕获的原生 `params` 存进了 `capturedOutbound` 却从没有代码读它做字段映射，真实
+  client 把 `sessions.send.params.message`/`sessions.messages.subscribe.params.key`/
+  `sessions.abort.params.key` 发错也不会被抓到。本轮改为 `normalizeNativeParams` 直接从**真实捕获
+  的原生 `params`**（不是 timeline 的 `args`）现算：`sessionId` 反查『哪个已声明 session 拥有这个
+  原生 key』（`kernelKeyToDeclaredSessionID`），查不到就显式置 `NSNull()`，不 fallback 回声明值；
+  `payload` 是 `params` 去掉 `key` 后的剩余字段（`send` 一项把原生 `message` 映射回 D1 `Input.text`
+  以便跨语言比较，其余字段原样保留原生字段名）。`basic/`、`operation-outcome/stop-active-run-succeeded.json`
+  等多条 fixture 的 pattern 也相应补上了 `sessionId`/`payload.text` 深度断言。已实测反证：临时让
+  真实 `sessions.send()` 在 `message` 参数末尾追加一段乱码、临时让真实 `subscribe()` 发一个错误的
+  `key`，两个场景下 `expect_outbound` 均立即 FAIL（验证后已复原，未改动
+  `OpenclawGatewayKernelClient.swift` 一行）。
 - `PartialMatch.swift` 修正了与 TS `partialMatch` 不等价的假阴性：显式 JSON `null` 与『字段完全
   缺失』此前被混为一谈（TS `undefined === null` 是 `false`，旧版一律放行）；Foundation 把 `Bool`
   桥接成 `NSNumber` 后，`true`/`1`、`false`/`0` 曾被误判相等——**实测发现这个问题比预期更深**：
@@ -293,3 +306,44 @@ sleep，见上文）；**soft-steer-then-stop.json 补 createSession 前置步�
 （覆盖本轮新落地的 D1 §6.2 force-deny 能力，两端一致）。`SwiftFixtureRunner.swift` 的 `ReplyGate`
 改用 `actor` 取代 `NSLock`（Swift 6 language mode 下 `NSLock.lock/unlock` 在 async 上下文会是编译
 错误，`swiftc` 实测复现过这条警告，现已消除）。
+
+## T-050 REWORK 收残记录（confirming 再审 MUST-FIX，本节汇总，逐条见对应文件内的 `T-050 REWORK` 标注）
+
+T-050（codex confirming 再审，接续自己的 T-048）确认 T-048 REWORK 的 advance_clock/DEGRADED/Swift 6
+锁三类缺陷真闭合，但揪出 5 处仍是"表面绕过/绿灯不能证明它声称的东西"，全部收残：
+
+1. **`expect_outbound` 治根**：`normalizeNativeParams`（`SwiftFixtureRunner.swift`）改为直接从真实
+   捕获的原生 `params` 现算规范化请求（`sessionId` 反查 `kernelKeyToDeclaredSessionID`，查不到显式
+   置 `NSNull()`，不 fallback；`payload` 是 `params` 去掉 `key` 后的剩余原生字段，`send` 一项把
+   `message` 映射回 `text`），不再是 T-048 REWORK #4 那版"顺手拿 timeline 的 `args` 拼一份"。多条
+   fixture 的 pattern 补上 `sessionId`/`payload.text` 深度断言。反证：临时破坏真实 `send()`/
+   `subscribe()` 的对应字段，`expect_outbound` 均真实 FAIL（验证后已复原）。
+2. **TS force-deny 从空转改为独立 spec oracle**：`mock-kernel-client.ts` 的 `call()` 处理 'stop' 时
+   独立对本地 `approvalState` 执行 D1 §6.2 force-deny（推进 pending reqId 到
+   `force_denied_on_stop`、push `nativeCallOrder`），`evt.turn_complete` 转发时用这份自算列表覆盖
+   payload，不再读 fixture 声明的 `forceResolvedApprovals` 当输入。反证：临时让这段计算不记录任何
+   reqId，`expected.observedEvents[2].payload.forceResolvedApprovals` 立即 FAIL（验证后已复原）。
+3. **gold fixture 新增 `nativeCallOrder` 顺序断言**：两端各自独立记录 `approval.resolve`/
+   `sessions.abort` 的调用顺序（Swift 在真实 native RPC stub 被调用的那一刻 append；TS 在 `call()`
+   的代码顺序里 push），`stop-force-denies-pending-approval.json` 新增 `expected.nativeCallOrder:
+   ["approval.resolve", "sessions.abort"]`。反证：临时把真实 `stop()` 里两次 `request()` 调用顺序
+   颠倒，该 fixture 立即 FAIL（验证后已复原，未改动 `OpenclawGatewayKernelClient.swift`）。
+4. **修最后 1 条非法 D2 message**：`stop-rejected-rpc-failure.json` 的 `res.stop.failure.code:
+   "unknown"` 不在 `RejectionFailure | ProtocolFailure` 枚举里——改用 `ProtocolFailure` 的合法值
+   `malformed_message`（这次要表达的是底层 RPC 交换本身坏了，属于消息层协议错误）。改完后对全部 13
+   条默认 fixture 的 34 条展开 message 跑 Ajv 2020 严格校验（复用 `runner.ts` 导出的
+   `expandResponseShorthand`/`expandEventShorthand`，不是另写一份可能漂移的复刻），结果
+   `expanded_messages=34 schema_valid=34 schema_invalid=0`。
+5. **补 `seq`**：`expandEventShorthand`（`ts-runner/runner.ts`）此前只补 `ts`/`sentAt`/`direction`，
+   漏了 `EventMessage` 判别联合每个分支都要求的 `seq`（`common/envelope.schema.json#/$defs/
+   eventEnvelopeBase`）。改为按 `sessionId` 分桶维护一个递增计数器（每条 fixture 独立从 1 开始，不
+   是模块级共享状态）。反证：临时去掉 `seq` 字段重跑上述 Ajv 校验，34 条里有 6 条（全部 `mock_event`
+   展开的消息）变成 schema 不合法；补回后恢复 34/34。
+
+附带修复 `SwiftFixtureRunner.swift` 里 1 条 "no async operations occur within await" warning
+（`startDraining` 内 `Task {}` 闭包继承同一 actor 隔离，`self.appendEvent` 不跨隔离域，去掉多余的
+`await` 即可）；SG-5 `kernel-client.swift` 的另外 3 条同类 warning 不在本轮 scope，未触碰。
+
+两端复验：`node ts-runner/runner.ts` 全部 13 条 **13 PASS / 0 FAIL**（TS force-deny 现在是自己算的，
+不是回显）；swift-fixture-runner **12 PASS / 0 FAIL / 1 DEGRADED**（`expect_outbound` 现在真匹配
+native params，`stop-force-denies-pending-approval.json` 断言 RPC 顺序）。

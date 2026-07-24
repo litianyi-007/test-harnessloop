@@ -17,6 +17,16 @@
  * - `advance_clock`/`disconnect` 只在『有一个 stop() 正在等待 active run 终态确认』
  *   （`pendingStopWait` 非空）时才有意义，Stage A 范围外的虚拟时钟/断线重连语义仍是 TODO
  *   （与 swift-runner 同样窄的范围声明对齐，见该文件 `applyAdvanceClock`/`.disconnect` 文档注释）。
+ *
+ * **T-050 REWORK #2（confirming 再审揪出的空转，本轮修）**：`stop()` 的 D1 §6.2 M3 force-deny 分支
+ * 此前只是把 fixture 在 `evt.turn_complete.payload.forceResolvedApprovals` 里声明的值原样转发到
+ * `observedEvents`——`approvalState` 从未真正被 stop() 推进到任何强制终态，也从未产出对应的
+ * `approval.resolve` outbound；这是 T-048 REWORK #3 声称的『两端独立 oracle』在这一个分支上的例外
+ * （空转，不是从 spec 写出）。本轮改为在 `call()` 处理 'stop' 时**独立执行** force-deny（对本地
+ * `approvalState` 里仍是 'pending' 的每个 reqId 推进到 'force_denied_on_stop'、记录一次
+ * `nativeCallOrder.push('approval.resolve')`），并把由此算出的 reqId 列表存进
+ * `forceResolvedApprovalsByCallId`；`evt.turn_complete` 到达时不再读 fixture 声明的
+ * `forceResolvedApprovals`，改用这份自己算出的列表覆盖/删除该字段（见 `applyEvent`）。
  */
 
 import type { KernelClientMethod, SessionLockState, OperationOutcome } from '../dsl.ts';
@@ -42,6 +52,11 @@ interface PendingStopWait {
    *  做键，不是内部 operationId，见 dsl.ts 对该字段的注释）。 */
   id: string;
   affectedRunId: string;
+  /** T-050 REWORK #2 新增：这次 stop() 在 `call()` 里（D1 §6.2 M3 定序要求的『先 force-deny 再
+   *  abort』时机）**独立算出**的『被强制 deny 的 reqId 列表』——不是从 fixture 的
+   *  `evt.turn_complete.payload.forceResolvedApprovals` 读来的，见 `call()` 的 'stop' 分支与
+   *  `applyEvent` 的 `evt.turn_complete` 分支。 */
+  forceResolvedApprovalReqIds: string[];
 }
 
 /** stop() 测试专用超时阈值——与 swift-runner `RunnerContext.stopTimeoutSeconds = 1`
@@ -65,6 +80,13 @@ export class MockKernelClient {
    *  PENDING（`evt.approval_request` 到达即置 'pending'），与 swift-runner `ctx.approvalState`
    *  的记账口径一致。 */
   approvalState: Record<string, string> = {};
+  /** T-050 REWORK #3 新增：与 swift-runner `RunnerContext.nativeCallOrder` 同一目的——只登记
+   *  Stage A 需要断言顺序的这几个特定动作（`approval.resolve`/`sessions.abort`），供
+   *  `stop-force-denies-pending-approval.json` 的 `expected.nativeCallOrder` 断言防回归。TS 端
+   *  没有真实原生 RPC 层，这里在 `call()` 自己的执行顺序里 push——即『force-deny 循环必须先于
+   *  产出 req.stop outbound』这条 D1 §6.2 M3 定序要求，由本文件自己的代码顺序保证，若未来谁把两步
+   *  顺序调换，这里记录下来的顺序就会真实反映出来。 */
+  nativeCallOrder: string[] = [];
 
   /** 已发出、尚未收到 mock_response 的 outbound 记录，供 expect_outbound / mock_response 引用。 */
   private outbound = new Map<string, OutboundRecord>();
@@ -73,6 +95,13 @@ export class MockKernelClient {
   private queuedStopWhileInterrupt: string | undefined;
   /** T-048 REWORK #3 新增：stop() 命中 active run 时的等待态，见 `PendingStopWait` 文档注释。 */
   private pendingStopWait: PendingStopWait | undefined;
+  /** T-050 REWORK #2 新增：`call()` 处理 'stop' 时（D1 §6.2 M3 force-deny 时机）算出的『被强制
+   *  deny 的 reqId 列表』，按这次 stop() 的 client_call id 记账——`applyStopResponse` 稍后把它
+   *  搬进 `PendingStopWait.forceResolvedApprovalReqIds`（若确实进入等待态），或者在『没有 active
+   *  run，立即结算』的路径上就没有 turn_complete 事件可以附着，直接丢弃（这条路径的失败/立即成功
+   *  也不会产生任何 forceResolvedApprovals，符合 D1 §6.2：该字段严格限定于经由 turn_complete 的
+   *  stop 场景）。 */
+  private forceResolvedApprovalsByCallId: Record<string, string[]> = {};
   private eventSeq = 0;
 
   private emit(type: string, payload: unknown): void {
@@ -129,10 +158,28 @@ export class MockKernelClient {
         }
         this.pendingOperations[id] = 'in_flight';
         break;
-      case 'stop':
+      case 'stop': {
         type = 'req.stop';
         message.payload = {};
         message.sessionId = sessionId;
+        // D1 §6.2 M3（T-050 REWORK #2：独立从 spec 实现，不回显 fixture）：stop() 在发起
+        // sessions.abort 之前，必须先把本 session 所有仍处于 PENDING 的审批强制推进到
+        // FORCE_DENIED_ON_STOP——本段从本文件自己跟踪的 `approvalState` 局部推导被强制 deny 的
+        // reqId 列表，不读 fixture 在 `evt.turn_complete.payload.forceResolvedApprovals` 里声明
+        // 的值当输入（那是 T-050 confirming 再审揪出的问题：此前只是把这个字段原样转发，TS parity
+        // 在这里完全空转）。`nativeCallOrder` 依次 push 'approval.resolve'（每条 pending 各一次）
+        // 再 push 'sessions.abort'——这个顺序就是这段代码本身的执行顺序，正是 D1 §6.2 M3 定序要求
+        // 断言的东西：force-deny 必须先于 abort。
+        const forceDenied: string[] = [];
+        for (const reqId of Object.keys(this.approvalState)) {
+          if (this.approvalState[reqId] === 'pending') {
+            this.nativeCallOrder.push('approval.resolve');
+            this.approvalState[reqId] = 'force_denied_on_stop';
+            forceDenied.push(reqId);
+          }
+        }
+        if (forceDenied.length > 0) this.forceResolvedApprovalsByCallId[id] = forceDenied;
+        this.nativeCallOrder.push('sessions.abort');
         if (this.sessionLock === 'interrupt_in_progress') {
           // D1 §9.3：soft steer 在途时 stop() 到达——排队等待，不改变当前锁状态，不得抢占。
           this.queuedStopWhileInterrupt = id;
@@ -141,6 +188,7 @@ export class MockKernelClient {
         }
         this.pendingOperations[id] = 'in_flight';
         break;
+      }
       case 'respondApproval':
         type = 'req.respondApproval';
         message.payload = payload;
@@ -237,7 +285,12 @@ export class MockKernelClient {
       return;
     }
 
-    this.pendingStopWait = { id: replyTo, affectedRunId: this.currentRunId };
+    // T-050 REWORK #2：把 `call()` 处理这次 stop() 时（force-deny 时机）独立算出的 reqId 列表
+    // 搬进等待态——不存在就是空数组（这次 stop() 没有命中任何 pending 审批，`evt.turn_complete`
+    // 转发时会删掉 payload 里的 forceResolvedApprovals 字段，即使 fixture 误声明了这个字段）。
+    const forceResolvedApprovalReqIds = this.forceResolvedApprovalsByCallId[replyTo] ?? [];
+    delete this.forceResolvedApprovalsByCallId[replyTo];
+    this.pendingStopWait = { id: replyTo, affectedRunId: this.currentRunId, forceResolvedApprovalReqIds };
   }
 
   private resolveStopWait(outcome: 'succeeded' | 'timed_out' | 'aborted_effect_unknown', sessionEndReason: string): void {
@@ -270,16 +323,28 @@ export class MockKernelClient {
 
     if (type === 'evt.turn_complete' && this.pendingStopWait) {
       // D1 v3 §9.3：terminal-observed 路径——先补 operation_completed(succeeded) 镜像，再转发
-      // fixture 自己声明的 turn_complete（forceResolvedApprovals 等字段原样透传，不是本文件计算
-      // 出来的——T-048 新增能力 stop-force-denies-pending-approval.json 靠这条路径把
-      // forceResolvedApprovals 传递到 observedEvents），最后补 session_end(stopped)。
+      // turn_complete，最后补 session_end(stopped)。
+      // **T-050 REWORK #2（治根）**：`forceResolvedApprovals` 不再原样透传 fixture 声明值——那是
+      // 把 expected 事实当输入再回显，TS parity 在这里空转（T-050 confirming 再审揪出的问题）。
+      // 改为用 `wait.forceResolvedApprovalReqIds`（`call()` 处理这次 stop() 时，从本文件自己的
+      // `approvalState` 独立算出的列表，见 `PendingStopWait` 文档注释）覆盖——没有强制 deny 任何
+      // 审批就删掉这个字段（即使 fixture 在 `mock_event` 里误声明了它），忠实反映『这是适配器自己
+      // 决定要不要填的字段，不是内核 wire 帧原生携带的东西』（真实 Swift 端同理：
+      // `TurnCompleteEvent.forceResolvedApprovals` 由 `stop()` 铸造的 `PendingStop.
+      // forceResolvedApprovalReqIDs` 提供，EventMapping.swift 从不读取原生 wire 帧本身的这个字段）。
       const wait = this.pendingStopWait;
       this.emit('evt.operation_completed', { outcome: 'succeeded', operationKind: 'stop', affectedRunId: wait.affectedRunId });
       this.pendingOperations[wait.id] = 'succeeded';
       this.sessionLock = 'idle';
       this.pendingStopWait = undefined;
       this.currentRunId = undefined;
-      this.observedEvents.push({ type, payload });
+      const outgoingPayload: Record<string, unknown> = { ...(payload ?? {}) };
+      if (wait.forceResolvedApprovalReqIds.length > 0) {
+        outgoingPayload.forceResolvedApprovals = wait.forceResolvedApprovalReqIds;
+      } else {
+        delete outgoingPayload.forceResolvedApprovals;
+      }
+      this.observedEvents.push({ type, payload: outgoingPayload });
       this.emit('evt.session_end', { reason: 'stopped' });
       return;
     }

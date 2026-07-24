@@ -74,7 +74,26 @@ D1 §6.2 要求的"强制 deny pending approval"步骤；两处构造 `TurnCompl
 `stop-force-denies-pending-approval.json`（本目录新增）是该能力的金标 parity 覆盖：swift-runner
 在 `performClientCall` 的 `stop` 分支为 `approval.resolve` 注册了一个默认「内核已确认 denied」的
 背景桩（对没有 pending 审批的其余 fixture 是安全 no-op），驱动真实 `stop()`/
-`forceDenyPendingApprovalsBeforeStop` 方法体本身走一遍这条分支；断言可观察到 RPC 顺序
-`approval.resolve` → `sessions.abort`（见 fixture 跑起来时的 SEND/RECV 日志顺序）与最终
-`TurnCompleteEvent.forceResolvedApprovals` 含该 reqId。ts-runner 的 `MockKernelClient` 同样按 D1
-§6.2 spec 转发 fixture 声明的 `forceResolvedApprovals`（不是照抄 Swift 行为），两端一致通过。
+`forceDenyPendingApprovalsBeforeStop` 方法体本身走一遍这条分支。
+
+**T-050 REWORK 收残（confirming 再审 MUST-FIX 揪出两处表面绕过，本轮修）**：
+
+- **RPC 顺序此前只是"可观察"，不是"被断言"**：上一版只在日志层面能看到 `approval.resolve` 先于
+  `sessions.abort`，fixture 本身从未把这个顺序变成机器断言——若真实 `stop()` 回归成先 abort 再
+  resolve，fixture 当时不会 FAIL。本轮 `SwiftFixtureRunner.swift` 新增 `RunnerContext.nativeCallOrder`
+  ——在两个 native RPC stub 闭包**真正被真实 client 调用的那一刻**（不是注册的时刻）各自 append，
+  暴露给 `expected.nativeCallOrder` 断言；`ts-runner/mock-kernel-client.ts` 同样在 `call()` 处理
+  'stop' 时按代码顺序 push，构成两端独立记录的同一断言。已实测反证：临时把真实 `stop()` 里两次
+  `request()` 调用顺序颠倒（先 abort 后 force-deny），本 fixture 立即 FAIL（`nativeCallOrder` 断言
+  与顺序不符），验证后已复原，未改动 `OpenclawGatewayKernelClient.swift` 任何一行。
+- **ts-runner 的 `MockKernelClient` 此前不是"转发 fixture 声明的 forceResolvedApprovals"，而是把它
+  当输入直接回显**——`approvalState` 从未真正被 `stop()` 推进到任何强制终态，也从未产出对应的
+  `approval.resolve` outbound，是 T-048 REWORK #3 声称"两端独立 oracle"的一个例外（这一分支实际上
+  空转）。本轮改为 `call()` 处理 'stop' 时**独立执行** force-deny（对本地 `approvalState` 里仍是
+  'pending' 的每个 reqId 推进到 `force_denied_on_stop`），把由此算出的 reqId 列表覆盖到
+  `evt.turn_complete` 转发的 payload 上，不再读 fixture 声明的值当输入。已实测反证：临时让这段
+  独立计算不记录任何 reqId（模拟回归成空转），`expected.observedEvents[2].payload.
+  forceResolvedApprovals` 立即 FAIL（期望数组，实际 `undefined`），验证后已复原。
+
+两端各自独立产出 RPC 顺序与 `forceResolvedApprovals`，fixture 的 `expected` 才真正是两个独立
+oracle 都必须自己算对的金标，不是其中一端读另一端/读 fixture 声明值就能蒙混过关。

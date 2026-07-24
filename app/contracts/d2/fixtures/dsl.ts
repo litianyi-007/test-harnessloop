@@ -84,6 +84,14 @@ export interface ClientObservableState {
   >;
   /** subscribe() 收到的事件回调顺序与字段值，按观察到的先后顺序排列。 */
   observedEvents?: Array<{ type: string; payload?: unknown }>;
+  /** T-050 REWORK #3 新增：只登记 Stage A 需要断言顺序的这几个特定原生/内部调用（目前只有
+   *  `approval.resolve`/`sessions.abort`，供 `stop-force-denies-pending-approval.json` 断言 D1
+   *  §6.2 M3 定序——force-deny 必须先于 abort，防止实现回归成反过来），不是完整调用日志。两端各自
+   *  独立记录：swift-runner 在真实 native RPC stub 闭包被**真正调用**的那一刻 append（反映真实
+   *  `OpenclawGatewayKernelClient.stop()` 的调用顺序）；ts-runner 的 `MockKernelClient` 在
+   *  `call()` 处理 'stop' 时按 D1 §6.2 M3 定序要求的代码顺序 push（force-deny 循环在前，
+   *  `sessions.abort` 对应的 outbound 构造在后）。 */
+  nativeCallOrder?: string[];
 }
 
 /** `mock_event` 专属的翻译层驱动控制量——**不属于** D2 wire 事件本身（那是 `message` 字段的职责，

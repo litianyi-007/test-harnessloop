@@ -1,13 +1,13 @@
 {
   "name": "send-in-flight-send-pending",
-  "description": "SessionLockState 四态之 send_pending 的进入/退出：send() 发起后、kernel ack 到达前，锁必须真实处于 send_pending（不是摆拍）；ack 到达后锁自动释放回 idle。swift-runner 用 ReplyGate 让 send1 的底层 sessions.send RPC 真实悬挂到对应 mock_response 被处理的那一刻，中途的 assert_state 断言的是真实 actor 状态（`testSupportLockState`），不是预先设好的常量。逐字对应 D1 v3.1 §9.3 `SessionLockState` 定义的 send_pending 注释：'send() 已发起，等待 kernel ack（极短窗口，正常情况几乎不可观察）'——本 fixture 用受控延迟的 mock_response 把这个『极短窗口』人为拉长到可断言。",
+  "description": "SessionLockState 四态之 send_pending 的进入/退出：send() 发起后、kernel ack 到达前，锁必须真实处于 send_pending（不是摆拍）；ack 到达后锁自动释放回 idle。swift-runner 用 ReplyGate 让 send1 的底层 sessions.send RPC 真实悬挂到对应 mock_response 被处理的那一刻，中途的 assert_state 断言的是真实 actor 状态（`testSupportLockState`），不是预先设好的常量。逐字对应 D1 v3.1 §9.3 `SessionLockState` 定义的 send_pending 注释：'send() 已发起，等待 kernel ack（极短窗口，正常情况几乎不可观察）'——本 fixture 用受控延迟的 mock_response 把这个『极短窗口』人为拉长到可断言。**T-050 REWORK #1（治根）**：`send1` 的 `expect_outbound` pattern 补上 `payload.text` 深度断言——swift-runner 侧从真实捕获的原生 `sessions.send` `params.message` 规范化而来。",
   "timeline": [
     { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
     { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
     { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
     { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
     { "t": 15, "op": "client_call", "id": "send1", "call": "send", "args": { "kind": "text", "text": "hello" } },
-    { "t": 15, "op": "expect_outbound", "matches": "send1", "pattern": { "type": "req.send" } },
+    { "t": 15, "op": "expect_outbound", "matches": "send1", "pattern": { "type": "req.send", "payload": { "text": "hello" } } },
     { "t": 16, "op": "assert_state", "expected": { "sessionLock": "send_pending" } },
     { "t": 20, "op": "mock_response", "replyTo": "send1", "message": { "type": "res.send", "result": { "runId": "run-1" } } },
     { "t": 25, "op": "assert_state", "expected": { "sessionLock": "idle" } }
