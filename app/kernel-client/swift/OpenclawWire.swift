@@ -70,14 +70,28 @@ func encodeAttachmentForWire(_ part: Part) -> JSONObject? {
 /// ——不管原值是字符串/数字/嵌套对象，都不放过（嵌套对象整体替换是有意为之：与其精确挑出对象内部
 /// 哪个字段敏感，不如把整个已知敏感的容器打码，避免遗漏同一容器里未来新增的其它凭证字段）。
 ///
-/// **为什么是整词匹配、不是子串匹配**：第一版实现用裸子串 `lower.contains("token")`，实测
-/// （真实 openclaw `session.message`/`hello-ok` 快照）会把 `contextTokens`/`inputTokens`/
-/// `outputTokens`/`totalTokens` 这些纯粹的"token 计数"字段（不是凭证）一起误伤，白白丢失这些真实
-/// 诊断数据的可见性。整词匹配（`token` 单数精确命中 `authToken`/`apiToken`/`params.auth.token`
-/// 这类真凭证字段，`tokens` 复数不命中）避免了这个副作用，同时仍然覆盖上面这条 CRITICAL 缺陷本身
-/// 关心的字段。
-private let sensitiveWords: Set<String> = [
-    "auth", "authorization", "token", "secret", "password", "credential", "apikey",
+/// **M4 rework（收 T-045 codex 确认性再审复现）**：上一轮"整词匹配"本身只覆盖了单数敏感词，
+/// `credentials`/`apiKeys`/`secrets` 这些真实 openclaw payload 里常见的**复数**写法——整个 key
+/// 就是这一个词（没有 camelCase 边界可分词），永远不等于单数形式，因此完全漏报（凭证泄漏，
+/// REPRO `credentials`/`apiKeys` 见 FrameReplayTests.swift）。同时 `token` 是本轮唯一有歧义的
+/// 词：它既出现在真凭证字段（`authToken`/`apiToken`/裸 `auth.token`），也出现在纯粹的"用量计数"
+/// 字段（`contextTokens`/`tokenBudget`/`inputTokens`/`outputTokens`）——继续用"token 是不是整词
+/// 命中"这一个维度已经不够精确，需要看它的**相邻词**才能判断，这正是"更精确的键语义,不是裸子串"
+/// 的具体落地：
+///  1. 无歧义凭证词（`auth`/`authorization`/`secret`/`password`/`credential`，含常见复数，去掉
+///     末尾单个 `s` 再比较）——整词命中即敏感，不需要看上下文。
+///  2. `apiKey`/`apiKeys` 复合词——`api` 后紧跟 `key`/`keys` 才算敏感（不能把裸 `key` 单独列为
+///     敏感词，openclaw session key 等大量字段就叫 `key`，不是凭证）。
+///  3. `token`/`tokens`——裸字段（key 本身就是这一个词）或与 `auth`/`api` 复合（`authToken(s)`/
+///     `apiToken(s)`）视为敏感；与已知的计数类限定词（`context`/`input`/`output`/`total`/`max`/
+///     `budget`/`count`/`limit`/`usage`/`remaining`）相邻则明确排除，不脱敏——这些正是真实样本里
+///     观察到的 token 用量诊断字段，不是凭证。未知限定词默认落回敏感（安全的一侧：宁可多脱敏一个
+///     没见过的字段，也不能漏报真凭证）。
+private let unambiguousSensitiveSingulars: Set<String> = [
+    "auth", "authorization", "secret", "password", "credential",
+]
+private let tokenCountingQualifiers: Set<String> = [
+    "context", "input", "output", "total", "max", "budget", "count", "limit", "usage", "remaining",
 ]
 
 /// 把一个 camelCase/snake_case/kebab-case 的 key 拆成小写单词列表——`"contextTokens"` ->
@@ -101,17 +115,35 @@ private func lowercasedWords(_ key: String) -> [String] {
     return words
 }
 
+/// 简单的英语复数去除——只处理"末尾加 s"这一种最常见形态（`credentials` -> `credential`，
+/// `secrets` -> `secret`）。这个项目的敏感词表本身都是规则复数，不需要处理不规则变形。
+private func singularized(_ word: String) -> String {
+    word.hasSuffix("s") && word.count > 1 ? String(word.dropLast()) : word
+}
+
 private func isSensitiveKey(_ key: String) -> Bool {
     let words = lowercasedWords(key)
-    if words.contains(where: { sensitiveWords.contains($0) }) {
+
+    // ① 无歧义凭证词（含复数）——整词命中（去掉可能的末尾 "s" 再比较）。
+    if words.contains(where: { unambiguousSensitiveSingulars.contains(singularized($0)) }) {
         return true
     }
-    // "apiKey"/"api_key" 这类复合词——"api"/"key" 相邻出现才算敏感,不能把"key"单独列为敏感词
-    // (RPC 里大量语义完全不同的字段就叫 "key",例如 openclaw 的 session key,不是凭证)。
-    guard words.count >= 2 else { return false }
-    for i in 0..<(words.count - 1) where words[i] == "api" && words[i + 1] == "key" {
-        return true
+
+    // ② apiKey/apiKeys 复合词——"api" 后紧跟 "key"/"keys" 才算敏感。
+    for i in 0..<words.count where words[i] == "api" && i + 1 < words.count {
+        if singularized(words[i + 1]) == "key" { return true }
     }
+
+    // ③ token/tokens——裸字段或与 auth/api 复合视为敏感；与计数类限定词相邻则明确排除（诚实保留
+    // 这些真实的用量诊断字段，不误伤）。
+    for (i, word) in words.enumerated() where singularized(word) == "token" {
+        let hasCountingNeighbor =
+            (i > 0 && tokenCountingQualifiers.contains(words[i - 1])) ||
+            (i + 1 < words.count && tokenCountingQualifiers.contains(words[i + 1]))
+        if hasCountingNeighbor { continue } // 明确排除：token 计数字段，不脱敏
+        return true // 裸 token(s) 或与其它未知限定词复合——默认敏感（安全的一侧）
+    }
+
     return false
 }
 

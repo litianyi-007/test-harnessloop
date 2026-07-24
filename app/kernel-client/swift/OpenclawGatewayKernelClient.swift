@@ -67,14 +67,20 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     }
     private var lockStateBySessionID: [String: SessionLockState] = [:]
 
-    // MARK: F6 — stop() 的 pending 状态（adapter 铸造的唯一 operationId + 等待终态确认）
+    // MARK: F6/M3 — stop() 的 pending 状态（adapter 铸造的唯一 operationId + 等待终态确认）
     private struct PendingStop {
         let operationID: String
-        let affectedRunID: String?
+        // M3：不再是 let——发起 sessions.abort 之后必须用其权威返回值 abortedRunId 覆盖这里（见
+        // stop() 的文档注释），不能一直沿用发起 abort 前可能陈旧的本地缓存值。
+        var affectedRunID: String?
         var terminalEmitted: Bool = false
         var waiter: CheckedContinuation<Bool, Never>?
     }
     private var pendingStops: [String: PendingStop] = [:]
+
+    /// M3：测试专用的 stop() 等待超时覆盖（秒）——生产默认 5 秒（D1 v3 §9.3），测试用一个短得多的
+    /// 值验证"超时"这条路径，不用真的等 5 秒。`nil` 时 stop() 使用生产默认值。
+    private var testSupportStopTimeoutSecondsOverride: Int?
 
     // MARK: F8 — 三条 sessionEnd 路径（shutdown/transportClosed/stop）共享的去重标记
     private var sessionTerminalEmitted: Set<String> = []
@@ -91,10 +97,43 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     private var runIDsBySessionID: [String: Set<String>] = [:] // 供 session 结束时批量清理 per-run 缓存
     private var lastToolCallIDByRunID: [String: String] = [:]
     private var lastUsageByRunID: [String: (input: Int, output: Int)] = [:]
-    /// F4：`agent(stream:"approval", phase:"requested")` 的 approvalId -> toolCallId 精确映射，
-    /// 取代上一轮"同 session 最近一次 toolCall"的猜测。一次性缓存，用过即清（同一个 approvalId
-    /// 不会有第二次 pending）。
-    private var toolCallIDByApprovalID: [String: String] = [:]
+
+    // MARK: M1 — approval 双向 join（agent(stream:"approval") <-> session.approval(phase:"pending")）
+    //
+    // F4 上一轮只缓存 approvalId -> toolCallId，遗漏了这次审批**真实归属的 runId**——`session.approval`
+    // 落地时只能退回到全 session 的 `lastRunIDBySessionID`，在多个 run 交替产生审批时会把 approval
+    // 错误关联到"当前最新活跃的 run"，而不是这次审批实际所在的 run（对抗审 T-045 M1 复现：
+    // agent approval-A(run-A) 之后 agent approval-B(run-B) 到达，把 lastRunIDBySessionID 刷新成
+    // run-B，随后姗姗来迟的 session.approval(approval-A) 会被错误按成 run-B）。同时上一轮完全没有
+    // 处理"session.approval 先于对应 agent(stream:approval) 帧到达"这个方向——直接丢弃，approval
+    // _request 永久丢失，即使 agent 帧随后真的到达也不会补发。本轮改为按 approvalId 做真正的双向
+    // 缓冲 join：agent 帧先到就缓冲 {runID,toolCallID}，session.approval 先到就缓冲整个 payload，
+    // 谁后到就用先到的那份补全信息，立即产出（且只产出一次）。
+    private struct AgentApprovalInfo {
+        let runID: String
+        let toolCallID: String
+    }
+    private var agentApprovalInfoByApprovalID: [String: AgentApprovalInfo] = [:]
+
+    private struct PendingSessionApproval {
+        let payload: JSONObject
+        let ourSessionID: String
+    }
+    private var pendingSessionApprovalByApprovalID: [String: PendingSessionApproval] = [:]
+
+    /// 上面两张按 approvalId 键控的缓存本身不是 per-session 键，session 结束时要靠这张反向索引才
+    /// 知道该批量清哪些 approvalId（M5：避免漏配对的条目永久残留）。
+    private var approvalIDsBySessionID: [String: Set<String>] = [:]
+
+    // MARK: - Test-only：拦截 RPC（不需要真实 WebSocket 连接）
+    //
+    // M3/M6 rework：真 actor 级测试需要驱动真实的 send()/stop() 方法体本身（包括它们发起的
+    // sessions.send/sessions.abort/sessions.delete RPC），而不是像上一轮那样直接 seed 内部状态、
+    // 绕开方法体——但这个项目没有真实网络可用。`testSupportRPCResponders` 按 RPC method 名注册一个
+    // "request(method:) 被调用时应该返回什么/抛什么错"的闭包；`request()` 内部命中该表时直接走
+    // 这条路径，完全不碰 `task`（未连接的 `freshClient()` 场景下 task 本来就是 nil）。生产路径不受
+    // 影响——这张表默认为空，`request()` 只有命中表项时才短路。
+    private var testSupportRPCResponders: [String: @Sendable (JSONObject) async throws -> JSONObject] = [:]
 
     // MARK: F3 — per-run 单调 seq 域
     private var seqByRunID: [String: Int] = [:]
@@ -303,6 +342,10 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                 prettyPrint("RECV sessions.messages.subscribe result", result)
                 if let subscribed = result["subscribed"] as? Bool, !subscribed {
                     continuation.finish(throwing: KernelClientError.protocolMismatch("subscribe returned subscribed:false"))
+                } else {
+                    // M1：消费 subscribe 响应里的 `approvalReplay`（authoritative 的当前 pending
+                    // 审批快照，见下方 consumeApprovalReplay 文档注释）——上一轮完全没有读这个字段。
+                    await self.consumeApprovalReplay(result, kernelKey: kernelKey)
                 }
             } catch {
                 continuation.finish(throwing: error)
@@ -316,27 +359,31 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         throw KernelClientError.notImplemented("interrupt() 本轮 TODO 桩——L1 闭环没有 active run 需要 interrupt")
     }
 
-    /// D1 §2.5 stop()。**F6 rework**：上一轮把 stop() 实现为"abort -> delete -> finish 流"三步，
-    /// 存在两个严重缺陷（对抗审 T-044 复现）：
-    ///   ① 返回给调用方的 `StopResultPayload.operationID` 是 `"\(sessionID)-stop-abort_\(status)"`，
-    ///      与 EventMapping 里 lifecycle 映射自己派生的 `"\(sessionID)-abort-\(runID)"` 完全不同，
-    ///      调用方的 Promise 结果和异步 `operation_completed` 事件根本无法关联。
-    ///   ② delete 之后立刻 `finishEventContinuation`（= 立刻 finish 流），如果该 run 的强制取消
-    ///      产生的 `turn_complete(cancelled)`/`operation_completed` 事件恰好还没被 receiveLoop 处理
-    ///      完，调用方永远收不到这两个 D1 §9.3 明确要求的必需终态。
+    /// D1 §2.5 stop()。**M3 rework（收 T-045 codex 确认性再审 MUST-FIX，在 F6 基础上第二次收残）**：
+    /// F6 只解决了"operationId 不共享"和"delete 前不等终态"两个问题，但重写本身引入/遗留了三类新
+    /// 缺陷（codex 独立复现）：
+    ///   ① `abortedRunId==nil`（无 active run）与"等待超时"两条路径只让 Promise 知道结果，从不给
+    ///      `subscribe()` 事件流补一条 `operation_completed` 镜像——只订阅事件流、不等 Promise 的
+    ///      观察者完全看不到这次 stop 操作本身的终态。
+    ///   ② active-run 路径把"这次 stop 操作成功与否"和"sessions.delete 这一步资源回收是否成功"
+    ///      两件事混为一谈：`handleAgentEvent` 在 delete **之前**就已经用 `succeeded` 发出了
+    ///      operation_completed（这个时机是对的，D1 §9.3 要求先有终态再有 session_end），但 Promise
+    ///      的 outcome 却在 delete **之后**重新按 `deleted` 布尔值计算——如果 delete 恰好返回
+    ///      `deleted:false`，Promise 报 `.rejected`，与已经发出的 Event `.succeeded` 直接矛盾。
+    ///      修法：outcome 只由"等没等到终态确认"（timedOut）决定，不再看 `deleted`——delete 是这次
+    ///      stop 操作的收尾资源回收步骤，和"abort 本身有没有成功"是两件事，不应该互相污染判定，这样
+    ///      Promise 和已经发出的 Event 天然保持一致（因为它们不再有两个独立的信息来源）。
+    ///   ③ `sessions.abort`/`sessions.delete` 抛错时整个函数直接向上抛出，`stopInProgress` 锁、
+    ///      `pendingStops` 条目都不会被释放——真实复现：第一次 stop() 因传输错误抛出后，锁永久卡在
+    ///      `stop_in_progress`，第二次 stop() 会被误判成"另一个 stop 正在进行"而拒绝
+    ///      （`session_locked`），即使第一次调用早就已经失败结束。修法：`do/catch` 包裹两次 RPC，
+    ///      catch 里统一释放锁 + 清理 pendingStop + 发一条 `operation_completed(outcome:.rejected)`
+    ///      镜像，然后把原始错误重新抛给调用方（stop() 这次调用确实失败了，调用方需要知道）。
     ///
-    /// 本轮修法：
-    ///   1. 在发起 `sessions.abort` **之前**就铸造一个唯一 operationId，登记到 `pendingStops`
-    ///      （连同"这次 stop 生效前活跃的 runId"），供 `handleAgentEvent` 观察到对应的 aborted
-    ///      lifecycle 帧时使用**同一个** operationId 构造 operation_completed，不再自己派生。
-    ///   2. abort 之后、delete 之前，有界等待（`waitForPendingStopTerminal`，非无限悬挂）该 run 的
-    ///      operation_completed + turn_complete(cancelled) 已经被 `handleAgentEvent` 观察并 yield
-    ///      完成——只有等到确认（或超时）才继续，避免过早 finish 流。
-    ///   3. delete 之后、finish 流之前，yield 一条 `session_end(reason:.stopped)`（上一轮从未产出
-    ///      这个事件）。
-    ///   4. `StopResultPayload.operationID` 返回同一个铸造好的值，`outcome` 在等待超时时诚实记
-    ///      `.timedOut`（D1 §2.5 stop() 可达 outcome 子集本就包含这一态），否则按 delete 是否成功
-    ///      记 succeeded/rejected（同上一轮）。
+    /// `PendingStop.affectedRunID` 在 abort 之后立刻用 `abortResult.abortedRunId`（权威值）覆盖——
+    /// 不能一直沿用发起 abort 前的本地缓存 `lastRunIDBySessionID`，那个值可能陈旧，会让
+    /// `handleAgentEvent` 里 `pendingForRun.affectedRunID == runID` 的相等判断永远不成立、白等到
+    /// 超时（codex 复现的具体机制）。
     public func stop(session: SessionHandle) async throws -> StopResultPayload {
         guard let kernelKey = kernelKeyBySessionID[session.sessionID] else {
             throw KernelClientError.protocolMismatch("unknown session \(session.sessionID)")
@@ -352,42 +399,110 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         lockStateBySessionID[session.sessionID] = .stopInProgress
 
         let operationID = "op-stop-\(UUID().uuidString)"
-        let affectedRunID = lastRunIDBySessionID[session.sessionID]
-        pendingStops[session.sessionID] = PendingStop(operationID: operationID, affectedRunID: affectedRunID)
+        let affectedRunIDBeforeAbort = lastRunIDBySessionID[session.sessionID]
+        pendingStops[session.sessionID] = PendingStop(operationID: operationID, affectedRunID: affectedRunIDBeforeAbort)
 
-        let abortResult = try await request(method: "sessions.abort", params: ["key": kernelKey])
-        prettyPrint("RECV sessions.abort result", abortResult)
+        do {
+            let abortResult = try await request(method: "sessions.abort", params: ["key": kernelKey])
+            prettyPrint("RECV sessions.abort result", abortResult)
 
-        // D1 v3 §9.3："stop() 调用时存在 active run，适配器必须先完成该 run 的强制取消并产出
-        // TurnCompleteEvent(cancelled)...确认该事件已经进入 subscribe() 流之后，才能产出
-        // SessionEndEvent(reason:'stopped')"。有界等待（不是无限悬挂），交由 handleAgentEvent 在
-        // 观察到对应 aborted lifecycle 帧时唤醒；超时则诚实继续（不让调用方永久悬挂），并把
-        // outcome 记成 .timedOut。
-        //
-        // **是否需要等待，由 `sessions.abort` 自己的返回值判断，不是本地缓存的 `affectedRunID`**
-        // ——现场实测（scratchpad/openclaw-iso3 隔离环境）坐实：`lastRunIDBySessionID` 只在收到新
-        // run 时刷新，一个 run 正常 turnComplete 之后这个缓存不会被清空；如果 stop() 在该 run 早已
-        // 自然结束之后才被调用，`sessions.abort` 会诚实回报 `{"abortedRunId":null,
-        // "status":"no-active-run"}`——这种情况下压根不会有任何 aborted lifecycle 帧到达，若仍然
-        // 用 `affectedRunID != nil` 去等待，会白白悬挂满 5 秒、还诚实性错误地把 outcome 报成
-        // `.timedOut`（本轮真实探针复现过这个具体场景：`sessions.send` 的模型回复早已完成，
-        // stop() 才被调用，`abortedRunId` 为 nil，若仍等待就是在等一个永远不会来的事件）。改为
-        // 直接读 `abortResult.abortedRunId`——非空才说明这次 abort 真的中止了一个活跃 run，才需要
-        // 等待其终态；为 nil 就没有等待的意义，直接把这次 pendingStop 标记掉，不留悬空 waiter。
-        var timedOut = false
-        let actuallyAbortedRunID = abortResult["abortedRunId"] as? String
-        if actuallyAbortedRunID != nil {
-            timedOut = await waitForPendingStopTerminal(sessionID: session.sessionID, timeoutSeconds: 5)
-        } else {
+            // D1 v3 §9.3："stop() 调用时存在 active run，适配器必须先完成该 run 的强制取消并产出
+            // TurnCompleteEvent(cancelled)...确认该事件已经进入 subscribe() 流之后，才能产出
+            // SessionEndEvent(reason:'stopped')"。有界等待（不是无限悬挂），交由 handleAgentEvent 在
+            // 观察到对应 aborted lifecycle 帧时唤醒；超时则诚实继续（不让调用方永久悬挂），并把
+            // outcome 记成 .timedOut。
+            //
+            // **是否需要等待，由 `sessions.abort` 自己的返回值判断，不是本地缓存的 `affectedRunID`**
+            // ——现场实测（scratchpad/openclaw-iso3 隔离环境）坐实：`lastRunIDBySessionID` 只在收到
+            // 新 run 时刷新，一个 run 正常 turnComplete 之后这个缓存不会被清空；如果 stop() 在该 run
+            // 早已自然结束之后才被调用，`sessions.abort` 会诚实回报 `{"abortedRunId":null,
+            // "status":"no-active-run"}`——这种情况下压根不会有任何 aborted lifecycle 帧到达。改为
+            // 直接读 `abortResult.abortedRunId`——非空才说明这次 abort 真的中止了一个活跃 run，才需要
+            // 等待其终态；为 nil 就没有等待的意义。
+            let actuallyAbortedRunID = abortResult["abortedRunId"] as? String
+            var timedOut = false
+            if let actuallyAbortedRunID = actuallyAbortedRunID {
+                // M3：用权威值覆盖，不再信任 abort 前的本地缓存（见函数文档注释）。
+                pendingStops[session.sessionID]?.affectedRunID = actuallyAbortedRunID
+                let timeoutSeconds = testSupportStopTimeoutSecondsOverride ?? 5
+                timedOut = await waitForPendingStopTerminal(sessionID: session.sessionID, timeoutSeconds: timeoutSeconds)
+                if timedOut {
+                    // M3：等待超时也必须给事件流补一条 operation_completed 镜像——上一轮只有 Promise
+                    // 知道超时了，只订阅事件流的观察者永远看不到这个 run 的终态。
+                    emitOperationCompletedMirror(
+                        sessionID: session.sessionID, operationID: operationID,
+                        affectedRunID: actuallyAbortedRunID, outcome: .timedOut
+                    )
+                }
+            } else {
+                // M3：这次 stop() 生效时该 run 早已自然结束（sessions.abort 诚实回报
+                // abortedRunId:null）——没有可等待的终态，但 Promise 即将报 succeeded，必须同时给
+                // 事件流补一条 operation_completed 镜像（上一轮这条路径只发 session_end，事件流
+                // 观察者完全看不到这次 stop 操作本身的终态）。
+                pendingStops.removeValue(forKey: session.sessionID)
+                emitOperationCompletedMirror(
+                    sessionID: session.sessionID, operationID: operationID,
+                    affectedRunID: nil, outcome: .succeeded
+                )
+            }
+
+            let deleteResult = try await request(method: "sessions.delete", params: ["key": kernelKey])
+            prettyPrint("RECV sessions.delete result", deleteResult)
+            let deleted = (deleteResult["deleted"] as? Bool) ?? false
+            if !deleted {
+                // 诚实记录：delete 未确认成功，但不据此把已经发出/即将返回的 succeeded 倒转成
+                // rejected——delete 是会话资源回收的收尾步骤，和"这次 stop 操作本身有没有成功中止
+                // run"是两件事，不应该互相污染判定（M3 修的正是这个矛盾）。
+                prettyPrint("WARN sessions.delete reported deleted:false after stop() otherwise succeeded", deleteResult)
+            }
+
+            emitStopSessionEndAndFinish(session: session)
+
+            // D1 §2.5：stop() 可达的 outcome 子集是 succeeded/timed_out/rejected 三态——本函数只有
+            // 走到这里（两次 RPC 都没有抛错）才可能是 succeeded/timed_out，`.rejected` 专属于下面
+            // catch 分支代表的"RPC 本身失败"。
+            let outcome: StopResultPayloadOutcome = timedOut ? .timedOut : .succeeded
+            return StopResultPayload(operationID: operationID, outcome: outcome)
+        } catch {
+            // M3：sessions.abort/sessions.delete 抛错——释放锁 + 清理 pendingStop + 发一条
+            // operation_completed(outcome:.rejected) 镜像，再把原始错误重新抛出。不清理这三样状态
+            // 会让该 session 永久卡在 stop_in_progress（复现：第一次 stop 抛错后锁不释放，第二次
+            // stop 被 session_locked 拒绝，即使第一次调用早已结束）。
+            let affectedRunID = pendingStops[session.sessionID]?.affectedRunID ?? affectedRunIDBeforeAbort
+            emitOperationCompletedMirror(
+                sessionID: session.sessionID, operationID: operationID,
+                affectedRunID: affectedRunID, outcome: .rejected
+            )
             pendingStops.removeValue(forKey: session.sessionID)
+            lockStateBySessionID.removeValue(forKey: session.sessionID)
+            throw error
         }
+    }
 
-        let deleteResult = try await request(method: "sessions.delete", params: ["key": kernelKey])
-        prettyPrint("RECV sessions.delete result", deleteResult)
-        let deleted = (deleteResult["deleted"] as? Bool) ?? false
+    /// M3：为 stop() 不会经过 `handleAgentEvent` 真实 aborted lifecycle 帧的路径（无 active run、
+    /// 等待超时、RPC 抛错）补一条 `operation_completed` 镜像——D1 §9.3 要求 Promise 结果与
+    /// `subscribe()` 流里的 `operation_completed` 必须是同一个 `{operationId,outcome}`，不能让只
+    /// 订阅事件流的观察者完全看不到这次 stop 操作的终态。
+    private func emitOperationCompletedMirror(
+        sessionID: String, operationID: String, affectedRunID: String?, outcome: PayloadOutcome
+    ) {
+        guard let continuation = eventContinuations[sessionID] else { return }
+        let opPayload = OperationCompletedEventMessagePayload(
+            affectedRunID: affectedRunID, detail: nil, newRunID: nil,
+            operationID: operationID, operationKind: .stop, outcome: outcome
+        )
+        continuation.yield(.operationCompleted(OperationCompletedEventMessage(
+            direction: .event, payload: opPayload, runID: affectedRunID,
+            sentAt: Date(), seq: nextSeq(runID: affectedRunID, sessionID: sessionID),
+            sessionID: sessionID, ts: Date(), type: .evtOperationCompleted
+        )))
+    }
 
-        // F8：session_end(stopped) 必须在 finish 流之前 yield，且与 shutdown/transportClosed 两条
-        // 路径共享同一个"这个 session 是否已经产出过 terminal"标记，避免重复/矛盾的 sessionEnd。
+    /// stop() 成功路径的收尾：F8 `sessionTerminalEmitted` 去重 + yield `session_end(stopped)` +
+    /// finish 事件流（`finishEventContinuation` 内部的 `clearSessionDerivedCaches` 已经覆盖 M5
+    /// 要求的全部派生缓存清理，这里只再额外清 `kernelKeyBySessionID`——那张表不是"派生缓存"，是
+    /// session 本身是否还存在的权威映射，不属于 `clearSessionDerivedCaches` 的职责范围）。
+    private func emitStopSessionEndAndFinish(session: SessionHandle) {
         if !sessionTerminalEmitted.contains(session.sessionID) {
             sessionTerminalEmitted.insert(session.sessionID)
             if let continuation = eventContinuations[session.sessionID] {
@@ -398,15 +513,8 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                 ))
             }
         }
-
         finishEventContinuation(sessionID: session.sessionID)
         kernelKeyBySessionID.removeValue(forKey: session.sessionID)
-        pendingStops.removeValue(forKey: session.sessionID)
-        lockStateBySessionID.removeValue(forKey: session.sessionID)
-
-        // D1 §2.5：stop() 可达的 outcome 子集是 succeeded/timed_out/rejected 三态。
-        let outcome: StopResultPayloadOutcome = timedOut ? .timedOut : (deleted ? .succeeded : .rejected)
-        return StopResultPayload(operationID: operationID, outcome: outcome)
     }
 
     /// 等待 `pendingStops[sessionID]` 对应的 run 终态（operation_completed + turn_complete）已被
@@ -458,12 +566,13 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         return next
     }
 
-    private func finishEventContinuation(sessionID: String) {
-        eventContinuations[sessionID]?.finish()
-        eventContinuations.removeValue(forKey: sessionID)
-        // per-run 缓存一并清理，避免长生命周期的 client 无限累积已经 stop() 掉的 session 名下所有
-        // run 的 seq/toolCallId/usage 缓存（F1：缓存改成 per-run 键之后，这里改为按
-        // `runIDsBySessionID` 记录的清单批量清）。
+    /// M5（收 T-045 codex 确认性再审 MUST-FIX）：一个 session 的全部派生缓存——per-run
+    /// seq/toolCallId/usage、M1 approval 双向缓冲区（含从未配对成功的孤儿条目）、pendingStop、
+    /// session 锁、F8 terminal 去重标记——统一在这里清干净。`finishEventContinuation`（stop()/
+    /// 正常 subscribe 流结束）和 `handleTransportClosed`（transport 异常）两条路径都必须调用同一份
+    /// 清理，不能像上一轮那样只清一半（前者只清了 per-run 缓存，后者干脆什么都不清；approval 缓存
+    /// 更是只有 join 成功时才删除，pending-first 漏配对的条目会永久残留）。
+    private func clearSessionDerivedCaches(sessionID: String) {
         for runID in runIDsBySessionID[sessionID] ?? [] {
             seqByRunID.removeValue(forKey: runID)
             lastToolCallIDByRunID.removeValue(forKey: runID)
@@ -472,11 +581,31 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         runIDsBySessionID.removeValue(forKey: sessionID)
         lastRunIDBySessionID.removeValue(forKey: sessionID)
         seqFallbackBySessionID.removeValue(forKey: sessionID)
+
+        for approvalID in approvalIDsBySessionID[sessionID] ?? [] {
+            agentApprovalInfoByApprovalID.removeValue(forKey: approvalID)
+            pendingSessionApprovalByApprovalID.removeValue(forKey: approvalID)
+        }
+        approvalIDsBySessionID.removeValue(forKey: sessionID)
+
+        pendingStops.removeValue(forKey: sessionID)
+        lockStateBySessionID.removeValue(forKey: sessionID)
+        sessionTerminalEmitted.remove(sessionID)
+    }
+
+    private func finishEventContinuation(sessionID: String) {
+        eventContinuations[sessionID]?.finish()
+        eventContinuations.removeValue(forKey: sessionID)
+        clearSessionDerivedCaches(sessionID: sessionID)
     }
 
     // MARK: - 内部：RPC 请求/响应关联
 
     private func request(method: String, params: JSONObject) async throws -> JSONObject {
+        if let responder = testSupportRPCResponders[method] {
+            prettyPrint("SEND req \(method) (test-stubbed, no real transport)", ["method": method, "params": params])
+            return try await responder(params)
+        }
         guard let task = task else { throw KernelClientError.notConnected }
         nextReqID += 1
         let id = "r\(nextReqID)"
@@ -524,21 +653,28 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                     break
                 }
             } catch {
-                // 传输中断前先尽力给每个尚未产出过 terminal 的活跃 session 补一条
-                // sessionEnd(reason:.transportClosed)——F8：与 shutdown/stop 两条路径共享
-                // `sessionTerminalEmitted` 去重标记，不会对同一个 session 重复/矛盾地产出 sessionEnd。
-                for (ourSessionID, continuation) in eventContinuations {
-                    guard !sessionTerminalEmitted.contains(ourSessionID) else { continue }
-                    sessionTerminalEmitted.insert(ourSessionID)
-                    continuation.yield(makeSessionEndEventForTransportClosed(
-                        ourSessionID: ourSessionID,
-                        nextSeq: { self.nextSeq(runID: nil, sessionID: ourSessionID) }
-                    ))
-                }
-                failAllPending(error: KernelClientError.transport("\(error)"))
+                handleTransportClosed(error: KernelClientError.transport("\(error)"))
                 break
             }
         }
+    }
+
+    /// 传输中断（真实 WS 断开，或 `testSupportSimulateTransportClosed` 模拟）的统一处理：先尽力给
+    /// 每个尚未产出过 terminal 的活跃 session 补一条 sessionEnd(reason:.transportClosed)——F8：与
+    /// shutdown/stop 两条路径共享 `sessionTerminalEmitted` 去重标记，不会对同一个 session 重复/
+    /// 矛盾地产出 sessionEnd；然后 `failAllPending` 收尾所有还在等待的 RPC/事件流。抽成独立方法只是
+    /// 为了让测试能直接触发这条路径（M6：真实驱动 shutdown+transport close 两条路径，不是像上一轮
+    /// 那样用两次同样的 shutdown 帧代替）。
+    private func handleTransportClosed(error: Error) {
+        for (ourSessionID, continuation) in eventContinuations {
+            guard !sessionTerminalEmitted.contains(ourSessionID) else { continue }
+            sessionTerminalEmitted.insert(ourSessionID)
+            continuation.yield(makeSessionEndEventForTransportClosed(
+                ourSessionID: ourSessionID,
+                nextSeq: { self.nextSeq(runID: nil, sessionID: ourSessionID) }
+            ))
+        }
+        failAllPending(error: error)
     }
 
     private func failAllPending(error: Error) {
@@ -550,8 +686,12 @@ public actor OpenclawGatewayKernelClient: KernelClient {
             waiter.resume(throwing: error)
         }
         oneShotEventWaiters.removeAll()
-        for (_, cont) in eventContinuations {
+        // M5：transport 异常路径上一轮只 finish 了 continuation，从不清理per-session派生缓存
+        // （seq/toolCallId/usage/approval 双向缓冲/pendingStop/锁/terminal 标记）——这里改为跟
+        // `finishEventContinuation` 共享同一份 `clearSessionDerivedCaches`。
+        for (sessionID, cont) in eventContinuations {
             cont.finish(throwing: error)
+            clearSessionDerivedCaches(sessionID: sessionID)
         }
         eventContinuations.removeAll()
     }
@@ -721,13 +861,34 @@ public actor OpenclawGatewayKernelClient: KernelClient {
             }
 
         case "approval":
-            // F4：只做 approvalId -> toolCallId 的精确关联缓存，不直接产出 D2 事件——真正的
-            // approval_request 仍由 session.approval(phase:pending) 产出（它才有 timeoutMs/
-            // presentation 等完整字段），这里只是给它提供一个不会串号的 toolCallId 来源。
+            // F4/M1：这条 agent 帧本身不直接产出 D2 事件——真正的 approval_request 仍由
+            // session.approval(phase:pending) 产出（它才有 timeoutMs/presentation 等完整字段），
+            // 这里只是给它提供不会串号的 {runId,toolCallId} 来源。
+            //
+            // M1 订正：`approvalRunID` 必须取**这一条 agent 帧自己的** `runIDHint`（上面已经用这条
+            // 帧自带的 `payload.runId` 刷新过 `lastRunIDBySessionID`，此刻 `runIDHint` 精确对应
+            // 这次审批），而不是等到 `session.approval` 落地时再去查全 session 的
+            // `lastRunIDBySessionID`——那时如果又有别的 run 的 approval 帧插队到达，会把这次审批
+            // 错误关联到"当前最新活跃的 run"（对抗审 T-045 M1 复现的具体机制）。按 approvalId 存好
+            // {runId,toolCallId} 之后，双向 join：
+            //   - 若 `session.approval(pending)` 已经先到达并缓冲（`pendingSessionApprovalByApprovalID`
+            //     有这个 approvalId 的条目）——现在信息齐了，立即补发 approvalRequest（上一轮这个
+            //     方向完全没处理，session.approval 先到时直接丢弃，approval_request 永久丢失）。
+            //   - 否则缓存 {runId,toolCallId}，等 `session.approval` 后到时再用。
             if jsonString(data["phase"]) == "requested",
                let approvalID = jsonString(data["approvalId"]),
-               let toolCallID = jsonString(data["toolCallId"]) {
-                toolCallIDByApprovalID[approvalID] = toolCallID
+               let toolCallID = jsonString(data["toolCallId"]),
+               let approvalRunID = runIDHint {
+                approvalIDsBySessionID[ourSessionID, default: []].insert(approvalID)
+                if let bufferedSessionApproval = pendingSessionApprovalByApprovalID.removeValue(forKey: approvalID) {
+                    emitApprovalRequestIfPossible(
+                        payload: bufferedSessionApproval.payload, ourSessionID: bufferedSessionApproval.ourSessionID,
+                        runID: approvalRunID, toolCallID: toolCallID
+                    )
+                    approvalIDsBySessionID[ourSessionID]?.remove(approvalID)
+                } else {
+                    agentApprovalInfoByApprovalID[approvalID] = AgentApprovalInfo(runID: approvalRunID, toolCallID: toolCallID)
+                }
             }
 
         case "lifecycle":
@@ -784,34 +945,82 @@ public actor OpenclawGatewayKernelClient: KernelClient {
 
     /// `session.approval` wire 事件——subscribe() 已在 `sessions.messages.subscribe` 参数里带上
     /// `includeApprovals:true`（见 subscribe() 实现），否则收不到这个事件。
+    ///
+    /// **M1 订正**：上一轮如果这条 `pending` 帧先于对应的 `agent(stream:"approval")` 帧到达
+    /// （`toolCallIDForApprovalID` 查不到），会直接 `return nil`——`approval_request` 就此永久丢失，
+    /// 即使 agent 帧随后真的到达也不会补发（对抗审 T-045 M1 第二个 REPRO：反向到达时
+    /// `eventTypes=["evt.session_end"]`，approval_request 完全缺席）。本轮改为双向缓冲 join：查不到
+    /// 就把整条 payload 按 approvalId 缓冲起来，等 agent 帧补上 `{runId,toolCallId}` 时由
+    /// `handleAgentEvent` 的 "approval" 分支补发。
     private func handleSessionApprovalEvent(_ frame: JSONObject) {
         guard let payload = frame["payload"] as? JSONObject,
               let kernelKey = payload["sessionKey"] as? String,
               let ourSessionID = ourSessionID(forKernelKey: kernelKey) else {
             return
         }
-        guard let continuation = eventContinuations[ourSessionID] else { return }
+        guard eventContinuations[ourSessionID] != nil else { return }
 
-        let runIDHint = lastRunIDBySessionID[ourSessionID]
-        let approvalID = (payload["approval"] as? JSONObject)?["id"] as? String
-        // F4：用 approvalId 去查"更权威的 agent(stream:approval) 来源"缓存的精确 toolCallId，
-        // 取代上一轮"最近一次 toolCall"的猜测。
-        let toolCallIDForApprovalID = approvalID.flatMap { toolCallIDByApprovalID[$0] }
-        let sid = ourSessionID
+        guard jsonString(payload["phase"]) == "pending" else {
+            // terminal 分支：D1 11 变体没有它的对应位置（见 EventMapping.swift 文档注释），如实跳过。
+            prettyPrint("RECV session.approval（phase:terminal，D1 11 变体无对应，跳过）", frame)
+            return
+        }
+        guard let approvalID = (payload["approval"] as? JSONObject)?["id"] as? String else { return }
 
-        if let event = mapOpenclawSessionApprovalToKernelEvent(
-            payload, ourSessionID: ourSessionID,
-            runIDHint: runIDHint,
-            toolCallIDForApprovalID: toolCallIDForApprovalID,
-            nextSeq: { self.nextSeq(runID: runIDHint, sessionID: sid) }
-        ) {
-            // 用过就清掉，避免这张一次性关联表无限增长（同一个 approvalId 不会有第二次 pending）。
-            if let approvalID = approvalID {
-                toolCallIDByApprovalID.removeValue(forKey: approvalID)
-            }
-            continuation.yield(event)
+        if let agentInfo = agentApprovalInfoByApprovalID.removeValue(forKey: approvalID) {
+            // agent(stream:"approval") 已经先到达，缓存里有准确的 {runId,toolCallId}——立即 join。
+            approvalIDsBySessionID[ourSessionID]?.remove(approvalID)
+            emitApprovalRequestIfPossible(
+                payload: payload, ourSessionID: ourSessionID, runID: agentInfo.runID, toolCallID: agentInfo.toolCallID
+            )
         } else {
-            prettyPrint("RECV session.approval（phase:terminal 或缺关联字段，D1 11 变体无对应/跳过）", frame)
+            // M1 双向 join：agent 帧还没到——缓冲这条 session.approval，等它来补发，不再直接丢弃。
+            pendingSessionApprovalByApprovalID[approvalID] = PendingSessionApproval(payload: payload, ourSessionID: ourSessionID)
+            approvalIDsBySessionID[ourSessionID, default: []].insert(approvalID)
+            prettyPrint("RECV session.approval(phase:pending)（agent(stream:approval) 尚未到达，缓冲等待补发）", frame)
+        }
+    }
+
+    /// 用已经确定的 `{runID,toolCallID}`（无论是 agent 帧先到、session.approval 先到、还是
+    /// approvalReplay 重放）产出一条 approvalRequest 事件——三条来源路径共享这一份构造+yield 逻辑，
+    /// 不重新发明一遍判断。
+    private func emitApprovalRequestIfPossible(payload: JSONObject, ourSessionID: String, runID: String, toolCallID: String) {
+        guard let continuation = eventContinuations[ourSessionID] else { return }
+        let sid = ourSessionID
+        if let event = mapOpenclawSessionApprovalToKernelEvent(
+            payload, ourSessionID: ourSessionID, runIDHint: runID, toolCallIDForApprovalID: toolCallID,
+            nextSeq: { self.nextSeq(runID: runID, sessionID: sid) }
+        ) {
+            continuation.yield(event)
+        }
+    }
+
+    /// M1：消费 `sessions.messages.subscribe` 响应里的 `approvalReplay.approvals`——这是这次
+    /// subscribe 建立**之前**就已经处于 pending 状态的审批快照（真实场景：respondApproval 还没
+    /// 落地、client 断线重连，或首次 subscribe 时错过了原始 `session.approval(pending)` 广播，只能
+    /// 靠这份权威快照补齐——见 openclaw 源码
+    /// `gateway/server-methods/sessions-subscriptions.ts:91-121`：`includeApprovals:true` 时
+    /// subscribe 的响应本身就带上 `approvalReplay:{sessionKey,updatedAtMs,approvals,truncated}`，
+    /// 每个 `approvals[]` 条目与 `session.approval(phase:"pending")` 的 `approval` 字段同构，见
+    /// `packages/gateway-protocol/src/schema/approvals.ts` 的 `PendingApprovalSnapshotSchema`）。
+    /// 上一轮完全没有读这个字段，这些审批永远不会出现在 D2 事件流里。逐条构造等价的
+    /// `session.approval(phase:"pending")` frame，直接调用 `handleSessionApprovalEvent`——走跟真实
+    /// wire 事件完全相同的双向 join 逻辑（大多数情况下这里还没有 agent(stream:approval) 帧，会被
+    /// 正常缓冲，等随后真实到达的 agent 帧补发）。
+    private func consumeApprovalReplay(_ result: JSONObject, kernelKey: String) {
+        guard let replay = result["approvalReplay"] as? JSONObject,
+              let approvals = replay["approvals"] as? [Any] else {
+            return
+        }
+        let updatedAtMs = replay["updatedAtMs"]
+        for case let approval as JSONObject in approvals {
+            let syntheticPayload: JSONObject = [
+                "sessionKey": kernelKey,
+                "updatedAtMs": updatedAtMs as Any,
+                "phase": "pending",
+                "approval": approval,
+            ]
+            handleSessionApprovalEvent(["type": "event", "event": "session.approval", "payload": syntheticPayload])
         }
     }
 
@@ -859,28 +1068,46 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         (lockStateBySessionID[sessionID] ?? .idle).description
     }
 
-    /// 测试专用：直接把某个 session 的锁状态摆到 send_pending，模拟"另一个 send() 正在途中"，
-    /// 不需要真的发起一次网络请求来制造这个窗口。
-    func testSupportForceLockToSendPending(sessionID: String) {
-        lockStateBySessionID[sessionID] = .sendPending
-    }
-
-    /// 测试专用：模拟"这个 session 上有一个 run 正在被 stop() 强制取消"——不经过真实
-    /// `sessions.abort` RPC，直接登记 `pendingStops` 与 `lastRunIDBySessionID`，供随后灌入的
-    /// aborted lifecycle 帧走真实的去重 dispatch 逻辑。
-    func testSupportSeedPendingStop(sessionID: String, runID: String, operationID: String) {
-        lastRunIDBySessionID[sessionID] = runID
-        runIDsBySessionID[sessionID, default: []].insert(runID)
-        pendingStops[sessionID] = PendingStop(operationID: operationID, affectedRunID: runID)
-    }
-
     /// 读取某个 pendingStop 是否已经被标记为"terminal 已产出"（F6 去重的核心状态）。
     func testSupportPendingStopTerminalEmitted(sessionID: String) -> Bool? {
         pendingStops[sessionID]?.terminalEmitted
     }
 
+    /// M3：读取某个 session 当前是否还残留一个 pendingStop 条目——用于验证 stop() 的各条退出路径
+    /// （成功/超时/抛错）收尾之后确实清干净了，没有泄漏。
+    func testSupportHasPendingStop(sessionID: String) -> Bool {
+        pendingStops[sessionID] != nil
+    }
+
     /// 读取某个 session 是否已经产出过 terminal sessionEnd（F8 去重的核心状态）。
     func testSupportSessionTerminalEmitted(sessionID: String) -> Bool {
         sessionTerminalEmitted.contains(sessionID)
+    }
+
+    /// M1/M5：读取某个 approvalId 当前是否还残留在任一方向的双向 join 缓冲区里——用于验证
+    /// pending-first/agent-first 两个方向在 join 成功后确实清掉了自己的缓存条目，以及 session
+    /// 结束时孤儿条目（从未配对成功的）确实被批量清理。
+    func testSupportHasBufferedApproval(approvalID: String) -> Bool {
+        agentApprovalInfoByApprovalID[approvalID] != nil || pendingSessionApprovalByApprovalID[approvalID] != nil
+    }
+
+    /// M3/M6：按 RPC method 名注册一个"被调用时应该返回什么/抛什么错"的闭包——供测试真实驱动
+    /// `send()`/`stop()` 方法体本身（含它们发起的 `sessions.send`/`sessions.abort`/
+    /// `sessions.delete` RPC），不需要一个真实的 WebSocket 连接。见 `request()` 的调用点。
+    func testSupportStubRPC(method: String, responder: @escaping @Sendable (JSONObject) async throws -> JSONObject) {
+        testSupportRPCResponders[method] = responder
+    }
+
+    /// M3：缩短 stop() 等待 aborted-run 终态的超时（生产默认 5 秒），供"超时"路径的测试使用，不用
+    /// 真的等 5 秒。
+    func testSupportSetStopTimeoutSeconds(_ seconds: Int) {
+        testSupportStopTimeoutSecondsOverride = seconds
+    }
+
+    /// M6：直接触发 `handleTransportClosed`（真实 WS 断开时 `receiveLoop` 走的同一条路径）——供
+    /// 测试验证"shutdown 之后真实 transport close"不会产出第二条矛盾的 sessionEnd，而不是像上一轮
+    /// 那样用两次同样的 shutdown 帧代替 transport close。
+    func testSupportSimulateTransportClosed() {
+        handleTransportClosed(error: KernelClientError.transport("test-simulated transport closed"))
     }
 }

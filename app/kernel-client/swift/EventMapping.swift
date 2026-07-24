@@ -367,6 +367,18 @@ func isOpenclawExecToolName(_ name: String?) -> Bool {
 /// 还在工具调用中就进入了 lifecycle "end"，边缘情况，同样折叠进 `.completed`，因为 `aborted:false`
 /// + `phase:"end"` 已经由 openclaw 保证"不是错误终止"）。`"max_turns"`/`"maxTurns"` 本轮仍未现场
 /// 观察到，映射到 `.maxTurns`维持上一轮的推断标注，未改判。
+///
+/// **M2 订正（收 T-045 codex 确认性再审 MUST-FIX）**：上一轮只看 `data.stopReason`，完全忽略
+/// `data.phase` 本身——但源码坐实（同一个 `embedded-agent-subscribe.handlers.lifecycle.ts:176-202`
+/// `emitLifecycleTerminal`）：当 `isError==true` 时 `phase` 被设成 `"error"`，且 `terminalStopReason`
+/// 的推导对 `isError` 分支直接短路成 `undefined`（`(!isError && isAssistantMessage(lastAssistant) ?
+/// lastAssistant.stopReason : undefined)`——也就是说 `phase:"error"` 这一帧的 `data.stopReason`
+/// 很可能根本不是 `"error"` 字面值（甚至可能完全缺失），只有 `phase` 字段本身能可靠地表达"这是一次
+/// assistant 错误终止"。上一轮 handler 把 `phase=="error"` 的帧也送进这个 mapper（`aborted==false`
+/// 分支两者都会进来），但 mapper 只看 `stopReason`，于是被这个"缺省折叠成 completed"的逻辑一并误报
+/// 成 `.completed`——一次真实的 assistant 错误被报告成"正常完成"。修法：`phase=="error"` 优先于
+/// `stopReason` 判定，直接映射 `.error`（D2 `StopReason` 枚举本身就有这个取值，语义精确对应，不是
+/// 推断）；只有 `phase != "error"` 时才继续走 `stopReason` 的 max_turns/completed 折叠逻辑。
 func mapOpenclawAgentLifecycleToTurnComplete(
     _ data: JSONObject,
     ourSessionID: String,
@@ -375,15 +387,22 @@ func mapOpenclawAgentLifecycleToTurnComplete(
     cachedUsage: (input: Int, output: Int)?,
     nextSeq: () -> Int
 ) -> EventMessageUnion {
+    let phase = jsonString(data["phase"])
     let rawStopReason = jsonString(data["stopReason"])
     let stopReason: StopReason
-    switch rawStopReason {
-    case "max_turns", "maxTurns":
-        stopReason = .maxTurns // 推断：本轮未现场观察到这个取值，维持上一轮标注
-    default:
-        // "stop"/"toolUse"/nil/其余未知取值：aborted:false + phase:"end" 由 openclaw 自身构造逻辑
-        // 保证非错误终止（见函数文档注释），一律记 completed，不再默认 error（F6）。
-        stopReason = .completed
+    if phase == "error" {
+        // M2：phase 本身就是 assistant 错误终止的权威信号——不看 stopReason 字段是否存在/取值
+        // 为何，直接映射 error，别再忽略 phase。
+        stopReason = .error
+    } else {
+        switch rawStopReason {
+        case "max_turns", "maxTurns":
+            stopReason = .maxTurns // 推断：本轮未现场观察到这个取值，维持上一轮标注
+        default:
+            // "stop"/"toolUse"/nil/其余未知取值：aborted:false + phase:"end" 由 openclaw 自身构造
+            // 逻辑保证非错误终止（见函数文档注释），一律记 completed，不再默认 error（F6）。
+            stopReason = .completed
+        }
     }
     let usage = cachedUsage.map { Usage(inputTokens: $0.input, outputTokens: $0.output) }
     let turnPayload = TurnCompleteEventMessagePayload(
