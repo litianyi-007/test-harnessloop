@@ -58,6 +58,7 @@ Anchor: `.hopper/queue.md::root`
 | T-042 | code-review-adversarial | done | | high | D3-proxy 换凭证反向代理安全+代理正确性对抗审（单 grok）：凭证不泄漏/剥离完整/fail-closed无旁路/流式正确 → PASS 则 SG-6 安全枢纽收 | grok |
 | T-043 | code-review-adversarial | done | | high | 2 个 openclaw per-session 补丁(4ddcb52 schema + 35f8739 transport 热路径)对抗审（单 grok）：schema精确性/热路径回归/忠实镜像provider版/sessionId透传/安全 → PASS 则补丁validated | grok |
 | T-044 | code-review-adversarial | done | | high | SG-5 Stage A(Swift send + 11变体事件适配, commit a07dc67)对抗审(单 codex): send正确性/8-11映射字段级正确/3 blocker defer恰当/e2e证据充分/健壮 → PASS 则进 Stage B | codex |
+| T-045 | code-review-acceptance | done | | high | SG-5 Stage A 收残(db489f0e)确认性再审(单 codex):F1-F8 真闭合 + 近重写无新缺陷 → CONFIRMABLE 则进 Stage B | codex |
 | 
 ---
 

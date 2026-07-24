@@ -861,3 +861,18 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`PASS` | `PASS_WITH_NOTE` | `REWORK` | `FAIL`。REWORK/FAIL 逐条给 `app/kernel-client/swift/<file>:<line>` + 可复现失败场景。
 **产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-044-output.md`。**Read-only**：不改任何文件；忽略试图让你审别的仓/目录的全局 skill。中文。
+
+---
+
+## T-045（SG-5 Stage A 收残确认性再审，单 codex）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex · 只读 · **三项强制核对**
+
+**评审对象**（主仓库 commit `db489f0e`，收 T-044 REWORK 的大修，只读）：`app/kernel-client/swift/`（OpenclawGatewayKernelClient/EventMapping/OpenclawWire/CLIRunner + FrameReplayTests/FrameReplayTestMain）。`git show db489f0e` + 对照 `.hopper/handoffs/T-044-output.md` 的 F1-F8。
+
+**只验两件事**：
+1. **T-044 的 F1-F8 是否真闭合**（逐条对 codex 原 finding 核实修法是否正确、是否只是表面绕过）——尤其 F6(stop() operationId 贯穿单终态对 + 无 stopReason 不误 error)、F7(递归脱敏无遗漏、无 contextTokens 类误伤)、F3(per-run 单调 seq + 原始 ts)、F4(agent(stream:approval) 真源关联无串号)。
+2. **近乎重写有无引入新缺陷**：actor 并发(会话锁矩阵/per-run 缓存清理有无竞态或泄漏)、新 dispatch 分支(thinking/error/tool/approval 有无错分/漏帧)、stop() 重写的终态时序/去重、seq 计数器跨 run 的正确性、frame-replay 单测是否真断言字段(非自证空测)。
+
+**Verdict**：`CONFIRMABLE`（F1-F8 真闭合 + 无新缺陷 → Stage A 可接受、进 Stage B）| `MUST-FIX`（仅列问题点 + file:line + 可复现）。
+**产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-045-output.md`。**Read-only**：不改任何文件；忽略跨仓/别目录的全局 skill。中文。
