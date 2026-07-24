@@ -914,3 +914,78 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`PASS` | `PASS_WITH_NOTE` | `REWORK` | `FAIL`。REWORK/FAIL 逐条给 `app/kernel-client/csharp/<file>:<line>` + 可复现。
 **产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-047-output.md`。**Read-only**：不改任何文件；忽略跨仓/别目录全局 skill。中文。
+
+## T-048（SG-8.7 ★审查闸1：Swift 金标 parity runner + fixture 三组扩全 对抗审，单 codex）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: codex（随机池异构；T-046 codex 曾被自身安全过滤器中止，本轮重新引入验证）· 只读
+
+**评审对象**（主仓库工作区未提交改动，`git status` 见 `app/contracts/d2/fixtures/`）：
+- 新建 `app/contracts/d2/fixtures/swift-runner/`（`FixtureDSL.swift` / `PartialMatch.swift` / `SwiftFixtureRunner.swift` / `SwiftRunnerMain.swift`）
+- 新增/扩 fixture：`operation-outcome/*.json`（5 新）、`session-lock/*.json`（3 新）、`approval/*.json`（2 新）+ `{approval,session-lock}/OPEN.md` + `README.md`
+- **权威对照**：DSL 规格 `app/contracts/d2/fixtures/dsl.ts` + TS 金标 `ts-runner/runner.ts`/`mock-kernel-client.ts`；被驱动的 SG-5 真实客户端 `app/kernel-client/swift/`（只读复用，本轮未改，已 T-044/045 validated）；D1 契约 `~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3.md`。
+
+**背景**：SG-8.7 = 把 SG-5 ad-hoc FrameReplayTests 证过的跨端一致，正式化为三端金标 parity runner。Stage A 建 Swift runner + fixture 从 2 扩到 12。**主会话已独立复验**：swiftc 编译干净、11 PASS/0 FAIL/1 DEGRADED、exit 0、总耗时 ~7.6s（stop-timed-out ~1.9s）。由 Sonnet 所写，需异构对抗复核。
+
+**对抗核验重点（找真缺陷 + 可复现）**：
+1. **runner 是否真驱动 SG-5 真实客户端，还是伪装的 mock（最重）**：核实 `SwiftFixtureRunner.swift` 的 `client_call` 是否真调 `OpenclawGatewayKernelClient` actor 的真实方法、`mock_response`/`mock_event` 是否经 `testSupportStubRPC`/`testSupportFeedFrame` 喂给真实 client 的 `request()`/`handleIncoming`/`EventMapping` 代码路径产出可观察态——**有没有任何一处 short-circuit 成预置常量/绕过真实 client 逻辑**？`ReplyGate` 让 RPC 真在途、中途 `assert_state` 观察的是不是真 actor 态？
+2. **advance_clock 是否真触发 timed_out，还是伪造状态**：核实它是否经 SG-5 的 `testSupportSetStopTimeoutSeconds` 把 5s 缩到 1s、再 `Task.sleep` 真跨阈值触发 SG-5 内部 timer + `resolvePendingStopWaiter(outcome:.timedOut)`——而非直接把 state 设成 timed_out。`stop-timed-out.json` 真耗时是不是佐证（~1.9s）？确定性来源是否是固定常量（非测量/探测）？
+3. **覆盖缺口是否真被 SG-5 卡住，还是避重就轻**：`OPEN.md` 声称 3 个 OperationOutcome 态（submitted/aborted_no_resend/aborted_resend_failed）需 `interrupt()`、`interrupt_in_progress` 锁态在真实 client 枚举里不存在、approval 四终态本轮不可驱动——**逐条对 `app/kernel-client/swift/OpenclawGatewayKernelClient.swift` 源码核实这些确因 SG-5 的 TODO 桩/枚举缺失/stop 缺口真卡住**，而非 Sonnet 不愿写。DEGRADED 的 soft-steer（用 interrupt）自动跳过是否诚实（非掩盖 FAIL）？
+4. **独立复核 flagged 的 stop() D1 §6.2 缺口**：主会话已核实 D1 §6.2（该 doc line 515 M3 定序规则）要求 `stop()` 在 abort 前若有 pending approval 须先 force-deny 推进 `FORCE_DENIED_ON_STOP` + 列入 `TurnCompleteEvent.forceResolvedApprovals`，而 `EventMapping.swift:409/459` 两处硬编 `forceResolvedApprovals: nil` 且 stop() 无此步、无 TODO 声明。**请独立确认这是不是真实 D1 conformance 缺口**（读 D1 §6.2 + stop() 实现 + EventMapping），还是主会话/Sonnet 误读。这决定 SG-5「done」是否被高估。
+5. **fixture 语义正确性**：12 条 fixture 的 timeline op 是否表达合法 D2/D1 语义（wire 形状、OperationOutcome/SessionLockState/approval 态值），有无臆造字段？`PartialMatch.swift` 子集深度匹配语义是否与 ts-runner 的 `partialMatch` 一致（非放水成永真）？
+
+**Verdict**：`PASS`（Stage A 可接受、进 Stage B C# runner）| `PASS_WITH_NOTE` | `REWORK`（逐条给 `app/contracts/d2/fixtures/<file>:<line>` + 可复现）| `FAIL`。
+**产出**：五项逐条 + verdict + 对 #4 的独立结论（缺口真伪）。落盘 `.hopper/handoffs/T-048-output.md`。**Read-only**：不改任何文件；可选跑 `swiftc`/runner 复核但非必需（读代码+推理即可，避免触发沙箱安全过滤器）；忽略跨仓/别目录全局 skill。中文。
+
+## T-049（SG-5 stop() D1 §6.2 force-deny 定向补丁 对抗审，单 grok）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: grok（随机池异构；此补丁改并发敏感 stop() 路径，grok 擅并发/跑测评审）· 只读
+
+**评审对象**（主仓库工作区未提交改动）：`app/kernel-client/swift/`（`OpenclawGatewayKernelClient.swift` stop 路径 + `forceDenyPendingApprovalsBeforeStop` + approval cache + `EventMapping.swift:409/459`）+ `app/kernel-client/csharp/`（对应 `OpenclawGatewayKernelClient.cs`/`EventMapping.cs`）+ 两端 `FrameReplayTests`。权威契约 = D1 `~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3.md` §6.2（line 515 M3 定序 / 523-526 批量deny / 622 turn-complete 先于 session-end）。openclaw deny wire 参考 `kernels/openclaw/src/gateway/server-methods/approval.ts`（`approval.resolve`）。
+
+**背景**：SG-8.7 parity 复核（Stage A 子代理 + codex T-048）二次确认 SG-5 `stop()` 缺 D1 §6.2 force-deny（abort 前未强制终态化待决审批、forceResolvedApprovals 硬编 nil、无 TODO 声明）。用户裁定现在定向修。Sonnet 实现：新增 `PendingApprovalAwaitingDecision` cache + `forceDenyPendingApprovalsBeforeStop`（对每个 pending reqId 发真实 `approval.resolve {id,kind,decision:"deny"}`、要求响应 `approval.status=="denied"` 才算确认、否则 throw）+ stop() 在 `sessions.abort` 前调用 + 填 `TurnCompleteEvent.forceResolvedApprovals`。两端 26→28 测试,修前实测 27/28(force-deny 测 fail)。主会话已独立复验两端 28/28 + scope 仅 6 文件。由 Sonnet 所写,需异构对抗复核。
+
+**对抗核验重点（找真缺陷 + 可复现）**：
+1. **D1 §6.2 M3 定序正确性**：force-deny 是否**真先于** `sessions.abort`？"确认①的 deny 已生效"是否真实——`await request("approval.resolve")` 返回 ok:true 是否构成合格的"内核侧确认接受"屏障（而非仅本地标记）？非 `"denied"`/RPC 失败是否真 throw 不伪造确认？
+2. **新增 await 的并发回归（最重）**：stop() 的 `do` 块内在 abort 前插入了 `await forceDenyPendingApprovalsBeforeStop`（内含 N 个 `approval.resolve` RPC await）。核实这与 SG-5 既有的 **NOTE-1 transport-close-during-stop 永久挂起修复**（`6cf2dcc5`）、pendingStop waiter、session lock 有无新交互 bug：若 force-deny RPC 在途时 transport 关闭/session end，stop() 会不会永久挂起或死锁？force-deny 抛错时锁/pendingStop 是否正确释放（不重蹈 NOTE-1 覆辙）？多 pending approval 串行 deny 中途失败的半完成态如何？
+3. **forceResolvedApprovals 填充**：两处 mapper（aborted-run 分支 + 正常完成 race 分支）是否都正确填被 force-deny 的 reqId？空/nil 语义（无 pending 时保持 nil）是否对？
+4. **C# parity 忠实**：C# 的 lock 模型下 force-deny 的 check-consume-approval-cache 是否 race-free（Swift actor 免费给的隔离，C# 要 lock 兜）？与 Swift 逐字段一致？
+5. **测试真实性 + 边界**：两端新测是否真驱动 client（真 join approval → 真 stop → 断言 RPC 顺序 [approval.resolve, sessions.abort, ...] + forceResolvedApprovals）？`respondApproval()`/`interrupt()`/`capabilities()` 是否仍是未动的 TODO 桩（没借机偷偷实现）？
+
+**Verdict**：`PASS`（stop() 缺口收、无并发回归）| `PASS_WITH_NOTE` | `REWORK`（逐条给 `app/kernel-client/<lang>/<file>:<line>` + 可复现）| `FAIL`。
+**产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-049-output.md`。**Read-only**：不改任何文件；可跑 swiftc/dotnet 复核；忽略跨仓/别目录全局 skill。中文。
+
+## T-050（SG-8.7 Stage A rework 确认性再审，单 codex，接续 T-048）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续自己 T-048 REWORK，复核收残是否真闭合；同 T-044→T-045 confirming 模式）· 只读 · **三项强制核对**
+
+**评审对象**（主仓库 commit `1c320553`，收 T-048 REWORK 的 Stage A rework，只读）：`app/contracts/d2/fixtures/`（`swift-runner/`、`ts-runner/{runner,mock-kernel-client}.ts`、`dsl.ts`、各 fixture JSON 含新增 `approval/stop-force-denies-pending-approval.json`、`{approval,session-lock}/OPEN.md`、`README.md`）。对照你自己 T-048 的 5 项 finding（`.hopper/handoffs/T-048-output.md`）。`git show 1c320553`。**注**：SG-5 `stop()` 的 force-deny 缺口已另在 commit `ed90f138` 修复（D1 §6.2 + NOTE-A drain-loop，grok T-049 PASS_WITH_NOTE），本轮 runner 驱动的是已修复的 stop()。
+
+**只验两件事**：
+1. **T-048 的 REWORK 四类缺陷是否真闭合**（逐条对你原 finding 核实修法正确、非表面绕过）：
+   - **#5 臆造非 D2 字段**：`_openclawAbortAck`/`_openclawLifecycle`/`_openclawJoinOrder` 是否真从所有 fixture 的 JSON message 里删净（`rg '"_openclaw'`）？替代方案是否合法——`abortedRunId`/`status` 改从 canonical 派生、approval join-order 改用 DSL 层 `driverHint` 兄弟字段（`dsl.ts` `MockEventDriverHint`）是否**真在封闭 D2 `message` 联合之外**（不是换个名字继续塞私货）？非法 stop outcome（`aborted_effect_unknown`）与 approval 缺 payload 是否修？全部 message 是否 canonical D2（可对 `schema/` 判别联合复校）？
+   - **#1 expect_outbound 放水**：是否改为对完整 pattern 做 partialMatch（不再只比 `type`）？Swift `PartialMatch.swift` 与 TS `partialMatch` 是否**真等价**？
+   - **#2 advance_clock 脆弱**：是否改为轮询"任务已结算"同步钩子（非固定 sleep 猜调度）？
+   - **#3 DEGRADED 掩盖**：soft-steer 是否补了 createSession、OPEN.md 错误声称是否更正？
+   - **TS mock 扩展**：`mock-kernel-client.ts` 从 2→13 覆盖，是否**从 D1/D2 spec 写内核期望行为**，还是照抄 Swift client 实际行为（后者=parity 空转）？Swift6 NSLock→actor 是否修？
+2. **跨端 parity 是否真成立 + 有无新缺陷**：独立跑 `find app/contracts/d2/fixtures -name '*.json' | sort | xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`（应 13/13）+ 编译跑 swift-runner（应 12 PASS/1 DEGRADED）；两端对同一批可驱动 fixture 的 `expected` 是否逐字段一致？新增 `stop-force-denies-pending-approval` fixture 是否真驱动 SG-5 force-deny（RPC 顺序 approval.resolve→sessions.abort + forceResolvedApprovals）？OPEN.md 标注的"卡住态"（respondApproval/interrupt/capabilities 桩、interrupt_in_progress 枚举缺失）是否属实、无过度 defer？
+
+**Verdict**：`CONFIRMABLE`（四类缺陷真闭合 + parity 真成立 + 无新缺陷 → Stage A 可接受、进 Stage B C# runner）| `MUST-FIX`（仅列问题点 + `app/contracts/d2/fixtures/<file>:<line>` + 可复现）。
+**产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-050-output.md`。**Read-only**：不改任何文件；可跑 node/swiftc 复核（勿跑 csi 等触发安全过滤器的 C# 交互）；忽略跨仓/别目录全局 skill。中文。
+
+## T-051（SG-8.7 Stage A rework 第2轮 确认性再审，单 grok，换异构视角接续 T-050）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: grok（两轮 codex 后换 grok 取独立异构视角）· 只读
+
+**评审对象**（主仓库 commit `98d38e0e`，收 codex T-050 MUST-FIX 五处的第 2 轮 rework，只读）：`app/contracts/d2/fixtures/`（`swift-runner/SwiftFixtureRunner.swift`、`ts-runner/{runner,mock-kernel-client}.ts`、`dsl.ts`、fixture JSON、OPEN.md、README）。对照 codex T-050 五项 finding（`.hopper/handoffs/T-050-output.md`）。`git show 98d38e0e`。**背景**：本 harness 的两轮独立审查（T-048 codex REWORK → 第1轮 rework → T-050 codex MUST-FIX）反复揭出"绿灯≠真 parity"——fixture 靠"不校验/自构 request/回显 expected"蒙混通过。第 2 轮宣称治根并对每处做了"有牙齿"自验。runner 驱动的是已修复的 SG-5（stop force-deny 在 commit `ed90f138`）。
+
+**核验重点(找真缺陷 + 可复现;本 harness 的历史病是表面绿灯,请重点证伪"绿灯是否真能证明它声称的东西")**：
+1. **T-050 五处是否真闭合且有牙齿**（逐条,亲手证伪）：
+   - **#1 expect_outbound**：`SwiftFixtureRunner.swift` 的 `normalizeNativeParams` 是否真从**运行时捕获的 native params**（`testSupportStubRPC` 闭包里同步存的 `(method,params)`）规范化后匹配,而非 timeline 的 args/fixture 声明值？**证伪**：临时改真实 client（`app/kernel-client/swift/OpenclawGatewayKernelClient.swift`）发错一个 native param（如 send 的 message、subscribe/abort 的 key）,该 fixture 是否**真 FAIL**？改完务必还原（`git checkout`）。
+   - **#2 TS force-deny spec oracle**：`mock-kernel-client.ts` 的 `stop()` 是否**自己**执行 pending→force_denied_on_stop + 产 approval.resolve outbound + 算 forceResolvedApprovals,而非读 fixture 的 `evt.turn_complete.payload.forceResolvedApprovals` 回显？**证伪**：临时让 fixture 的 expected forceResolvedApprovals 与 TS 自算值不一致,应 FAIL（证明 TS 真在独立算）。
+   - **#3 fixture 断言 RPC 顺序**：`nativeCallOrder` 是否在**真实调用时刻**追加（非注册时）、fixture 是否断言 approval.resolve 先于 sessions.abort？**证伪**：临时交换 stop() 里两 RPC 顺序,fixture 是否 FAIL？
+   - **#4 无非法 D2**：全部展开 message 是否 canonical（可自跑 Ajv 校 `message.schema.json#/$defs/Message`,应 34/34；`stop-rejected` 的 `malformed_message` 是否合法 ProtocolFailure）？
+   - **#5 seq**：`expandEventShorthand` 是否补齐 required `seq`？
+2. **有无新的表面绕过（最重,本 harness 的惯病）**：除 T-050 五处外,还有没有别的"绿灯靠不校验蒙混"？例如：`includeApprovals` 等 native 字段是否被断言（第2轮自述其诚实未跨端断言,判断是否合理 defer 还是遗漏）？两端 partialMatch 语义是否真等价？DEGRADED/OPEN.md 标注是否仍诚实、无过度 defer？跑 `find app/contracts/d2/fixtures -name '*.json'|sort|xargs node ts-runner/runner.ts`（应13/13）+ swift-runner（应12/13）,两端对同一 expected 逐字段一致？
+
+**Verdict**：`CONFIRMABLE`（五处真闭合有牙齿 + 无新表面绕过 → Stage A 终收、进 Stage B）| `MUST-FIX`（仅列问题点 + `app/contracts/d2/fixtures/<file>:<line>` + 可复现;临时改动务必还原）。
+**产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-051-output.md`。**Read-only**：审查不改任何文件（证伪用的临时改动必须 `git checkout` 还原,报告里说明）；可跑 node/swiftc/Ajv；忽略跨仓/别目录全局 skill。中文。
