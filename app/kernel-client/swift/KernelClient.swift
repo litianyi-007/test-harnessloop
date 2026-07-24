@@ -4,16 +4,21 @@
 // 下面 7 个方法逐一对应 D1 §2.1~§2.7（queryBilling 属于 §7 计费查询，不在窄腰 7 方法之列，本轮
 // 未纳入协议——D2.swift 已生成其 wire DTO，留给后续轮次）：
 //
-//   createSession   -> §2.1（本轮完整实现，见 OpenclawGatewayKernelClient.swift）
-//   send            -> §2.2（TODO 桩，defer 到 SG-8.1/L2——本项目隔离 openclaw 内核没有 mock
-//                       provider，真正调用会触发真实模型请求，见
-//                       scratchpad/sg4-openclaw-run-recipe.md §4 的 live 佐证）
-//   subscribe       -> §2.3（本轮完整实现）
-//   interrupt       -> §2.4（TODO 桩，同 send 一并 defer——L1 闭环没有 active run 可供中断）
-//   stop            -> §2.5（本轮完整实现：适配为 openclaw 的 sessions.abort + sessions.delete，
+//   createSession   -> §2.1（SG-4 完整实现，见 OpenclawGatewayKernelClient.swift）
+//   send            -> §2.2（SG-5 本轮完整实现：适配为 openclaw `sessions.send`，真实触发过
+//                       Kimi 模型调用——`scratchpad/openclaw-iso3` 隔离 openclaw + D3-proxy +
+//                       Pi Postgres/new-api 现场验证，见 OpenclawGatewayKernelClient.swift send()
+//                       的文档注释）
+//   subscribe       -> §2.3（SG-4 完整实现；SG-5 补充 includeApprovals:true）
+//   interrupt       -> §2.4（TODO 桩，仍 defer——本轮 send() 用的是"一次性 send 到完"的场景，
+//                       没有构造"发送中途 interrupt"的现场）
+//   stop            -> §2.5（SG-4 完整实现：适配为 openclaw 的 sessions.abort + sessions.delete，
 //                       见 recipe §3 "建议 kernel-client 把 stop 实现为…" 一段）
-//   respondApproval -> §2.6（TODO 桩，本轮闭环没有触发任何审批请求）
-//   capabilities    -> §2.7（TODO 桩，本轮未探测 openclaw capabilities 端点）
+//   respondApproval -> §2.6（TODO 桩——SG-5 现场触发过一次真实 approvalRequest【见
+//                       EventMapping.swift ④】，但本轮没有回调 respondApproval 本身，approval
+//                       在现场因无路由自动 timeout-deny）
+//   capabilities    -> §2.7（TODO 桩，本轮未探测 openclaw capabilities 端点；evt.capability_changed
+//                       的映射也因此没有 baseline 可 diff，见 EventMapping.swift ⑥）
 //
 // 复用 SG-1 codegen 产物：入参/出参类型直接引用 app/generated/swift/D2.swift 里 quicktype 生成的
 // D2 DTO（Config/SessionHandle/Input/SendResultPayload/InterruptRequestMessagePayload/
@@ -66,7 +71,7 @@ public protocol KernelClient: AnyObject {
     /// D1 §2.1 createSession。
     func createSession(config: Config) async throws -> SessionHandle
 
-    /// D1 §2.2 send —— 本轮 TODO 桩，defer 到 SG-8.1/L2（见文件头注释）。
+    /// D1 §2.2 send —— SG-5 本轮完整实现（见文件头注释、OpenclawGatewayKernelClient.swift）。
     func send(session: SessionHandle, input: Input) async throws -> SendResultPayload
 
     /// D1 §2.3 subscribe。

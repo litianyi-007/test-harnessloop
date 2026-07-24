@@ -46,6 +46,17 @@ func runL1CloseLoop() async throws {
     print("  kernel                                     = \(handle.kernel.rawValue)")
     print("  billing.tokenRef (占位，本轮未铸造真 newapi token) = \(handle.billing.tokenRef)")
 
+    // （可选，SG-5 验收用）：d3proxy 这类 per-session 计费代理需要先在外部把
+    // handle.sessionID/kernelSessionID 映射进它自己的凭证表才能真正转发成功（见
+    // OPENCLAW-ISOLATED-RUN-RECIPE.md 与 scratchpad/openclaw-iso3 现场脚本），createSession 和
+    // 真正 send 之间留一个可配置的暂停窗口，给外部脚本一个 seed 的机会——不设置该环境变量时暂停为
+    // 0，不影响默认行为。
+    if let pauseMs = ProcessInfo.processInfo.environment["SG5_PRE_SEND_PAUSE_MS"].flatMap(UInt64.init),
+       pauseMs > 0 {
+        print("\n[PAUSE] 等待 \(pauseMs)ms，供外部脚本按 kernelSessionId=\(handle.kernelSessionID ?? "<nil>") seed 计费映射…")
+        try await Task.sleep(nanoseconds: pauseMs * 1_000_000)
+    }
+
     // STEP 3: subscribe
     let eventStream = await client.subscribe(session: handle)
     print("\n[STEP 3] subscribe 已发起（sessions.messages.subscribe），开始观察事件…")
@@ -63,10 +74,30 @@ func runL1CloseLoop() async throws {
         return count
     }
 
-    // 本轮没有调用 send()（defer，见 recipe §4），观察窗口内预期不会有真实 session.message
-    // 事件——这里只是证明"订阅已建立、流没有立刻报错"。
-    try await Task.sleep(nanoseconds: 1_500_000_000)
-    print("  观察窗口结束（1.5s，未调用 send，预期 0 条事件）")
+    // STEP 3.5（可选，SG-5）：send() 现已实现——设置 SG5_SEND_MESSAGE 环境变量即可驱动一次真实
+    // send，为 Stage B（真 client 驱动 e2e）铺路。默认不发（不设该变量），行为与 SG-4 时一致：
+    // 观察窗口内预期 0 条事件，只证明"订阅已建立、流没有立刻报错"。
+    //
+    // 注意：真正发出去会触发一次真实模型调用（走 openclaw 配置的 provider），且大概率需要先给
+    // 这个 session 的 sessionId 在 D3-proxy 的 `session_newapi_tokens` 表里 seed 一条映射
+    // （见 app/kernel-client/OPENCLAW-ISOLATED-RUN-RECIPE.md 与 SG-5 现场探针脚本
+    // scratchpad/openclaw-iso3/seed-upsert.cjs 风格的做法）——这个壳本身不做 seed，调用方需自行
+    // 保证目标 openclaw 实例的 provider 已经能对这个 sessionId 转发成功。
+    let sendMessage = ProcessInfo.processInfo.environment["SG5_SEND_MESSAGE"]
+    if let sendMessage = sendMessage, !sendMessage.isEmpty {
+        print("\n[STEP 3.5] send()：SG5_SEND_MESSAGE 已设置，发送一条真实消息…")
+        let input = Input(kind: .text, text: sendMessage, parts: nil)
+        let sendResult = try await client.send(session: handle, input: input)
+        print("  send() 完成: runId=\(sendResult.runID)（真正的模型输出走 STEP 3 的事件流异步到达）")
+        let observeWindowNanos = UInt64(ProcessInfo.processInfo.environment["SG5_SEND_WAIT_MS"].flatMap { UInt64($0) } ?? 60_000) * 1_000_000
+        try await Task.sleep(nanoseconds: observeWindowNanos)
+        print("  send() 观察窗口结束")
+    } else {
+        // 本轮没有调用 send()（未设置 SG5_SEND_MESSAGE），观察窗口内预期不会有真实 session.message
+        // 事件——这里只是证明"订阅已建立、流没有立刻报错"。
+        try await Task.sleep(nanoseconds: 1_500_000_000)
+        print("  观察窗口结束（1.5s，未调用 send，预期 0 条事件）")
+    }
 
     // STEP 4: stop（sessions.abort + sessions.delete）——这一步会 finish 事件流的 continuation。
     print("\n[STEP 4] stop（sessions.abort + sessions.delete）")

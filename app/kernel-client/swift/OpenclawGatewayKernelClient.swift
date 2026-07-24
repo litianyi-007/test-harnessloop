@@ -7,8 +7,11 @@
 // 用 `actor` 承载连接状态（WS task、pending 请求表、事件流表、sessionId 映射表）——并发安全靠
 // actor 隔离保证，不需要手写锁。
 //
-// 本轮只完整实现 createSession / subscribe / stop 三个方法（SG-4 L1 闭环范围）；
-// send/interrupt/respondApproval/capabilities 是 TODO 桩，理由见 KernelClient.swift 头注释。
+// SG-4 完整实现了 createSession / subscribe / stop 三个方法（L1 闭环范围）；SG-5 本轮补上
+// send()，并把事件 dispatch 从"只认 session.message"扩展到同时处理 agent(command_output/
+// lifecycle)/session.approval/全局 shutdown 四类 wire 事件，为 EventMapping.swift 完整覆盖 D2
+// 11 变体提供真实触发路径（见该文件头注释①~⑥ 的逐条 grounding）。interrupt/respondApproval/
+// capabilities 仍是 TODO 桩，理由见 KernelClient.swift 头注释。
 
 import Foundation
 
@@ -29,6 +32,18 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// 预分配的寻址锚点，kernelSessionId/这里的 key 才是内核认得的、后续 RPC 真正要用的值）。
     private var kernelKeyBySessionID: [String: String] = [:]
     private var eventContinuations: [String: AsyncThrowingStream<EventMessageUnion, Error>.Continuation] = [:]
+
+    // MARK: SG-5 新增：事件映射需要的最小逐 session 状态缓存
+    //
+    // openclaw 的 wire 事件本身不总是自带 D2 判别联合要求的全部字段（最典型的是 turnComplete/
+    // operationCompleted/approvalRequest 都要求非空的 runID，但 session.approval 事件本身不带
+    // runId；approvalRequest 还要求 toolCallID，但 openclaw 的审批 payload 本身不带 toolCallId——
+    // 见 EventMapping.swift ③④ 的文档注释）。这三个字典只做"记住同一 session 内最近一次见到的
+    // 真实值，供后续同 session 的事件借用"，不做任何跨 session 关联、不编造数据；缺失时对应的
+    // mapper 会诚实返回 nil 而不是用占位符填充必填字段。
+    private var lastRunIDBySessionID: [String: String] = [:]
+    private var lastToolCallIDBySessionID: [String: String] = [:]
+    private var lastUsageBySessionID: [String: (input: Int, output: Int)] = [:]
 
     public private(set) var lastHandshakeScopes: [String] = []
     public private(set) var lastHandshakeProtocol: Int?
@@ -125,11 +140,74 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         )
     }
 
+    /// D1 §2.2 send()。适配为 openclaw `sessions.send`（recipe §3.3 params:
+    /// `{key, agentId?, message, thinking?, attachments?, timeoutMs?, idempotencyKey?}`）。
+    ///
+    /// **返回语义**（SG-5 实测坐实，`scratchpad/openclaw-iso3` 隔离 openclaw + D3-proxy + 真实
+    /// Kimi）：`sessions.send` 的 RPC 响应是一次同步 ack，形状
+    /// `{"runId":"...","status":"started","messageSeq":1}`——不是模型的最终输出。真正的 agent
+    /// 输出（assistant 文本/工具调用/工具结果/回合结束……）全部经由已建立的 `subscribe()` 事件流
+    /// 异步到达（`session.message`/`agent`/`session.approval` 等 wire 事件，见 EventMapping.swift）。
+    /// 这与 D1 SendResultPayload 的窄腰语义完全对应：`send()` 只承诺"这次输入被接受、拿到一个
+    /// runId"，不承诺任何输出内容——因此本实现只取 wire 响应的 `runId` 字段构造
+    /// `SendResultPayload(runID:)`，忽略 `status`/`messageSeq` 这两个 openclaw 专有、D1 SendResultPayload
+    /// 没有对应字段的值。
+    ///
+    /// 拿到 runId 后立刻缓存到 `lastRunIDBySessionID`——EventMapping 里 turnComplete/
+    /// operationCompleted/approvalRequest 三个必填 runID 字段都是从这个缓存借的（见类头 SG-5
+    /// 状态缓存注释），subscribe() 的事件处理路径也会在观察到 `agent` 事件的 payload.runId 时
+    /// 持续刷新它，send() 这里只是最早的一次写入来源。
     public func send(session: SessionHandle, input: Input) async throws -> SendResultPayload {
-        throw KernelClientError.notImplemented(
-            "send() defer 到 SG-8.1/L2——本项目隔离 openclaw 内核没有 mock provider，真实调用会触发" +
-            "真实模型请求（sessions.create 的 resolved.model 已证实，见 recipe §4），本轮 L1 闭环刻意不跑它"
-        )
+        guard let kernelKey = kernelKeyBySessionID[session.sessionID] else {
+            throw KernelClientError.protocolMismatch("unknown session \(session.sessionID)")
+        }
+
+        var params: JSONObject = [
+            "key": kernelKey,
+            "message": resolveSendMessageText(from: input),
+            "timeoutMs": 0,
+        ]
+        // 结构化 attachments 透传——openclaw `SessionsSendParamsSchema.attachments` 本身是
+        // `Type.Array(Type.Unknown())`（recipe/源码均未见到逐字段 schema），这里只在 D1 Input
+        // 确有非文本 part 时才附带一个最小 {mimeType?, path?} 形状，如实标注：这不是对着某个
+        // 已验证的 openclaw attachment schema 抄的，是"尽量不丢信息"的最佳努力透传，未 grounding。
+        if input.kind == .structured, let parts = input.parts {
+            let attachments: [JSONObject] = parts.compactMap { part in
+                guard part.kind != .text else { return nil }
+                var obj: JSONObject = [:]
+                if let mime = part.mimeType { obj["mimeType"] = mime }
+                if let path = part.path { obj["path"] = path }
+                return obj.isEmpty ? nil : obj
+            }
+            if !attachments.isEmpty {
+                params["attachments"] = attachments
+            }
+        }
+
+        let result = try await request(method: "sessions.send", params: params)
+        prettyPrint("RECV sessions.send result", result)
+
+        guard let runID = result["runId"] as? String else {
+            throw KernelClientError.protocolMismatch("sessions.send result missing 'runId' field")
+        }
+        lastRunIDBySessionID[session.sessionID] = runID
+        return SendResultPayload(runID: runID)
+    }
+
+    /// D1 Input -> openclaw `sessions.send.message`（纯文本字符串）的最小转换。`kind:.text` 直接用
+    /// `input.text`；`kind:.structured` 把 `parts` 里 `kind:.text` 的段落用换行拼接（非文本 part
+    /// 走上面 attachments 分支，不混进正文），三者都拿不到文本时退化为空字符串而不是抛错——openclaw
+    /// 的 `SessionsSendParamsSchema.message` 是必填 `Type.String()`，允许空串（recipe 未标注拒绝
+    /// 空消息），比在这里主观拒绝更贴近"如实转发调用方输入"的适配器职责。
+    private func resolveSendMessageText(from input: Input) -> String {
+        if input.kind == .text {
+            return input.text ?? ""
+        }
+        let texts = (input.parts ?? []).compactMap { part -> String? in
+            guard part.kind == .text else { return nil }
+            return part.text
+        }
+        return texts.joined(separator: "\n")
     }
 
     public func subscribe(session: SessionHandle) async -> AsyncThrowingStream<EventMessageUnion, Error> {
@@ -143,7 +221,14 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                 return
             }
             do {
-                let result = try await self.request(method: "sessions.messages.subscribe", params: ["key": kernelKey])
+                // includeApprovals:true——SG-5 新增：不带这个 flag 收不到 session.approval 事件
+                // （recipe 未记录、本轮现场探针实测坐实：`SessionsMessagesSubscribeParamsSchema`
+                // 的 `includeApprovals` 是 opt-in，默认不推送），approvalRequest 映射的现场 grounding
+                // 全部建立在这个 flag 打开的前提上（见 EventMapping.swift ④）。
+                let result = try await self.request(
+                    method: "sessions.messages.subscribe",
+                    params: ["key": kernelKey, "includeApprovals": true]
+                )
                 prettyPrint("RECV sessions.messages.subscribe result", result)
                 if let subscribed = result["subscribed"] as? Bool, !subscribed {
                     continuation.finish(throwing: KernelClientError.protocolMismatch("subscribe returned subscribed:false"))
@@ -204,6 +289,11 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     private func finishEventContinuation(sessionID: String) {
         eventContinuations[sessionID]?.finish()
         eventContinuations.removeValue(forKey: sessionID)
+        // SG-5 状态缓存一并清理，避免长生命周期的 client 无限累积已经 stop() 掉的 session 的
+        // runId/toolCallId/usage 缓存。
+        lastRunIDBySessionID.removeValue(forKey: sessionID)
+        lastToolCallIDBySessionID.removeValue(forKey: sessionID)
+        lastUsageBySessionID.removeValue(forKey: sessionID)
     }
 
     // MARK: - 内部：RPC 请求/响应关联
@@ -256,6 +346,15 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                     break
                 }
             } catch {
+                // SG-5：传输中断前先尽力给每个活跃 session 的事件流补一条 sessionEnd
+                // (reason:.transportClosed)——本轮未现场实测这条路径本身（现场实测的是"先收到
+                // 全局 shutdown 事件、WS 随后才断开"这条更常见的优雅关闭路径，见
+                // makeSessionEndEventForShutdown 的文档注释），是源码/设计层面的合理补全：调用方
+                // 不应该只看到事件流因为一个裸 Error 而 finish、却不知道"session 结束"这件事本身
+                // 也是 D1 11 变体之一。
+                for (ourSessionID, continuation) in eventContinuations {
+                    continuation.yield(makeSessionEndEventForTransportClosed(ourSessionID: ourSessionID, seq: 0))
+                }
                 failAllPending(error: KernelClientError.transport("\(error)"))
                 break
             }
@@ -303,9 +402,21 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                 waiter.resume(returning: payload)
                 return
             }
-            if eventName == "session.message" {
+            // SG-5：session.message 之外还要分发 agent(command_output/lifecycle)、
+            // session.approval、全局 shutdown 三类 wire 事件——D2 11 变体里除
+            // message_delta/thinking/tool_call 之外的大多数（tool_result/turn_complete/
+            // operation_completed/approval_request/session_end）都不是从 session.message 来的，
+            // 见 EventMapping.swift 头注释①~⑤ 的现场 grounding。
+            switch eventName {
+            case "session.message":
                 handleSessionMessageEvent(frame)
-            } else {
+            case "agent":
+                handleAgentEvent(frame)
+            case "session.approval":
+                handleSessionApprovalEvent(frame)
+            case "shutdown":
+                handleShutdownEvent(frame)
+            default:
                 prettyPrint("RECV event \(eventName) (未处理的旁路事件，原样打印)", frame)
             }
 
@@ -314,20 +425,126 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         }
     }
 
+    /// 按 openclaw 原生 key 反查我们自己铸造的 sessionID——四个事件 handler（session.message/
+    /// agent/session.approval）共享同一套"payload.sessionKey -> ourSessionID -> continuation"
+    /// 查找逻辑，抽成一个小helper 避免重复。
+    private func ourSessionID(forKernelKey kernelKey: String) -> String? {
+        kernelKeyBySessionID.first(where: { $0.value == kernelKey })?.key
+    }
+
     private func handleSessionMessageEvent(_ frame: JSONObject) {
         guard let payload = frame["payload"] as? JSONObject,
-              let kernelKey = payload["sessionKey"] as? String else {
-            return
-        }
-        guard let ourSessionID = kernelKeyBySessionID.first(where: { $0.value == kernelKey })?.key else {
+              let kernelKey = payload["sessionKey"] as? String,
+              let ourSessionID = ourSessionID(forKernelKey: kernelKey) else {
             return
         }
         guard let continuation = eventContinuations[ourSessionID] else { return }
 
-        if let mapped = mapOpenclawSessionMessageToKernelEvent(payload, ourSessionID: ourSessionID) {
-            continuation.yield(mapped)
+        // 顺带刷新 runId/usage 缓存——session.message 的 session 快照里带 activeRunIds，assistant
+        // 消息自己带 usage，这两个都是别的事件（approvalRequest/turnComplete）必填字段的唯一
+        // 现场来源（见 EventMapping.swift 头注释与状态缓存字段的文档注释）。
+        if let sessionSnapshot = payload["session"] as? JSONObject,
+           let activeRunIDs = sessionSnapshot["activeRunIds"] as? [Any],
+           let firstRunID = activeRunIDs.first as? String {
+            lastRunIDBySessionID[ourSessionID] = firstRunID
+        }
+        if let message = payload["message"] as? JSONObject, let usage = message["usage"] as? JSONObject,
+           let input = jsonInt(usage["input"]), let output = jsonInt(usage["output"]) {
+            lastUsageBySessionID[ourSessionID] = (input: input, output: output)
+        }
+
+        let events = mapOpenclawSessionMessageToKernelEvents(
+            payload, ourSessionID: ourSessionID, runIDHint: lastRunIDBySessionID[ourSessionID]
+        )
+        if events.isEmpty {
+            prettyPrint("RECV session.message（未能映射到 D2 KernelEvent 11 变体之一）", frame)
+            return
+        }
+        for event in events {
+            if case .toolCall(let toolCall) = event {
+                // approvalRequest 的 toolCallID 借用"同 session 最近一次 toolCall"做时序关联
+                // （openclaw 审批 payload 本身不带 toolCallId，见 EventMapping.swift ④ 文档注释）。
+                lastToolCallIDBySessionID[ourSessionID] = toolCall.payload.toolCallID
+            }
+            continuation.yield(event)
+        }
+    }
+
+    /// `agent` wire 事件——`payload.stream` 分好几种，本轮只把 `command_output`(phase:end) 映射到
+    /// toolResult、`lifecycle`(phase:end/error) 映射到 turnComplete/operationCompleted；其余
+    /// stream（run_status/item/usage/assistant，均为 openclaw 自有 UI 进度信号，D1 11 变体没有
+    /// 对应位置）原样打印、不映射，见 EventMapping.swift ②③ 的现场 grounding 与范围声明。
+    private func handleAgentEvent(_ frame: JSONObject) {
+        guard let payload = frame["payload"] as? JSONObject,
+              let kernelKey = payload["sessionKey"] as? String,
+              let ourSessionID = ourSessionID(forKernelKey: kernelKey) else {
+            return
+        }
+        guard let continuation = eventContinuations[ourSessionID] else { return }
+
+        // agent 事件的 payload.runId 是本轮拿到 runIDHint 最可靠的现场来源之一（session.create
+        // 之后、真正 send() 之前也可能已经有别的 run 在跑），顺带刷新缓存。
+        if let runID = payload["runId"] as? String {
+            lastRunIDBySessionID[ourSessionID] = runID
+        }
+
+        guard let stream = payload["stream"] as? String, let data = payload["data"] as? JSONObject else {
+            return
+        }
+        let seq = jsonInt(frame["seq"]) ?? (jsonInt(payload["seq"]) ?? 0)
+        let runIDHint = lastRunIDBySessionID[ourSessionID]
+
+        switch stream {
+        case "command_output":
+            if let event = mapOpenclawAgentCommandOutputToToolResult(
+                data, ourSessionID: ourSessionID, runIDHint: runIDHint, seq: seq
+            ) {
+                continuation.yield(event)
+            }
+        case "lifecycle":
+            if let event = mapOpenclawAgentLifecycleToKernelEvent(
+                data, ourSessionID: ourSessionID, runIDHint: runIDHint, seq: seq,
+                cachedUsage: lastUsageBySessionID[ourSessionID]
+            ) {
+                continuation.yield(event)
+            }
+        default:
+            // run_status/item/usage/assistant 等：openclaw 自有 UI 进度信号，D1 11 变体没有对应
+            // 位置，如实不映射（不是遗漏，见 EventMapping.swift ②③ 范围声明）。
+            break
+        }
+    }
+
+    /// `session.approval` wire 事件——subscribe() 已在 `sessions.messages.subscribe` 参数里带上
+    /// `includeApprovals:true`（见 subscribe() 实现），否则收不到这个事件。
+    private func handleSessionApprovalEvent(_ frame: JSONObject) {
+        guard let payload = frame["payload"] as? JSONObject,
+              let kernelKey = payload["sessionKey"] as? String,
+              let ourSessionID = ourSessionID(forKernelKey: kernelKey) else {
+            return
+        }
+        guard let continuation = eventContinuations[ourSessionID] else { return }
+
+        let seq = jsonInt(frame["seq"]) ?? 0
+        if let event = mapOpenclawSessionApprovalToKernelEvent(
+            payload, ourSessionID: ourSessionID,
+            runIDHint: lastRunIDBySessionID[ourSessionID],
+            lastToolCallIDHint: lastToolCallIDBySessionID[ourSessionID],
+            seq: seq
+        ) {
+            continuation.yield(event)
         } else {
-            prettyPrint("RECV session.message（未能映射到 D2 KernelEvent 11 变体之一，TODO 见 SG-5）", frame)
+            prettyPrint("RECV session.approval（phase:terminal 或缺关联字段，D1 11 变体无对应/跳过）", frame)
+        }
+    }
+
+    /// gateway 全局 `shutdown` 事件——对所有当前活跃 session 各广播一条 sessionEnd(reason:
+    /// .kernelExited)，见 EventMapping.swift ⑤ 的现场 grounding（对隔离 gateway 发 SIGTERM 实测）。
+    private func handleShutdownEvent(_ frame: JSONObject) {
+        let seq = jsonInt(frame["seq"]) ?? 0
+        prettyPrint("RECV event shutdown（向所有活跃 session 广播 sessionEnd(reason:kernelExited)）", frame)
+        for (ourSessionID, continuation) in eventContinuations {
+            continuation.yield(makeSessionEndEventForShutdown(ourSessionID: ourSessionID, seq: seq))
         }
     }
 }
