@@ -60,7 +60,7 @@ Anchor: `.hopper/queue.md::root`
 | T-044 | code-review-adversarial | done | | high | SG-5 Stage A(Swift send + 11变体事件适配, commit a07dc67)对抗审(单 codex): send正确性/8-11映射字段级正确/3 blocker defer恰当/e2e证据充分/健壮 → PASS 则进 Stage B | codex |
 | T-045 | code-review-acceptance | done | | high | SG-5 Stage A 收残(db489f0e)确认性再审(单 codex):F1-F8 真闭合 + 近重写无新缺陷 → CONFIRMABLE 则进 Stage B | codex |
 | T-046 | code-review-adversarial | failed | | high | SG-5 ★审查闸2 C# parity(3ae6fa81)对抗审(单codex):并发移植race-free/parity测试真实性/M1-M6忠实镜像/C#特有缺陷/D2 JSON等价 → PASS 则 SG-5 收官 | codex |
-| T-047 | code-review-adversarial | pending | | high | SG-5 ★审查闸2 重派(grok):C# parity 并发race-free/测试真实性/M1-M6镜像/C#特有缺陷/D2等价 → PASS 则 SG-5 收官 | grok |
+| T-047 | code-review-adversarial | done | | high | SG-5 ★审查闸2 重派(grok):C# parity 并发race-free/测试真实性/M1-M6镜像/C#特有缺陷/D2等价 → PASS 则 SG-5 收官 | grok |
 | 
 ---
 

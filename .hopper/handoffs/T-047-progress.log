@@ -1,0 +1,2 @@
+{"seq":1,"ts":"2026-07-24T10:03:55.368Z","task_id":"T-047","vendor":"grok","phase":"starting","kind":"lifecycle","message":"Background task queued.","source":"runner","terminal":false}
+{"seq":2,"ts":"2026-07-24T10:08:56.514Z","task_id":"T-047","vendor":"grok","phase":"done","kind":"terminal","message":"Task completed successfully.","source":"runner","terminal":true,"status":"done","duration_ms":301084,"exit_code":0,"signal":null,"adapter_status":"success","timed_out":null}
