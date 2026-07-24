@@ -1,4 +1,4 @@
-# 金标 parity fixtures（骨架 + SG-1 深化：DSL 正式化/最小 TS runner + SG-8.7 Stage A：Swift 真实 client runner/fixture 扩全）
+# 金标 parity fixtures（骨架 + SG-1 深化：DSL 正式化/最小 TS runner + SG-8.7 Stage A：Swift 真实 client runner/fixture 扩全 + Stage B：C# 真实 client runner，三端 parity 收官）
 
 对应 D4 跨平台架构 v2.2 §4「金标 parity 测试」，尤其 §4.3「fixture DSL：确定性
 action/timeline」。金标 parity 测试是一组**语言中立的契约一致性用例**——每条用例是一条确定性
@@ -10,8 +10,9 @@ kernel-client 驱动/消费同一条 timeline 后，产生的可观察客户端�
 `TimelineOp`/`ClientObservableState` 等）正式化为可被编译器检查、可被 runner `import` 的 TS
 类型；`ts-runner/` 是按该 DSL 写的最小 runner，能真正读取本轮两个既有 fixture、驱动一个极简
 "假内核"（`mock-kernel-client.ts`）执行 timeline、断言最终状态——**打通 TS 一端作样板**（任务
-书原话），Swift/C# runner 未做，见文末 TODO。跑法：`npm --prefix ../codegen run run:fixtures`
+书原话）。跑法：`npm --prefix ../codegen run run:fixtures`
 （或直接 `node ts-runner/runner.ts`，Node 22+ 原生支持直接运行 `.ts` 文件，无需单独构建步骤）。
+**SG-8.7 Stage A/B 已分别补齐 Swift/C# 真实 client runner**（见文末「三端 parity」一节）。
 
 **范围仍未求全（SG-1 时的状态，历史记录保留）**：当时只放 2 个语言中立 fixture 样例，验证的是
 "DSL 结构 + TS runner 机制本身可用"，不是完整覆盖。**SG-8.7 Stage A 已把 `approval`/
@@ -131,10 +132,11 @@ parity/
 跑法：`npm --prefix ../codegen run run:fixtures`（先 `npm run typecheck:fixtures-runner`
 用 `tsc --strict` 校验类型，再实际执行），或直接
 `node app/contracts/d2/fixtures/ts-runner/runner.ts <fixture ...>` 指定任意子集/全集（不带参数时
-跑 `defaultFixturePaths()` 枚举的默认 13 条清单，与 swift-runner `SwiftRunnerMain.swift` 的默认
-清单一一对应）。**T-048 REWORK 复验**：`node ts-runner/runner.ts` 对全部 13 条 fixture 跑
-**13 PASS / 0 FAIL**。Swift/C# runner（`swift-runner/`、`csharp-runner/`，D4 §4.4）——Swift 见
-下一节（SG-8.7 Stage A 新增），C# 仍未创建，TODO。
+跑 `defaultFixturePaths()` 枚举的默认 13 条清单，与 swift-runner `SwiftRunnerMain.swift`/
+csharp-runner `CSharpRunnerMain.cs` 的默认清单一一对应）。**T-048 REWORK 复验**：`node
+ts-runner/runner.ts` 对全部 13 条 fixture 跑 **13 PASS / 0 FAIL**。Swift/C# runner
+（`swift-runner/`、`csharp-runner/`，D4 §4.4）——见下两节（SG-8.7 Stage A/B 新增）与文末「三端
+parity」总节。
 
 ## Swift 金标 parity runner（SG-8.7 Stage A 新增）
 
@@ -227,6 +229,81 @@ DEGRADED，不计入 PASS/FAIL，也不强行伪造通过；该 fixture 本轮�
 前置步骤，修正了此前"从未 createSession 就调 interrupt/stop"的独立缺陷，DEGRADED 只是覆盖缺口，
 不再掩盖其它问题），整条 suite 约 7 秒（`stop-timed-out.json` 单独约 1.6 秒），连续多次 + 人为加满
 CPU 负载复验均稳定无 flake。也可传具体 fixture 路径只跑一部分。
+
+## C# 金标 parity runner（SG-8.7 Stage B 新增）
+
+`csharp-runner/`（`FixtureDsl.cs` + `PartialMatch.cs` + `CSharpFixtureRunner.cs` +
+`CSharpRunnerMain.cs`）逐机制镜像 `swift-runner/`（Swift 侧是本轮的权威参考实现，已过
+T-048/T-050/T-051 三轮异构对抗审收敛），驱动的同样不是假内核，而是 SG-5 交付的**真实**
+`app/kernel-client/csharp/OpenclawGatewayKernelClient.cs`——同一批 fixture JSON、同一套 DSL，
+`client_call` 直接调用真实类的 `CreateSessionAsync`/`SendAsync`/`Subscribe`/`StopAsync`（`Config`/
+`Input`/`SessionHandle` 都是 D2 codegen 类型），`mock_response`/`mock_event` 经翻译层转成真实
+client 认得的 openclaw 原生 wire 帧/RPC 响应（复用 `app/kernel-client/csharp/tests/FrameReplayTests.cs`
+已验证过的 `TestSupportStubRpc`/`TestSupportFeedFrame` 两个钩子），最终 `ClientObservableState`
+逐字段来自真实实例状态/真实 `EventMapping.cs` 映射产物的事件流，不是手工构造后短路过去。
+
+**逐机制对照 Swift（从第一行就带着 Stage A 已付学费的纪律，不重新踩坑）**：
+
+- **真 client 驱动**：`client_call` 的 `createSession`/`send`/`subscribe`/`stop` 四个分支各自注册
+  `TestSupportStubRpc` 桩（`sessions.create`/`sessions.send`/`sessions.messages.subscribe`/
+  `sessions.abort`+`sessions.delete`+`approval.resolve`），再 `Task.Run` 真调用对应的 `*Async`
+  方法/`Subscribe`，`ReplyGate`（`lock`+`TaskCompletionSource` 实现，语义对应 Swift `actor
+  ReplyGate`）让 RPC 真悬挂到 runner 处理对应 `mock_response` 的那一刻才返回。
+- **`expect_outbound` 从真实捕获的 native params 匹配**：`RecordOutbound` 只记录 `TestSupportStubRpc`
+  闭包同步收到的原始 `params`（不是 timeline 的 `args`/fixture 声明值）；`NormalizeNativeParams`
+  在断言时才现算规范化请求——`sessionId` 反查 `kernelKeyToDeclaredSessionId`（查不到显式置
+  `JsonNullMarker.Instance`，不 fallback），`sessions.send` 把原生 `message` 映射回 `text`，逐字
+  对应 Swift `normalizeNativeParams`。
+- **`nativeCallOrder` 真实调用时刻追加**：`approval.resolve`/`sessions.abort` 两个 stub 闭包**被真实
+  client 调用的那一刻**（不是注册的时刻）`AppendNativeCall`，暴露给 `expected.nativeCallOrder` 断言
+  （`stop-force-denies-pending-approval.json`）。
+- **`advance_clock`/`disconnect` 轮询"任务已结算"**：`PollUntilSettledAsync` 轮询 `ctx.IsCallSettled`
+  （复用 `OnStopResolvedAsync`/`OnStopThrewAsync` 写入的 `pendingOperations`/`callOutcomes`），不是
+  固定 `Task.Delay` 猜调度；`TestSupportSetStopTimeoutSeconds(1)` 把生产 5 秒超时收窄到 1 秒，真实
+  触发 SG-5 内部 `Task.Delay(timeoutSeconds)` 定时器产出 `timed_out`。
+- **soft-steer 诚实 DEGRADED**：`DegradeReason` 静态扫描 timeline，含 `interrupt`/`respondApproval`/
+  `capabilities` 任一 client_call 就整条标记 DEGRADED（C# `InterruptAsync`/`RespondApprovalAsync`/
+  `CapabilitiesAsync` 同样是 SG-5 TODO 桩，`throw KernelClientException(NotImplemented,...)`），不
+  伪造假内核让它"通过"。
+- **`PartialMatch` 与 TS/Swift 语义等价，但省掉了 Swift 需要的 Bool/NSNumber workaround**：C#
+  `object` 装箱后运行时类型精确保留（装箱 `bool` 恒为 `System.Boolean`，不会被启发式误判成数字
+  0/1），`ScalarsEqual` 因此不需要 `PartialMatch.swift` 那段 `objCType` 判别逻辑——这是语言运行时
+  差异带来的合理简化，`PartialMatch.cs` 文件头注释记录了这个刻意的差异，不是漏做。显式 JSON `null`
+  与"字段完全缺失"仍严格区分（`JsonNullMarker.Instance` vs C# `null`，见该文件 `JsonNullMarker` 的
+  文档注释——特别记录了这个哨兵值**只能**用于 runner 自己的 actual/expected 统一值域，绝不能泄漏进
+  喂给真实 client 的 wire `JSONObject`，那边的『JSON null』语义仍是裸 C# `null`，跟 `OpenclawWire.cs`
+  自己的 `ConvertElement` 一致）。
+
+**C# 与 Swift 的表达差异（刻意记录，不是漂移）**：C# 没有 Swift `actor` 隔离，`RunnerContext`/
+`ReplyGate` 改用 `lock` 保护可变状态——与 `OpenclawGatewayKernelClient.cs` 自己既定的 `_sync` 模式
+一致，不是本 runner 独创；`OpenclawGatewayKernelClient` 的全部 `TestSupport*` 钩子在 C# 侧是**同步**
+方法（不像 Swift 需要在几乎每个调用点 `await` actor hop），`RunnerContext` 因此比 Swift 版本少了很多
+`async`/`await` 噪音，只有真正跨越 `Task.Delay`（`OnStopResolvedAsync`/`OnStopThrewAsync` 的
+event-drain settle、`ApplyMockEventAsync` 的双帧间隔、`ApplyAdvanceClockAsync`/`disconnect` 的轮询）
+的地方才是 `async`。
+
+**编译+跑法**（`CSharpRunnerMain.cs` 文件头有同一段可复制命令；不依赖 xunit/NuGet 网络 restore，
+直接把 `KernelClient` 项目源文件连同 runner 本体一起编译成一个 Exe，同
+`app/kernel-client/csharp/tests/KernelClientTests.csproj` 既定风格）：
+
+```
+cd app/contracts/d2/fixtures/csharp-runner
+dotnet build
+dotnet run --no-build
+```
+
+不带参数时按 `CSharpRunnerMain.DefaultFixturePaths()` 枚举的内置清单跑 13 条 fixture（与
+`ts-runner/runner.ts`/`swift-runner/SwiftRunnerMain.swift` 的默认清单一一对应），**实测
+12 PASS / 0 FAIL / 1 DEGRADED**（`operation-outcome/soft-steer-then-stop.json` 因 timeline 用到
+`client_call: interrupt` 被 `DegradeReason` 静态扫描自动标记 DEGRADED，同 Swift 侧同一条、同一原因）。
+也可传具体 fixture 路径只跑一部分，如 `dotnet run --no-build -- ../approval/stop-force-denies-pending-approval.json`。
+
+**注意（`dotnet build`/`run` 的产物污染）**：`csharp-runner/` 目录本身在 `fixtures/` 树内，`dotnet
+build` 会在原地生成 `bin/`/`obj/`（已 `.gitignore`，同 `app/kernel-client/csharp/.gitignore` 既定
+做法），其中含若干 `*.json`（`project.assets.json`/`*.deps.json` 等 NuGet/构建元数据，不是 fixture）。
+若要跑本文档「三端 parity」一节给出的 `find app/contracts/d2/fixtures -name '*.json' | ... |
+xargs node ts-runner/runner.ts` 这类"扫描全部 fixture json"命令，建议先 `dotnet clean`（或 `rm -rf
+csharp-runner/{bin,obj}`）清掉这些构建产物，避免被误当成 fixture 传给 TS/Swift runner。
 
 ## 三组 fixture 覆盖清单（SG-8.7 Stage A 新增，供 Swift 真实 client parity 用）
 
@@ -347,3 +424,72 @@ T-050（codex confirming 再审，接续自己的 T-048）确认 T-048 REWORK �
 两端复验：`node ts-runner/runner.ts` 全部 13 条 **13 PASS / 0 FAIL**（TS force-deny 现在是自己算的，
 不是回显）；swift-fixture-runner **12 PASS / 0 FAIL / 1 DEGRADED**（`expect_outbound` 现在真匹配
 native params，`stop-force-denies-pending-approval.json` 断言 RPC 顺序）。
+
+## 三端 parity（SG-8.7 Stage B 收官）
+
+TS（假内核，D1/D2 spec oracle）+ Swift/C#（驱动各自真实 `OpenclawGatewayKernelClient`）三端对同一批
+13 条 fixture、同一份 `expected` 逐字段跑 parity，三端各自跑法：
+
+| 端 | 跑法 | 结果 |
+|---|---|---|
+| TS | `find app/contracts/d2/fixtures -name '*.json' \| sort \| xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`（或 `npm --prefix ../codegen run run:fixtures`） | **13 PASS / 0 FAIL** |
+| Swift | `swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift app/kernel-client/swift/{KernelClient,OpenclawWire,EventMapping,OpenclawGatewayKernelClient}.swift app/contracts/d2/fixtures/swift-runner/{FixtureDSL,PartialMatch,SwiftFixtureRunner,SwiftRunnerMain}.swift -o /tmp/swift-fixture-runner && /tmp/swift-fixture-runner` | **12 PASS / 0 FAIL / 1 DEGRADED** |
+| C# | `cd app/contracts/d2/fixtures/csharp-runner && dotnet build && dotnet run --no-build` | **12 PASS / 0 FAIL / 1 DEGRADED** |
+
+（TS 用假内核覆盖全部 13 条，包括依赖 `interrupt()` 的 `soft-steer-then-stop.json`——D1/D2 spec 里
+`interrupt(mode:'steer')` 是已定义行为，TS oracle 按 spec 实现了它；Swift/C# 驱动的是 SG-5 交付的
+真实 client，`interrupt()`/`respondApproval()`/`capabilities()` 三个方法本轮仍是 TODO 桩，无法驱动，
+该 fixture 因此在两端都诚实 DEGRADED，不计入 PASS/FAIL，也不是三端不一致——是"两个 native 端遇到
+同一个已知产品缺口"，DEGRADED 原因完全相同。）
+
+**一致性依据**：12 条可驱动 fixture 上，Swift/C# 对同一份 fixture `expected` 做逐字段子集深度匹配
+（`PartialMatch.swift`/`PartialMatch.cs`，语义与 TS `partialMatch` 等价，差异只在 C# 不需要 Swift
+的 Bool/NSNumber 桥接 workaround，见上文「C# 金标 parity runner」一节），断言维度完全相同：
+`pendingOperations`/`callOutcomes`/`approvalState`/`observedEvents`/`sessionLock`/`nativeCallOrder`。
+`stop-force-denies-pending-approval.json` 额外要求两端 `nativeCallOrder` 均为
+`["approval.resolve","sessions.abort"]`——C# 端已实测通过（见下方反证 2）。`includeApprovals` 等
+openclaw 原生特有字段两端均**诚实未跨端断言**（T-051 记录的既定 defer，非遗漏型假闭合）：C# 真实
+`Subscribe()` 也发 `includeApprovals:true`（见 `OpenclawGatewayKernelClient.cs`），但 fixture 的
+`expect_outbound` 从未在 `req.subscribe` 的 `payload` 里断言该字段——若强行跨端断言会打穿 TS 假内核
+（`payload` 恒为 `{}`）与两个 native 端的语义差，Stage A 已判定保持不断言更诚实，Stage B 沿用同一
+判断，不新增。
+
+### 3 处"有牙齿"反证（临时改动，验证后已全部还原）
+
+1. **真实 client 发错 native param**：临时把 `OpenclawGatewayKernelClient.cs` `SendAsync` 里的
+   `["message"] = ResolveSendMessageText(input)` 改成写死 `"T-STAGEB-TEETH-WRONG-MESSAGE"`，重新
+   `dotnet build` 后单跑 `stop-active-run-succeeded.json`：
+   ```
+   [FAIL] stop-active-run-succeeded
+          - expect_outbound(send1).payload.text: 期望 "run something long"，实际 "T-STAGEB-TEETH-WRONG-MESSAGE"
+   ```
+   `git checkout -- app/kernel-client/csharp/OpenclawGatewayKernelClient.cs` 还原，`git status`
+   确认无残留。
+2. **交换 stop() 的 force-deny/abort 调用顺序**：临时把 `StopAsync` 里
+   `ForceDenyPendingApprovalsBeforeStopAsync(...)` 与 `RequestAsync("sessions.abort", ...)` 两行
+   互换（abort 先发），单跑 `stop-force-denies-pending-approval.json`：
+   ```
+   [FAIL] stop-force-denies-pending-approval
+          - assert_state@t=36.nativeCallOrder: 期望长度 2，实际长度 1
+          - expected.nativeCallOrder[0]: 期望 "approval.resolve"，实际 "sessions.abort"
+          - expected.nativeCallOrder[1]: 期望 "sessions.abort"，实际 "approval.resolve"
+   ```
+   还原后同一命令恢复 PASS，`git status` 确认无残留。
+3. **破坏 `PartialMatch`**：临时把 `PartialMatch.cs` 的字符串比较从 `sa == sb` 反转成 `sa != sb`
+   （标量匹配核心），重新 `dotnet build` 后跑全部 13 条：
+   ```
+   === 0 PASS / 12 FAIL / 1 DEGRADED （共 13 条 fixture） ===
+   ```
+   12 条可驱动 fixture 全部真实 FAIL（证明 `PartialMatch` 不是被绕过的桩，逐条断言真的在被求值），
+   还原后恢复 `12 PASS / 0 FAIL / 1 DEGRADED`。`csharp-runner/PartialMatch.cs` 是 Stage B 本轮新增
+   文件（未纳入 git），手工核对还原后内容与上文「逐机制对照」描述一致，非 git diff（无历史版本可
+   比对）。
+
+### 已知边界（诚实记录，非隐瞒）
+
+- `csharp-runner/` 未包含在既有 SG-5 frame-replay 测试范围内，是本轮新写的独立可执行程序；三端
+  parity 的"跨端一致"结论仅覆盖本 README 引用的 13 条金标 fixture，不代表覆盖 D1/D2 全部方法/
+  事件类型（见前两节「未覆盖/后续轮次」「三组 fixture 覆盖清单」的既有 TODO 登记，Stage B 未扩大
+  fixture 覆盖面，只补齐 C# 驱动端）。
+- 未发现真实跨端 parity bug——12 条可驱动 fixture 在 TS/Swift/C# 三端对同一 `expected` 逐字段一致
+  PASS，无需报告 blocker。

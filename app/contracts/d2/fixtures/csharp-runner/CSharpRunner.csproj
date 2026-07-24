@@ -1,0 +1,38 @@
+<!-- SG-8.7 Stage B：C# 金标 parity fixture runner——镜像 ../swift-runner/ 的角色,驱动 SG-5 交付的
+     真实 OpenclawGatewayKernelClient（../../../../kernel-client/csharp/OpenclawGatewayKernelClient.cs），
+     不另写假内核。沿用 app/kernel-client/csharp/tests/KernelClientTests.csproj 的既定风格——不引入
+     xunit/NuGet（避免网络限制下的 restore 风险，也避免和现有 KernelClient.csproj 的"直接编译源文件、
+     不打包"风格不一致），把 KernelClient 项目的全部源文件（含 generated D2.cs/DiscriminatedUnions.cs）
+     连同本目录的 runner 文件一起直接编译成一个可执行程序——`internal`（如 D2.Converter.Settings）因此
+     在同一 assembly 内天然可见，不需要 InternalsVisibleTo。 -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS8618;CS8601;CS8602;CS8603;CS8625;CS8619;CS8620</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>TestHarnessloop.Fixtures.CSharpRunner</AssemblyName>
+    <RootNamespace>CSharpRunner</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 与 app/kernel-client/csharp/KernelClient.csproj / tests/KernelClientTests.csproj 完全相同的
+         生产源文件集合——直接复用，不复制。 -->
+    <Compile Include="../../../../generated/csharp/D2.cs" />
+    <Compile Include="../../../../generated/csharp/DiscriminatedUnions.cs" />
+    <Compile Include="../../../../kernel-client/csharp/IKernelClient.cs" />
+    <Compile Include="../../../../kernel-client/csharp/KernelClientError.cs" />
+    <Compile Include="../../../../kernel-client/csharp/OpenclawWire.cs" />
+    <Compile Include="../../../../kernel-client/csharp/EventMapping.cs" />
+    <Compile Include="../../../../kernel-client/csharp/OpenclawGatewayKernelClient.cs" />
+    <!-- runner 本体。 -->
+    <Compile Include="FixtureDsl.cs" />
+    <Compile Include="PartialMatch.cs" />
+    <Compile Include="CSharpFixtureRunner.cs" />
+    <Compile Include="CSharpRunnerMain.cs" />
+  </ItemGroup>
+
+</Project>
