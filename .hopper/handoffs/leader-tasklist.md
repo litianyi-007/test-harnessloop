@@ -876,3 +876,41 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（F1-F8 真闭合 + 无新缺陷 → Stage A 可接受、进 Stage B）| `MUST-FIX`（仅列问题点 + file:line + 可复现）。
 **产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-045-output.md`。**Read-only**：不改任何文件；忽略跨仓/别目录的全局 skill。中文。
+
+---
+
+## T-046（SG-5 ★审查闸2：C# kernel-client parity 对抗审，单 codex）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: codex（知 Swift 端 M1-M6 correctness,可核 C# 是否忠实镜像）· 只读 · **三项强制核对**
+
+**评审对象**（主仓库 commit `3ae6fa81`）：`app/kernel-client/csharp/`（OpenclawGatewayKernelClient/EventMapping/OpenclawWire/KernelClientError.cs + tests/）。对照权威 spec = Swift 端 `app/kernel-client/swift/`（已经 T-044/T-045 两轮对抗审 validated + Stage B 真 e2e）。`git show 3ae6fa81`。
+
+**对抗核验重点（找真缺陷 + 可复现）**：
+1. **并发移植是否真 race-free（最重）**：Swift 用 actor 天然序列化跨 await 的隔离态访问;C# 改用 `lock`/Monitor + 短临界区（不跨 await）。核实:会话锁的 check-and-set 是否原子(单 lock 内)?await 间隙的可重入是否被 SessionLockState 正确挡住?per-run 缓存/pendingStop/approval 表/sessionTerminalEmitted 的读写是否有 C# 特有的竞态(actor 免费给的、lock 模型可能漏)?stop 的 TaskCompletionSource 等待/超时/完成与锁释放有无竞态或死锁?
+2. **parity 测试是否真测 C# 逻辑,还是只抄 Swift 期望值**：测试期望值抄自 Swift 断言——核实这些测试是否真驱动 C# 的实现逻辑(真调 SendAsync/StopAsync/真 dispatch),还是构造后直接断言常量(会掩盖两端共有 bug)。M1-M6 每个场景的 C# 断言是否真反映 C# 行为。
+3. **M1-M6 是否忠实镜像、无遗漏/走样**：逐条对 Swift 的修法核 C#（approval 双向join、phase:error、stop 四路径统一 operationId、F7 脱敏键分类[复数+token计数排除]、M5 清理）。有无 C# 移植时的语义偏差。
+4. **C# 特有缺陷**：JsonElement↔Dictionary 递归转换、null 处理、Channel 完成/取消、async 异常传播、ClientWebSocket 生命周期。
+5. **完整 D2 JSON 往返等价**：业务字段是否真字节级一致（时间戳 Z vs +00:00 差异已知,非本项）。
+
+**Verdict**：`PASS` | `PASS_WITH_NOTE` | `REWORK` | `FAIL`。REWORK/FAIL 逐条给 `app/kernel-client/csharp/<file>:<line>` + 可复现。
+**产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-046-output.md`。**Read-only**：不改任何文件；忽略跨仓/别目录全局 skill。中文。
+
+---
+
+## T-047（SG-5 ★审查闸2 重派：C# kernel-client parity 对抗审，单 grok）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: grok（T-046 codex 被自身安全过滤器中止无 verdict,改派 grok;随机池异构）· 只读
+
+**评审对象**（主仓库 commit `3ae6fa81`）：`app/kernel-client/csharp/`（OpenclawGatewayKernelClient/EventMapping/OpenclawWire/KernelClientError.cs + tests/FrameReplayTests.cs）。对照权威 spec = Swift 端 `app/kernel-client/swift/`（已经 T-044/T-045 两轮对抗审 validated + Stage B 真 e2e）。`git show 3ae6fa81`。**只读评审,别跑 C# 交互脚本(csi/dotnet-script);读代码 + 已有 dotnet test 结果即可。**
+
+**背景**：SG-5 Stage C 把 Swift 权威 kernel-client 镜像到 C#(1136+397+255 行),25/25 parity 测试过、dotnet build 0/0。由 Sonnet 所写,需异构对抗复核。
+
+**对抗核验重点（找真缺陷 + 可复现）**：
+1. **并发移植是否真 race-free（最重）**：Swift 用 actor 天然序列化跨 await 的隔离态访问;C# 改用 `lock`/Monitor + 短临界区(不跨 await)。核实:会话锁 check-and-set 是否原子(单 lock 内)?await 间隙的可重入是否被 SessionLockState 挡住?per-run 缓存/pendingStop/approval 三表/sessionTerminalEmitted 的并发读写有无 C# 特有竞态(actor 免费给、lock 模型可能漏)?stop 的 TaskCompletionSource 等待/超时/完成与锁释放有无竞态或死锁?
+2. **parity 测试是否真测 C# 逻辑,还是只抄 Swift 期望值**：`tests/FrameReplayTests.cs` 的期望值抄自 Swift 断言——核实测试是否真驱动 C# 实现(真调 SendAsync/StopAsync/真 dispatch),还是构造后直接断言常量(会掩盖两端共有 bug)。
+3. **M1-M6 忠实镜像**：逐条对 Swift 修法核 C#(approval 双向join、phase:error、stop 四路径统一 operationId、F7 脱敏键分类、M5 清理),有无语义偏差。
+4. **C# 特有缺陷**：JsonElement↔Dictionary 递归转换、null 处理、Channel 完成/取消、async 异常传播、ClientWebSocket 生命周期。
+5. **D2 JSON 往返**：业务字段是否真字节级一致(时间戳 Z vs +00:00 差异已知,非本项)。
+
+**Verdict**：`PASS` | `PASS_WITH_NOTE` | `REWORK` | `FAIL`。REWORK/FAIL 逐条给 `app/kernel-client/csharp/<file>:<line>` + 可复现。
+**产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-047-output.md`。**Read-only**：不改任何文件；忽略跨仓/别目录全局 skill。中文。
