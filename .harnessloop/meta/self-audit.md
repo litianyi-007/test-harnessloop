@@ -541,3 +541,63 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 - Reason: 本轮技术层发现（openclaw 两处真实源码 bug 挡住 per-session 动态归因、SG-6 spike"零改动"结论一度证伪）属**项目设计/实现问题**，不是 harnessloop 框架缺陷——round → scope-lock → decision 闭环本身运作正常：scope-lock Disallowed Changes 撞线时，由用户 2 次现场确认扩围，决策留痕于 round-summary/decision.md，非框架失灵。这是继 D4 v2.3（SG-1 codegen 代码级证伪）、D1 hermes-steer 假设证伪等既有记录之后的"下游实现连环证伪上游设计"第 5 例（技术观察，已记于 round-summary/SG-6 wiki doc），非新的框架级缺陷。是否将 2 个 openclaw bug 上游 push 或另开 evolution-issue，以及是否为本轮新增补丁补一轮第三方对抗审，均留待后续决定，不在本轮 self-audit 范围内提前裁定
 - Issue path: 无新增（如需记录"下游连环证伪"模式本身的框架级复现规律，留待后续 self-audit 或专项 evolution-issue 评估，非本轮范围）
 - Redaction notes: 无涉密内容（仅引用 commit 短号、sessionId 示例值、host/端口/版本号；凭证值未出现在本文件）
+
+---
+
+# Self Audit
+
+## Audit Metadata
+
+- Audit ID: AUDIT-20260724-ROUND0005-SG5-KERNELCLIENT
+- Trigger: round-close rounds/0005
+- Active goal: 20260718-002-agent-app
+- Active round: 0005（SG-5 kernel-client 完整化，闭合客户端交互环）
+- Auditor: main session（claude-sonnet-5）
+- Timestamp: 2026-07-24
+
+## Loop Health
+
+| Check | Status | Evidence path | Notes |
+| --- | --- | --- | --- |
+| Dead loop risk | pass | rounds/0005/scope-lock.md; rounds/0005/round-summary.md | 本轮首次以"continue 驱动 + 关键节点独立审查"机制驱动，全程每次收残/改派均有**新证据**支撑且逐步收敛：Stage A 经 T-044（REWORK，8 findings）→ 收残 → T-045（确认性再审，MUST-FIX，M1-M6，含收残引入的新死锁与假绿测试）→ 第二次收残（真 actor 级测试 25/25）彻底收敛，收敛守卫（连续 MUST-FIX 达第 3 轮即停报）**设置但未触发**；★审查闸2 首次派发（T-046）遇 codex 自身安全过滤器中止（非重复无新证据的动作，而是评审执行层面失败），当场改派 grok（T-047）而非反复重试同一 vendor，非死循环 |
+| Self-contradiction | pass | rounds/0005/round-summary.md; rounds/0005/decision.md; goal-breakdown.md SG-5 行 | 无矛盾：SG-5 done（A/B/C 三阶段 + 两 ★审查闸）与 SG-4 遗留 defer 项（send/事件适配/C# parity）一脉衔接，非推翻；T-046"failed"如实标记于 `.hopper/queue.md`（非误标为 done/PASS），round-summary/decision/goal-breakdown 三处对"codex 中止评审"表述一致 |
+| Goal drift | pass | rounds/0005/scope-lock.md | 未偏离 scope-lock 目标（Swift send 做实+事件适配 11 变体+真 client 驱动 e2e+C# parity+金标回归衔接 SG-8.7）；NOTE-1 收尾（修复两端共有的 transport-close-during-stop 挂起）属 ★审查闸2 PASS_WITH_NOTE 的既定后续收残动作，非新增 scope |
+| Evidence drift | pass | state/evidence-index.md E16 | 新增 E16 覆盖 SG-5 kernel-client 完整化交付物，无 stale |
+| Validation drift | pass | rounds/0005/scope-lock.md「Verification Commands Or Checks」；rounds/0005/round-summary.md | 验证方法（swiftc/dotnet build+test、★审查闸 hopper 派发、live e2e 字段级断言+计费核对）已在 scope-lock 中显式列出并在 round-summary 中逐项对照回填，非静默变更 |
+| Handoff stagnation | pass | `.hopper/queue.md` T-044/T-045/T-046/T-047 | 4 个 hopper 派发均已闭合（T-046 如实标记 failed 而非静默悬置，随即改派 T-047 done）；无 open handoff 停滞 |
+| Cost/context runaway | pass |  | 源码/单测/对抗审 handoff 走 `app/kernel-client/{swift,csharp}`、`.hopper/handoffs/`，主会话摘要引用，未把大量原始日志灌入本文件 |
+| Recoverable blocker stalled | pass | rounds/0005/round-summary.md | T-046 codex 安全过滤器中止属评审执行层面可恢复情况，识别后立即改派而非反复重试或空等，收盘时无残留 blocker |
+
+Status values: `pass`, `warn`, `fail`, `unknown`.
+
+## Deterministic Signals
+
+| Signal | Current value | Previous value | Threshold | Status |
+| --- | --- | --- | --- | --- |
+| Recent feedback sequence | positive（round 0005，SG-5 完整化，轮内 Stage A 经历一次 REWORK→MUST-FIX→收敛的确认性再审序列，均有新证据支撑，非重复无新证据的 neutral/negative） | positive（round 0004，SG-8.5 完整链 e2e） | no repeated neutral/negative without new evidence | pass |
+| Repeated next action count | 1（本轮首次对 SG-5 执行 continue 驱动全流程，非重复） | 1（rounds/0004 提议 SG-5/SG-3/决策类待办） | max 2 identical actions | pass |
+| Scope-lock version | rounds/0005 v1（新建，全程未扩围，两次 ★审查闸的收残均在 v1 授权范围内） | rounds/0004 v1（执行期间 2 次 user 现场授权扩围） | must change after failed action unless rollback | pass |
+| Goal contract version/hash | goal-breakdown SG-5 行 in-progress→done（显式记录 A/B/C 三阶段 + 两 ★审查闸 + defer 项），首批目标表头追加 rounds/0005 摘要，均显式留痕，非静默变更 | 前值（SG-5 行 in-progress，rounds/0004 收盘时状态） | no silent change | pass |
+| Threshold version/hash | 本批未改动 thresholds.md（沿用既有 SG-5 行验证方法，记于 scope-lock/round-summary，未新增独立阈值行） | 前值 | no silent change | pass |
+| Verification command set | 新增 swiftc/dotnet build+test 双端回归、hopper 派 codex/grok 异构对抗审序列（T-044/045/046/047）、Stage B live e2e 字段级断言+new-api 计费核对，显式记于 round-summary.md | 既有 Pi Docker/curl/swiftc/dotnet build 等 | no silent change | pass |
+| Stale evidence count | 0（E16 新鲜） | 0 | 0 for acceptance | pass |
+| Open handoff age | 0（T-044/045/046/047 均已闭合，T-046 failed 已改派 T-047 done） | 0 | project-defined | pass |
+| Main-session raw context risk | 低（源码/单测/对抗审 transcript 走 `app/kernel-client/`、`.hopper/handoffs/`，主会话摘要引用） | 低 | raw logs stay in evidence files | pass |
+| Delegation model/effort verified | 写码（Stage A/B/C 实现与两次收残）由主会话 claude-sonnet-5 子代理执行（code-impl 绝不派第三方），未派第三方 vendor；关键节点独立审查（★审查闸1/2）按既定规则 hopper 派 codex/grok 随机池，本轮首次完整实证"关键节点独立审查"这一委派模式——★1 两轮均产出可用 verdict 并揪出真实缺陷，★2 首次派发（codex T-046）遇 vendor 自身限制未产出 verdict，已按既定改派纪律处理（非委派模式本身失效，是单次 vendor 执行失败） | 历轮同规则；本轮首次系统性验证"关键节点独立审查"机制 | required for high-risk delegation | pass |
+| Recoverable blocker next action | 不适用（无 blocker；T-046 中止已立即改派解除，非停滞） | 同 | read-only investigation before user pause | pass |
+
+## Local Repair Decision
+
+- Required repair: 无——本轮延续 rounds/0002-0004 建立的做法，SG-5 先有 scope-lock（rounds/0005/scope-lock.md）再执行，收盘时完整走 round-summary → decision → state 回写（current.md/evidence-index.md/goal-breakdown.md/self-audit.md），闭环完整、无绕开；本轮额外首次验证了"continue 驱动 + 关键节点独立审查"机制在多阶段、多轮收残场景下可行且见效——★1 揪出 CRITICAL 凭证泄漏 + 收残引入的新死锁 + 测试假绿根因，★2 揪出 Swift/C# 两端共有的真实挂起 bug（NOTE-1），且该 bug 的复现测试自身又带出并修复一处次生矛盾事件 bug；收敛守卫（连续 MUST-FIX 达第 3 轮即停报）已设置但本轮未触发（第二次收残即彻底收敛）
+- Smallest safe next action: 待选 **SG-3**（codegen 增量：CI 冒烟挂接 + type-level 断言）/ **SG-7**（hermes per-session key 接线）/ **SG-8.x**（PRE-1/3/7 runtime 探针 + SG-8.7 完整三端 gold parity runner + D4 §4.6 产品逻辑层 parity）/ 副发现处理，继续逐个走 round 闭环
+- Blocker type: none
+- Recovery eligible: 不适用（无 blocker）
+- Human confirmation required: 否（SG-5 本身已完整交付；下一步 SG 选择待后续与用户或主会话统一裁定，不阻塞本轮收盘）
+- Block execution until repaired: 否
+
+## Evolution Issue Decision
+
+- Create upstream evolution issue: no
+- Reason: 本轮未发现新的 harnessloop 框架缺陷；本轮暴露的两个技术层观察点（codex 因自身 cybersecurity 过滤器中止评审、grok 尾部 auth-fail 先例的延续记录）属于 **hopper vendor 边用边验证** 范畴——已按 CLAUDE.md 既定纪律记录（未采信 exit code/自述、已改派同池另一 vendor），是本项目"边用边验证插件"产出的一部分，不构成 harnessloop 协议本身的缺陷；是否需要 hopper 插件侧新增"vendor 因自身安全策略中止时的自动改派"能力，留待 hopper 后续迭代评估，非本轮 harnessloop evolution-issue 范围
+- Issue path: 无新增（codex 安全过滤器中止评审的观察点记于 rounds/0005/round-summary.md Open Risks 与本条 Loop Health「Handoff stagnation」；如后续需针对 hopper 插件本身开 issue，走 hopper 插件自身的迭代回路，非本 harnessloop evolution-issue 通道）
+- Redaction notes: 无涉密内容（仅引用 commit 短号、hopper task ID、事件字段名；凭证值未出现在本文件）
