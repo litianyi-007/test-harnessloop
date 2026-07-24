@@ -1007,3 +1007,16 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`PASS`（C# runner 可信、三端 parity 真成立 → SG-8.7 主体达成）| `PASS_WITH_NOTE` | `REWORK`（逐条给 `app/contracts/d2/fixtures/csharp-runner/<file>:<line>` + 可复现）| `FAIL`。
 **产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-052-output.md`。**Read-only**：审查不改任何文件（证伪临时改动必须还原并说明）；忽略跨仓/别目录全局 skill。中文。
+
+## T-053（SG-8.7 Stage B 收残确认性再审，单 codex，接续 T-052）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续自己 T-052,持有原始复现）· 只读 · **工具约束:可跑 dotnet build/run/node/swiftc,严禁 csi/dotnet-script**
+
+**评审对象**（主仓库 commit `2a60b010`,收 T-052 唯一阻断的定向修复）：`app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs`（normalize 分支）+ `swift-runner/SwiftFixtureRunner.swift`（同分支）。`git show 2a60b010`。对照你自己 T-052 的第 2 项 finding（`.hopper/handoffs/T-052-output.md`）。
+
+**只验两件事**：
+1. **旁路是否真闭合**：修法=无条件先剥 payload 拷贝的 `message`+`text` 两键、仅当真实捕获 `message` 存在才写回 `text`。用你 T-052 的**原始复现**验证：临时把真实 C# client `SendAsync` 的 `["message"]` 改 `["text"]`（`app/kernel-client/csharp/OpenclawGatewayKernelClient.cs:336`）→ `dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json` 现在应 **FAIL**（修复前你测得 PASS）→ `git checkout` 还原。Swift 端同理可验（`OpenclawGatewayKernelClient.swift:338`）。确认无其它同类 remap 碰撞旁路（两 runner 里 message→text 是否唯一 remap）。
+2. **收残无新缺陷 + 三端恢复**：strict 剥键对现有 13 条 fixture 语义无副作用（正确 native `message` 路径行为不变）？三端矩阵恢复 TS 13/13 + Swift 12/13 + C# 12/13（亲跑,TS 记得排除 bin/obj）？
+
+**Verdict**：`CONFIRMABLE`（旁路真闭合+无新缺陷 → ★审查闸2 过、SG-8.7 主体达成）| `MUST-FIX`（问题点 + file:line + 可复现）。
+**产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-053-output.md`。**Read-only**：审查不改文件（证伪临时改动必须还原并说明）；忽略跨仓/别目录全局 skill。中文。

@@ -1,0 +1,3807 @@
+Reading additional input from stdin...
+OpenAI Codex v0.145.0
+--------
+workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019f9597-7a09-78e0-baa9-3df02e8295e3
+--------
+user
+# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+
+You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+on your role — it overrides anything you may read locally.
+
+1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+   specialist." Nothing is listening downstream — if you delegate, the task fails.
+3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+   complete, closed loop.
+5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+   output, and proceed. The loop is closed — begin now and finish.
+
+---
+
+# Task-type: code-review-acceptance
+
+Anchor: `.hopper/tasks/code-review-acceptance.md::root`
+
+## Purpose
+
+Verify a change against its stated acceptance criteria. Review only — no edits.
+
+## Input shape
+
+- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+- Positive scope (files allowed) and negative scope (files that must not change)
+- Budget: time and vendor-cost ceiling
+
+## Output shape (output.md)
+
+The output should contain, in this order:
+
+- **Summary**: what was delivered, in two to four sentences
+- **Files touched**: paths with a one-line rationale each (or "none")
+- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+- **Decisions / deviations**: judgment calls or scope changes (or "none")
+- **Open questions**: list, or "none"
+- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+- **Next recommendation**: what should happen next
+
+## Notes
+
+This frame describes the SHAPE of the work and the expected output, not an
+identity to adopt. The vendor CLI brings its own behavior; the frame only states
+what the protocol expects back.
+
+---
+
+## Task spec
+
+## T-053（SG-8.7 Stage B 收残确认性再审，单 codex，接续 T-052）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续自己 T-052,持有原始复现）· 只读 · **工具约束:可跑 dotnet build/run/node/swiftc,严禁 csi/dotnet-script**
+
+**评审对象**（主仓库 commit `2a60b010`,收 T-052 唯一阻断的定向修复）：`app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs`（normalize 分支）+ `swift-runner/SwiftFixtureRunner.swift`（同分支）。`git show 2a60b010`。对照你自己 T-052 的第 2 项 finding（`.hopper/handoffs/T-052-output.md`）。
+
+**只验两件事**：
+1. **旁路是否真闭合**：修法=无条件先剥 payload 拷贝的 `message`+`text` 两键、仅当真实捕获 `message` 存在才写回 `text`。用你 T-052 的**原始复现**验证：临时把真实 C# client `SendAsync` 的 `["message"]` 改 `["text"]`（`app/kernel-client/csharp/OpenclawGatewayKernelClient.cs:336`）→ `dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json` 现在应 **FAIL**（修复前你测得 PASS）→ `git checkout` 还原。Swift 端同理可验（`OpenclawGatewayKernelClient.swift:338`）。确认无其它同类 remap 碰撞旁路（两 runner 里 message→text 是否唯一 remap）。
+2. **收残无新缺陷 + 三端恢复**：strict 剥键对现有 13 条 fixture 语义无副作用（正确 native `message` 路径行为不变）？三端矩阵恢复 TS 13/13 + Swift 12/13 + C# 12/13（亲跑,TS 记得排除 bin/obj）？
+
+**Verdict**：`CONFIRMABLE`（旁路真闭合+无新缺陷 → ★审查闸2 过、SG-8.7 主体达成）| `MUST-FIX`（问题点 + file:line + 可复现）。
+**产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-053-output.md`。**Read-only**：审查不改文件（证伪临时改动必须还原并说明）；忽略跨仓/别目录全局 skill。中文。
+
+codex
+我会按 T-052 的原始复现逐项复核：先审 commit 与旧 finding，再运行三端基线和两端定向篡改复现，最后确认工作树恢复并仅落盘 T-053 审查报告。
+  → 读取 T-052 finding、目标提交与当前工作树状态
+  • 核对两 runner 的 normalize 修法及 remap 唯一性
+  • 运行 TS、Swift、C# 三端基线矩阵
+  • 临时篡改真实 C# 与 Swift client 并验证 fixture FAIL，随后还原
+  • 确认无残留改动并写入 T-053 审查报告
+exec
+/bin/zsh -lc "git status --short && git rev-parse --show-toplevel && git rev-parse HEAD && git show --stat --oneline --decorate --no-renames 2a60b010 && sed -n '1,240p' .hopper/handoffs/T-052-output.md && git show --no-ext-diff --unified=80 --no-renames 2a60b010 -- app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 523ms:
+ M .hopper/handoffs/leader-tasklist.md
+ M .hopper/queue.md
+ ? kernels/openclaw
+?? .hopper/handoffs/T-053-output.log
+?? .hopper/handoffs/T-053-output.md
+?? .hopper/handoffs/T-053-progress.log
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+2a60b0100826e72ec27df7b18a4244fcf46fbeeb
+2a60b01 (HEAD -> main) fix: SG-8.7 收 codex T-052——两端 runner NormalizeNativeParams 假绿旁路(strict 剥键)
+ .hopper/handoffs/T-052-output-raw.txt              | 7071 ++++++++++++++++++++
+ .hopper/handoffs/T-052-output.log                  | 7071 ++++++++++++++++++++
+ .hopper/handoffs/T-052-output.md                   |  204 +
+ .hopper/handoffs/T-052-progress.log                |    2 +
+ .hopper/handoffs/leader-tasklist.md                |   18 +
+ .hopper/queue.md                                   |    1 +
+ .../fixtures/csharp-runner/CSharpFixtureRunner.cs  |   16 +-
+ .../fixtures/swift-runner/SwiftFixtureRunner.swift |   15 +-
+ 8 files changed, 14392 insertions(+), 6 deletions(-)
+---
+phase: done
+last_progress_at: "2026-07-24T19:18:50.497Z"
+last_progress: Task completed successfully.
+progress_seq: 2
+terminal_event_emitted: true
+status: done
+end_time: "2026-07-24T19:18:50.496Z"
+exit_code: 0
+signal: null
+timed_out: null
+duration_ms: 522292
+adapter_status: success
+---
+## Summary
+
+已完成对 commit `505202a5` 的 Stage B C# parity runner 对抗审：三端基线结果与 README 声明一致，C# 确实驱动 SG-5 真实 client，调用顺序、超时结算和当前 fixture 值域上的 `PartialMatch` 也基本可信。发现 1 个必须修复的假绿：真实 C# client 若把 OpenClaw native `message` 字段错写成 D2 层的 `text`，`stop-active-run-succeeded.json` 仍然 PASS；根因是 `NormalizeNativeParams` 会原样保留预存的 `text`，没有强制证明该值来自真实捕获的 `message`。因此“三端当前样本跑绿”成立，但“C# 绿灯能捕获 send native param 形状回归”的核心声明尚不成立。
+
+## Files touched
+
+- `.hopper/handoffs/T-052-output.md`：本次只读审查产物。
+- 评审对象源码：none。所有证伪临时改动均已还原；`app/kernel-client/csharp/OpenclawGatewayKernelClient.cs` 最终 blob 为原始 `3992e0f13a79b3309a9c8dfc640d042ed5cd65e5`，`git diff --exit-code --` 返回 0。
+
+## Acceptance verification (5/5)
+
+1. **真驱动 vs mock：通过。**
+   - `app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:471-480`、`:501-510`、`:533-549`、`:558-589` 分别给真实 RPC 注册测试 responder，随后调用真实 `CreateSessionAsync`、`SendAsync`、`Subscribe`、`StopAsync`；生产 `RequestAsync` 在 `app/kernel-client/csharp/OpenclawGatewayKernelClient.cs:955-963` 才把真实方法发出的参数交给 responder，不存在 runner 直接伪造 call outcome 的 short-circuit。
+   - `ReplyGate`（`CSharpFixtureRunner.cs:69-126`）在同一把锁内处理 resolve-before-wait 和 wait-before-resolve，TCS 使用 `RunContinuationsAsynchronously`；中途状态来自真实方法在 RPC await 前设置的 lock。现有每个 gate 只有一个 waiter，未发现当前 13 条 fixture 可触发的竞态假绿。
+
+2. **native params 捕获：未通过，发现 MUST-FIX 假绿。**
+   - 正向证据：捕获发生于真实 stub 闭包（`CSharpFixtureRunner.cs:471-475`、`:501-505`、`:558-566`）；错误 key 反证有效——临时把真实 `sessions.abort.params.key` 改为 `"T052-wrong-key"` 后，命令
+     `dotnet build --nologo && dotnet run --no-build -- ../operation-outcome/stop-no-active-run-succeeded.json`
+     退出 1，并报 `expect_outbound(stop1).sessionId: 期望 "session-1"，实际 null`，证明 key 反查无 fallback。
+   - 阻断反证：临时把真实 client 的 `SendAsync` 从 `["message"] = ResolveSendMessageText(input)` 改为错误 native 形状 `["text"] = ResolveSendMessageText(input)`，再运行
+     `dotnet build --nologo && dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json`。
+     日志明确打印 `sessions.send.params` 为 `{"key":"openclaw-key-session-1","text":"run something long","timeoutMs":0}`，但结果仍是 `=== 1 PASS / 0 FAIL / 0 DEGRADED ===`、退出码 0。
+   - 根因位于 `app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:647-656`：先完整复制 native params；仅当 `message` 存在时才执行 `Remove("message")` 并写 `text`，若真实 client 已错误发送 `text`，该字段会原样留在 payload 中并满足 fixture 的 `payload.text`。这复现了 Stage A 式“看似从真实 params 匹配、实际允许错误字段形状自证”的假绿。Swift 权威实现 `SwiftFixtureRunner.swift:612-623` 具有同样的条件 remap，修复时应同步收口。
+
+3. **nativeCallOrder / advance_clock：通过。**
+   - `sessions.abort` 与 `approval.resolve` 仅在 responder 被真实 client 调用时追加（`CSharpFixtureRunner.cs:558-577`），不是注册时追加；基线运行 `stop-force-denies-pending-approval` PASS，真实 RPC 日志顺序为 `approval.resolve` 后 `sessions.abort`，与 expected 完全一致。
+   - `ApplyAdvanceClockAsync` 在 `CSharpFixtureRunner.cs:918-941` 轮询 `IsCallSettled`；真实 SG-5 定时器在 `OpenclawGatewayKernelClient.cs:764-787` 使用 `Task.Delay(timeoutSeconds)`。单跑 `stop-timed-out.json` 的 `/usr/bin/time -p` 结果为 `real 2.16` 秒并 PASS，明显跨过注入的 1 秒内部 timer，未发现 runner 直接铸造 `timed_out` 的路径。
+
+4. **PartialMatch 三端等价：当前 fixture 值域上通过。**
+   - `PartialMatch.cs:142-195` 对缺失值与显式 JSON null 分流、对象按 expected 子集递归、数组强制等长并逐项匹配；bool 必须两侧均为 `System.Boolean`，不会发生 Swift/Foundation 的 `NSNumber` 0/1 桥接误判，README 的“C# 无需 objCType workaround”论证成立。
+   - 当前 13 条 fixture 的数字均为普通 JSON 整数/小数范围（扫描最大值 `1800000`），C# 的 `long`/`double` 统一与 TS `number` 在该值域等价；未发现当前样本上的数值精度、显式 null 或数组长度放水。阻断缺陷发生在进入 matcher 前的 native 参数规范化，不在 matcher 本体。
+
+5. **三端 parity / DEGRADED / teeth：矩阵通过，但 teeth 覆盖不足。**
+   - TS：`find app/contracts/d2/fixtures -name '*.json' -not -path '*/bin/*' -not -path '*/obj/*' | sort | xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`，实测 13 条 `[PASS]`、`ALL PASS`。
+   - Swift：按 README 的 `swiftc ... -o /tmp/T-052-swift-fixture-runner && /tmp/T-052-swift-fixture-runner`，实测 `12 PASS / 0 FAIL / 1 DEGRADED`。
+   - C#：`dotnet build --nologo && dotnet run --no-build`，build 为 `0 Warning(s) / 0 Error(s)`，runner 为 `12 PASS / 0 FAIL / 1 DEGRADED`。
+   - Swift/C# 的静态扫描集合均为 `interrupt`、`respondApproval`、`capabilities`（C#：`CSharpFixtureRunner.cs:998-1012`；Swift：`SwiftFixtureRunner.swift:932-942`），本次两端唯一 DEGRADED 均为 `soft-steer-then-stop` 的 `interrupt` TODO，原因同口径。
+   - README 第 1 个 teeth 的**精确错值**反证已独立复现：把 `message` 值写死为 `"T-STAGEB-TEETH-WRONG-MESSAGE"` 后退出 1，报 `expect_outbound(send1).payload.text` 不匹配；第 2 个 teeth 的调用时刻记录与基线顺序断言吻合，第 3 个 teeth 的 matcher 调用链也确实覆盖 timeline/final expected。三项报告本身可信，但第 1 项只证明“正确字段上的错误值”会失败，没有覆盖“错误字段名恰好等于规范化目标名”的旁路，因而不足以支撑完整声明。
+
+## Decisions / deviations
+
+- 将五个“对抗核验重点”视为五项 acceptance verification；五项均已执行，其中第 2 项发现阻断缺陷。
+- 按任务授权做了三次单行临时证伪：错误 `message` 值（预期 FAIL）、错误 `key`（预期 FAIL）、错误字段名 `text`（异常 PASS）。每次均用反向补丁还原；最终重新 build、单跑恢复 PASS，并以 blob/hash + `git diff --exit-code` 复核无源码残留。
+- 仅使用允许的 `dotnet build` / `dotnet run` / `node` / `swiftc`，未调用 `csi`、`dotnet-script` 或任何 C# 交互工具。`dotnet` 生成的忽略项 `csharp-runner/bin/`、`obj/` 不是源码变更。
+
+## Open questions
+
+none
+
+## Verdict
+
+REWORK
+
+## Next recommendation
+
+先修 `CSharpFixtureRunner.cs:647-656`：对 `sessions.send` 必须显式要求捕获到 native `message`，并在映射前移除/拒绝原生 payload 中预存的 `text`；缺少 `message` 时应产生 mismatch（或写入显式 null marker 使现有 expected 必然失败），不能让错误的 `text` 自己满足 D2 `payload.text`。同步修正 Swift 的同构逻辑，加入“生产 client 把 `message` 改名为 `text` 时 fixture 必须 FAIL”的回归 teeth，然后重跑三端 13/13、12/13、12/13 与三类反证后再进闸。
+
+## Vendor output (parsed) _(preview 8000/368310 chars; full raw stream in `T-052-output.log`)_
+
+```
+Reading additional input from stdin...
+OpenAI Codex v0.145.0
+--------
+workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019f9588-f706-70b2-8a07-b88600b58655
+--------
+user
+# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+
+You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+on your role — it overrides anything you may read locally.
+
+1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+   specialist." Nothing is listening downstream — if you delegate, the task fails.
+3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+   complete, closed loop.
+5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+   output, and proceed. The loop is closed — begin now and finish.
+
+---
+
+# Task-type: code-review-adversarial
+
+Anchor: `.hopper/tasks/code-review-adversarial.md::root`
+
+## Purpose
+
+Independently review a change, hunting for defects the author would miss. Review only — no edits.
+
+## Input shape
+
+- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+- Positive scope (files allowed) and negative scope (files that must not change)
+- Budget: time and vendor-cost ceiling
+
+## Output shape (output.md)
+
+The output should contain, in this order:
+
+- **Summary**: what was delivered, in two to four sentences
+- **Files touched**: paths with a one-line rationale each (or "none")
+- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+- **Decisions / deviations**: judgment calls or scope changes (or "none")
+- **Open questions**: list, or "none"
+- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+- **Next recommendation**: what should happen next
+
+## Notes
+
+This frame describes the SHAPE of the work and the expected output, not an
+identity to adopt. The vendor CLI brings its own behavior; the frame only states
+what the protocol expects back.
+
+---
+
+## Task spec
+
+## T-052（SG-8.7 ★审查闸2：Stage B C# 金标 parity runner 对抗审，单 codex）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: codex（轮换,T-051 为 grok；⚠️ **工具约束:可跑 `dotnet build`/`dotnet run`/node/swiftc,严禁 `csi`/`dotnet-script` 等 C# 交互工具**——T-046 先例:跑 csi 触发你自身安全过滤器致评审中止）· 只读
+
+**评审对象**（主仓库 commit `505202a5`）：`app/contracts/d2/fixtures/csharp-runner/`（`FixtureDsl.cs`/`PartialMatch.cs`/`CSharpFixtureRunner.cs`/`CSharpRunnerMain.cs`/`CSharpRunner.csproj`）+ README 三端 parity 节。**权威对照**：已 validated 的 `swift-runner/`（T-048→T-050→T-051 三审收敛,commit `98d38e0e`）+ `ts-runner/` + `dsl.ts`；被驱动的 SG-5 真实 C# client `app/kernel-client/csharp/`（stop force-deny + NOTE-A 已修,30/30,grok T-049 PASS_WITH_NOTE）。`git show 505202a5`。
+
+**背景**：Stage A 的 Swift runner 经三轮审查才挤干"绿灯≠真 parity"的水分（臆造字段/自构 request 匹配/空转 oracle/不断言顺序/漏 seq）。Stage B 声称把全套纪律镜像到 C# runner：三端矩阵 TS 13/13 + Swift 12/13 + C# 12/13（同一 expected、DEGRADED 同因），3 处 teeth 反证（错 param/错顺序/放水 matcher→FAIL）均还原。主会话已独立复跑三端 + C# 端 teeth 亲证。由 Sonnet 所写,需异构对抗复核。
+
+**对抗核验重点（找真缺陷 + 可复现;重点证伪"C# 绿灯是否真能证明它声称的东西"）**：
+1. **真驱动 vs mock**：`CSharpFixtureRunner.cs` 的 `client_call` 是否真调 `OpenclawGatewayKernelClient` 的 `CreateSessionAsync`/`SendAsync`/`Subscribe`/`StopAsync`（经 `TestSupportStubRpc`/喂帧钩子）？有无任何 short-circuit 预置状态绕过真实 client 代码路径？`ReplyGate`（lock+TCS）是否真让 RPC 在途、中途 assert 观察真实状态（对照 Swift 的 actor ReplyGate,C# lock 版有无竞态）？
+2. **native params 匹配是否真捕获**：`NormalizeNativeParams` 是否从 stub 闭包运行时捕获的真实 `params` 规范化（非 timeline args 回放）？`message`→`text` 反映射、key 反查 sessionId、无 fallback（缺失→null 标记）是否与 swift-runner 语义一致？**证伪**：临时改真实 C# client 发错 native param → fixture 应 FAIL（改完 `git checkout` 还原）。
+3. **nativeCallOrder/advance_clock**：顺序是否真实调用时刻记录（非注册时）？advance_clock 是否轮询 `IsCallSettled` 且 timed_out 真由 SG-5 内部 `Task.Delay` timer 触发（可计时验证）？
+4. **PartialMatch 三端等价**：C# 的对称统一值域实现与 Swift（非对称+objCType workaround）/TS 在当前 fixture JSON 值域上是否行为等价？其文档化的"C# 无需 objCType workaround"论证是否成立？有无放水路径（如 number 精度/显式 null/数组长度）？
+5. **三端 parity 声明与 teeth 可信度**：亲跑三端（TS 排除 bin/obj 污染:`find ... -not -path '*/bin/*' -not -path '*/obj/*'`）确认 13/13、12/13、12/13 且 DEGRADED 同因；`DegradeReason` 静态扫描是否与 swift-runner 同口径（interrupt/respondApproval/capabilities 桩）？报告声称的 3 处 teeth 是否可信（可抽验其一）？有无 Stage A 式表面绕过在 C# 端复发（如某字段仅 C# 端不校验）？
+
+**Verdict**：`PASS`（C# runner 可信、三端 parity 真成立 → SG-8.7 主体达成）| `PASS_WITH_NOTE` | `REWORK`（逐条给 `app/contracts/d2/fixtures/csharp-runner/<file>:<line>` + 可复现）| `FAIL`。
+**产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-052-output.md`。**Read-only**：审查不改任何文件（证伪临时改动必须还原并说明）；忽略跨仓/别目录全局 skill。中文。
+
+codex
+我将直接做只读对抗审查：先锁定两处目标 commit 与工作树基线，再逐项核验真实 client 路径、参数捕获、时序、matcher 语义和三端运行结果；仅写入指定的 `T-052-output.md`，任何临时证伪改动都会在最终校验前还原。
+  → 确认仓库、commit、工作树与评审文件基线
+  • 静态审查 C# runner、真实 client、Swift/TS 权威实现
+  • 运行三端矩阵并执行至少一项可复现 teeth 证伪
+  • 汇总结论并写入 T-052-output.md
+  • 复核仅输出文件发生变化
+exec
+/bin/zsh -lc 'rg --files app/contracts/d2/fixtures/csharp-runner app/contracts/d2/fixtures/swift-runner app/contracts/d2/fixtures/ts-runner app/kernel-client/csharp | sort' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+exec
+/bin/zsh -lc 'rg -n "parity|C#|Swift|TypeScript|13/13|12/13|DEGRADED" app/contracts/d2/fixtures/README.md app/contracts/d2/README.md README.md 2>/dev/null' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+app/contracts/d2/fixtures/README.md:1:# 金标 parity fixtures（骨架 + SG-1 深化：DSL 正式化/最小 TS runner + SG-8.7 Stage A：Swift 真实 client runner/fixture 扩全 + Stage B：C# 真实 client runner，三端 parity 收官）
+app/contracts/d2/fixtures/README.md:3:对应 D4 跨平台架构 v2.2 §4「金标 parity 测试」，尤其 §4.3「fixture DSL：确定性
+app/contracts/d2/fixtures/README.md:4:action/timeline」。金标 parity 测试是一组**语言中立的契约一致性用例**——每条用例是一条确定性
+app/contracts/d2/fixtures/README.md:15:**SG-8.7 Stage A/B 已分别补齐 Swift/C# 真实 client runner**（见文末「三端 parity」一节）。
+app/contracts/d2/fixtures/README.md:19:`session-lock`/`operation-outcome` 三组扩到共 10 条新 fixture + Swift 真实 client runner**（见文末
+app/contracts/d2/fixtures/README.md:20:「Swift 金标 parity runner」「三组 fixture 覆盖清单」两节）；**T-048 REWORK 轮**（对抗审 codex 判
+app/contracts/d2/fixtures/README.md:25:Swift `PartialMatch`/`expect_outbound` 与 TS 不等价的假阴性、把 `advance_clock` 的确定性从"固定
+app/contracts/d2/fixtures/README.md:32:分流、`EmptyPayload` 边界、C# runner（D4 §4.4）仍是后续轮次交付物，不在本轮范围内。
+app/contracts/d2/fixtures/README.md:69:（它不模拟原生双帧 join），只有 Swift/C# 这类驱动真实 client 的 runner 会读取。
+app/contracts/d2/fixtures/README.md:89:parity/
+app/contracts/d2/fixtures/README.md:119:  再誊抄一遍——否则两端 parity 只是"互相抄"的空转（T-048 codex 对抗审的核心批评），一旦真实
+app/contracts/d2/fixtures/README.md:135:跑 `defaultFixturePaths()` 枚举的默认 13 条清单，与 swift-runner `SwiftRunnerMain.swift`/
+app/contracts/d2/fixtures/README.md:137:ts-runner/runner.ts` 对全部 13 条 fixture 跑 **13 PASS / 0 FAIL**。Swift/C# runner
+app/contracts/d2/fixtures/README.md:139:parity」总节。
+app/contracts/d2/fixtures/README.md:141:## Swift 金标 parity runner（SG-8.7 Stage A 新增）
+app/contracts/d2/fixtures/README.md:143:`swift-runn
+
+... [truncated, 360310 chars omitted]
+```
+
+## Status (background completion)
+- queue_status: done
+- adapter_status: success
+- exit_code: 0
+- duration_ms: 522292
+- end_time: 2026-07-24T19:18:50.496Z
+- log: see `T-052-output.log` for raw output
+commit 2a60b0100826e72ec27df7b18a4244fcf46fbeeb
+Author: litianyi <litianyi@corp.netease.com>
+Date:   Sat Jul 25 03:25:36 2026 +0800
+
+    fix: SG-8.7 收 codex T-052——两端 runner NormalizeNativeParams 假绿旁路(strict 剥键)
+    
+    T-052 ★审查闸2 唯一阻断:message→text 条件 remap 在真实 client 发错字段名恰好叫 text 时原样留 payload 自证 PASS(codex 实证;Swift 权威端同病,T-051 证伪只覆盖错值未覆盖错字段名)。
+    修法(两端同构):无条件先剥 payload 拷贝的 message+text 两键,仅当真实捕获 message 存在才写回 text——错误 native 形状被剥,payload.text 断言如实 FAIL。
+    teeth(两端+主会话亲手):临时改真实 client message→text → fixture FAIL(实际 nil)→ git checkout 还原 diff=0。
+    扫描确认 message→text 是两 runner 唯一 remap,无同类碰撞旁路。三端恢复:TS 13/13 + Swift 12/13 + C# 12/13(主会话独立复跑)
+
+diff --git a/app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs b/app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs
+index 9eb10e3..619e9c3 100644
+--- a/app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs
++++ b/app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs
+@@ -563,173 +563,183 @@ namespace CSharpRunner
+                         // `RequestAsync` 调用的真实先后顺序。
+                         ctx.AppendNativeCall("sessions.abort");
+                         ctx.RecordOutbound(id, "sessions.abort", parameters);
+                         return gate.Wait();
+                     });
+                     client.TestSupportStubRpc("sessions.delete", _ => Task.FromResult(new JSONObject { ["deleted"] = true }));
+                     // D1 §6.2 M3（stop-path 强制 deny）：`StopAsync` 在发起 `sessions.abort` 之前，若
+                     // 该 session 仍有 pending 审批，会先对每一个调用真实 openclaw 统一审批解决 RPC
+                     // `approval.resolve`。绝大多数 fixture 没有 pending 审批时，
+                     // `ForceDenyPendingApprovalsBeforeStopAsync` 在空列表上提前返回、根本不会发起这条
+                     // RPC（这条 stub 是安全的默认背景桩，不影响其余 fixture）；只有
+                     // `approval/stop-force-denies-pending-approval.json` 会真正命中。
+                     client.TestSupportStubRpc("approval.resolve", _ =>
+                     {
+                         ctx.AppendNativeCall("approval.resolve");
+                         return Task.FromResult(new JSONObject
+                         {
+                             ["applied"] = true,
+                             ["approval"] = new JSONObject { ["status"] = "denied" },
+                         });
+                     });
+                     var eventsCountAtStart = ctx.DrainedEventsCount();
+                     var task = Task.Run(async () =>
+                     {
+                         try
+                         {
+                             var result = await client.StopAsync(handle);
+                             await ctx.OnStopResolvedAsync(id, result, eventsCountAtStart);
+                         }
+                         catch (Exception error)
+                         {
+                             await ctx.OnStopThrewAsync(id, error, eventsCountAtStart);
+                         }
+                     });
+                     ctx.AddPendingTask(task);
+                     break;
+                 }
+ 
+                 case "interrupt":
+                 case "respondApproval":
+                 case "capabilities":
+                     // 不应该走到这里——`DegradeReason` 已经在执行 timeline 之前静态扫描并整条 fixture
+                     // 标记 DEGRADED。留一个明确抛错，防止未来谁绕开了那道静态检查。
+                     throw new RunnerException($"client_call『{call}』本应在执行前被 DegradeReason 拦截，未被拦截是 runner 自身的缺陷");
+ 
+                 default:
+                     throw new RunnerException($"未知 KernelClientMethod『{call}』");
+             }
+ 
+             // 给刚 spawn 的 Task 一点真实时间跑到它的 RPC await 点，让紧随其后的
+             // expect_outbound/assert_state 断言的是『真的在途』而不是『还没开始』。
+             await Task.Delay(50);
+         }
+ 
+         // MARK: - expect_outbound
+ 
+         /// <summary>D2 req.* 方法名 -&gt; 真实 client 会调用的 openclaw 原生 RPC 方法名。只覆盖 Stage
+         /// A/B 用到的四个方法（interrupt/respondApproval/capabilities 对应的 fixture 已被整条
+         /// DEGRADED，不会走到这里）。</summary>
+         private static readonly Dictionary<string, string> ExpectOutboundMethodTable = new()
+         {
+             ["req.createSession"] = "sessions.create",
+             ["req.send"] = "sessions.send",
+             ["req.subscribe"] = "sessions.messages.subscribe",
+             ["req.stop"] = "sessions.abort",
+         };
+ 
+         /// <summary>
+         /// 把真实捕获到的 openclaw 原生 RPC `params`（`PerformClientCallAsync` 的 `TestSupportStubRpc`
+         /// 闭包同步收到的原始入参，真实 client 传的，不是 fixture 声明值）规范化成一个可与
+         /// `expect_outbound` 的 `pattern` 做完整深度匹配的『规范化请求』——逐字镜像
+         /// `SwiftFixtureRunner.swift` 的 `normalizeNativeParams`（T-050 REWORK #1 治根方案）：
+         ///   - `sessionId`：从捕获到的原生 `key` 反查『哪个已声明 session 拥有这个 kernelKey』。`key`
+         ///     不存在于 `params`（如 createSession，session 尚不存在）就不设置这个字段；`key` 存在但
+         ///     查不到对应的已声明 session（真实 client 把 `key` 发错，或发了一个从未声明过的 key）就
+         ///     显式置 <see cref="JsonNullMarker.Instance"/>——不 fallback 到任何 fixture 声明值，让
+         ///     pattern 里的 `sessionId` 断言在这种情况下真的失败。
+         ///   - `payload`：`params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后剩下的全部
+         ///     字段，原样保留原生字段名——仅 `sessions.send` 一项例外：把原生 `message` 反向映射回
+         ///     D1 `Input.text` 概念，只为了让这个字段能与 TS/Swift 端 `payload.text` 做跨语言一致的
+-        ///     深度匹配；其余字段不改名，如实反映原生协议。
++        ///     深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：`message`→`text`
++        ///     重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——否则若真实
++        ///     client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段会原样
++        ///     留在 payload 里、自证满足 `payload.text` 断言，形成假绿。剥掉之后只有真的捕获到
++        ///     `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
++        ///     `payload.text` 断言必然失败。
+         /// </summary>
+         private static Dictionary<string, object?> NormalizeNativeParams(string method, JSONObject parameters, string expectedType, RunnerContext ctx)
+         {
+             var payload = new JSONObject(parameters);
+             var outp = new Dictionary<string, object?> { ["type"] = expectedType };
+             if (payload.Remove("key", out var keyVal) && keyVal is string key)
+             {
+                 var declared = ctx.DeclaredSessionId(key);
+                 outp["sessionId"] = declared != null ? declared : JsonNullMarker.Instance;
+             }
+-            if (method == "sessions.send" && payload.Remove("message", out var message))
+-                payload["text"] = message;
++            if (method == "sessions.send")
++            {
++                var hasMessage = payload.Remove("message", out var message);
++                payload.Remove("text", out _);
++                if (hasMessage)
++                    payload["text"] = message;
++            }
+             outp["payload"] = payload;
+             return outp;
+         }
+ 
+         public static void CheckExpectOutbound(TimelineOp op, RunnerContext ctx)
+         {
+             if (op.Matches is not { } matches)
+                 throw new RunnerException($"expect_outbound 缺少 matches（t={op.T}）");
+             var patternAny = FixtureJson.ToActualObject(op.Pattern);
+             if (!(patternAny.TryGetValue("type", out var typeObj) && typeObj is string expectedType))
+                 throw new RunnerException($"expect_outbound({matches}) 的 pattern 缺少 'type'");
+ 
+             if (!ExpectOutboundMethodTable.TryGetValue(expectedType, out var expectedMethod))
+             {
+                 ctx.AppendMismatch(
+                     $"expect_outbound({matches}): csharp-runner 未登记『{expectedType}』对应的 openclaw RPC 方法名" +
+                     "（该 D2 方法本轮 SG-5 未实现，或超出 Stage A/B 翻译范围）");
+                 return;
+             }
+ 
+             var captured = ctx.CapturedOutboundMethod(matches);
+             if (captured != expectedMethod)
+             {
+                 ctx.AppendMismatch(
+                     $"expect_outbound({matches}): 期望真实 client 调用底层 openclaw RPC 方法『{expectedMethod}』" +
+                     $"（对应 D2『{expectedType}』），实际捕获到『{captured ?? "<none>"}』");
+                 return;
+             }
+ 
+             // T-050 REWORK #1 治根：规范化对象从 `CapturedParams`——真实捕获的原生 `params`——现算，
+             // 不是把 timeline `args`/fixture 声明值抄回去验证自己。
+             var parameters = ctx.CapturedParams(matches) ?? new JSONObject();
+             var normalized = NormalizeNativeParams(expectedMethod, parameters, expectedType, ctx);
+             var diff = PartialMatch.Match(normalized, patternAny, $"expect_outbound({matches})");
+             foreach (var d in diff) ctx.AppendMismatch(d);
+         }
+ 
+         // MARK: - mock_response
+ 
+         public static void ApplyMockResponse(TimelineOp op, RunnerContext ctx)
+         {
+             if (op.ReplyTo is not { } replyTo)
+                 throw new RunnerException($"mock_response 缺少 replyTo（t={op.T}）");
+             var gate = ctx.Gate(replyTo) ?? throw new RunnerException(
+                 $"mock_response(replyTo={replyTo}) 找不到对应的 reply gate——对应 client_call 未发起，或该方法不需要 gate（如 subscribe）");
+             var messageAny = FixtureJson.ToActualObject(op.Message);
+             var kind = ctx.CallKind(replyTo) ?? "";
+ 
+             if (messageAny.TryGetValue("failure", out var failureObj) && failureObj is Dictionary<string, object?> failure)
+             {
+                 var code = failure.TryGetValue("code", out var c) && c is string cs ? cs : "unknown";
+                 var detail = failure.TryGetValue("detail", out var d) && d is string ds ? ds : null;
+                 gate.ResolveFailure(new KernelClientException(KernelClientErrorKind.RpcRejected, detail ?? "", code));
+                 return;
+             }
+ 
+             var result = messageAny.TryGetValue("result", out var resultObj) && resultObj is Dictionary<string, object?> r
+                 ? r
+                 : new Dictionary<string, object?>();
+ 
+             switch (kind)
+             {
+                 case "createSession":
+                 {
+                     string? sessionId = null;
+                     if (result.TryGetValue("sessionHandle", out var sh) && sh is Dictionary<string, object?> shd &&
+                         shd.TryGetValue("sessionId", out var sid) && sid is string sids)
+                         sessionId = sids;
+                     var key = $"openclaw-key-{sessionId ?? Guid.NewGuid().ToString()}";
+                     ctx.SetCurrentKernelKey(key);
+                     // T-050 REWORK #1：登记『这把 key 对应哪个已声明 session』——真实 client 之后每次
+                     // send/subscribe/stop 都会在原生 `params.key` 里带上这把 key（原样回显），
+                     // `expect_outbound` 断言时反查这张表，从真实捕获的 key 算出 sessionId。
+                     ctx.RegisterDeclaredSession(key, sessionId ?? key);
+                     gate.ResolveSuccess(new JSONObject { ["key"] = key, ["sessionId"] = sessionId ?? key });
+                     break;
+                 }
+                 case "send":
+                 {
+                     var runId = result.TryGetValue("runId", out var rid) && rid is string rids ? rids : $"run-{Guid.NewGuid():N}"[..12];
+diff --git a/app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift b/app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift
+index 63beaba..7c8f84e 100644
+--- a/app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift
++++ b/app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift
+@@ -527,175 +527,184 @@ func performClientCall(_ op: TimelineOp, ctx: RunnerContext) async throws {
+             // 书写顺序（那只是注册顺序，与调用顺序无关）。
+             await ctx.appendNativeCall("sessions.abort")
+             await ctx.recordOutbound(id: id, method: "sessions.abort", params: params)
+             return try await gate.wait()
+         }
+         await client.testSupportStubRPC(method: "sessions.delete") { _ in ["deleted": true] }
+         // D1 §6.2 M3（stop() 强制 deny 补丁，本轮新落地）：`stop()` 在发起 `sessions.abort` 之前，
+         // 若该 session 仍有 pending 审批，会先对每一个调用真实 openclaw 统一审批解决 RPC
+         // `approval.resolve`（`forceDenyPendingApprovalsBeforeStop`，见
+         // OpenclawGatewayKernelClient.swift 文档注释），要求响应体 `approval.status == "denied"`
+         // 才算数。绝大多数 fixture 没有 pending 审批时，`forceDenyPendingApprovalsBeforeStop` 在空
+         // 列表上提前返回、根本不会发起这条 RPC（这条 stub 是安全的默认背景桩，不影响其余 fixture）；
+         // 只有 `approval/stop-force-denies-pending-approval.json` 会真正命中。
+         await client.testSupportStubRPC(method: "approval.resolve") { _ in
+             // T-050 REWORK #3：同上，append 在真实调用发生的这一刻——若 `forceDenyPendingApprovalsBeforeStop`
+             // 回归成在 `sessions.abort` 之后才调用（或压根不调用），`nativeCallOrder` 就不会是
+             // `["approval.resolve", "sessions.abort"]`，`stop-force-denies-pending-approval.json`
+             // 的 `expected.nativeCallOrder` 断言会真的 FAIL。
+             await ctx.appendNativeCall("approval.resolve")
+             return ["applied": true, "approval": ["status": "denied"]]
+         }
+         let eventsCountAtStart = await ctx.drainedEventsCount()
+         let task = Task<Void, Never> {
+             do {
+                 let result = try await client.stop(session: handle)
+                 await ctx.onStopResolved(id: id, result: result, eventsCountAtStart: eventsCountAtStart)
+             } catch {
+                 await ctx.onStopThrew(id: id, error: error, eventsCountAtStart: eventsCountAtStart)
+             }
+         }
+         await ctx.addPendingTask(task)
+ 
+     case "interrupt", "respondApproval", "capabilities":
+         // 不应该走到这里——`degradeReason(for:)` 已经在执行 timeline 之前静态扫描并整条 fixture
+         // 标记 DEGRADED。留一个明确抛错，防止未来谁绕开了那道静态检查。
+         throw RunnerError.malformed("client_call『\(call)』本应在执行前被 degradeReason 拦截，未被拦截是 runner 自身的缺陷")
+ 
+     default:
+         throw RunnerError.malformed("未知 KernelClientMethod『\(call)』")
+     }
+ 
+     // 给刚 spawn 的 Task 一点真实时间跑到它的 RPC await 点（actor hop + 进入 gate.wait()），
+     // 让紧随其后的 expect_outbound/assert_state 断言的是『真的在途』而不是『还没开始』。
+     try? await Task.sleep(nanoseconds: 50_000_000)
+ }
+ 
+ // MARK: - RunnerContext 的几个薄 setter（放在 extension 里避免上面主体过长）
+ 
+ extension RunnerContext {
+     func setCallKind(id: String, call: String) { callKindByID[id] = call }
+     func setGate(id: String, gate: ReplyGate) { replyGates[id] = gate }
+     func setCallOutcomeResolved(id: String) { callOutcomes[id] = ["status": "resolved"] }
+ }
+ 
+ // MARK: - expect_outbound
+ 
+ /// D2 req.* 方法名 → 真实 client 会调用的 openclaw 原生 RPC 方法名。只覆盖 Stage A 用到的四个方法
+ /// （interrupt/respondApproval/capabilities 对应的 fixture 已被整条 DEGRADED，不会走到这里）。
+ let expectOutboundMethodTable: [String: String] = [
+     "req.createSession": "sessions.create",
+     "req.send": "sessions.send",
+     "req.subscribe": "sessions.messages.subscribe",
+     "req.stop": "sessions.abort",
+ ]
+ 
+ /// T-050 REWORK #1（治根）：把真实捕获到的 openclaw 原生 RPC `params`（`performClientCall` 的
+ /// `testSupportStubRPC` 闭包同步收到的原始入参，真实 client 传的，不是 fixture 声明值）规范化成一个
+ /// 可与 `expect_outbound` 的 `pattern` 做完整深度匹配的『规范化请求』——见文件头「已知的『无法翻译』
+ /// 边界」一节对本函数存在理由的完整说明。
+ ///
+ /// - `sessionId`：从捕获到的原生 `key` 反查『哪个已声明 session 拥有这个 kernelKey』
+ ///   （`ctx.declaredSessionID(forKernelKey:)`）。`key` 不存在于 `params`（如 createSession，session
+ ///   尚不存在）就不设置这个字段；`key` 存在但查不到对应的已声明 session（真实 client 把 key 发错、
+ ///   或发了一个从未声明过的 key）就显式置 `NSNull()`——不 fallback 到任何 fixture 声明值，让 pattern
+ ///   里的 `sessionId` 断言在这种情况下真的失败。
+ /// - `payload`：`params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后剩下的全部字段，原样
+ ///   保留原生字段名（`label`/`model`/`timeoutMs`/`attachments`/`includeApprovals` 等）——**仅
+ ///   `sessions.send` 一项**例外：把原生 `message` 反向映射回 D1 `Input.text` 概念（对应
+ ///   `resolveSendMessageText` 在 Stage A fixture 唯一用到的 `kind:"text"` 场景，不覆盖
+ ///   structured/parts），只为了让这个字段能与 TS 端 `payload.text`（直接来自 client_call 的 D1
+-///   `args`）做跨语言一致的深度匹配；其余字段不改名，如实反映原生协议。
++///   `args`）做跨语言一致的深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：
++///   `message`→`text` 重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——
++///   否则若真实 client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段
++///   会原样留在 payload 里、自证满足 `payload.text` 断言，形成假绿。剥掉之后只有真的捕获到
++///   `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
++///   `payload.text` 断言必然失败。
+ func normalizeNativeParams(
+     method: String, params: JSONObject, expectedType: String, ctx: RunnerContext
+ ) async -> [String: Any] {
+     var out: [String: Any] = ["type": expectedType]
+     var payload = params
+     if let key = payload.removeValue(forKey: "key") as? String {
+         if let sessionID = await ctx.declaredSessionID(forKernelKey: key) {
+             out["sessionId"] = sessionID
+         } else {
+             out["sessionId"] = NSNull()
+         }
+     }
+-    if method == "sessions.send", let message = payload.removeValue(forKey: "message") {
+-        payload["text"] = message
++    if method == "sessions.send" {
++        let message = payload.removeValue(forKey: "message")
++        payload.removeValue(forKey: "text")
++        if let message {
++            payload["text"] = message
++        }
+     }
+     out["payload"] = payload
+     return out
+ }
+ 
+ func checkExpectOutbound(_ op: TimelineOp, ctx: RunnerContext) async throws {
+     guard let matches = op.matches else {
+         throw RunnerError.malformed("expect_outbound 缺少 matches（t=\(op.t)）")
+     }
+     let patternAny = (op.pattern?.value as? [String: Any]) ?? [:]
+     guard let expectedType = patternAny["type"] as? String else {
+         throw RunnerError.malformed("expect_outbound(\(matches)) 的 pattern 缺少 'type'")
+     }
+     guard let expectedMethod = expectOutboundMethodTable[expectedType] else {
+         await ctx.appendMismatch(
+             "expect_outbound(\(matches)): swift-runner 未登记『\(expectedType)』对应的 openclaw RPC 方法名" +
+             "（该 D2 方法本轮 SG-5 未实现，或超出 Stage A 翻译范围）"
+         )
+         return
+     }
+     let captured = await ctx.capturedOutboundMethod(for: matches)
+     guard captured == expectedMethod else {
+         await ctx.appendMismatch(
+             "expect_outbound(\(matches)): 期望真实 client 调用底层 openclaw RPC 方法『\(expectedMethod)』" +
+             "（对应 D2『\(expectedType)』），实际捕获到『\(captured ?? "<none>")』"
+         )
+         return
+     }
+     // T-048 REWORK #4 / T-050 REWORK #1（治根）：方法名匹配之后，不再到此为止——继续对一个『规范化
+     // 请求』做与 `ts-runner/runner.ts` 的 `partialMatch` 等价的完整子集深度匹配，让 pattern 里
+     // `type` 之外的字段（如 basic fixture 的 `sessionId`、interrupt 的 `payload.mode`）也真正生效。
+     // **T-050 治根**：规范化对象改从 `capturedParams(for:)`——真实捕获的原生 `params`——现算
+     // （`normalizeNativeParams`），不再是 T-048 REWORK #4 那版『捕获时顺手拿 timeline 的 args 拼一份』
+     // 的规范化请求（那份验证的是 fixture 自己声明的东西，不是真实发出的东西）。
+     let params = await ctx.capturedParams(for: matches) ?? [:]
+     let normalized = await normalizeNativeParams(method: expectedMethod, params: params, expectedType: expectedType, ctx: ctx)
+     let diff = partialMatch(actual: normalized, expected: patternAny, path: "expect_outbound(\(matches))")
+     for d in diff { await ctx.appendMismatch(d) }
+ }
+ 
+ // MARK: - mock_response
+ 
+ func applyMockResponse(_ op: TimelineOp, ctx: RunnerContext) async throws {
+     guard let replyTo = op.replyTo else {
+         throw RunnerError.malformed("mock_response 缺少 replyTo（t=\(op.t)）")
+     }
+     guard let gate = await ctx.gate(for: replyTo) else {
+         throw RunnerError.malformed(
+             "mock_response(replyTo=\(replyTo)) 找不到对应的 reply gate——对应 client_call 未发起，" +
+             "或该方法不需要 gate（如 subscribe）"
+         )
+     }
+     let messageAny = (op.message?.value as? [String: Any]) ?? [:]
+     let kind = await ctx.callKind(for: replyTo) ?? ""
+ 
+     if let failure = messageAny["failure"] as? [String: Any] {
+         let code = (failure["code"] as? String) ?? "unknown"
+         let detail = failure["detail"] as? String
+         await gate.resolve(.failure(KernelClientError.rpcRejected(code: code, message: detail)))
+         return
+     }
+ 
+     let result = (messageAny["result"] as? [String: Any]) ?? [:]
+ 
+     switch kind {
+     case "createSession":
+         let sessionId = (result["sessionHandle"] as? [String: Any])?["sessionId"] as? String
+         let key = "openclaw-key-\(sessionId ?? UUID().uuidString)"
+         await ctx.setCurrentKernelKey(key)
+         // T-050 REWORK #1：登记『这把 key 对应哪个已声明 session』——真实 client 之后每次
+         // send/subscribe/stop 都会在原生 `params.key` 里带上这把 key（原样回显，不会自己再编码
+         // sessionId），`expect_outbound` 断言时反查这张表，从真实捕获的 key 算出 sessionId，而不是
+         // 直接信任 fixture 声明值（见 RunnerContext.kernelKeyToDeclaredSessionID 文档注释）。
+         await ctx.registerDeclaredSession(kernelKey: key, sessionID: sessionId ?? key)
+         await gate.resolve(.success(["key": key, "sessionId": sessionId ?? key]))
+ 
+     case "send":
+         let runId = (result["runId"] as? String) ?? "run-\(UUID().uuidString.prefix(8))"
+         await gate.resolve(.success(["runId": runId, "status": "started", "messageSeq": 1]))
+ 
+
+已确认 HEAD 正是目标 commit 2a60b010，并取得 T-052 的唯一阻断与修复 diff；工作树在审查开始前已有 hopper 任务/日志变更及 T-053 输出占位，后续只覆盖指定输出文件，不触碰这些既有状态。
+  ✓ 读取 T-052 finding、目标提交与当前工作树状态
+  → 核对两 runner 的 normalize 修法及 remap 唯一性
+  • 运行 TS、Swift、C# 三端基线矩阵
+  • 临时篡改真实 C# 与 Swift client 并验证 fixture FAIL，随后还原
+  • 确认无残留改动并写入 T-053 审查报告
+exec
+/bin/zsh -lc "rg -n -C 12 'NormalizeNativeParams|normalizeNativeParams|Remove\\(\"message\"|removeValue\\(forKey: \"message\"|\\[\"text\"\\].*=.*message|payload\\[\"text\"\\]' app/contracts/d2/fixtures/csharp-runner app/contracts/d2/fixtures/swift-runner && rg -n 'message.*text|text.*message|payload\\[\"text\"\\]|\\[\"text\"\\].*ResolveSendMessageText|\\[\"message\"\\].*ResolveSendMessageText|\"text\".*resolveSendMessageText|\"message\".*resolveSendMessageText' app/contracts/d2/fixtures/csharp-runner app/contracts/d2/fixtures/swift-runner app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && rg -n -C 3 'swiftc|dotnet run|node .*runner|find .*fixtures' app/contracts/d2/fixtures/README.md && nl -ba app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs | sed -n '635,675p' && nl -ba app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift | sed -n '605,640p' && nl -ba app/kernel-client/csharp/OpenclawGatewayKernelClient.cs | sed -n '328,343p' && nl -ba app/kernel-client/swift/OpenclawGatewayKernelClient.swift | sed -n '330,345p'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-34-//   本 runner 在执行前就静态扫描发现并标记 DEGRADED（跳过，不计入 PASS/FAIL），见
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-35-//   `degradeReason(for:)`。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-36-// - `expect_outbound`（T-048 REWORK #4 收残；**T-050 REWORK #1 治根**）：先校验『真实 client 是否
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-37-//   调用了这个 D2 方法对应的正确 openclaw RPC 方法名』（`expectOutboundMethodTable`，真实 client 的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-38-//   outbound wire 从来就不是 D2 req.* 形状，这一步是翻译诚实能保证的最基础粒度），方法名匹配后再对
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-39-//   一个『规范化请求』（`type` + 可选 `sessionId` + `payload`）做与 `ts-runner/runner.ts` 的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-40-//   `partialMatch` 等价的完整子集深度匹配。**T-048 REWORK #4 曾经的残留问题**：那一轮虽然调了完整
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-41-//   `partialMatch`，但被匹配的『规范化请求』其实是把 timeline 的 `args` 原样放回 `payload` + 把
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-42-//   `sessionId` 直接取 `declaredSessionID`（fixture 声明值）——`params`（真实 client 调用
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-43-//   `testSupportStubRPC` 时同步传入的原生 RPC 参数）虽然存进了 `capturedOutbound`，却从没有代码读
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-44-//   它做字段映射，等于『只验证了方法名，pattern 其余字段验证的是 fixture 自己声明的东西』，真实
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-45-//   client 把 `sessions.send.params.message`/`sessions.messages.subscribe.params.key`/
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:46://   `sessions.abort.params.key` 发错也不会被抓到。**本轮改法**：`normalizeNativeParams` 直接从
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-47-//   `capturedParams(for:)`（真实捕获的原生 `params`，而不是 fixture 的 `args`）规范化——
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-48-//   `sessionId` 通过反查『哪个已声明 session 拥有这个原生 `key`』得到（`kernelKeyToDeclaredSessionID`，
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-49-//   在 `res.createSession` 处理时登记），查不到就显式置 `NSNull()`，不 fallback 回
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-50-//   fixture 声明值；`payload` 是 `params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-51-//   剩余字段，`send` 一项把原生 `message` 反向映射回 D1 `Input.text` 概念（仅覆盖 Stage A 用到的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-52-//   `kind:"text"` 场景）以便与 TS 端可比较，其余字段原样保留原生字段名，不臆造新映射。这样真实
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-53-//   client 把这几个字段发错，`expect_outbound` 才会真的 FAIL——不再是『调了 partialMatch 但验证的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-54-//   还是自己声明的东西』这种表面绕过。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-55-// - `sessionId`/`operationId` 是真实 client 内部铸造的随机 UUID（`createSession()`/`stop()`
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-56-//   各自 `UUID().uuidString`），fixture 无法预先声明字面值——本 runner 因此不断言真实 client 内部
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-57-//   状态查询（`testSupportLockState` 等）之外场景下这两个字段的具体取值。`pendingOperations` 改用
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-58-//   dsl.ts 注释里明确允许的『client_call 的 id』做键（不是内部 operationId）。`runId` 例外：它是
+--
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-196-    static let stopTimeoutSeconds = 1
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-197-    static let stopTimeoutMs: UInt64 = 1000
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-198-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-199-    var currentSessionHandle: SessionHandle?
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-200-    var currentSessionID: String?
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-201-    var currentKernelKey: String?
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-202-    var currentRunID: String?
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-203-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-204-    /// 原生 `kernelKey` → fixture 在 `res.createSession` 里声明过的 `sessionHandle.sessionId`
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-205-    /// （如 "session-1"）——**T-050 REWORK #1**：取代旧版 `declaredSessionID`（单值、被
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-206-    /// `expect_outbound` 直接当作『真实发出的 sessionId』使用，与真实捕获到的原生 `params.key`
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-207-    /// 完全无关，是 T-048 REWORK #4 残留的表面绕过）。本表在 `res.createSession` 处理时登记，供
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:208:    /// `normalizeNativeParams` 从**真实捕获的原生 `key`** 反查『这把 key 对应哪个已声明 session』，
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-209-    /// 查不到就不 fallback——让真实 client 把 `key` 发错时 `expect_outbound` 的 `sessionId` 断言
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-210-    /// 真的失败。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-211-    var kernelKeyToDeclaredSessionID: [String: String] = [:]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-212-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-213-    /// 当前是否有一个 `stop()` client_call 正在等待 SG-5 内部终态确认（`hasStopWaitingForTerminal`
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-214-    /// 为 true 期间）——记录是*哪一个* client_call id，供 `advance_clock`/`disconnect` 轮询
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-215-    /// `isCallSettled(id:)` 时知道该盯哪个 id（T-048 REWORK #5）。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-216-    var waitingStopCallID: String?
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-217-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-218-    var callKindByID: [String: String] = [:]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-219-    var replyGates: [String: ReplyGate] = [:]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-220-    /// 真实捕获到的原生 RPC 调用——`(method, params)`，`params` 是 `testSupportStubRPC` 闭包收到的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-221-    /// 原始入参（真实 client 同步传入，不是 fixture 声明值）。**T-050 REWORK #1**：不再在捕获时就
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-222-    /// 顺手构造一份『规范化请求』（那份构造用的是 timeline 的 `args`，等于验证 fixture 自己声明的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-223-    /// 东西）——规范化改成 `checkExpectOutbound` 需要断言时才从这里的原始 `params` 现算
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:224:    /// （`normalizeNativeParams`），保证断言对象是真实发出的东西。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-225-    var capturedOutbound: [String: (method: String, params: JSONObject)] = [:]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-226-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-227-    /// 真实原生 RPC 调用顺序——只登记 Stage A 需要断言顺序的这几个特定调用（目前只有
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-228-    /// `approval.resolve`/`sessions.abort`，`stop-force-denies-pending-approval.json` 用它断言
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-229-    /// D1 §6.2 M3 定序，T-050 REWORK #3 新增），不是完整调用日志。在 stub 闭包**真正被调用的那一刻**
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-230-    /// （不是注册的时刻）append，因此忠实反映真实 client 的调用顺序。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-231-    var nativeCallOrder: [String] = []
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-232-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-233-    /// `client_call` 的 id → OperationOutcome（interrupt/stop 铸造的 operation 通道）——dsl.ts 明确
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-234-    /// 允许键是『operationId 或 client_call 的 id』，本 runner 一律用后者（真实 operationId 是运行时
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-235-    /// 随机 UUID，fixture 无法预先声明，见文件头说明）。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-236-    var pendingOperations: [String: Any] = [:]
+--
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-255-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-256-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-257-    func capturedParams(for id: String) -> JSONObject? {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-258-        capturedOutbound[id]?.params
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-259-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-260-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-261-    /// `res.createSession` 处理时登记——见 `kernelKeyToDeclaredSessionID` 文档注释。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-262-    func registerDeclaredSession(kernelKey: String, sessionID: String) {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-263-        kernelKeyToDeclaredSessionID[kernelKey] = sessionID
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-264-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-265-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-266-    /// 从真实捕获的原生 `key` 反查已声明 session——查不到返回 nil（调用方据此显式置 `NSNull()`，
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:267:    /// 不 fallback，见 `normalizeNativeParams`）。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-268-    func declaredSessionID(forKernelKey key: String) -> String? {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-269-        kernelKeyToDeclaredSessionID[key]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-270-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-271-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-272-    /// 见 `nativeCallOrder` 文档注释——在真实调用发生的那一刻 append。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-273-    func appendNativeCall(_ name: String) {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-274-        nativeCallOrder.append(name)
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-275-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-276-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-277-    func gate(for id: String) -> ReplyGate? { replyGates[id] }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-278-    func callKind(for id: String) -> String? { callKindByID[id] }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-279-    func setCurrentKernelKey(_ key: String) { currentKernelKey = key }
+--
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-440-    let argsAny = (op.args?.value as? [String: Any]) ?? [:]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-441-    let client = ctx.client
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-442-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-443-    switch call {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-444-    case "createSession":
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-445-        let configJSON = (argsAny["config"] as? [String: Any]) ?? [:]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-446-        let config = try decodeConfig(from: configJSON)
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-447-        let gate = ReplyGate()
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-448-        await ctx.setGate(id: id, gate: gate)
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-449-        await client.testSupportStubRPC(method: "sessions.create") { params in
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-450-            // T-050 REWORK #1：只记录真实捕获的原生 params——不再在这里顺手拼一份『规范化请求』
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-451-            // （那份是从 timeline 的 `argsAny` 抄的，等于验证 fixture 自己声明的东西）。规范化留给
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:452:            // `checkExpectOutbound` 断言时从这份原始 params 现算（`normalizeNativeParams`）。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-453-            await ctx.recordOutbound(id: id, method: "sessions.create", params: params)
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-454-            return try await gate.wait()
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-455-        }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-456-        let task = Task<Void, Never> {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-457-            do {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-458-                let handle = try await client.createSession(config: config)
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-459-                await ctx.onCreateSessionResolved(id: id, handle: handle)
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-460-            } catch {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-461-                await ctx.onCallThrew(id: id, error: error)
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-462-            }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-463-        }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-464-        await ctx.addPendingTask(task)
+--
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-601-///   里的 `sessionId` 断言在这种情况下真的失败。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-602-/// - `payload`：`params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后剩下的全部字段，原样
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-603-///   保留原生字段名（`label`/`model`/`timeoutMs`/`attachments`/`includeApprovals` 等）——**仅
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-604-///   `sessions.send` 一项**例外：把原生 `message` 反向映射回 D1 `Input.text` 概念（对应
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-605-///   `resolveSendMessageText` 在 Stage A fixture 唯一用到的 `kind:"text"` 场景，不覆盖
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-606-///   structured/parts），只为了让这个字段能与 TS 端 `payload.text`（直接来自 client_call 的 D1
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-607-///   `args`）做跨语言一致的深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-608-///   `message`→`text` 重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-609-///   否则若真实 client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-610-///   会原样留在 payload 里、自证满足 `payload.text` 断言，形成假绿。剥掉之后只有真的捕获到
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-611-///   `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-612-///   `payload.text` 断言必然失败。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:613:func normalizeNativeParams(
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-614-    method: String, params: JSONObject, expectedType: String, ctx: RunnerContext
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-615-) async -> [String: Any] {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-616-    var out: [String: Any] = ["type": expectedType]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-617-    var payload = params
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-618-    if let key = payload.removeValue(forKey: "key") as? String {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-619-        if let sessionID = await ctx.declaredSessionID(forKernelKey: key) {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-620-            out["sessionId"] = sessionID
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-621-        } else {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-622-            out["sessionId"] = NSNull()
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-623-        }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-624-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-625-    if method == "sessions.send" {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:626:        let message = payload.removeValue(forKey: "message")
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-627-        payload.removeValue(forKey: "text")
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-628-        if let message {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:629:            payload["text"] = message
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-630-        }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-631-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-632-    out["payload"] = payload
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-633-    return out
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-634-}
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-635-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-636-func checkExpectOutbound(_ op: TimelineOp, ctx: RunnerContext) async throws {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-637-    guard let matches = op.matches else {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-638-        throw RunnerError.malformed("expect_outbound 缺少 matches（t=\(op.t)）")
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-639-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-640-    let patternAny = (op.pattern?.value as? [String: Any]) ?? [:]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-641-    guard let expectedType = patternAny["type"] as? String else {
+--
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-651-    let captured = await ctx.capturedOutboundMethod(for: matches)
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-652-    guard captured == expectedMethod else {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-653-        await ctx.appendMismatch(
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-654-            "expect_outbound(\(matches)): 期望真实 client 调用底层 openclaw RPC 方法『\(expectedMethod)』" +
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-655-            "（对应 D2『\(expectedType)』），实际捕获到『\(captured ?? "<none>")』"
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-656-        )
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-657-        return
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-658-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-659-    // T-048 REWORK #4 / T-050 REWORK #1（治根）：方法名匹配之后，不再到此为止——继续对一个『规范化
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-660-    // 请求』做与 `ts-runner/runner.ts` 的 `partialMatch` 等价的完整子集深度匹配，让 pattern 里
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-661-    // `type` 之外的字段（如 basic fixture 的 `sessionId`、interrupt 的 `payload.mode`）也真正生效。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-662-    // **T-050 治根**：规范化对象改从 `capturedParams(for:)`——真实捕获的原生 `params`——现算
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:663:    // （`normalizeNativeParams`），不再是 T-048 REWORK #4 那版『捕获时顺手拿 timeline 的 args 拼一份』
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-664-    // 的规范化请求（那份验证的是 fixture 自己声明的东西，不是真实发出的东西）。
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-665-    let params = await ctx.capturedParams(for: matches) ?? [:]
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:666:    let normalized = await normalizeNativeParams(method: expectedMethod, params: params, expectedType: expectedType, ctx: ctx)
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-667-    let diff = partialMatch(actual: normalized, expected: patternAny, path: "expect_outbound(\(matches))")
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-668-    for d in diff { await ctx.appendMismatch(d) }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-669-}
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-670-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-671-// MARK: - mock_response
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-672-
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-673-func applyMockResponse(_ op: TimelineOp, ctx: RunnerContext) async throws {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-674-    guard let replyTo = op.replyTo else {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-675-        throw RunnerError.malformed("mock_response 缺少 replyTo（t=\(op.t)）")
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-676-    }
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-677-    guard let gate = await ctx.gate(for: replyTo) else {
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift-678-        throw RunnerError.malformed(
+--
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-113-        /// <summary>真实收窄后的 stop() 等待超时——见 `SwiftFixtureRunner.swift` 同名常量的说明。</summary>
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-114-        public const int StopTimeoutSeconds = 1;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-115-        public const int StopTimeoutMs = 1000;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-116-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-117-        private readonly object _sync = new();
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-118-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-119-        private SessionHandle? _currentSessionHandle;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-120-        private string? _currentSessionId;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-121-        private string? _currentKernelKey;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-122-        private string? _currentRunId;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-123-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-124-        /// <summary>原生 `kernelKey` -&gt; fixture 在 `res.createSession` 里声明过的
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:125:        /// `sessionHandle.sessionId`——供 `NormalizeNativeParams` 从真实捕获的原生 `key` 反查，见该
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-126-        /// 方法文档注释（对应 Swift `kernelKeyToDeclaredSessionID`）。</summary>
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-127-        private readonly Dictionary<string, string> _kernelKeyToDeclaredSessionId = new();
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-128-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-129-        private string? _waitingStopCallId;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-130-        private readonly Dictionary<string, string> _callKindById = new();
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-131-        private readonly Dictionary<string, ReplyGate> _replyGates = new();
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-132-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-133-        /// <summary>真实捕获到的原生 RPC 调用——`(method, params)`，`params` 是 `TestSupportStubRpc`
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-134-        /// 闭包收到的原始入参（真实 client 同步传入，不是 fixture 声明值）。</summary>
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-135-        private readonly Dictionary<string, (string Method, JSONObject Params)> _capturedOutbound = new();
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-136-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-137-        /// <summary>真实原生 RPC 调用顺序——只登记 `approval.resolve`/`sessions.abort`，在 stub 闭包
+--
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-175-        public JSONObject? CapturedParams(string id)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-176-        {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-177-            lock (_sync) return _capturedOutbound.TryGetValue(id, out var v) ? v.Params : null;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-178-        }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-179-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-180-        /// <summary>`res.createSession` 处理时登记——见 `_kernelKeyToDeclaredSessionId` 文档注释。</summary>
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-181-        public void RegisterDeclaredSession(string kernelKey, string sessionId)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-182-        {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-183-            lock (_sync) _kernelKeyToDeclaredSessionId[kernelKey] = sessionId;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-184-        }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-185-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-186-        /// <summary>从真实捕获的原生 `key` 反查已声明 session——查不到返回 null（调用方据此显式置
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:187:        /// <see cref="JsonNullMarker.Instance"/>，不 fallback，见 `NormalizeNativeParams`）。</summary>
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-188-        public string? DeclaredSessionId(string kernelKey)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-189-        {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-190-            lock (_sync) return _kernelKeyToDeclaredSessionId.TryGetValue(kernelKey, out var v) ? v : null;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-191-        }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-192-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-193-        public void AppendNativeCall(string name) { lock (_sync) _nativeCallOrder.Add(name); }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-194-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-195-        public void SetCurrentKernelKey(string key) { lock (_sync) _currentKernelKey = key; }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-196-        public void SetHasStopWaitingForTerminal(bool value) { lock (_sync) _hasStopWaitingForTerminal = value; }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-197-        public void SetWaitingStopCallId(string? id) { lock (_sync) _waitingStopCallId = id; }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-198-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-199-        public void SetCallOutcomeResolved(string id)
+--
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-458-            switch (call)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-459-            {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-460-                case "createSession":
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-461-                {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-462-                    if (op.Args is not { } argsEl || !argsEl.TryGetProperty("config", out var configEl))
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-463-                        throw new RunnerException($"client_call(createSession id={id}) 缺少 args.config");
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-464-                    var config = configEl.Deserialize<Config>(D2.Converter.Settings)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-465-                        ?? throw new RunnerException($"client_call(createSession id={id}) 的 config 解码为 null");
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-466-                    var gate = new ReplyGate();
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-467-                    ctx.SetGate(id, gate);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-468-                    // T-050 REWORK #1 治根纪律：只记录真实捕获的原生 params——不在这里顺手拼一份
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-469-                    // 『规范化请求』（那会验证 fixture 自己声明的东西）。规范化留给 `CheckExpectOutbound`
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:470:                    // 断言时从这份原始 params 现算（`NormalizeNativeParams`）。
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-471-                    client.TestSupportStubRpc("sessions.create", parameters =>
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-472-                    {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-473-                        ctx.RecordOutbound(id, "sessions.create", parameters);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-474-                        return gate.Wait();
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-475-                    });
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-476-                    var task = Task.Run(async () =>
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-477-                    {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-478-                        try
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-479-                        {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-480-                            var handle = await client.CreateSessionAsync(config);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-481-                            ctx.OnCreateSessionResolved(id, handle);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-482-                        }
+--
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-622-        private static readonly Dictionary<string, string> ExpectOutboundMethodTable = new()
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-623-        {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-624-            ["req.createSession"] = "sessions.create",
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-625-            ["req.send"] = "sessions.send",
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-626-            ["req.subscribe"] = "sessions.messages.subscribe",
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-627-            ["req.stop"] = "sessions.abort",
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-628-        };
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-629-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-630-        /// <summary>
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-631-        /// 把真实捕获到的 openclaw 原生 RPC `params`（`PerformClientCallAsync` 的 `TestSupportStubRpc`
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-632-        /// 闭包同步收到的原始入参，真实 client 传的，不是 fixture 声明值）规范化成一个可与
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-633-        /// `expect_outbound` 的 `pattern` 做完整深度匹配的『规范化请求』——逐字镜像
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:634:        /// `SwiftFixtureRunner.swift` 的 `normalizeNativeParams`（T-050 REWORK #1 治根方案）：
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-635-        ///   - `sessionId`：从捕获到的原生 `key` 反查『哪个已声明 session 拥有这个 kernelKey』。`key`
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-636-        ///     不存在于 `params`（如 createSession，session 尚不存在）就不设置这个字段；`key` 存在但
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-637-        ///     查不到对应的已声明 session（真实 client 把 `key` 发错，或发了一个从未声明过的 key）就
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-638-        ///     显式置 <see cref="JsonNullMarker.Instance"/>——不 fallback 到任何 fixture 声明值，让
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-639-        ///     pattern 里的 `sessionId` 断言在这种情况下真的失败。
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-640-        ///   - `payload`：`params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后剩下的全部
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-641-        ///     字段，原样保留原生字段名——仅 `sessions.send` 一项例外：把原生 `message` 反向映射回
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-642-        ///     D1 `Input.text` 概念，只为了让这个字段能与 TS/Swift 端 `payload.text` 做跨语言一致的
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-643-        ///     深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：`message`→`text`
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-644-        ///     重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——否则若真实
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-645-        ///     client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段会原样
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-646-        ///     留在 payload 里、自证满足 `payload.text` 断言，形成假绿。剥掉之后只有真的捕获到
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-647-        ///     `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-648-        ///     `payload.text` 断言必然失败。
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-649-        /// </summary>
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:650:        private static Dictionary<string, object?> NormalizeNativeParams(string method, JSONObject parameters, string expectedType, RunnerContext ctx)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-651-        {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-652-            var payload = new JSONObject(parameters);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-653-            var outp = new Dictionary<string, object?> { ["type"] = expectedType };
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-654-            if (payload.Remove("key", out var keyVal) && keyVal is string key)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-655-            {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-656-                var declared = ctx.DeclaredSessionId(key);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-657-                outp["sessionId"] = declared != null ? declared : JsonNullMarker.Instance;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-658-            }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-659-            if (method == "sessions.send")
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-660-            {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:661:                var hasMessage = payload.Remove("message", out var message);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-662-                payload.Remove("text", out _);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-663-                if (hasMessage)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:664:                    payload["text"] = message;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-665-            }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-666-            outp["payload"] = payload;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-667-            return outp;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-668-        }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-669-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-670-        public static void CheckExpectOutbound(TimelineOp op, RunnerContext ctx)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-671-        {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-672-            if (op.Matches is not { } matches)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-673-                throw new RunnerException($"expect_outbound 缺少 matches（t={op.T}）");
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-674-            var patternAny = FixtureJson.ToActualObject(op.Pattern);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-675-            if (!(patternAny.TryGetValue("type", out var typeObj) && typeObj is string expectedType))
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-676-                throw new RunnerException($"expect_outbound({matches}) 的 pattern 缺少 'type'");
+--
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-686-            var captured = ctx.CapturedOutboundMethod(matches);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-687-            if (captured != expectedMethod)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-688-            {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-689-                ctx.AppendMismatch(
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-690-                    $"expect_outbound({matches}): 期望真实 client 调用底层 openclaw RPC 方法『{expectedMethod}』" +
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-691-                    $"（对应 D2『{expectedType}』），实际捕获到『{captured ?? "<none>"}』");
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-692-                return;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-693-            }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-694-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-695-            // T-050 REWORK #1 治根：规范化对象从 `CapturedParams`——真实捕获的原生 `params`——现算，
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-696-            // 不是把 timeline `args`/fixture 声明值抄回去验证自己。
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-697-            var parameters = ctx.CapturedParams(matches) ?? new JSONObject();
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:698:            var normalized = NormalizeNativeParams(expectedMethod, parameters, expectedType, ctx);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-699-            var diff = PartialMatch.Match(normalized, patternAny, $"expect_outbound({matches})");
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-700-            foreach (var d in diff) ctx.AppendMismatch(d);
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-701-        }
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-702-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-703-        // MARK: - mock_response
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-704-
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-705-        public static void ApplyMockResponse(TimelineOp op, RunnerContext ctx)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-706-        {
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-707-            if (op.ReplyTo is not { } replyTo)
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-708-                throw new RunnerException($"mock_response 缺少 replyTo（t={op.T}）");
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-709-            var gate = ctx.Gate(replyTo) ?? throw new RunnerException(
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs-710-                $"mock_response(replyTo={replyTo}) 找不到对应的 reply gate——对应 client_call 未发起，或该方法不需要 gate（如 subscribe）");
+app/kernel-client/csharp/OpenclawGatewayKernelClient.cs:336:                    ["message"] = ResolveSendMessageText(input),
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:338:            "message": resolveSendMessageText(from: input),
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:370:    /// D1 Input -> openclaw `sessions.send.message`（纯文本字符串）的最小转换。`kind:.text` 直接用
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:51://   剩余字段，`send` 一项把原生 `message` 反向映射回 D1 `Input.text` 概念（仅覆盖 Stage A 用到的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:604:///   `sessions.send` 一项**例外：把原生 `message` 反向映射回 D1 `Input.text` 概念（对应
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:608:///   `message`→`text` 重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:609:///   否则若真实 client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:611:///   `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:629:            payload["text"] = message
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:776:        let runID = (messageAny["runId"] as? String) ?? contextRunID ?? ""
+app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:797:        let runID = (messageAny["runId"] as? String) ?? contextRunID ?? "run-approval-1"
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:643:        ///     深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：`message`→`text`
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:644:        ///     重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——否则若真实
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:645:        ///     client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段会原样
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:647:        ///     `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:664:                    payload["text"] = message;
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:828:                    var runId = messageAny.TryGetValue("runId", out var rv) && rv is string rs ? rs : (contextRunId ?? "");
+app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:856:                    var runId = messageAny.TryGetValue("runId", out var rv) && rv is string rs ? rs : (contextRunId ?? "run-approval-1");
+11-类型；`ts-runner/` 是按该 DSL 写的最小 runner，能真正读取本轮两个既有 fixture、驱动一个极简
+12-"假内核"（`mock-kernel-client.ts`）执行 timeline、断言最终状态——**打通 TS 一端作样板**（任务
+13-书原话）。跑法：`npm --prefix ../codegen run run:fixtures`
+14:（或直接 `node ts-runner/runner.ts`，Node 22+ 原生支持直接运行 `.ts` 文件，无需单独构建步骤）。
+15-**SG-8.7 Stage A/B 已分别补齐 Swift/C# 真实 client runner**（见文末「三端 parity」一节）。
+16-
+17-**范围仍未求全（SG-1 时的状态，历史记录保留）**：当时只放 2 个语言中立 fixture 样例，验证的是
+--
+131-
+132-跑法：`npm --prefix ../codegen run run:fixtures`（先 `npm run typecheck:fixtures-runner`
+133-用 `tsc --strict` 校验类型，再实际执行），或直接
+134:`node app/contracts/d2/fixtures/ts-runner/runner.ts <fixture ...>` 指定任意子集/全集（不带参数时
+135-跑 `defaultFixturePaths()` 枚举的默认 13 条清单，与 swift-runner `SwiftRunnerMain.swift`/
+136-csharp-runner `CSharpRunnerMain.cs` 的默认清单一一对应）。**T-048 REWORK 复验**：`node
+137-ts-runner/runner.ts` 对全部 13 条 fixture 跑 **13 PASS / 0 FAIL**。Swift/C# runner
+--
+210-**编译+跑法**（`swift-runner/SwiftRunnerMain.swift` 文件头有同一段可复制命令）：
+211-
+212-```
+213:swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift \
+214-       app/kernel-client/swift/KernelClient.swift app/kernel-client/swift/OpenclawWire.swift \
+215-       app/kernel-client/swift/EventMapping.swift \
+216-       app/kernel-client/swift/OpenclawGatewayKernelClient.swift \
+--
+289-```
+290-cd app/contracts/d2/fixtures/csharp-runner
+291-dotnet build
+292:dotnet run --no-build
+293-```
+294-
+295-不带参数时按 `CSharpRunnerMain.DefaultFixturePaths()` 枚举的内置清单跑 13 条 fixture（与
+296-`ts-runner/runner.ts`/`swift-runner/SwiftRunnerMain.swift` 的默认清单一一对应），**实测
+297-12 PASS / 0 FAIL / 1 DEGRADED**（`operation-outcome/soft-steer-then-stop.json` 因 timeline 用到
+298-`client_call: interrupt` 被 `DegradeReason` 静态扫描自动标记 DEGRADED，同 Swift 侧同一条、同一原因）。
+299:也可传具体 fixture 路径只跑一部分，如 `dotnet run --no-build -- ../approval/stop-force-denies-pending-approval.json`。
+300-
+301-**注意（`dotnet build`/`run` 的产物污染）**：`csharp-runner/` 目录本身在 `fixtures/` 树内，`dotnet
+302-build` 会在原地生成 `bin/`/`obj/`（已 `.gitignore`，同 `app/kernel-client/csharp/.gitignore` 既定
+303-做法），其中含若干 `*.json`（`project.assets.json`/`*.deps.json` 等 NuGet/构建元数据，不是 fixture）。
+304:若要跑本文档「三端 parity」一节给出的 `find app/contracts/d2/fixtures -name '*.json' | ... |
+305:xargs node ts-runner/runner.ts` 这类"扫描全部 fixture json"命令，建议先 `dotnet clean`（或 `rm -rf
+306-csharp-runner/{bin,obj}`）清掉这些构建产物，避免被误当成 fixture 传给 TS/Swift runner。
+307-
+308-## 三组 fixture 覆盖清单（SG-8.7 Stage A 新增，供 Swift 真实 client parity 用）
+--
+370-3. **两端金标 parity**：`ts-runner/mock-kernel-client.ts` 从"只覆盖 2 个 fixture"扩到覆盖全部 13
+371-   条——`send()`/`stop()` 锁互斥矩阵、stop() 的 OperationOutcome 因果链（有/无 active run、RPC
+372-   失败、terminal-observed/timed-out/transport-closed 三条互斥收尾路径）、approvalState 记账，
+373:   均从 D1/D2 spec 写出，不照抄 Swift 观察到的行为。`node ts-runner/runner.ts` 全部 13 条
+374-   **13 PASS / 0 FAIL**；swift-fixture-runner **12 PASS / 0 FAIL / 1 DEGRADED**。
+375-4. **`expect_outbound` 改全 pattern 匹配**：方法名匹配后继续对规范化请求（`type`+可选
+376-   `sessionId`+`payload`）做与 TS `partialMatch` 等价的完整子集深度匹配。`PartialMatch.swift`
+--
+382-错误，同步更正 `session-lock/OPEN.md` 的错误声称）；**stop-force-denies-pending-approval.json 新增**
+383-（覆盖本轮新落地的 D1 §6.2 force-deny 能力，两端一致）。`SwiftFixtureRunner.swift` 的 `ReplyGate`
+384-改用 `actor` 取代 `NSLock`（Swift 6 language mode 下 `NSLock.lock/unlock` 在 async 上下文会是编译
+385:错误，`swiftc` 实测复现过这条警告，现已消除）。
+386-
+387-## T-050 REWORK 收残记录（confirming 再审 MUST-FIX，本节汇总，逐条见对应文件内的 `T-050 REWORK` 标注）
+388-
+--
+421-（`startDraining` 内 `Task {}` 闭包继承同一 actor 隔离，`self.appendEvent` 不跨隔离域，去掉多余的
+422-`await` 即可）；SG-5 `kernel-client.swift` 的另外 3 条同类 warning 不在本轮 scope，未触碰。
+423-
+424:两端复验：`node ts-runner/runner.ts` 全部 13 条 **13 PASS / 0 FAIL**（TS force-deny 现在是自己算的，
+425-不是回显）；swift-fixture-runner **12 PASS / 0 FAIL / 1 DEGRADED**（`expect_outbound` 现在真匹配
+426-native params，`stop-force-denies-pending-approval.json` 断言 RPC 顺序）。
+427-
+--
+432-
+433-| 端 | 跑法 | 结果 |
+434-|---|---|---|
+435:| TS | `find app/contracts/d2/fixtures -name '*.json' \| sort \| xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`（或 `npm --prefix ../codegen run run:fixtures`） | **13 PASS / 0 FAIL** |
+436:| Swift | `swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift app/kernel-client/swift/{KernelClient,OpenclawWire,EventMapping,OpenclawGatewayKernelClient}.swift app/contracts/d2/fixtures/swift-runner/{FixtureDSL,PartialMatch,SwiftFixtureRunner,SwiftRunnerMain}.swift -o /tmp/swift-fixture-runner && /tmp/swift-fixture-runner` | **12 PASS / 0 FAIL / 1 DEGRADED** |
+437:| C# | `cd app/contracts/d2/fixtures/csharp-runner && dotnet build && dotnet run --no-build` | **12 PASS / 0 FAIL / 1 DEGRADED** |
+438-
+439-（TS 用假内核覆盖全部 13 条，包括依赖 `interrupt()` 的 `soft-steer-then-stop.json`——D1/D2 spec 里
+440-`interrupt(mode:'steer')` 是已定义行为，TS oracle 按 spec 实现了它；Swift/C# 驱动的是 SG-5 交付的
+   635	        ///   - `sessionId`：从捕获到的原生 `key` 反查『哪个已声明 session 拥有这个 kernelKey』。`key`
+   636	        ///     不存在于 `params`（如 createSession，session 尚不存在）就不设置这个字段；`key` 存在但
+   637	        ///     查不到对应的已声明 session（真实 client 把 `key` 发错，或发了一个从未声明过的 key）就
+   638	        ///     显式置 <see cref="JsonNullMarker.Instance"/>——不 fallback 到任何 fixture 声明值，让
+   639	        ///     pattern 里的 `sessionId` 断言在这种情况下真的失败。
+   640	        ///   - `payload`：`params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后剩下的全部
+   641	        ///     字段，原样保留原生字段名——仅 `sessions.send` 一项例外：把原生 `message` 反向映射回
+   642	        ///     D1 `Input.text` 概念，只为了让这个字段能与 TS/Swift 端 `payload.text` 做跨语言一致的
+   643	        ///     深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：`message`→`text`
+   644	        ///     重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——否则若真实
+   645	        ///     client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段会原样
+   646	        ///     留在 payload 里、自证满足 `payload.text` 断言，形成假绿。剥掉之后只有真的捕获到
+   647	        ///     `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
+   648	        ///     `payload.text` 断言必然失败。
+   649	        /// </summary>
+   650	        private static Dictionary<string, object?> NormalizeNativeParams(string method, JSONObject parameters, string expectedType, RunnerContext ctx)
+   651	        {
+   652	            var payload = new JSONObject(parameters);
+   653	            var outp = new Dictionary<string, object?> { ["type"] = expectedType };
+   654	            if (payload.Remove("key", out var keyVal) && keyVal is string key)
+   655	            {
+   656	                var declared = ctx.DeclaredSessionId(key);
+   657	                outp["sessionId"] = declared != null ? declared : JsonNullMarker.Instance;
+   658	            }
+   659	            if (method == "sessions.send")
+   660	            {
+   661	                var hasMessage = payload.Remove("message", out var message);
+   662	                payload.Remove("text", out _);
+   663	                if (hasMessage)
+   664	                    payload["text"] = message;
+   665	            }
+   666	            outp["payload"] = payload;
+   667	            return outp;
+   668	        }
+   669	
+   670	        public static void CheckExpectOutbound(TimelineOp op, RunnerContext ctx)
+   671	        {
+   672	            if (op.Matches is not { } matches)
+   673	                throw new RunnerException($"expect_outbound 缺少 matches（t={op.T}）");
+   674	            var patternAny = FixtureJson.ToActualObject(op.Pattern);
+   675	            if (!(patternAny.TryGetValue("type", out var typeObj) && typeObj is string expectedType))
+   605	///   `resolveSendMessageText` 在 Stage A fixture 唯一用到的 `kind:"text"` 场景，不覆盖
+   606	///   structured/parts），只为了让这个字段能与 TS 端 `payload.text`（直接来自 client_call 的 D1
+   607	///   `args`）做跨语言一致的深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：
+   608	///   `message`→`text` 重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——
+   609	///   否则若真实 client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段
+   610	///   会原样留在 payload 里、自证满足 `payload.text` 断言，形成假绿。剥掉之后只有真的捕获到
+   611	///   `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
+   612	///   `payload.text` 断言必然失败。
+   613	func normalizeNativeParams(
+   614	    method: String, params: JSONObject, expectedType: String, ctx: RunnerContext
+   615	) async -> [String: Any] {
+   616	    var out: [String: Any] = ["type": expectedType]
+   617	    var payload = params
+   618	    if let key = payload.removeValue(forKey: "key") as? String {
+   619	        if let sessionID = await ctx.declaredSessionID(forKernelKey: key) {
+   620	            out["sessionId"] = sessionID
+   621	        } else {
+   622	            out["sessionId"] = NSNull()
+   623	        }
+   624	    }
+   625	    if method == "sessions.send" {
+   626	        let message = payload.removeValue(forKey: "message")
+   627	        payload.removeValue(forKey: "text")
+   628	        if let message {
+   629	            payload["text"] = message
+   630	        }
+   631	    }
+   632	    out["payload"] = payload
+   633	    return out
+   634	}
+   635	
+   636	func checkExpectOutbound(_ op: TimelineOp, ctx: RunnerContext) async throws {
+   637	    guard let matches = op.matches else {
+   638	        throw RunnerError.malformed("expect_outbound 缺少 matches（t=\(op.t)）")
+   639	    }
+   640	    let patternAny = (op.pattern?.value as? [String: Any]) ?? [:]
+   328	                _lockStateBySessionId[session.SessionId] = SessionLockState.SendPending;
+   329	            }
+   330	
+   331	            try
+   332	            {
+   333	                var parameters = new JSONObject
+   334	                {
+   335	                    ["key"] = kernelKey,
+   336	                    ["message"] = ResolveSendMessageText(input),
+   337	                    ["timeoutMs"] = 0L,
+   338	                };
+   339	                // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+   340	                if (input.Kind == InputKind.Structured && input.Parts != null)
+   341	                {
+   342	                    var attachments = input.Parts
+   343	                        .Where(p => p.Kind != PartKind.Text)
+   330	            // send_pending 只是"等待 kernel ack"的极短窗口——ack 到达（无论成功失败）后立刻释放。
+   331	            if lockStateBySessionID[session.sessionID] == .sendPending {
+   332	                lockStateBySessionID[session.sessionID] = .idle
+   333	            }
+   334	        }
+   335	
+   336	        var params: JSONObject = [
+   337	            "key": kernelKey,
+   338	            "message": resolveSendMessageText(from: input),
+   339	            "timeoutMs": 0,
+   340	        ]
+   341	        // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+   342	        // （`normalizeRpcAttachmentsToChatAttachments`）只保留带 `content` 字段（base64 或字符串）
+   343	        // 的附件，`.filter((a) => a.content)` 会把上一轮发送的 `{mimeType,path}` 形状直接丢弃（无
+   344	        // content 字段）——见 `server-methods.test.ts:2693-2699` 明确验证这一点。本轮改为读取
+   345	        // `Part.path` 指向的本地文件、base64 编码后塞进 `content`；读不到文件就诚实跳过这一个
+
+codex
+静态核对已确认修法两端同构：C# `:659-665`、Swift `:625-630` 都先从 payload 移除 `message` 与 `text`，仅在捕获到 `message` 时重建 `text`；代码级搜索未见第二处同类 message→text remap。现在并行跑三端完整基线矩阵。
+两端 normalize 实现符合定向修法，生产 client 的正确字段仍为 message；搜索结果显示 runner 中唯一的可执行 message→text remap 就是各自 normalize 分支。
+  ✓ 读取 T-052 finding、目标提交与当前工作树状态
+  ✓ 核对两 runner 的 normalize 修法及 remap 唯一性
+  → 运行 TS、Swift、C# 三端基线矩阵
+  • 临时篡改真实 C# 与 Swift client 并验证 fixture FAIL，随后还原
+  • 确认无残留改动并写入 T-053 审查报告
+exec
+/bin/zsh -lc "find app/contracts/d2/fixtures -name '*.json' -not -path '*/bin/*' -not -path '*/obj/*' | sort | xargs node app/contracts/d2/fixtures/ts-runner/runner.ts" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+exec
+/bin/zsh -lc 'swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift app/kernel-client/swift/KernelClient.swift app/kernel-client/swift/OpenclawWire.swift app/kernel-client/swift/EventMapping.swift app/kernel-client/swift/OpenclawGatewayKernelClient.swift app/contracts/d2/fixtures/swift-runner/FixtureDSL.swift app/contracts/d2/fixtures/swift-runner/PartialMatch.swift app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift app/contracts/d2/fixtures/swift-runner/SwiftRunnerMain.swift -o /tmp/T-053-swift-fixture-runner && /tmp/T-053-swift-fixture-runner' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+exec
+/bin/zsh -lc 'dotnet build --nologo && dotnet run --no-build' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/csharp-runner
+ succeeded in 109ms:
+[PASS] stop-no-active-run-succeeded (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-no-active-run-succeeded.json)
+[PASS] stop-rejected-rpc-failure (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-rejected-rpc-failure.json)
+[PASS] stop-timed-out (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-timed-out.json)
+[PASS] stop-transport-closed-aborted-effect-unknown (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-transport-closed-aborted-effect-unknown.json)
+[PASS] send-in-flight-rejects-concurrent-stop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-rejects-concurrent-stop.json)
+[PASS] send-in-flight-send-pending (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-send-pending.json)
+[PASS] stop-no-active-run-idle-transitions (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/stop-no-active-run-idle-transitions.json)
+
+=== ALL PASS（TS fixture runner 全部通过） ===
+
+ succeeded in 8830ms:
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  CSharpRunner -> /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/csharp-runner/bin/Debug/net7.0/TestHarnessloop.Fixtures.CSharpRunner.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.00
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "subscribed": true,
+  "key": "openclaw-key-session-1"
+}
+[PASS] create-session-subscribe-message-delta (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/basic/create-session-subscribe-message-delta.json)
+[DEGRADED] soft-steer-then-stop-waits-not-preempts (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json)
+       原因: timeline 包含 client_call『interrupt』——SG-5 OpenclawGatewayKernelClient 该方法本轮仍是 TODO 桩（IKernelClient.cs 头注释 + OpenclawGatewayKernelClient.cs 对应方法体均为 throw KernelClientException(NotImplemented,...)），没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 csharp-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'。
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method": "sessions.abort",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId": null,
+  "status": "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method": "sessions.delete",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted": true
+}
+[PASS] stop-no-active-run-succeeded (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-no-active-run-succeeded.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method": "sessions.send",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "message": "run something long",
+    "timeoutMs": 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "runId": "run-1",
+  "status": "started",
+  "messageSeq": 1
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method": "sessions.abort",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId": "run-1",
+  "status": "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method": "sessions.delete",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted": true
+}
+[PASS] stop-active-run-succeeded (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-active-run-succeeded.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method": "sessions.send",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "message": "run something that never confirms cancellation",
+    "timeoutMs": 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "runId": "run-1",
+  "status": "started",
+  "messageSeq": 1
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method": "sessions.abort",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId": "run-1",
+  "status": "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method": "sessions.delete",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted": true
+}
+[PASS] stop-timed-out (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-timed-out.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method": "sessions.abort",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+[PASS] stop-rejected-rpc-failure (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-rejected-rpc-failure.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method": "sessions.send",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "message": "run something interrupted by transport close",
+    "timeoutMs": 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "runId": "run-1",
+  "status": "started",
+  "messageSeq": 1
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method": "sessions.abort",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId": "run-1",
+  "status": "aborted"
+}
+[PASS] stop-transport-closed-aborted-effect-unknown (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-transport-closed-aborted-effect-unknown.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method": "sessions.send",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "message": "hello",
+    "timeoutMs": 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "runId": "run-1",
+  "status": "started",
+  "messageSeq": 1
+}
+[PASS] send-in-flight-send-pending (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-send-pending.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method": "sessions.send",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "message": "hello",
+    "timeoutMs": 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "runId": "run-1",
+  "status": "started",
+  "messageSeq": 1
+}
+[PASS] send-in-flight-rejects-concurrent-stop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-rejects-concurrent-stop.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method": "sessions.abort",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId": null,
+  "status": "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method": "sessions.delete",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted": true
+}
+[PASS] stop-no-active-run-idle-transitions (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/stop-no-active-run-idle-transitions.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+[PASS] pending-request-agent-first (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/pending-request-agent-first.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- RECV session.approval(phase:pending)（agent(stream:approval) 尚未到达，缓冲等待补发） ---
+{
+  "type": "event",
+  "event": "session.approval",
+  "payload": {
+    "sessionKey": "openclaw-key-session-1",
+    "updatedAtMs": 1784921224967,
+    "phase": "pending",
+    "approval": {
+      "id": "req-session-first-1",
+      "status": "pending",
+      "presentation": {
+        "kind": "exec",
+        "commandText": "echo req-session-first-1"
+      },
+      "createdAtMs": 1784921224967,
+      "expiresAtMs": 1784923024967
+    }
+  }
+}
+[PASS] pending-request-session-first (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/pending-request-session-first.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method": "sessions.send",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "message": "run with a pending approval",
+    "timeoutMs": 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "runId": "run-1",
+  "status": "started",
+  "messageSeq": 1
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method": "approval.resolve",
+  "params": {
+    "id": "req-force-deny-1",
+    "kind": "exec",
+    "decision": "deny"
+  }
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 1) ---
+{
+  "applied": true,
+  "approval": {
+    "status": "denied"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method": "sessions.abort",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId": "run-1",
+  "status": "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method": "sessions.delete",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted": true
+}
+[PASS] stop-force-denies-pending-approval (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/stop-force-denies-pending-approval.json)
+
+=== 12 PASS / 0 FAIL / 1 DEGRADED （共 13 条 fixture） ===
+
+ succeeded in 12079ms:
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:392:35: warning: no 'async' operations occur within 'await' expression
+ 390 | 
+ 391 |         Task {
+ 392 |             guard let kernelKey = await self.kernelKey(for: ourSessionID) else {
+     |                                   `- warning: no 'async' operations occur within 'await' expression
+ 393 |                 continuation.finish(throwing: KernelClientError.protocolMismatch("unknown session \(ourSessionID)"))
+ 394 |                 return
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:410:21: warning: no 'async' operations occur within 'await' expression
+ 408 |                     // M1：消费 subscribe 响应里的 `approvalReplay`（authoritative 的当前 pending
+ 409 |                     // 审批快照，见下方 consumeApprovalReplay 文档注释）——上一轮完全没有读这个字段。
+ 410 |                     await self.consumeApprovalReplay(result, kernelKey: kernelKey)
+     |                     `- warning: no 'async' operations occur within 'await' expression
+ 411 |                 }
+ 412 |             } catch {
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:767:17: warning: no 'async' operations occur within 'await' expression
+ 765 |             Task {
+ 766 |                 try? await Task.sleep(nanoseconds: UInt64(timeoutSeconds) * 1_000_000_000)
+ 767 |                 await self.resolvePendingStopWaiter(sessionID: sessionID, outcome: .timedOut)
+     |                 `- warning: no 'async' operations occur within 'await' expression
+ 768 |             }
+ 769 |         }
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "key" : "openclaw-key-session-1",
+  "subscribed" : true
+}
+[PASS] create-session-subscribe-message-delta (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/basic/create-session-subscribe-message-delta.json)
+[DEGRADED] soft-steer-then-stop-waits-not-preempts (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json)
+       原因: timeline 包含 client_call『interrupt』——SG-5 OpenclawGatewayKernelClient 该方法本轮仍是 TODO 桩（KernelClient.swift 头注释 + OpenclawGatewayKernelClient.swift 对应方法体均为 `throw .notImplemented`），没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 swift-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'。
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : null,
+  "status" : "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-no-active-run-succeeded (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-no-active-run-succeeded.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "run something long",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-active-run-succeeded (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-active-run-succeeded.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "run something that never confirms cancellation",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-timed-out (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-timed-out.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+[PASS] stop-rejected-rpc-failure (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-rejected-rpc-failure.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "run something interrupted by transport close",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+[PASS] stop-transport-closed-aborted-effect-unknown (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-transport-closed-aborted-effect-unknown.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "hello",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+[PASS] send-in-flight-send-pending (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-send-pending.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "hello",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+[PASS] send-in-flight-rejects-concurrent-stop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-rejects-concurrent-stop.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : null,
+  "status" : "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-no-active-run-idle-transitions (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/stop-no-active-run-idle-transitions.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+[PASS] pending-request-agent-first (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/pending-request-agent-first.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV session.approval(phase:pending)（agent(stream:approval) 尚未到达，缓冲等待补发） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "createdAtMs" : 1784921228133,
+      "expiresAtMs" : 1784923028133,
+      "id" : "req-session-first-1",
+      "presentation" : {
+        "commandText" : "echo req-session-first-1",
+        "kind" : "exec"
+      },
+      "status" : "pending"
+    },
+    "phase" : "pending",
+    "sessionKey" : "openclaw-key-session-1",
+    "updatedAtMs" : 1784921228133
+  },
+  "type" : "event"
+}
+[PASS] pending-request-session-first (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/pending-request-session-first.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "run with a pending approval",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "req-force-deny-1",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 1) ---
+{
+  "applied" : true,
+  "approval" : {
+    "status" : "denied"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-force-denies-pending-approval (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/stop-force-denies-pending-approval.json)
+
+=== 12 PASS / 0 FAIL / 1 DEGRADED （共 13 条 fixture） ===
+
+codex
+三端基线恢复并与目标口径一致：TS 13/13，Swift 12 PASS / 1 DEGRADED，C# 12 PASS / 1 DEGRADED；两真实端的唯一降级仍是 `interrupt`。接下来执行 T-052 原始错字段名反证：仅临时把两生产 client 的 `message` 改为 `text`，重编译后单跑目标 fixture，期望两端都退出非零并在 `payload.text` 处报缺失。
+三端完整基线均通过，正确 native message 路径未受 strict 剥键影响；Swift 编译仅有 3 条既存 await warning，非本提交引入。
+  ✓ 读取 T-052 finding、目标提交与当前工作树状态
+  ✓ 核对两 runner 的 normalize 修法及 remap 唯一性
+  ✓ 运行 TS、Swift、C# 三端基线矩阵
+  → 临时篡改真实 C# 与 Swift client 并验证 fixture FAIL，随后还原
+  • 确认无残留改动并写入 T-053 审查报告
+exec
+/bin/zsh -lc 'git status --short -- app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && git hash-object app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && git rev-parse HEAD:app/kernel-client/csharp/OpenclawGatewayKernelClient.cs HEAD:app/kernel-client/swift/OpenclawGatewayKernelClient.swift' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 210ms:
+3992e0f13a79b3309a9c8dfc640d042ed5cd65e5
+3a03362fd2d0ca38666ea7a05efc87a2b696e133
+3992e0f13a79b3309a9c8dfc640d042ed5cd65e5
+3a03362fd2d0ca38666ea7a05efc87a2b696e133
+
+apply patch
+patch: completed
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+exec
+/bin/zsh -lc 'git diff --check -- app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && git diff --unified=2 -- app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+ succeeded in 134ms:
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f..3b45c46 100644
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -334,5 +334,5 @@ namespace KernelClient
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362..a265256 100644
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -336,5 +336,5 @@ public actor OpenclawGatewayKernelClient: KernelClient {
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+
+exec
+/bin/zsh -lc 'dotnet build --nologo && dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/csharp-runner
+exec
+/bin/zsh -lc 'swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift app/kernel-client/swift/KernelClient.swift app/kernel-client/swift/OpenclawWire.swift app/kernel-client/swift/EventMapping.swift app/kernel-client/swift/OpenclawGatewayKernelClient.swift app/contracts/d2/fixtures/swift-runner/FixtureDSL.swift app/contracts/d2/fixtures/swift-runner/PartialMatch.swift app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift app/contracts/d2/fixtures/swift-runner/SwiftRunnerMain.swift -o /tmp/T-053-swift-fixture-runner-mutated && /tmp/T-053-swift-fixture-runner-mutated app/contracts/d2/fixtures/operation-outcome/stop-active-run-succeeded.json' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ exited 1 in 3224ms:
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  CSharpRunner -> /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/csharp-runner/bin/Debug/net7.0/TestHarnessloop.Fixtures.CSharpRunner.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.28
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method": "sessions.send",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "text": "run something long",
+    "timeoutMs": 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "runId": "run-1",
+  "status": "started",
+  "messageSeq": 1
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method": "sessions.abort",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId": "run-1",
+  "status": "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method": "sessions.delete",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted": true
+}
+[FAIL] stop-active-run-succeeded (../operation-outcome/stop-active-run-succeeded.json)
+       - expect_outbound(send1).payload.text: 期望 "run something long"，实际 nil
+
+=== 0 PASS / 1 FAIL / 0 DEGRADED （共 1 条 fixture） ===
+
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+ exited 1 in 5504ms:
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:392:35: warning: no 'async' operations occur within 'await' expression
+ 390 | 
+ 391 |         Task {
+ 392 |             guard let kernelKey = await self.kernelKey(for: ourSessionID) else {
+     |                                   `- warning: no 'async' operations occur within 'await' expression
+ 393 |                 continuation.finish(throwing: KernelClientError.protocolMismatch("unknown session \(ourSessionID)"))
+ 394 |                 return
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:410:21: warning: no 'async' operations occur within 'await' expression
+ 408 |                     // M1：消费 subscribe 响应里的 `approvalReplay`（authoritative 的当前 pending
+ 409 |                     // 审批快照，见下方 consumeApprovalReplay 文档注释）——上一轮完全没有读这个字段。
+ 410 |                     await self.consumeApprovalReplay(result, kernelKey: kernelKey)
+     |                     `- warning: no 'async' operations occur within 'await' expression
+ 411 |                 }
+ 412 |             } catch {
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:767:17: warning: no 'async' operations occur within 'await' expression
+ 765 |             Task {
+ 766 |                 try? await Task.sleep(nanoseconds: UInt64(timeoutSeconds) * 1_000_000_000)
+ 767 |                 await self.resolvePendingStopWaiter(sessionID: sessionID, outcome: .timedOut)
+     |                 `- warning: no 'async' operations occur within 'await' expression
+ 768 |             }
+ 769 |         }
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "text" : "run something long",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[FAIL] stop-active-run-succeeded (app/contracts/d2/fixtures/operation-outcome/stop-active-run-succeeded.json)
+       - expect_outbound(send1).payload.text: 期望 run something long，实际 nil
+
+=== 0 PASS / 1 FAIL / 0 DEGRADED （共 1 条 fixture） ===
+
+codex
+反证命中且两端一致：真实 outbound 明确只含错误 `text`，C# 与 Swift 都以退出码 1 失败，错误均为 `expect_outbound(send1).payload.text ... 实际 nil`；这正是修复前会假绿的路径。现在按任务要求还原两份生产源码，并重编译、正向单跑确认没有留下陈旧构建结果。
+exec
+/bin/zsh -lc 'git checkout -- app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && git status --short -- app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && git hash-object app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && git rev-parse HEAD:app/kernel-client/csharp/OpenclawGatewayKernelClient.cs HEAD:app/kernel-client/swift/OpenclawGatewayKernelClient.swift' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+ succeeded in 250ms:
+3992e0f13a79b3309a9c8dfc640d042ed5cd65e5
+3a03362fd2d0ca38666ea7a05efc87a2b696e133
+3992e0f13a79b3309a9c8dfc640d042ed5cd65e5
+3a03362fd2d0ca38666ea7a05efc87a2b696e133
+
+exec
+/bin/zsh -lc 'dotnet build --nologo && dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/csharp-runner
+exec
+/bin/zsh -lc 'swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift app/kernel-client/swift/KernelClient.swift app/kernel-client/swift/OpenclawWire.swift app/kernel-client/swift/EventMapping.swift app/kernel-client/swift/OpenclawGatewayKernelClient.swift app/contracts/d2/fixtures/swift-runner/FixtureDSL.swift app/contracts/d2/fixtures/swift-runner/PartialMatch.swift app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift app/contracts/d2/fixtures/swift-runner/SwiftRunnerMain.swift -o /tmp/T-053-swift-fixture-runner-restored && /tmp/T-053-swift-fixture-runner-restored app/contracts/d2/fixtures/operation-outcome/stop-active-run-succeeded.json' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 3639ms:
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  CSharpRunner -> /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/csharp-runner/bin/Debug/net7.0/TestHarnessloop.Fixtures.CSharpRunner.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:02.15
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method": "sessions.create",
+  "params": {
+    "label": "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key": "openclaw-key-session-1",
+  "sessionId": "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method": "sessions.messages.subscribe",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "includeApprovals": true
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method": "sessions.send",
+  "params": {
+    "key": "openclaw-key-session-1",
+    "message": "run something long",
+    "timeoutMs": 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "runId": "run-1",
+  "status": "started",
+  "messageSeq": 1
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method": "sessions.abort",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId": "run-1",
+  "status": "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method": "sessions.delete",
+  "params": {
+    "key": "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted": true
+}
+[PASS] stop-active-run-succeeded (../operation-outcome/stop-active-run-succeeded.json)
+
+=== 1 PASS / 0 FAIL / 0 DEGRADED （共 1 条 fixture） ===
+
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+ succeeded in 5330ms:
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:392:35: warning: no 'async' operations occur within 'await' expression
+ 390 | 
+ 391 |         Task {
+ 392 |             guard let kernelKey = await self.kernelKey(for: ourSessionID) else {
+     |                                   `- warning: no 'async' operations occur within 'await' expression
+ 393 |                 continuation.finish(throwing: KernelClientError.protocolMismatch("unknown session \(ourSessionID)"))
+ 394 |                 return
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:410:21: warning: no 'async' operations occur within 'await' expression
+ 408 |                     // M1：消费 subscribe 响应里的 `approvalReplay`（authoritative 的当前 pending
+ 409 |                     // 审批快照，见下方 consumeApprovalReplay 文档注释）——上一轮完全没有读这个字段。
+ 410 |                     await self.consumeApprovalReplay(result, kernelKey: kernelKey)
+     |                     `- warning: no 'async' operations occur within 'await' expression
+ 411 |                 }
+ 412 |             } catch {
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:767:17: warning: no 'async' operations occur within 'await' expression
+ 765 |             Task {
+ 766 |                 try? await Task.sleep(nanoseconds: UInt64(timeoutSeconds) * 1_000_000_000)
+ 767 |                 await self.resolvePendingStopWaiter(sessionID: sessionID, outcome: .timedOut)
+     |                 `- warning: no 'async' operations occur within 'await' expression
+ 768 |             }
+ 769 |         }
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "run something long",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-active-run-succeeded (app/contracts/d2/fixtures/operation-outcome/stop-active-run-succeeded.json)
+
+=== 1 PASS / 0 FAIL / 0 DEGRADED （共 1 条 fixture） ===
+
+exec
+/bin/zsh -lc "sed -n '1,240p' .hopper/handoffs/T-053-output.md && git diff --exit-code -- app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift; diff_status="'$?; git status --short; exit $diff_status' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+ succeeded in 601ms:
+ M .hopper/handoffs/leader-tasklist.md
+ M .hopper/queue.md
+ ? kernels/openclaw
+?? .hopper/handoffs/T-053-output.log
+?? .hopper/handoffs/T-053-output.md
+?? .hopper/handoffs/T-053-progress.log
+
+exec
+/bin/zsh -lc "rg -n 'payload\\.Remove\\(\"message\"|payload\\.Remove\\(\"text\"|payload\\[\"text\"\\]\\s*=|payload\\.removeValue\\(forKey: \"message\"|payload\\.removeValue\\(forKey: \"text\"' app/contracts/d2/fixtures/csharp-runner app/contracts/d2/fixtures/swift-runner && git show --format= --name-only 2a60b010 -- app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift && git diff --check && git hash-object app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && git rev-parse HEAD:app/kernel-client/csharp/OpenclawGatewayKernelClient.cs HEAD:app/kernel-client/swift/OpenclawGatewayKernelClient.swift" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+ succeeded in 361ms:
+3992e0f13a79b3309a9c8dfc640d042ed5cd65e5
+3a03362fd2d0ca38666ea7a05efc87a2b696e133
+3992e0f13a79b3309a9c8dfc640d042ed5cd65e5
+3a03362fd2d0ca38666ea7a05efc87a2b696e133
+
+codex
+源码与构建状态已恢复：两 client 的 blob 分别与 HEAD 完全一致（C# `3992e0f…`、Swift `3a03362…`），还原后两端同一 fixture 均重新 PASS。下面只更新指定的 T-053 审查产物，记录 2/2 验证与 `CONFIRMABLE` 结论。
+两端错字段名反证均按预期 FAIL，且还原后重编译单跑均 PASS；生产 client 源码 blob 与 HEAD 一致，未留下临时变更。
+  ✓ 读取 T-052 finding、目标提交与当前工作树状态
+  ✓ 核对两 runner 的 normalize 修法及 remap 唯一性
+  ✓ 运行 TS、Swift、C# 三端基线矩阵
+  ✓ 临时篡改真实 C# 与 Swift client 并验证 fixture FAIL，随后还原
+  → 确认无残留改动并写入 T-053 审查报告
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+apply patch
+patch: completed
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-053-output.md
+diff --git a/.hopper/handoffs/T-053-output.md b/.hopper/handoffs/T-053-output.md
+index d449b8cc968b833a1336514cb8b0cda9967758ad..101f80d091309a5867df720c46b2d43b49f315a5
+--- a/.hopper/handoffs/T-053-output.md
++++ b/.hopper/handoffs/T-053-output.md
+@@ -1,28 +1,53 @@
+----
+-task_id: T-053
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 12834
+-start_time: "2026-07-24T19:25:59.293Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-24T19:25:59.294Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-053-progress.log
+-raw_log: ./T-053-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-053-output.log
+-started_by_pid: 12832
+----
++## Summary
++
++已完成 commit `2a60b010` 对 T-052 唯一阻断的确认性再审：C#、Swift runner 均无条件剥除 native payload 拷贝中的 `message` 与 `text`，且只在真实捕获到 `message` 时重建规范化 `text`。T-052 的原始错字段名复现在两端都由修复前的 PASS 变为确定性 FAIL；正确 `message` 路径和三端完整矩阵保持原结果。未发现新缺陷，SG-8.7 ★审查闸2 可通过。
+ 
+-# T-053 — codex (background, in-progress)
++## Files touched
+ 
+-Output streaming to `T-053-output.log`. Status updates here.
++- `.hopper/handoffs/T-053-output.md`：本次只读确认性再审产物。
++- 评审对象源码：none。两份生产 client 仅做了任务授权的单行临时证伪，随后用 `git checkout -- <精确路径>` 还原并以 blob/hash、正向重编译单跑复核。
++
++## Acceptance verification (2/2)
++
++1. **旁路真闭合：通过。**
++   - C# `app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:659-665`：进入 `sessions.send` 分支后先执行 `payload.Remove("message", out var message)` 与 `payload.Remove("text", out _)`，仅当 `hasMessage` 为真才写 `payload["text"] = message`。
++   - Swift `app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:625-630`：同构地先 `removeValue(forKey: "message")`、再移除 `"text"`，仅 `if let message` 时写回 `"text"`。
++   - 唯一性扫描：
++     `rg -n 'payload\\.Remove\\(\"message\"|payload\\.Remove\\(\"text\"|payload\\[\"text\"\\]\\s*=|payload\\.removeValue\\(forKey: \"message\"|payload\\.removeValue\\(forKey: \"text\"' app/contracts/d2/fixtures/csharp-runner app/contracts/d2/fixtures/swift-runner`
++     只命中上述 C# `:661-664` 与 Swift `:626-629` 各一组可执行 remap；两 runner 中无其它同类 message→text 碰撞旁路。
++   - C# 原始反证：临时把 `app/kernel-client/csharp/OpenclawGatewayKernelClient.cs:336` 的 `["message"]` 改成 `["text"]`，运行
++     `dotnet build --nologo && dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json`。
++     build 为 `0 Warning(s) / 0 Error(s)`；真实 outbound 打印 `{"key":...,"text":"run something long","timeoutMs":0}`；runner 退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，明确报
++     `expect_outbound(send1).payload.text: 期望 "run something long"，实际 nil`。这条修复前为 PASS 的旁路现已关闭。
++   - Swift 同构反证：临时把 `app/kernel-client/swift/OpenclawGatewayKernelClient.swift:338` 的 `"message"` 改成 `"text"`，重新 `swiftc` 后单跑同一 fixture。真实 outbound 同样只含错误 `text`；进程退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，同样报 `expect_outbound(send1).payload.text ... 实际 nil`。
++   - 两份临时改动均已还原。还原后的文件 blob 与 HEAD 完全一致：C# 均为 `3992e0f13a79b3309a9c8dfc640d042ed5cd65e5`，Swift 均为 `3a03362fd2d0ca38666ea7a05efc87a2b696e133`；再重编译单跑同一 fixture，两端均退出 0、`1 PASS / 0 FAIL / 0 DEGRADED`。
++
++2. **收残无新缺陷 + 三端恢复：通过。**
++   - 正确 native `message` 路径语义不变：两端先保存捕获值、清除原键和潜在碰撞键、再把保存值写回 `payload.text`。还原后正向单跑的真实 outbound 均含 `"message":"run something long"`，且 C#/Swift 都 PASS。
++   - TS：
++     `find app/contracts/d2/fixtures -name '*.json' -not -path '*/bin/*' -not -path '*/obj/*' | sort | xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`
++     退出码 0，13 条全部 `[PASS]`，最终 `ALL PASS`。
++   - Swift：按 README 的 `swiftc` 完整输入集编译到 `/tmp/T-053-swift-fixture-runner` 后无参数运行，退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 仍为 `soft-steer-then-stop`，原因仍是 SG-5 `interrupt` TODO。
++   - C#：在 `app/contracts/d2/fixtures/csharp-runner` 运行
++     `dotnet build --nologo && dotnet run --no-build`，build 为 `0 Warning(s) / 0 Error(s)`，runner 退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 与 Swift 为同一 fixture、同一 `interrupt` 原因。
++   - 因而 strict 剥键未改变现有 13 条 fixture 的正确路径语义，三端矩阵恢复为 TS 13/13 + Swift 12/13 + C# 12/13。
++
++## Decisions / deviations
++
++- 为确保 C# 临时源码改动确实进入 `--no-build` 所执行的程序集，先运行了允许的 `dotnet build --nologo`，再执行任务指定的 `dotnet run --no-build`；Swift 端同理重新编译后再单跑。
++- Swift 编译仍报告 3 条既存的 “no async operations occur within await expression” warning；它们不位于本提交修改分支，完整矩阵和定向复现均不受影响，未视为本轮新缺陷。
++- 审查开始时工作树已有 `.hopper/handoffs/leader-tasklist.md`、`.hopper/queue.md`、`kernels/openclaw` 及 hopper 日志/占位输出状态；本轮未改动这些既有项。仅使用 `dotnet build/run`、`node`、`swiftc`，未使用 `csi` 或 `dotnet-script`。
++
++## Open questions
++
++none
++
++## Verdict
++
++CONFIRMABLE
++
++## Next recommendation
++
++通过 SG-8.7 ★审查闸2并将 SG-8.7 主体标记为达成；后续可把本次两端“生产 client 将 `message` 错改为 `text` 时必须 FAIL”的反证固化为维护期 teeth，但不阻塞本次收口。
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+diff --git a/.hopper/handoffs/T-053-output.md b/.hopper/handoffs/T-053-output.md
+index d449b8cc968b833a1336514cb8b0cda9967758ad..101f80d091309a5867df720c46b2d43b49f315a5
+--- a/.hopper/handoffs/T-053-output.md
++++ b/.hopper/handoffs/T-053-output.md
+@@ -1,28 +1,53 @@
+----
+-task_id: T-053
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 12834
+-start_time: "2026-07-24T19:25:59.293Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-24T19:25:59.294Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-053-progress.log
+-raw_log: ./T-053-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-053-output.log
+-started_by_pid: 12832
+----
++## Summary
++
++已完成 commit `2a60b010` 对 T-052 唯一阻断的确认性再审：C#、Swift runner 均无条件剥除 native payload 拷贝中的 `message` 与 `text`，且只在真实捕获到 `message` 时重建规范化 `text`。T-052 的原始错字段名复现在两端都由修复前的 PASS 变为确定性 FAIL；正确 `message` 路径和三端完整矩阵保持原结果。未发现新缺陷，SG-8.7 ★审查闸2 可通过。
+ 
+-# T-053 — codex (background, in-progress)
++## Files touched
+ 
+-Output streaming to `T-053-output.log`. Status updates here.
++- `.hopper/handoffs/T-053-output.md`：本次只读确认性再审产物。
++- 评审对象源码：none。两份生产 client 仅做了任务授权的单行临时证伪，随后用 `git checkout -- <精确路径>` 还原并以 blob/hash、正向重编译单跑复核。
++
++## Acceptance verification (2/2)
++
++1. **旁路真闭合：通过。**
++   - C# `app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:659-665`：进入 `sessions.send` 分支后先执行 `payload.Remove("message", out var message)` 与 `payload.Remove("text", out _)`，仅当 `hasMessage` 为真才写 `payload["text"] = message`。
++   - Swift `app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:625-630`：同构地先 `removeValue(forKey: "message")`、再移除 `"text"`，仅 `if let message` 时写回 `"text"`。
++   - 唯一性扫描：
++     `rg -n 'payload\\.Remove\\(\"message\"|payload\\.Remove\\(\"text\"|payload\\[\"text\"\\]\\s*=|payload\\.removeValue\\(forKey: \"message\"|payload\\.removeValue\\(forKey: \"text\"' app/contracts/d2/fixtures/csharp-runner app/contracts/d2/fixtures/swift-runner`
++     只命中上述 C# `:661-664` 与 Swift `:626-629` 各一组可执行 remap；两 runner 中无其它同类 message→text 碰撞旁路。
++   - C# 原始反证：临时把 `app/kernel-client/csharp/OpenclawGatewayKernelClient.cs:336` 的 `["message"]` 改成 `["text"]`，运行
++     `dotnet build --nologo && dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json`。
++     build 为 `0 Warning(s) / 0 Error(s)`；真实 outbound 打印 `{"key":...,"text":"run something long","timeoutMs":0}`；runner 退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，明确报
++     `expect_outbound(send1).payload.text: 期望 "run something long"，实际 nil`。这条修复前为 PASS 的旁路现已关闭。
++   - Swift 同构反证：临时把 `app/kernel-client/swift/OpenclawGatewayKernelClient.swift:338` 的 `"message"` 改成 `"text"`，重新 `swiftc` 后单跑同一 fixture。真实 outbound 同样只含错误 `text`；进程退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，同样报 `expect_outbound(send1).payload.text ... 实际 nil`。
++   - 两份临时改动均已还原。还原后的文件 blob 与 HEAD 完全一致：C# 均为 `3992e0f13a79b3309a9c8dfc640d042ed5cd65e5`，Swift 均为 `3a03362fd2d0ca38666ea7a05efc87a2b696e133`；再重编译单跑同一 fixture，两端均退出 0、`1 PASS / 0 FAIL / 0 DEGRADED`。
++
++2. **收残无新缺陷 + 三端恢复：通过。**
++   - 正确 native `message` 路径语义不变：两端先保存捕获值、清除原键和潜在碰撞键、再把保存值写回 `payload.text`。还原后正向单跑的真实 outbound 均含 `"message":"run something long"`，且 C#/Swift 都 PASS。
++   - TS：
++     `find app/contracts/d2/fixtures -name '*.json' -not -path '*/bin/*' -not -path '*/obj/*' | sort | xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`
++     退出码 0，13 条全部 `[PASS]`，最终 `ALL PASS`。
++   - Swift：按 README 的 `swiftc` 完整输入集编译到 `/tmp/T-053-swift-fixture-runner` 后无参数运行，退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 仍为 `soft-steer-then-stop`，原因仍是 SG-5 `interrupt` TODO。
++   - C#：在 `app/contracts/d2/fixtures/csharp-runner` 运行
++     `dotnet build --nologo && dotnet run --no-build`，build 为 `0 Warning(s) / 0 Error(s)`，runner 退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 与 Swift 为同一 fixture、同一 `interrupt` 原因。
++   - 因而 strict 剥键未改变现有 13 条 fixture 的正确路径语义，三端矩阵恢复为 TS 13/13 + Swift 12/13 + C# 12/13。
++
++## Decisions / deviations
++
++- 为确保 C# 临时源码改动确实进入 `--no-build` 所执行的程序集，先运行了允许的 `dotnet build --nologo`，再执行任务指定的 `dotnet run --no-build`；Swift 端同理重新编译后再单跑。
++- Swift 编译仍报告 3 条既存的 “no async operations occur within await expression” warning；它们不位于本提交修改分支，完整矩阵和定向复现均不受影响，未视为本轮新缺陷。
++- 审查开始时工作树已有 `.hopper/handoffs/leader-tasklist.md`、`.hopper/queue.md`、`kernels/openclaw` 及 hopper 日志/占位输出状态；本轮未改动这些既有项。仅使用 `dotnet build/run`、`node`、`swiftc`，未使用 `csi` 或 `dotnet-script`。
++
++## Open questions
++
++none
++
++## Verdict
++
++CONFIRMABLE
++
++## Next recommendation
++
++通过 SG-8.7 ★审查闸2并将 SG-8.7 主体标记为达成；后续可把本次两端“生产 client 将 `message` 错改为 `text` 时必须 FAIL”的反证固化为维护期 teeth，但不阻塞本次收口。
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+exec
+/bin/zsh -lc "sed -n '1,260p' .hopper/handoffs/T-053-output.md && git diff --check -- app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && git diff --exit-code -- app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift app/kernel-client/csharp/OpenclawGatewayKernelClient.cs app/kernel-client/swift/OpenclawGatewayKernelClient.swift && git status --short" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+diff --git a/.hopper/handoffs/T-053-output.md b/.hopper/handoffs/T-053-output.md
+index d449b8cc968b833a1336514cb8b0cda9967758ad..101f80d091309a5867df720c46b2d43b49f315a5
+--- a/.hopper/handoffs/T-053-output.md
++++ b/.hopper/handoffs/T-053-output.md
+@@ -1,28 +1,53 @@
+----
+-task_id: T-053
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 12834
+-start_time: "2026-07-24T19:25:59.293Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-24T19:25:59.294Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-053-progress.log
+-raw_log: ./T-053-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-053-output.log
+-started_by_pid: 12832
+----
++## Summary
++
++已完成 commit `2a60b010` 对 T-052 唯一阻断的确认性再审：C#、Swift runner 均无条件剥除 native payload 拷贝中的 `message` 与 `text`，且只在真实捕获到 `message` 时重建规范化 `text`。T-052 的原始错字段名复现在两端都由修复前的 PASS 变为确定性 FAIL；正确 `message` 路径和三端完整矩阵保持原结果。未发现新缺陷，SG-8.7 ★审查闸2 可通过。
+ 
+-# T-053 — codex (background, in-progress)
++## Files touched
+ 
+-Output streaming to `T-053-output.log`. Status updates here.
++- `.hopper/handoffs/T-053-output.md`：本次只读确认性再审产物。
++- 评审对象源码：none。两份生产 client 仅做了任务授权的单行临时证伪，随后用 `git checkout -- <精确路径>` 还原并以 blob/hash、正向重编译单跑复核。
++
++## Acceptance verification (2/2)
++
++1. **旁路真闭合：通过。**
++   - C# `app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:659-665`：进入 `sessions.send` 分支后先执行 `payload.Remove("message", out var message)` 与 `payload.Remove("text", out _)`，仅当 `hasMessage` 为真才写 `payload["text"] = message`。
++   - Swift `app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:625-630`：同构地先 `removeValue(forKey: "message")`、再移除 `"text"`，仅 `if let message` 时写回 `"text"`。
++   - 唯一性扫描：
++     `rg -n 'payload\\.Remove\\(\"message\"|payload\\.Remove\\(\"text\"|payload\\[\"text\"\\]\\s*=|payload\\.removeValue\\(forKey: \"message\"|payload\\.removeValue\\(forKey: \"text\"' app/contracts/d2/fixtures/csharp-runner app/contracts/d2/fixtures/swift-runner`
++     只命中上述 C# `:661-664` 与 Swift `:626-629` 各一组可执行 remap；两 runner 中无其它同类 message→text 碰撞旁路。
++   - C# 原始反证：临时把 `app/kernel-client/csharp/OpenclawGatewayKernelClient.cs:336` 的 `["message"]` 改成 `["text"]`，运行
++     `dotnet build --nologo && dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json`。
++     build 为 `0 Warning(s) / 0 Error(s)`；真实 outbound 打印 `{"key":...,"text":"run something long","timeoutMs":0}`；runner 退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，明确报
++     `expect_outbound(send1).payload.text: 期望 "run something long"，实际 nil`。这条修复前为 PASS 的旁路现已关闭。
++   - Swift 同构反证：临时把 `app/kernel-client/swift/OpenclawGatewayKernelClient.swift:338` 的 `"message"` 改成 `"text"`，重新 `swiftc` 后单跑同一 fixture。真实 outbound 同样只含错误 `text`；进程退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，同样报 `expect_outbound(send1).payload.text ... 实际 nil`。
++   - 两份临时改动均已还原。还原后的文件 blob 与 HEAD 完全一致：C# 均为 `3992e0f13a79b3309a9c8dfc640d042ed5cd65e5`，Swift 均为 `3a03362fd2d0ca38666ea7a05efc87a2b696e133`；再重编译单跑同一 fixture，两端均退出 0、`1 PASS / 0 FAIL / 0 DEGRADED`。
++
++2. **收残无新缺陷 + 三端恢复：通过。**
++   - 正确 native `message` 路径语义不变：两端先保存捕获值、清除原键和潜在碰撞键、再把保存值写回 `payload.text`。还原后正向单跑的真实 outbound 均含 `"message":"run something long"`，且 C#/Swift 都 PASS。
++   - TS：
++     `find app/contracts/d2/fixtures -name '*.json' -not -path '*/bin/*' -not -path '*/obj/*' | sort | xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`
++     退出码 0，13 条全部 `[PASS]`，最终 `ALL PASS`。
++   - Swift：按 README 的 `swiftc` 完整输入集编译到 `/tmp/T-053-swift-fixture-runner` 后无参数运行，退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 仍为 `soft-steer-then-stop`，原因仍是 SG-5 `interrupt` TODO。
++   - C#：在 `app/contracts/d2/fixtures/csharp-runner` 运行
++     `dotnet build --nologo && dotnet run --no-build`，build 为 `0 Warning(s) / 0 Error(s)`，runner 退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 与 Swift 为同一 fixture、同一 `interrupt` 原因。
++   - 因而 strict 剥键未改变现有 13 条 fixture 的正确路径语义，三端矩阵恢复为 TS 13/13 + Swift 12/13 + C# 12/13。
++
++## Decisions / deviations
++
++- 为确保 C# 临时源码改动确实进入 `--no-build` 所执行的程序集，先运行了允许的 `dotnet build --nologo`，再执行任务指定的 `dotnet run --no-build`；Swift 端同理重新编译后再单跑。
++- Swift 编译仍报告 3 条既存的 “no async operations occur within await expression” warning；它们不位于本提交修改分支，完整矩阵和定向复现均不受影响，未视为本轮新缺陷。
++- 审查开始时工作树已有 `.hopper/handoffs/leader-tasklist.md`、`.hopper/queue.md`、`kernels/openclaw` 及 hopper 日志/占位输出状态；本轮未改动这些既有项。仅使用 `dotnet build/run`、`node`、`swiftc`，未使用 `csi` 或 `dotnet-script`。
++
++## Open questions
++
++none
++
++## Verdict
++
++CONFIRMABLE
++
++## Next recommendation
++
++通过 SG-8.7 ★审查闸2并将 SG-8.7 主体标记为达成；后续可把本次两端“生产 client 将 `message` 错改为 `text` 时必须 FAIL”的反证固化为维护期 teeth，但不阻塞本次收口。
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+ succeeded in 364ms:
+ M .hopper/handoffs/leader-tasklist.md
+ M .hopper/queue.md
+ ? kernels/openclaw
+?? .hopper/handoffs/T-053-output.log
+?? .hopper/handoffs/T-053-output.md
+?? .hopper/handoffs/T-053-progress.log
+
+报告已按要求落盘并复核；四个评审/证伪源码文件相对 HEAD 均无 diff，工作树剩余状态仅为审查前已有 hopper 项与本次指定输出。
+  ✓ 读取 T-052 finding、目标提交与当前工作树状态
+  ✓ 核对两 runner 的 normalize 修法及 remap 唯一性
+  ✓ 运行 TS、Swift、C# 三端基线矩阵
+  ✓ 临时篡改真实 C# 与 Swift client 并验证 fixture FAIL，随后还原
+  ✓ 确认无残留改动并写入 T-053 审查报告
+diff --git a/.hopper/handoffs/T-053-output.md b/.hopper/handoffs/T-053-output.md
+index d449b8cc968b833a1336514cb8b0cda9967758ad..101f80d091309a5867df720c46b2d43b49f315a5
+--- a/.hopper/handoffs/T-053-output.md
++++ b/.hopper/handoffs/T-053-output.md
+@@ -1,28 +1,53 @@
+----
+-task_id: T-053
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 12834
+-start_time: "2026-07-24T19:25:59.293Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-24T19:25:59.294Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-053-progress.log
+-raw_log: ./T-053-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-053-output.log
+-started_by_pid: 12832
+----
++## Summary
++
++已完成 commit `2a60b010` 对 T-052 唯一阻断的确认性再审：C#、Swift runner 均无条件剥除 native payload 拷贝中的 `message` 与 `text`，且只在真实捕获到 `message` 时重建规范化 `text`。T-052 的原始错字段名复现在两端都由修复前的 PASS 变为确定性 FAIL；正确 `message` 路径和三端完整矩阵保持原结果。未发现新缺陷，SG-8.7 ★审查闸2 可通过。
+ 
+-# T-053 — codex (background, in-progress)
++## Files touched
+ 
+-Output streaming to `T-053-output.log`. Status updates here.
++- `.hopper/handoffs/T-053-output.md`：本次只读确认性再审产物。
++- 评审对象源码：none。两份生产 client 仅做了任务授权的单行临时证伪，随后用 `git checkout -- <精确路径>` 还原并以 blob/hash、正向重编译单跑复核。
++
++## Acceptance verification (2/2)
++
++1. **旁路真闭合：通过。**
++   - C# `app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:659-665`：进入 `sessions.send` 分支后先执行 `payload.Remove("message", out var message)` 与 `payload.Remove("text", out _)`，仅当 `hasMessage` 为真才写 `payload["text"] = message`。
++   - Swift `app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:625-630`：同构地先 `removeValue(forKey: "message")`、再移除 `"text"`，仅 `if let message` 时写回 `"text"`。
++   - 唯一性扫描：
++     `rg -n 'payload\\.Remove\\(\"message\"|payload\\.Remove\\(\"text\"|payload\\[\"text\"\\]\\s*=|payload\\.removeValue\\(forKey: \"message\"|payload\\.removeValue\\(forKey: \"text\"' app/contracts/d2/fixtures/csharp-runner app/contracts/d2/fixtures/swift-runner`
++     只命中上述 C# `:661-664` 与 Swift `:626-629` 各一组可执行 remap；两 runner 中无其它同类 message→text 碰撞旁路。
++   - C# 原始反证：临时把 `app/kernel-client/csharp/OpenclawGatewayKernelClient.cs:336` 的 `["message"]` 改成 `["text"]`，运行
++     `dotnet build --nologo && dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json`。
++     build 为 `0 Warning(s) / 0 Error(s)`；真实 outbound 打印 `{"key":...,"text":"run something long","timeoutMs":0}`；runner 退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，明确报
++     `expect_outbound(send1).payload.text: 期望 "run something long"，实际 nil`。这条修复前为 PASS 的旁路现已关闭。
++   - Swift 同构反证：临时把 `app/kernel-client/swift/OpenclawGatewayKernelClient.swift:338` 的 `"message"` 改成 `"text"`，重新 `swiftc` 后单跑同一 fixture。真实 outbound 同样只含错误 `text`；进程退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，同样报 `expect_outbound(send1).payload.text ... 实际 nil`。
++   - 两份临时改动均已还原。还原后的文件 blob 与 HEAD 完全一致：C# 均为 `3992e0f13a79b3309a9c8dfc640d042ed5cd65e5`，Swift 均为 `3a03362fd2d0ca38666ea7a05efc87a2b696e133`；再重编译单跑同一 fixture，两端均退出 0、`1 PASS / 0 FAIL / 0 DEGRADED`。
++
++2. **收残无新缺陷 + 三端恢复：通过。**
++   - 正确 native `message` 路径语义不变：两端先保存捕获值、清除原键和潜在碰撞键、再把保存值写回 `payload.text`。还原后正向单跑的真实 outbound 均含 `"message":"run something long"`，且 C#/Swift 都 PASS。
++   - TS：
++     `find app/contracts/d2/fixtures -name '*.json' -not -path '*/bin/*' -not -path '*/obj/*' | sort | xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`
++     退出码 0，13 条全部 `[PASS]`，最终 `ALL PASS`。
++   - Swift：按 README 的 `swiftc` 完整输入集编译到 `/tmp/T-053-swift-fixture-runner` 后无参数运行，退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 仍为 `soft-steer-then-stop`，原因仍是 SG-5 `interrupt` TODO。
++   - C#：在 `app/contracts/d2/fixtures/csharp-runner` 运行
++     `dotnet build --nologo && dotnet run --no-build`，build 为 `0 Warning(s) / 0 Error(s)`，runner 退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 与 Swift 为同一 fixture、同一 `interrupt` 原因。
++   - 因而 strict 剥键未改变现有 13 条 fixture 的正确路径语义，三端矩阵恢复为 TS 13/13 + Swift 12/13 + C# 12/13。
++
++## Decisions / deviations
++
++- 为确保 C# 临时源码改动确实进入 `--no-build` 所执行的程序集，先运行了允许的 `dotnet build --nologo`，再执行任务指定的 `dotnet run --no-build`；Swift 端同理重新编译后再单跑。
++- Swift 编译仍报告 3 条既存的 “no async operations occur within await expression” warning；它们不位于本提交修改分支，完整矩阵和定向复现均不受影响，未视为本轮新缺陷。
++- 审查开始时工作树已有 `.hopper/handoffs/leader-tasklist.md`、`.hopper/queue.md`、`kernels/openclaw` 及 hopper 日志/占位输出状态；本轮未改动这些既有项。仅使用 `dotnet build/run`、`node`、`swiftc`，未使用 `csi` 或 `dotnet-script`。
++
++## Open questions
++
++none
++
++## Verdict
++
++CONFIRMABLE
++
++## Next recommendation
++
++通过 SG-8.7 ★审查闸2并将 SG-8.7 主体标记为达成；后续可把本次两端“生产 client 将 `message` 错改为 `text` 时必须 FAIL”的反证固化为维护期 teeth，但不阻塞本次收口。
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+codex
+已完成 T-053 确认性再审，结论为 **CONFIRMABLE**。
+
+- 错字段名旁路在 C#、Swift 两端均稳定 FAIL。
+- 三端矩阵恢复：TS 13/13、Swift 12/13、C# 12/13。
+- 所有临时源码改动均已还原，目标源码无残留 diff。
+- 审查报告：[T-053-output.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-053-output.md)
+diff --git a/.hopper/handoffs/T-053-output.md b/.hopper/handoffs/T-053-output.md
+index d449b8cc968b833a1336514cb8b0cda9967758ad..101f80d091309a5867df720c46b2d43b49f315a5
+--- a/.hopper/handoffs/T-053-output.md
++++ b/.hopper/handoffs/T-053-output.md
+@@ -1,28 +1,53 @@
+----
+-task_id: T-053
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 12834
+-start_time: "2026-07-24T19:25:59.293Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-24T19:25:59.294Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-053-progress.log
+-raw_log: ./T-053-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-053-output.log
+-started_by_pid: 12832
+----
++## Summary
++
++已完成 commit `2a60b010` 对 T-052 唯一阻断的确认性再审：C#、Swift runner 均无条件剥除 native payload 拷贝中的 `message` 与 `text`，且只在真实捕获到 `message` 时重建规范化 `text`。T-052 的原始错字段名复现在两端都由修复前的 PASS 变为确定性 FAIL；正确 `message` 路径和三端完整矩阵保持原结果。未发现新缺陷，SG-8.7 ★审查闸2 可通过。
+ 
+-# T-053 — codex (background, in-progress)
++## Files touched
+ 
+-Output streaming to `T-053-output.log`. Status updates here.
++- `.hopper/handoffs/T-053-output.md`：本次只读确认性再审产物。
++- 评审对象源码：none。两份生产 client 仅做了任务授权的单行临时证伪，随后用 `git checkout -- <精确路径>` 还原并以 blob/hash、正向重编译单跑复核。
++
++## Acceptance verification (2/2)
++
++1. **旁路真闭合：通过。**
++   - C# `app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs:659-665`：进入 `sessions.send` 分支后先执行 `payload.Remove("message", out var message)` 与 `payload.Remove("text", out _)`，仅当 `hasMessage` 为真才写 `payload["text"] = message`。
++   - Swift `app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift:625-630`：同构地先 `removeValue(forKey: "message")`、再移除 `"text"`，仅 `if let message` 时写回 `"text"`。
++   - 唯一性扫描：
++     `rg -n 'payload\\.Remove\\(\"message\"|payload\\.Remove\\(\"text\"|payload\\[\"text\"\\]\\s*=|payload\\.removeValue\\(forKey: \"message\"|payload\\.removeValue\\(forKey: \"text\"' app/contracts/d2/fixtures/csharp-runner app/contracts/d2/fixtures/swift-runner`
++     只命中上述 C# `:661-664` 与 Swift `:626-629` 各一组可执行 remap；两 runner 中无其它同类 message→text 碰撞旁路。
++   - C# 原始反证：临时把 `app/kernel-client/csharp/OpenclawGatewayKernelClient.cs:336` 的 `["message"]` 改成 `["text"]`，运行
++     `dotnet build --nologo && dotnet run --no-build -- ../operation-outcome/stop-active-run-succeeded.json`。
++     build 为 `0 Warning(s) / 0 Error(s)`；真实 outbound 打印 `{"key":...,"text":"run something long","timeoutMs":0}`；runner 退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，明确报
++     `expect_outbound(send1).payload.text: 期望 "run something long"，实际 nil`。这条修复前为 PASS 的旁路现已关闭。
++   - Swift 同构反证：临时把 `app/kernel-client/swift/OpenclawGatewayKernelClient.swift:338` 的 `"message"` 改成 `"text"`，重新 `swiftc` 后单跑同一 fixture。真实 outbound 同样只含错误 `text`；进程退出码 **1**，结果 `0 PASS / 1 FAIL / 0 DEGRADED`，同样报 `expect_outbound(send1).payload.text ... 实际 nil`。
++   - 两份临时改动均已还原。还原后的文件 blob 与 HEAD 完全一致：C# 均为 `3992e0f13a79b3309a9c8dfc640d042ed5cd65e5`，Swift 均为 `3a03362fd2d0ca38666ea7a05efc87a2b696e133`；再重编译单跑同一 fixture，两端均退出 0、`1 PASS / 0 FAIL / 0 DEGRADED`。
++
++2. **收残无新缺陷 + 三端恢复：通过。**
++   - 正确 native `message` 路径语义不变：两端先保存捕获值、清除原键和潜在碰撞键、再把保存值写回 `payload.text`。还原后正向单跑的真实 outbound 均含 `"message":"run something long"`，且 C#/Swift 都 PASS。
++   - TS：
++     `find app/contracts/d2/fixtures -name '*.json' -not -path '*/bin/*' -not -path '*/obj/*' | sort | xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`
++     退出码 0，13 条全部 `[PASS]`，最终 `ALL PASS`。
++   - Swift：按 README 的 `swiftc` 完整输入集编译到 `/tmp/T-053-swift-fixture-runner` 后无参数运行，退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 仍为 `soft-steer-then-stop`，原因仍是 SG-5 `interrupt` TODO。
++   - C#：在 `app/contracts/d2/fixtures/csharp-runner` 运行
++     `dotnet build --nologo && dotnet run --no-build`，build 为 `0 Warning(s) / 0 Error(s)`，runner 退出码 0，最终
++     `12 PASS / 0 FAIL / 1 DEGRADED（共 13 条 fixture）`。唯一 DEGRADED 与 Swift 为同一 fixture、同一 `interrupt` 原因。
++   - 因而 strict 剥键未改变现有 13 条 fixture 的正确路径语义，三端矩阵恢复为 TS 13/13 + Swift 12/13 + C# 12/13。
++
++## Decisions / deviations
++
++- 为确保 C# 临时源码改动确实进入 `--no-build` 所执行的程序集，先运行了允许的 `dotnet build --nologo`，再执行任务指定的 `dotnet run --no-build`；Swift 端同理重新编译后再单跑。
++- Swift 编译仍报告 3 条既存的 “no async operations occur within await expression” warning；它们不位于本提交修改分支，完整矩阵和定向复现均不受影响，未视为本轮新缺陷。
++- 审查开始时工作树已有 `.hopper/handoffs/leader-tasklist.md`、`.hopper/queue.md`、`kernels/openclaw` 及 hopper 日志/占位输出状态；本轮未改动这些既有项。仅使用 `dotnet build/run`、`node`、`swiftc`，未使用 `csi` 或 `dotnet-script`。
++
++## Open questions
++
++none
++
++## Verdict
++
++CONFIRMABLE
++
++## Next recommendation
++
++通过 SG-8.7 ★审查闸2并将 SG-8.7 主体标记为达成；后续可把本次两端“生产 client 将 `message` 错改为 `text` 时必须 FAIL”的反证固化为维护期 teeth，但不阻塞本次收口。
+diff --git a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+index 3992e0f13a79b3309a9c8dfc640d042ed5cd65e5..3b45c46be309c505c36e120b98e386cedc0e0f9d
+--- a/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
++++ b/app/kernel-client/csharp/OpenclawGatewayKernelClient.cs
+@@ -333,7 +333,7 @@
+                 var parameters = new JSONObject
+                 {
+                     ["key"] = kernelKey,
+-                    ["message"] = ResolveSendMessageText(input),
++                    ["text"] = ResolveSendMessageText(input),
+                     ["timeoutMs"] = 0L,
+                 };
+                 // F2：attachment 改发 openclaw 期望的 `content`（base64）编码。
+diff --git a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+index 3a03362fd2d0ca38666ea7a05efc87a2b696e133..a265256386df555bc8a37b9730a89a68031067d2
+--- a/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
++++ b/app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+@@ -335,7 +335,7 @@
+ 
+         var params: JSONObject = [
+             "key": kernelKey,
+-            "message": resolveSendMessageText(from: input),
++            "text": resolveSendMessageText(from: input),
+             "timeoutMs": 0,
+         ]
+         // F2 rework：openclaw `gateway/server-methods/attachment-normalize.ts:29-56`
+
+tokens used
+75,468
+已完成 T-053 确认性再审，结论为 **CONFIRMABLE**。
+
+- 错字段名旁路在 C#、Swift 两端均稳定 FAIL。
+- 三端矩阵恢复：TS 13/13、Swift 12/13、C# 12/13。
+- 所有临时源码改动均已还原，目标源码无残留 diff。
+- 审查报告：[T-053-output.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-053-output.md)

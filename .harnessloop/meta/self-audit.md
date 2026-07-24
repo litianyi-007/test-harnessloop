@@ -601,3 +601,63 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 - Reason: 本轮未发现新的 harnessloop 框架缺陷；本轮暴露的两个技术层观察点（codex 因自身 cybersecurity 过滤器中止评审、grok 尾部 auth-fail 先例的延续记录）属于 **hopper vendor 边用边验证** 范畴——已按 CLAUDE.md 既定纪律记录（未采信 exit code/自述、已改派同池另一 vendor），是本项目"边用边验证插件"产出的一部分，不构成 harnessloop 协议本身的缺陷；是否需要 hopper 插件侧新增"vendor 因自身安全策略中止时的自动改派"能力，留待 hopper 后续迭代评估，非本轮 harnessloop evolution-issue 范围
 - Issue path: 无新增（codex 安全过滤器中止评审的观察点记于 rounds/0005/round-summary.md Open Risks 与本条 Loop Health「Handoff stagnation」；如后续需针对 hopper 插件本身开 issue，走 hopper 插件自身的迭代回路，非本 harnessloop evolution-issue 通道）
 - Redaction notes: 无涉密内容（仅引用 commit 短号、hopper task ID、事件字段名；凭证值未出现在本文件）
+
+---
+
+# Self Audit
+
+## Audit Metadata
+
+- Audit ID: AUDIT-20260725-ROUND0006-SG87-PARITY
+- Trigger: round-close rounds/0006
+- Active goal: 20260718-002-agent-app
+- Active round: 0006（SG-8.7 金标 parity runner 补齐，主体达成 + Stage C 结转）
+- Auditor: main session（claude-sonnet-5）
+- Timestamp: 2026-07-25
+
+## Loop Health
+
+| Check | Status | Evidence path | Notes |
+| --- | --- | --- | --- |
+| Dead loop risk | pass | rounds/0006/scope-lock.md; rounds/0006/round-summary.md | 本轮是本项目收残轮次最多的一轮（Stage A 2 轮 rework、Stage B 1 轮 rework），但每一轮均有**新证据**支撑且逐步收敛——Stage A：T-048（REWORK，臆造字段）→ 收残 → T-050（确认性再审，MUST-FIX，5 处更深层表面绕过）→ 收残 → T-051（换异构视角，CONFIRMABLE）；Stage B：T-052（REWORK，remap 假绿旁路）→ 收残 → T-053（确认性再审，用原始复现验证翻转，CONFIRMABLE）。收敛守卫（同阶段第 3 轮 MUST-FIX 即停报）设置但两个 Stage 均**未触发**（各自在第 2 轮内收敛），非死循环 |
+| Self-contradiction | pass | rounds/0006/round-summary.md; rounds/0006/decision.md; goal-breakdown.md SG-8.7/SG-5 行 | 无矛盾：SG-8.7 主体 done（Stage A+B）与 Stage C 明确结转两处表述一致；SG-5 行补注的 `stop()` D1§6.2 缺口修复与 rounds/0005 原有的"done"verdict 不冲突（修复的是本轮形式化 parity 才发现的新缺口，非推翻 rounds/0005 判定，已在两处如实注明） |
+| Goal drift | pass | rounds/0006/scope-lock.md | 未偏离 scope-lock 目标（三端 runner + 三组 fixture 全集 + 跨端 parity）；SG-5 `stop()` 定向修复属 scope-lock 预先写好的「Scope 扩张记录」条款下的 user-confirmed 扩围（AskUserQuestion 现场确认，2026-07-24），非静默漂移；Stage C defer 属 scope-lock 预先声明的诚实分层判断，非临时回避 |
+| Evidence drift | pass | state/evidence-index.md E17 | 新增 E17 覆盖 SG-8.7 三端 parity runner 交付物，无 stale |
+| Validation drift | pass | rounds/0006/scope-lock.md「Verification Commands Or Checks」；rounds/0006/round-summary.md | 验证方法（三端 runner build/run + Ajv 校验 + ★审查闸 hopper 派发 + 破坏性反证 teeth）已在 scope-lock 中显式列出并在 round-summary 中逐项对照回填，非静默变更；teeth 纪律本轮首次系统化（每处收残均配破坏性反证），已显式记录为本轮方法论升级而非隐藏要求 |
+| Handoff stagnation | pass | `.hopper/queue.md` T-048~T-053 | 6 个 hopper 派发全部已闭合（无 failed，本轮 codex 全部正常产出 verdict）；无 open handoff 停滞 |
+| Cost/context runaway | pass |  | 源码/fixture/对抗审 handoff 走 `app/contracts/d2/fixtures/`、`.hopper/handoffs/`，主会话摘要引用，未把大量原始日志灌入本文件 |
+| Recoverable blocker stalled | pass | rounds/0006/round-summary.md | 本轮无 blocker；SG-5 `stop()` 缺口发现后未擅自扩围，而是停下用 AskUserQuestion 交用户裁定，随即解除，非停滞 |
+
+Status values: `pass`, `warn`, `fail`, `unknown`.
+
+## Deterministic Signals
+
+| Signal | Current value | Previous value | Threshold | Status |
+| --- | --- | --- | --- | --- |
+| Recent feedback sequence | positive（round 0006，SG-8.7 主体达成，轮内经历 Stage A 2 轮 rework + Stage B 1 轮 rework，均有新证据支撑，非重复无新证据的 neutral/negative） | positive（round 0005，SG-5 完整化） | no repeated neutral/negative without new evidence | pass |
+| Repeated next action count | 1（本轮首次对 SG-8.7 执行 continue 驱动全流程，非重复） | 1（rounds/0005 提议 SG-3/SG-7/SG-8.x） | max 2 identical actions | pass |
+| Scope-lock version | rounds/0006 v1（新建，SG-5 `stop()` 修复属其预写的「Scope 扩张记录」条款下扩围，未另建 v2） | rounds/0005 v1 | must change after failed action unless rollback | pass |
+| Goal contract version/hash | goal-breakdown SG-8.7 行 pending→主体 done（显式记录 Stage A/B + 两 ★审查闸 + Stage C 结转），SG-5 行补注 stop() 修复，首批目标表头追加 rounds/0006 摘要，均显式留痕，非静默变更 | 前值（SG-8.7 行 pending，SG-5 行无 stop() 补注） | no silent change | pass |
+| Threshold version/hash | 本批未改动 thresholds.md（沿用既有 SG-8.7 行验证方法，记于 scope-lock/round-summary，未新增独立阈值行） | 前值 | no silent change | pass |
+| Verification command set | 新增三端 runner build+run（swiftc/dotnet/node）+ Ajv 2020 严格校验 + hopper 派 codex/grok 异构对抗审序列（T-048~T-053）+ 逐处破坏性反证 teeth，显式记于 round-summary.md | 既有 swiftc/dotnet build+test、hopper 派发序列等 | no silent change | pass |
+| Stale evidence count | 0（E17 新鲜） | 0 | 0 for acceptance | pass |
+| Open handoff age | 0（T-048~T-053 六个均已闭合，均 done 无 failed） | 0（T-044~T-047，其中 T-046 failed 已改派） | project-defined | pass |
+| Main-session raw context risk | 低（源码/fixture/对抗审 transcript 走 `app/contracts/d2/fixtures/`、`.hopper/handoffs/`，主会话摘要引用） | 低 | raw logs stay in evidence files | pass |
+| Delegation model/effort verified | 写码（Stage A/B 实现与两次收残 + SG-5 stop() 定向修复）由主会话 claude-sonnet-5 子代理执行（code-impl 绝不派第三方），未派第三方 vendor；关键节点独立审查（★审查闸1/2）按既定规则 hopper 派 codex/grok 随机池，本轮**首次系统性验证"teeth 纪律"（每处收残配破坏性反证）作为交付标配的可行性**——多次临时改坏代码确认目标 fixture 真 FAIL、还原后确认 diff 干净，含主会话亲手验证一次；异构对抗审"每轮补上一轮盲区"机制再次实证（T-052 补上 T-051 证伪范围未覆盖的"字段错名"盲区） | 历轮同规则；rounds/0005 首次系统性验证"continue 驱动+关键节点独立审查"机制 | required for high-risk delegation | pass |
+| Recoverable blocker next action | 不适用（无 blocker；SG-5 stop() 缺口发现后已现场确认解除，非停滞） | 同 | read-only investigation before user pause | pass |
+
+## Local Repair Decision
+
+- Required repair: 无——本轮延续 rounds/0002-0005 建立的做法，SG-8.7 先有 scope-lock（rounds/0006/scope-lock.md）再执行，收盘时完整走 round-summary → decision → state 回写（current.md/evidence-index.md/goal-breakdown.md/self-audit.md），闭环完整、无绕开；本轮额外验证了两点：①"绿灯≠真 parity"这类表面绕过在多轮独立审查下会被层层挤出——T-048 揪臆造数据、T-050 揪断言机制层面的表面绕过、T-052 揪同类问题在 Stage B 的变体且反哺 Stage A 权威端的盲区；②"每处收残配破坏性反证（teeth）"从本轮起可作为交付标配沉淀为惯例，成本可控且显著提升收残可信度
+- Smallest safe next action: 待选 **SG-3**（codegen 增量：CI 冒烟挂接 + type-level 断言）/ **SG-7**（hermes per-session key 接线）/ **SG-8.x**（PRE-1/3/7 runtime 探针）/ **Stage C**（D4 §4.6 产品行为 parity 首批，本轮明确结转的独立工作包）/ 副发现处理，继续逐个走 round 闭环
+- Blocker type: none
+- Recovery eligible: 不适用（无 blocker）
+- Human confirmation required: 否（SG-8.7 主体本身已完整交付；下一步 SG 选择待后续与用户或主会话统一裁定，不阻塞本轮收盘）
+- Block execution until repaired: 否
+
+## Evolution Issue Decision
+
+- Create upstream evolution issue: no
+- Reason: 本轮未发现新的 harnessloop 框架缺陷；本轮五个值得沉淀的观察点均属项目/委派实践层面而非框架缺陷——①"绿灯≠真 parity"被三轮异构审查层层挤水（T-048 臆造字段 / T-050 表面绕过 / T-052 remap 旁路），且主会话自己的独立复验两次漏掉了跨端问题（Stage A 初版只跑了 Swift 单端未验 TS 跨端一致；Stage B 初版只验证了字段"错值"未验证字段"错名"），说明异构对抗审在这类"实现方自己既是选手又是裁判"的场景下是不可替代的纠错层，非框架缺陷而是委派模式的既有价值再次实证；②下游揭上游模式第 6+ 例（SG-5 `stop()` D1§6.2 缺口，rounds/0005 三轮对抗审全部漏掉），属既有观察模式的延续，非新框架问题；③teeth 纪律（破坏性反证）从 T-050 起成为本轮交付标配，值得作为项目内工程实践沉淀，但不是 harnessloop 协议层面的缺陷或缺口；④收敛守卫在 Stage A/B 两处均设置但未触发，机制本身正常运作；⑤hopper codex 工具约束（评审时禁跑 `csi`）延续有效，是 hopper 插件"边用边验证"产出的正面数据点，非 harnessloop 范畴。上述观察点均已记于 rounds/0006/round-summary.md 与 decision.md，不构成需要新开 harnessloop evolution-issue 的框架级缺陷
+- Issue path: 无新增
+- Redaction notes: 无涉密内容（仅引用 commit 短号、hopper task ID、字段名；凭证值未出现在本文件）
