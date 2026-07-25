@@ -29,7 +29,7 @@ rounds/0010 的验收边界由 scope-lock 明确为一件事：把 rounds/0008/0
   - **hermes session/load 静默失败 bug 上游处置**（报/不报 hermes issue）→ 待用户决策，wiki `research/pre1-hermes-source-conformance.md` §4.3 已备中立建议草案。
   - **D3 mint HTTP 501**（`newapi_token_id_lookup_unresolved`）→ 本轮只再确认登记状态，解除仍是 D3 业务面（第二批候选）待办。
   - **validate-schemas 实例校验缺口**（发现⑤）→ 应用侧 codegen 工具链待办，建议登记独立 harnessloop evolution issue 或结转后续 SG，非本轮 scope。
-- **side work（并行，非本轮 scope）**：用户指定的 harnessloop plugin 自主驱动能力评估调研（T-058 codex + T-059 grok + 主会话合成）与本轮同期完成，交付 `docs/harnessloop-evaluation-20260726.md`（commit `567d6bc1`）。与 SG-11 scope 无交叉，如实记录不计入本轮验证范围。
+- **side work（并行，非本轮 scope）**：用户指定的 harnessloop plugin 自主驱动能力评估调研（T-058 codex + T-059 grok + 主会话合成）与本轮同期完成，交付 `docs/harnessloop-evaluation-20260726.md`（commit `c6365aa7`）。与 SG-11 scope 无交叉，如实记录不计入本轮验证范围。
 - **下一步**：第二批 SG 方向已于 rounds/0009 收盘时 user-confirmed（主线＝SG-10 Mac UI 壳优先；随行项全选＝SG-11 conformance 修正批+SG-12 defer 修复轮+SG-13 hermes ACP 适配器+SG-14 Stage C 产品行为 parity），SG-11 完成后**下一 continue 应开 SG-10 Mac UI 壳主线 L1**（第二批主线启动），SG-12/13 按批次序建议穿插其间，非本轮擅自新裁定。
 
 ## Open Questions Resolved

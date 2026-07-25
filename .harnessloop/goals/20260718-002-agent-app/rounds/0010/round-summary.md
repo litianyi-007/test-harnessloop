@@ -28,7 +28,7 @@
 
 **处方级收残**：主会话照 codex 处方逐条修正——对照表行号更新为 `L112`/`L43`/`L263-304`（已复核对应当前 commit 的实际行位），d6-newapi-integration.md 与对照表内的多余花括号均已删除（commit `2ee61d2b`）；用 codex 报告中给出的复现命令（`nl -ba research/pre1-hermes-source-conformance.md`、`git show da764f8^:architecture/d6-newapi-integration.md | nl -ba | sed -n '263p'`）自行复验，结果与处方一致。**按 T-030 先例，纯机械精度的处方级 MUST-FIX 收残后不再触发二次送审 gate**（7 项主体事实本身未受质疑）。
 
-**并行 side work（同期，非本轮 scope，如实记）**：用户指定的 harnessloop plugin 自主驱动能力评估调研（T-058 codex + T-059 grok 双轨 + 主会话第一手合成）与本轮并行完成，交付 `docs/harnessloop-evaluation-20260726.md`（commit `567d6bc1`）：光谱定位"证据化控制协议非自主引擎"、14 条问题（S0×3）、12 条候选 evolution issues、3 条保留价值；过程中修 hopper `--search` 旗标漂移（`dispatch.js` env 旁路，submodule 内待正式版本流程）。此调研与 rounds/0010 SG-11 scope 无交叉，仅在同一时间窗口内推进，不计入本轮 scope-lock 验证范围。
+**并行 side work（同期，非本轮 scope，如实记）**：用户指定的 harnessloop plugin 自主驱动能力评估调研（T-058 codex + T-059 grok 双轨 + 主会话第一手合成）与本轮并行完成，交付 `docs/harnessloop-evaluation-20260726.md`（commit `c6365aa7`）：光谱定位"证据化控制协议非自主引擎"、14 条问题（S0×3）、12 条候选 evolution issues、3 条保留价值；过程中修 hopper `--search` 旗标漂移（`dispatch.js` env 旁路，submodule 内待正式版本流程）。此调研与 rounds/0010 SG-11 scope 无交叉，仅在同一时间窗口内推进，不计入本轮 scope-lock 验证范围。
 
 **收敛守卫**：1 次 MUST-FIX（阈值 3），未触发——处方级收残即闭合，未进入返工循环。
 
