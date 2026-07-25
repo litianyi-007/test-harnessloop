@@ -1087,3 +1087,46 @@ hopper 默认 timeout 处理。
 
 **Verdict**:`PASS`(SG-8 收尾批证据成立→SG-8 整体可收官)| `PASS_WITH_NOTE` | `REWORK`(逐条 + 可复现)| `FAIL`。
 **产出**:五项逐条 + 对 #1 的明确判定建议 + verdict。落盘 `.hopper/handoffs/T-057-output.md`。**Read-only**:不改任何文件;可只读跑探针复现但勿新增 LLM 计费调用、勿动 new-api 资源;忽略跨仓/别目录全局 skill。中文。
+
+## T-058（harnessloop plugin 自主驱动能力评估调研，codex 轨）/ T-059（同题，grok 轨）
+
+**Task-type**: `prd-research` · 双轨同题独立(T-058=codex / T-059=grok,互不知晓对方产出) · **只读**(纯文档/源码分析,不运行 app/内核/不动任何状态文件)
+
+**背景**:本仓(test-harnessloop)是 harnessloop plugin 的验证项目——"app 是手段,harnessloop 的迭代验证才是目的"。goal 002 已用「continue 驱动 + 关键节点独立审查」模式跑完 10 个执行轮(rounds/0001-0010,首批 SG-1..SG-9 全清),留下完整真实使用记录。现在需要一份**plugin 自主驱动能力评估调研报告**:harnessloop 在"自主驱动 goal 达成"上的真实表现、问题、改进空间——结合其 workflow 特点逐项对照实际使用。**不要求提出后立即改进,这是评估调研。**
+
+**语料(全部只读)**:
+1. **plugin 源码**:`harnessloop/plugins/harnessloop/skills/`(harnessloop-loop/continue/status/goal/evidence/issue/delegation/setup/secrets/intake 等各 SKILL.md + `harnessloop-loop/scripts/{check_setup.py,verify_protocol.py}`)——workflow 的设计意图与机械门实现。
+2. **真实使用记录**:`.harnessloop/goals/20260718-002-agent-app/`(goal.md/goal-breakdown.md/thresholds.md + rounds/0001-0010 各 scope-lock/round-summary/decision/evidence)、`.harnessloop/state/`(current.md/evidence-index.md/control-contract.md 等)、`.harnessloop/meta/self-audit.md`(**AUDIT-* 条目是金矿**——每轮如实记录的机制观察)。
+3. **旁证**:`.hopper/queue.md` + `handoffs/T-044..T-057`(独立审查闸的真实运转记录)、`docs/validation-log.md`(早期验证记录)、git log(主仓库 commit 叙事)。
+
+**核心评估问题(逐项给判断+证据引用,不预设答案)**:
+1. **驱动力归属**:continue gate 的"allowed next action"判定中,有多少决策实际由协议/skill 产生,多少是主会话(LLM)自行补位?(选哪个 SG/怎么分阶段/审查闸设在哪/收敛守卫/措辞纪律——这些在协议文本里有依据吗,还是会话自创?)"continue 驱动"的自主性真实成色几何?
+2. **状态文件工程性**:current.md/goal-breakdown.md 的行级巨块化(单元格当叙事文档用)、同一事实多处重复书写(current/goal-breakdown/round-summary/decision/evidence-index/self-audit 六处)、机器可读性、随轮次线性膨胀——对长期 goal 的可持续性影响?
+3. **机械门能力边界**:check_setup.py/verify_protocol.py 实际能挡什么、挡不了什么?(旁证:rounds/0009 scope-lock 路径缩写触发 false violation;业务真实性/证据质量完全靠会话自设的异构审查闸——协议对"审查质量"有无内建支撑?)
+4. **收官成本**:每轮收官六件套回写的重复劳动量、一致性风险、协议有无模板化/自动化支撑?
+5. **feedback 分类与收敛**:positive/negative/neutral/blocked 四分类的区分度;rework-loop 收敛(3rd MUST-FIX checkpoint)是协议内建还是会话自设;评审 verdict(REWORK/PASS_WITH_NOTE/CONFIRMABLE)与 feedback 分类的映射是否有协议依据?
+6. **实效正面清单**:scope-lock 前置/Rollback Condition/诚实分层 defer 文化/evidence-index 可追溯性/setup 门——哪些被实际使用记录证明有效?(有实例:SG-5 stop 缺口触发 rollback 条款停下问用户)
+7. **低使用率机制**:harnessloop-issue(evolution issue)/delegation gate/intake 等在 10 轮里的实际使用率与原因?
+8. **自主性上限**:若要让"continue 驱动"更自主(减少主会话自由裁量、减少人肉一致性维护),workflow 层面有哪些结构性改进方向?(如:结构化 state/自动收官回写/round 模板/审查闸协议化/成本感知)
+
+**产出(落盘各自 output.md)**:
+- 逐项评估(每项:判断+证据引用[file:line 或轮次实例]+置信度)
+- **问题清单**(按严重度排序,每条:现象/根因/影响/改进方向)
+- **核心价值保留清单**(改进时不能丢的东西)
+- 一段总评:harnessloop 当前形态在"自主驱动 goal 达成"光谱上的位置(纯记账协议 ←→ 真自主驱动引擎)
+
+**Read-only**:不改任何文件;忽略跨仓/别目录全局 skill;不运行 app/内核。中文。T-058 落 `.hopper/handoffs/T-058-output.md`,T-059 落 `T-059-output.md`。
+
+## T-060（rounds/0010 SG-11 conformance 修正批 确认审，单 codex）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（轮换,T-057/059 为 grok）· 只读
+
+**评审对象**：design wiki `~/.llm-wiki/agent-app-design` commit `da764f8`（`git -C ~/.llm-wiki/agent-app-design show da764f8`,4 文件:pre1-openclaw-source-conformance.md 新 §4/§5、pre1-hermes-source-conformance.md §1.7+新 §4、kernel-ecosystem-facts.md 事实④⑤、d6-newapi-integration.md v4 修正）+ 修正对照表 `.harnessloop/goals/20260718-002-agent-app/rounds/0010/evidence/correction-table.md`。真值 = `rounds/0009/evidence/track-{a,b}-*.md` + `.hopper/handoffs/T-055/T-057-output.md` + `app/kernel-client/HERMES-RUN-EVIDENCE.md`。scope-lock `rounds/0010/scope-lock.md`。
+
+**只验四件事**:
+1. **修正忠实性**:7 项修正逐条与真值一致(数字/file:line/结论无漂移无夸大)?抽验关键项:C-1 ack 不可区分的 chat-send-handler.ts:270-288 源码引用、C-4 sessions-messaging.ts:379-389、hermes session/load 根因链、new-api 两处 API 实况修正。
+2. **无契约语义夹带**:D1/D2/D5 契约文本零改动?"C-1/C-4 落在 D1 §11 预写分支上、二态不变"的判断成立吗(读 D1 §11 对应段核实)?
+3. **修订标注与上游建议**:4 文件修订标注+出处引用齐全、frontmatter updated 更新?hermes 上游处置建议段(§4.3)是否中立(报的草案要点 vs 不报理由并列,决策留用户,无倾向性夹带)?
+4. **无落点判定**:validate-schemas 项"wiki 无落点"的检索结论可信(D4/facts 确无相关断言叙述)?
+
+**Verdict**:`CONFIRMABLE`(SG-11 可收官)| `MUST-FIX`(逐条 file:line + 可复现)。落盘 `.hopper/handoffs/T-060-output.md`。**Read-only**:不改任何文件(wiki 尤其);忽略跨仓/别目录全局 skill。中文。
