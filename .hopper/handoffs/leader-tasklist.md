@@ -1020,3 +1020,21 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（旁路真闭合+无新缺陷 → ★审查闸2 过、SG-8.7 主体达成）| `MUST-FIX`（问题点 + file:line + 可复现）。
 **产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-053-output.md`。**Read-only**：审查不改文件（证伪临时改动必须还原并说明）；忽略跨仓/别目录全局 skill。中文。
+
+## T-054（rounds/0007 SG-3 增量 + CI 守门 对抗审，单 grok）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: grok（轮换,T-052/053 为 codex）· 只读
+
+**评审对象**（主仓库 commit `133b52da`,已 push,真实 CI run `30149090936` 双 job 绿）：`.github/workflows/ci.yml`（全仓首个 CI）+ `app/contracts/d2/codegen/`（`package.json` 新 scripts/`scripts/verify-type-fidelity-{swift,csharp}.mjs`/`scripts/verify-csharp.mjs` 硬失败开关/`verify/swift/type-fidelity.swift`/`verify/csharp-type-fidelity/`/`verify/ts/{type-fidelity.ts,type-fidelity-known-gap.ts}`/README）。`git show 133b52da`。可用 `gh run view 30149090936` 看真实 run。
+
+**背景**：SG-3 增量(EmptyPayload/WireCapabilityDescriptorPayload type-level 断言,此前零命中)+ SG-8.6 主体(codegen 冒烟幂等/openapi/verify:csharp CI 硬失败/三端 parity runner 挂 CI/app-server jest)。断言驱动揪出 SG-1 真实缺陷:TS 生成 `interface EmptyPayload {}` 是裸 {} 类型接受任意非空值——**defer 未修**(rollback 条款),证据保留 `type-fidelity-known-gap.ts`(不入 CI),CI 只断言成立的半边;次级发现 Swift/C# 解码边界静默忽略未知键(记 defer)。由 Sonnet 所写,主会话已独立复验三端断言+teeth+gen 幂等,需异构对抗复核。
+
+**对抗核验重点(证伪"CI 绿灯是否真的会红")**：
+1. **workflow 无放水**:逐 step 检查 ci.yml——有无 `continue-on-error`/`|| true`/`if: always()` 类软化?每 step 失败是否真红?`git diff --exit-code -- app/generated/` 幂等守门是否在 gen 步之后、能抓住生成器漂移?**证伪**:本地模拟(如临时改一个生成产物文件→diff 步应非零;临时让某 verify 脚本 exit 1→链应断)。
+2. **verify:csharp 硬失败真硬**:`CI=true` 时 dotnet 缺失/失败是否真 exit 非零(可本地 `CI=true PATH=<无dotnet> node scripts/verify-csharp.mjs` 复现)?本地(无 CI env)软跳过行为是否保持?
+3. **type-fidelity 三端负例真实性**:Swift `-D` 开关/C# `DefineConstants`/TS `@ts-expect-error` 的负例是否真编译失败(可各跑一遍)?正例 control 是否真过?有无"断言断了个寂寞"(如断言目标类型名错、负例根本没引用生成产物)?注意 Swift 侧生成类型名是 `Capabilit`(quicktype 截断命名)——断言是否真锚在 capability_changed 的 capabilities 载荷类型上?
+4. **ubuntu 拆解 gen 链 deviation**:实现者未在 ubuntu 跑单条 `npm run gen`(含 swiftc 步不可行),改为逐 script 拆步、Swift 三步只在 macos——对照 package.json 的 gen 全链清单,**ubuntu+macos 两 job 并集是否覆盖 gen 链全部步骤无遗漏**?幂等 diff 守门在拆解后是否仍守得住(gen:swift/gen:csharp 在 ubuntu 跑过再 diff)?
+5. **defer 处理诚实性**:TS EmptyPayload 缺陷的 defer 是否如实(known-gap 文件真能演示缺陷/未被偷偷接入 CI 造成常红或用 ||true 掩盖)?README 文档化是否与实况一致?解码边界发现是否如实标注为未解决?
+
+**Verdict**：`PASS`（CI 守门真有牙齿 → rounds/0007 可收官）| `PASS_WITH_NOTE` | `REWORK`（逐条 file:line + 可复现）| `FAIL`。
+**产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-054-output.md`。**Read-only**：证伪临时改动必须还原并说明；忽略跨仓/别目录全局 skill。中文。
