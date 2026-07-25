@@ -61,6 +61,8 @@
 >
 > **执行纪律（既定规则，非本次新增）**：实现类写代码（`code-impl`）绝不派第三方 vendor（codex/grok 仅用于对抗/验收评审与研究），一律由主会话的 claude-sonnet-5 子代理执行。app 代码统一落盘至主仓库 `app/` 目录，遵循 D4（`architecture/d4-cross-platform-arch.md`）已定稿的 monorepo 骨架（各端原生 client + 共享 D2 契约/codegen 产物/金标 parity fixtures）。
 
+**批次记录**：首批（PRE-1..PRE-7 + SG-1..SG-9）已于 2026-07-26（rounds/0009 收盘）全部主体完成，详见下方「首批开发子目标」表与「SG-8 验收清单」。第二批（SG-10..SG-14）已于 2026-07-26 user-confirmed 注入（AskUserQuestion：主线＝Mac UI 壳优先；随行项全选＝conformance 修正批 + defer 修复轮 + hermes ACP 适配器 + Stage C 产品行为 parity），详见下方「第二批开发子目标（SG-10..SG-14）」小节。
+
 ### PRE-① 源码核验部分完成（2026-07-22）
 
 针对 6 项前置中跨设计影响面最广的 **PRE-2/CO-02（C-3）**，以及 T-009 spike 遗留的 openclaw/hermes steer 事实，本轮完成一次**只读源码核验**（非真实环境 live-probe）——对本地 checkout `kernels/openclaw`（HEAD `bb3f6c56cd92348fdcc36d1d0eb1e694b053c964`，origin 确认官方 `openclaw/openclaw`）与 `kernels/hermes`（HEAD `17155e3a`）做定向源码深挖，产出 PR 设计 wiki `research/pre1-openclaw-source-conformance.md`/`research/pre1-hermes-source-conformance.md`：
@@ -152,6 +154,18 @@
 
 - **SG-8.7 金标 parity runner 补齐（横切）**——**主体 done（2026-07-25，rounds/0006）**：runner 落点据实归位到 `app/contracts/d2/fixtures/{ts,swift,csharp}-runner/`（非本行原文旧指向的空 `app/parity/`——TS runner 已在此，Swift/C# 新建亦共址，比另立 `app/parity/` 反向 import contracts 更内聚，已在 rounds/0006/scope-lock.md 中记录归位）。三端（TS/Swift/C#）runner 均驱动 SG-5 交付的真实 client（非 mock），fixture 从 2 扩到三组全集 13 条（审批五态 FSM 3 条 + `OperationOutcome` 七态全集 6 条 + `SessionLockState` 四态 3 条 + basic 1 条），三端 parity 矩阵：**TS 13/13 + Swift 12/13 + C# 12/13**（同一 `expected`，唯一 1 条 DEGRADED 同因于 `interrupt()` 仍是 SG-5 桩，两个 native 端遇到同一已知产品缺口，非三端不一致）+ Ajv 2020 严格校验 34/34。**经两个 ★审查闸、共 5 次异构对抗审、2 轮+1 轮 rework 收敛**：★审查闸1（Stage A）经 codex T-048 REWORK（7 条 fixture 塞臆造 `_openclaw*` 私有字段致 TS 金标假绿 2/12）→ 收残 `1c320553` → codex T-050 确认性再审 MUST-FIX（5 处"绿灯≠真 parity"表面绕过：自构 request 非真捕获/force-deny 空转 oracle/不断言 RPC 顺序/非法枚举/漏 `seq`）→ 收残 `98d38e0e`（治根+逐处破坏性反证自验）→ grok T-051 换异构视角 CONFIRMABLE，Stage A 终收；★审查闸2（Stage B）经 codex T-052 REWORK（`NormalizeNativeParams` 条件 remap 假绿旁路，Swift 权威端同病）→ 收残 `2a60b010`（两端 strict 剥键）→ codex T-053 用原始复现两端验证修复前后 PASS/FAIL 翻转，CONFIRMABLE，★审查闸2 通过。收敛守卫（同阶段第 3 轮 MUST-FIX 即停报）全程未触发。**副产（下游揭上游第 6+ 例）**：形式化 parity 揪出 SG-5 `stop()` 真实 D1 §6.2 force-deny 缺口（rounds/0005 三轮对抗审全部漏掉），user-confirmed 定向修复 `ed90f138`（+ NOTE-A drain-loop 加固，grok T-049 PASS_WITH_NOTE，Swift/C# 测试 26→30）。**Stage C（D4 §4.6 产品行为 parity 首批）明确结转**——按 scope-lock 授权的诚实 defer 边界判断，非本轮 scope，独立工作包留待后续轮。诚实 defer：`interrupt()`/`respondApproval()`/`capabilities()` 仍是桩；`includeApprovals` 等 openclaw 原生特有字段两端均诚实未跨端断言。详见 `rounds/0006/round-summary.md`、`decision.md`、`state/evidence-index.md` E17。
   - 原验收标准（保留存档）：build/run：三端 runner + 三组 fixture 全集；pass：三端 runner 在全部 fixture 上产生逐字段一致的可观察状态，并挂到 SG-4/SG-5 验收列；fail：任一 fixture 三端不一致或 runner 缺失；evidence：runner 报告——**已按上述达成（Stage A/B 级），Stage C 产品逻辑层 parity 部分结转**。
+
+### 第二批开发子目标（SG-10..SG-14，2026-07-26 user-confirmed 注入）
+
+> 首批（SG-1..SG-9）已于 2026-07-26（rounds/0009）全部主体完成（见上方「首批开发子目标」表与「SG-8 验收清单」）。第二批经 AskUserQuestion 用户确认（2026-07-26）：主线＝Mac UI 壳优先；随行项全选＝conformance 修正批 + defer 修复轮 + hermes ACP 适配器 + Stage C 产品行为 parity。**批次序建议**：SG-11 先行（让后续开发建立在修正过的事实上）→ SG-10 主线启动，SG-12/SG-13 穿插，SG-14 随 SG-10 同步。以下 5 行状态均为 **pending**，尚无预判，各自首轮 scope-lock 时再细化验收方法。
+
+| ID | 子目标 | 依赖 | 预期证据/验收 | 状态 |
+| --- | --- | --- | --- | --- |
+| **SG-10** | **Mac UI 壳（主线，多轮）**——仿 codex-app 原生 macOS app（SwiftUI，D4 已裁 Mac 优先原生），消费既有 kernel-client（Swift）+ D5 产品规格。分阶段验收（各阶段自己的 round 再细化）：L1 最小可见 app（窗口+会话列表+新建会话+消息流渲染，连隔离 openclaw 真实往返）；L2 会话交互完整化（流式渲染/stop/审批 UI 对接 D1 审批五态）；L3 成本/用量面板（newapi 归因数据）+ 能力开关 | SG-4/5 kernel-client、D5 规格、SG-8.5 计费链 | 真实 app 运行录屏/截图 + e2e 日志（各阶段独立证据，L1/L2/L3 分批交付） | pending（风险：UI 自动化验收方法待定，首轮 scope-lock 时定） |
+| **SG-11** | **conformance 修正批（轻，文档修订轮，建议先行）**——把 rounds/0009 5 发现（D3 mint 501 / openclaw ack 不可区分 / interruptedActiveRun 不透出 / hermes session-load 静默失败 / validate-schemas 未验实例）+ T-005/T-009/PRE-1 早期推断修正 + rounds/0008 的 token 掩码发现，回写进 design wiki 对应 conformance/设计文档；含 hermes session-load bug 是否报上游的处置建议（报/不报交用户）。**不改协议契约本身**（D1/D2 语义变更另立） | 无（整理已落盘的既有发现，不依赖新执行） | wiki 修订 diff + 修订对照表 | pending |
+| **SG-12** | **defer 修复轮**——①TS `EmptyPayload` 生成器修复（SG-1 defer：让生成的 `EmptyPayload` 真闭合，`known-gap.ts` 转正入 CI）；②strict-decode 设计裁决（D1/D2 级：生产解码器对未知键的策略——需小型设计轮+对抗审，裁决后视结论决定是否实现） | SG-1/SG-3（rounds/0007 defer 项） | ①codegen 修复 diff + CI 绿；②设计裁决文档 + 对抗审 verdict（裁决后若需实现另计） | pending |
+| **SG-13** | **hermes ACP kernel-client 适配器（SG-8.4③ 承接）**——Swift 端新写 `HermesACPKernelClient`（D1 KernelPort 7 方法对 ACP stdio 传输），完成 SG-8.4③ 的 hermes 线路 `createSession`/`subscribe` 闭环；C# parity 视 Swift 收敛后定 | PRE-7 结论（session/load 带 `provider:custom` 前提） | e2e 日志（hermes ACP 真实 `createSession`/`subscribe` 收到 KernelEvent 流）+（视 scope）跨端 parity 对照 | pending |
+| **SG-14** | **Stage C 产品行为 parity（D4 §4.6 结转）**——产品状态机三分类（fixture/checklist/OPEN）落地；**依赖 SG-10 各阶段**——UI 实现某产品状态机时顺带 fixture 化（与 UI 开发同步，非独立大轮） | SG-10 各阶段 | fixture + checklist 文档（随 SG-10 各阶段增量交付，非一次性批） | pending |
 
 ## Discovery Handoffs
 
