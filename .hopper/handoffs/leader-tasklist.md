@@ -1069,3 +1069,21 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（SG-7 可收官）| `MUST-FIX`（问题点 + file:line + 可复现）。
 **产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-056-output.md`。**Read-only**：不改任何文件;忽略跨仓/别目录全局 skill。中文。
+
+## T-057（rounds/0009 SG-8 收尾批双轨探针证据 对抗审，单 grok）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: grok（轮换,T-055/056 为 codex）· 只读
+
+**评审对象**：`.harnessloop/goals/20260718-002-agent-app/rounds/0009/evidence/track-a-openclaw.md`(273 行)+ `track-b-hermes.md`(364 行)——rounds/0009 双轨探针批(SG-8.1/8.2/8.3/8.4①②)的全部证据。对照:scope-lock `rounds/0009/scope-lock.md`(含 PRE-7 阈值)/ D1 `~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3.md` / PRE-① 两份 conformance(`research/pre1-{openclaw,hermes}-source-conformance.md`)/ 源码只读(`kernels/{openclaw,hermes}`、`app/server`)。
+
+**背景**:探针批,不写产品代码。两轨判定汇总:轨A 全 pass(SG-8.4② 回填重建子项因 capabilities 桩如实 defer);轨B 全 pass。带回 5 个发现:①D3 mint HTTP 端点实况仍 501(NotImplementedException),轨A 走 service 层直接调用真实编译产物达成映射断言;②openclaw `chat.send` ack 在 steer-注入 vs 空闲新 run 结构完全相同(D1 关心的 ack 层机器可区分性=否);③openclaw abort 成功+send 失败时不透出 `interruptedActiveRun`(sessions-messaging.ts:379-389 三元仅 ok===true 拼接);④hermes `session/load` 在 provider:auto+自定义端点下 100% 复现静默失败伪装成功(acp_adapter/session.py:551/651→runtime_provider.py:1169 provider 标签回写 openrouter;比 PRE-1 猜的部分丢失更糟);⑤`validate-schemas.mjs` 从未真正对实例调用 validator(只编译)。主会话已核:零内核改动(tracked diff 空/hermes 全空/openclaw ignored 全为历史构建产物)。
+
+**对抗核验重点(证伪判定与发现)**:
+1. **SG-8.1④ pass 判定诚实性(最重)**:mint HTTP 端点 501 而走 service 层直接实例化达成 `revokedAt IS NULL`+`findActive`——这算"mint 成功"的诚实 pass,还是应判"映射层 pass + HTTP 端点 stub 残留如实记录"?对照 SG-8 清单原文"mint 成功→...(501 解除信号)"的语义(501 解除了吗?)。给出你的判定建议。
+2. **发现②③④⑤ 的 file:line 可复现性**:各按 evidence 里的复现步骤/源码引用抽验(hermes session/load 静默失败可按 track-b 步骤复现或源码推理核实;PRE-3 的三元表达式;validate-schemas 只编译不验实例)。发现是否被夸大/误读?
+3. **SG-8.2 self 端点实况修正**:`/api/log/self` 需 cookie、真实等价是 `/api/log/token`+Bearer——互验证据(A 只见己 3 条/B 只见 1 条/对抗参数注入被忽略)是否充分支持"不串号"?
+4. **PRE-7 阈值判定**:20/20 条、0.79-0.82s、3/3 一致——数据是否真支持 pass?workaround(config provider:custom)是否 config-only 零内核改动?
+5. **零改动 + 判定汇总表**:两 submodule git 状态核验;各子项 pass/fail/defer 与证据实况一一对应,无过度声称(尤其 SG-8.4② defer 是否如实)。
+
+**Verdict**:`PASS`(SG-8 收尾批证据成立→SG-8 整体可收官)| `PASS_WITH_NOTE` | `REWORK`(逐条 + 可复现)| `FAIL`。
+**产出**:五项逐条 + 对 #1 的明确判定建议 + verdict。落盘 `.hopper/handoffs/T-057-output.md`。**Read-only**:不改任何文件;可只读跑探针复现但勿新增 LLM 计费调用、勿动 new-api 资源;忽略跨仓/别目录全局 skill。中文。

@@ -781,3 +781,63 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 - Reason: 本轮未发现新的 harnessloop 框架缺陷；本轮五个值得沉淀的观察点均属项目/委派实践层面，非框架缺陷——①**零改动 claim 的 e2e 检验方法论再度坐实、且这次是双方向验证**：SG-6 openclaw 与 SG-7 hermes 是同一上游设计裁决（PRE-① C-3 path①"零改动"）在两个异构内核上的检验，结局相反——openclaw 被证伪（3 补丁）、hermes 被证实（tracked+untracked+ignored 全空）。"源码核验结论必须过 e2e 才算数"这一方法论原则已在证伪与证实两个方向上各得到一次独立验证，不是单一方向的巧合，是本项目最有分量的方法论沉淀之一；②**审查者独立佐证挖掘 > 被动核对再添一例**：codex T-055 不仅核对了 brief 指定的核验点，还独立挖出隔离 `state.db` 这一 evidence 文档本身未引用的佐证源，并精确区分"tracked source 零改动"与"工作区零落盘"两个不同口径，延续 rounds/0006（T-048/T-050 揪臆造字段与表面绕过）、rounds/0007（grok T-054 亲手破坏性反证）观察到的"异构审查连续抓到主会话/实现方漏掉的真问题"模式，第 5 次同类观察；③**文档 file:line 错引用是本轮主要返工源**：T-055 REWORK 的 5 处里有 3+1 处（3 处 handler 映射 + 主会话自查另修 1 处）属 file:line 引用准确性问题，均为机械级、不涉及核心 e2e 结论——提示 recipe/evidence 类交付物在写作阶段就应对每条源码引用逐条复核，而非事后靠审查兜底，属项目内工程实践沉淀而非框架缺陷；④**隔离卫生新纪律**：`.gitignore` 遮蔽的残留（本例 `hermes_agent.egg-info/`）用普通 `git status/diff` 查不出来，必须补 `git status --ignored --short` 才能坐实"无残留"，本轮起已固化为隔离 recipe 的双查纪律，属项目内方法论升级；⑤收敛守卫（第 3 次 MUST-FIX/REWORK 即 checkpoint 用户）本轮设置但全程仅 1 次 REWORK，未触发，机制正常运作
 - Issue path: 无新增
 - Redaction notes: 无涉密内容（仅引用 commit 短号、hopper task ID、file:line 引用、new-api 字段名；凭证值未出现在本文件）
+
+---
+
+# Self Audit
+
+## Audit Metadata
+
+- Audit ID: AUDIT-20260726-ROUND0009-SG8-CLOSEOUT
+- Trigger: round-close rounds/0009
+- Active goal: 20260718-002-agent-app
+- Active round: 0009（SG-8 验收清单收尾批次——SG-8.1/8.2/8.3/8.4①②，双轨探针，主体已达成；SG-8.4③本轮 scope-lock 事先 defer）
+- Auditor: main session（claude-sonnet-5）
+- Timestamp: 2026-07-26
+
+## Loop Health
+
+| Check | Status | Evidence path | Notes |
+| --- | --- | --- | --- |
+| Dead loop risk | pass | rounds/0009/scope-lock.md; rounds/0009/round-summary.md | 本轮为首次对 SG-8 收尾批（SG-8.1/8.2/8.3/8.4①②）执行 continue 驱动+关键节点独立审查，非重试；★审查闸（grok T-057）一次即判 PASS_WITH_NOTE，未出现无新证据的重复动作；本项目首次两内核并行双子代理探针，无冲突/无重跑 |
+| Self-contradiction | pass | rounds/0009/round-summary.md; rounds/0009/decision.md; goal-breakdown.md SG-8 行与「SG-8 验收清单」各子行 | 无矛盾：SG-8.1④"映射层 pass+mint HTTP residual"与 SG-8.5 行已登记的 `newapi_token_id_lookup_unresolved` 缺口表述一致；SG-8.4②"连接级 pass+回填重建 defer"与 SG-4/SG-5 行既有的 `capabilities()`/`capability_changed` TODO 桩表述一致；SG-8.4③ defer 与 scope-lock 事先声明的诚实边界一致；PRE-7 PASS"有条件"与 thresholds.md 新增行的前提表述一致，未出现剥离前提单独引用 PASS 的矛盾写法 |
+| Goal drift | pass | rounds/0009/scope-lock.md | 未偏离 scope-lock 目标（SG-8.1/8.2/8.3/8.4①②探针批）；SG-8.4③按 scope-lock 事先声明的诚实边界 defer，非临时回避；发现④⑤未借机扩围改 `kernels/hermes`/`app/contracts` 源码，均按 Rollback Condition 条款止于记录层面 |
+| Evidence drift | pass | state/evidence-index.md E20 | 新增 E20 覆盖 SG-8 收尾批双轨探针交付物，无 stale |
+| Validation drift | pass | rounds/0009/scope-lock.md「Verification Commands Or Checks」；thresholds.md PRE-7 新增行 | 验证方法（双轨探针+PRE-7 阈值+★审查闸 hopper 派发）已在 scope-lock 中显式列出并在 round-summary/thresholds.md 中逐项回填，非静默变更；PRE-7 阈值首次由 scope-lock 提案转为 thresholds.md 正式落档行，回填含数据与前提 |
+| Handoff stagnation | pass | `.hopper/queue.md` T-057 | 1 个 hopper 派发已闭合，无 failed；无 open handoff 停滞 |
+| Cost/context runaway | pass |  | 双轨探针脚本/证据走 `rounds/0009/evidence/`、`.hopper/handoffs/`，主会话摘要引用，未把大量原始日志灌入本文件 |
+| Recoverable blocker stalled | pass | rounds/0009/round-summary.md | 本轮无 blocker；发现④⑤均按 scope-lock 既定条款登记为 conformance 修正候选，非停滞的 recoverable blocker |
+
+Status values: `pass`, `warn`, `fail`, `unknown`.
+
+## Deterministic Signals
+
+| Signal | Current value | Previous value | Threshold | Status |
+| --- | --- | --- | --- | --- |
+| Recent feedback sequence | positive（round 0009，SG-8 收尾批主体 done，有证据、收敛，1 次★审查闸即 PASS_WITH_NOTE，0 次 REWORK） | positive（round 0008，SG-7 hermes per-session key 接线） | no repeated neutral/negative without new evidence | pass |
+| Repeated next action count | 1（本轮首次对 SG-8 收尾批执行 continue 驱动全流程，非重复；下一步转为"第二批 SG 规划"这一新性质的动作，非重复） | 1（rounds/0008 提议 SG-8.x/SG-8 其余子项/Stage C/两个 defer 项） | max 2 identical actions | pass |
+| Scope-lock version | rounds/0009 v1（新建，全程未扩围） | rounds/0008 v1 | must change after failed action unless rollback | pass |
+| Goal contract version/hash | goal-breakdown 首批开发子目标表头追加 rounds/0009 摘要、SG-8 行状态由 pending 转为主体 done、SG-8.1/8.2/8.3/8.4 各子行补齐达成记录，均显式留痕，非静默变更 | 前值（SG-8 行 pending，SG-8.1/8.2/8.3/8.4 各子行仅原验收标准） | no silent change | pass |
+| Threshold version/hash | thresholds.md 新增 PRE-7 阈值正式落档行（数据+`provider:custom` 前提），本批唯一新增独立阈值行；变更显式记于本表与 round-summary | 前值（PRE-7 阈值仅存在于 scope-lock 提案，未落 thresholds.md 正式表） | no silent change | pass |
+| Verification command set | 新增两内核并行双子代理探针（本项目首次）+ hermes ACP stdio 探针（补装 `agent-client-protocol==0.9.0`）+ Swift 探针入口 `d2-live-dump-main.swift`（与生产代码一起编译）+ 抓包透传代理 `header-capture-proxy.mjs` + hopper 派 grok 证伪式对抗审（T-057），显式记于 round-summary.md | 既有 swiftc/dotnet build+test、CI workflow、hopper 派发序列等 | no silent change | pass |
+| Stale evidence count | 0（E20 新鲜） | 0 | 0 for acceptance | pass |
+| Open handoff age | 0（T-057 已闭合，无 failed） | 0（T-055/T-056 已闭合） | project-defined | pass |
+| Main-session raw context risk | 低（探针脚本/evidence/对抗审 transcript 走 `rounds/0009/evidence/`、`.hopper/handoffs/`，主会话摘要引用） | 低 | raw logs stay in evidence files | pass |
+| Delegation model/effort verified | 双轨探针（轨 A openclaw + 轨 B hermes）均由主会话 claude-sonnet-5 并行子代理执行（code-impl/探针型任务绝不派第三方 vendor），未派第三方 vendor；关键节点独立审查（★审查闸）按既定规则 hopper 派 codex/grok 随机池，本轮随机落在 grok 单人证伪式对抗审，一次即产出可用 verdict（PASS_WITH_NOTE），未遇 vendor 执行层失败或安全过滤器中止；grok 独立核验 SG-8.1④ 判定诚实性并给出拆层建议，延续"异构审查连续抓到主会话/实现方漏掉的真问题"观察（第 6 次同类，焦点从"结论是否成立"收窄到"措辞宽窄是否诚实"） | 历轮同规则；rounds/0006-0008 均观察到异构审查独立佐证价值 | required for high-risk delegation | pass |
+| Recoverable blocker next action | 不适用（无 blocker；发现④⑤均按既定条款登记为 conformance 修正候选，非停滞） | 同 | read-only investigation before user pause | pass |
+
+## Local Repair Decision
+
+- Required repair: 无——本轮延续 rounds/0002-0008 建立的做法，SG-8 收尾批先有 scope-lock（rounds/0009/scope-lock.md）再执行，收盘时完整走 round-summary → decision → state 回写（current.md/evidence-index.md/goal-breakdown.md/thresholds.md/self-audit.md），闭环完整、无绕开；本轮同时是本项目首批 SG（SG-1..SG-9）全部主体完成的收官节点
+- Smallest safe next action: **第二批 SG 规划**——候选：Mac app UI 壳 / D3 server 业务面（含 mint HTTP 501 解除）/ hermes ACP kernel-client 适配器（SG-8.4③）/ Stage C 产品行为 parity 结转 / 两个 rounds/0007 defer 项修复轮（TS `EmptyPayload` 精度缺陷/解码边界 strict-decode 设计裁决）/ conformance 修正批（本轮发现②③④⑤ + T-005/T-009/PRE-1 早期推断修正）/ hopper `||` 表格观察点处理。**规划属 goal 级决策，需用户参与**，确定方向后继续逐个走 round 闭环
+- Blocker type: none
+- Recovery eligible: 不适用（无 blocker）
+- Human confirmation required: 是（第二批 SG 规划方向属 goal 级决策，需用户参与选定；本轮收盘本身不需要用户进一步确认）
+- Block execution until repaired: 否
+
+## Evolution Issue Decision
+
+- Create upstream evolution issue: no
+- Reason: 本轮未发现新的 harnessloop 框架缺陷；本轮五个值得沉淀的观察点均属项目/委派实践层面，非框架缺陷——①**双轨并行探针方法论首次验证**：本轮是本项目首次对两个独立内核采用并行子代理探针，wall-clock 大致减半、两轨证据零交叉污染、零冲突合并，值得作为后续多内核/多组件探针批的默认执行模式，属项目内工程实践沉淀；②**审查焦点从"结论是否成立"收窄到"措辞宽窄是否诚实"**：grok T-057 的核心贡献不是发现新缺陷（探针本身合格），而是纠正 SG-8.1④ 汇总层措辞过宽的问题（映射层 pass 与 mint HTTP 501 residual 需拆层，否则读者会误判 mint e2e 已通）——延续本项目历轮"异构审查连续抓到主会话/实现方漏掉的真问题"模式，但本次问题类型是判定诚实性而非事实错误，是审查机制成熟度的新维度；③**探针批发现密度延续方法论验证**：5 处发现里 2 个是 openclaw 既有行为 conformance 实况坐实（②③）、1 个是 hermes 真实 bug（④）、1 个是 D3 已知 stub 缺口再确认（mint 501）、1 个是断言基建缺口（⑤）——是"runtime 探针不可被源码核验替代"方法论观察的第 3 次独立验证（前两次：rounds/0004 SG-8.5 揪 openclaw 2 处真实 bug、rounds/0006 揪 SG-5 `stop()` D1 §6.2 缺口）；④**PRE-7 阈值判定"前提必须同读"的纪律**：本轮首次把一个 PASS 判定显式绑定在配置前提（`provider:custom`）之上，若剥离前提单独引用会产生误导性结论——已在 thresholds.md/round-summary/decision 三处一致落笔，是本项目"诚实分层"纪律在阈值判定场景的新应用；⑤收敛守卫（第 3 次 MUST-FIX/REWORK 即 checkpoint 用户）本轮设置但全程 0 次 REWORK，未触发，机制正常运作。**本轮同时是首批 SG（SG-1..SG-9）全部主体完成的收官节点**，本身不构成框架缺陷发现，是项目里程碑而非 harnessloop 协议问题
+- Issue path: 无新增
+- Redaction notes: 无涉密内容（仅引用 commit 短号、hopper task ID、file:line 引用、new-api 字段名；凭证值未出现在本文件）
