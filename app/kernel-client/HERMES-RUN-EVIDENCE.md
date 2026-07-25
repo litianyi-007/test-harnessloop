@@ -89,7 +89,13 @@ POST /v1/chat/completions
 `SQL_DSN` 环境变量（即用默认 SQLite，`/home/ubuntu/newapi-deploy/data/one-api.db`），`scp` 一份
 **只读副本**到本机 scratchpad，本机 `sqlite3` 查 `SELECT id,name,key FROM tokens WHERE id IN (4,5)`
 拿到明文 key，随后**立即删除**本机副本（不留存、不入库）。全程未修改 Pi 上任何文件（`scp` 单向拉取，
-未 `docker exec` 写操作）。掩码形式：
+未 `docker exec` 写操作）。
+
+**limitation 注（T-055 对抗复核补记）**：以上"未修改 Pi 上任何文件"目前只有单向 `scp` 操作的操作
+叙述，**没有**远端操作前后的独立 stat/hash 对照或命令 transcript 留存——即没有可供事后复核的
+"scp 前后 Pi 端文件指纹不变"独立证据。这不影响本文档已验证的 e2e 归因结论（token/model/usage
+逐字段核对，见下方 B.3），但这条隔离子断言本身（"Pi 源 SQLite 只读、未被写"）尚未达到独立实证级，
+如实标注、不辩解。掩码形式：
 
 | id | name | key（掩码） |
 |---|---|---|
@@ -204,8 +210,12 @@ $ git -C kernels/hermes diff --stat
 (空输出)
 ```
 
-本轮全程未修改 `kernels/hermes` 任何文件；`build/` 构建产物（安装依赖时产生）已在提交前清理
-（详见 recipe §1 坑 1）；`~/.hermes/logs/` 的两个空日志文件（隔离缝隙，详见 recipe §6）已清理。
+本轮 `kernels/hermes` **无 tracked source diff**（上方 `git status`/`git diff --stat` 均干净，
+只是 tracked-source 口径，不等于工作目录零落盘——**收窄说明**：`build/` 构建产物（安装依赖时产生）
+已在提交前清理（详见 recipe §1 坑 1）；但被 `.gitignore:59` 遮蔽的 `hermes_agent.egg-info/` 当时
+**未察觉**，普通 `git status` 看不到它，直到 T-055 对抗复核用 `git status --ignored --short` 才现场
+发现并事后清理——本文档最初"全程未修改任何文件/已清理"的表述过宽，已按此收窄）。`~/.hermes/logs/`
+的两个空日志文件（隔离缝隙，详见 recipe §6）已清理。
 
 主仓库改动仅为本轮新建文件：
 ```

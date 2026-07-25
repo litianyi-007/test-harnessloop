@@ -24,11 +24,14 @@ per-session baseUrl/key = 原生零改动」claim；**未走** ACP 路径（PRE-
 
 **诚实标注一个尺度落差**（PRE-① 已预见，本轮 e2e 证实）：这条路径实现的是「每个预先在 config.yaml
 里登记的 alias 各自绑定一个 upstream key/base_url」，不是「运行时对任意新建 session 现铸现分配一个
-key」。要新增一个 alias，需要编辑 `config.yaml` 后重启 gateway 进程或执行 gateway 控制台命令
-`/platform resume api_server`（`[源码]` `gateway/platforms/api_server.py:5619` 注释原文提到这条恢复
-路径，本轮**未实测**该热重载命令本身，只实测了"改配置+重启进程"这条路径）。这与"运行时任意下发"之间
-仍有一步距离，PRE-① 原文已用"配置时静态登记，不是运行时任意动态下发"准确预告过这一点，本轮 e2e 未推翻
-也未加宽这个判断，只是把"静态登记这条路径本身能不能打通到真实计费归因"从理论坐实为实测。
+key」。要新增一个 alias，需要编辑 `config.yaml` 后**重启整个 gateway 进程**——这是本轮唯一实测且
+源码支持的路径。`gateway/platforms/api_server.py:5619` 附近的注释提到 `/platform resume
+api_server`，但那是端口绑定失败（`EADDRINUSE`）后的恢复手段，`gateway/slash_commands.py:
+1204-1237` 显示 `/platform resume` 只对已进入 `_failed_platforms` 且处于 paused 的平台生效，
+对正常 connected 的 api_server 执行会直接返回"nothing to resume"（T-055 对抗复核纠正：**不存在**
+靠这条命令热加载新 alias 的路径）。这与"运行时任意下发"之间仍有一步距离，PRE-① 原文已用"配置时静态
+登记，不是运行时任意动态下发"准确预告过这一点，本轮 e2e 未推翻也未加宽这个判断，只是把"静态登记这条
+路径本身能不能打通到真实计费归因"从理论坐实为实测。
 
 ---
 
@@ -40,32 +43,42 @@ cd "$SCRATCH"
 uv venv --python 3.11 hermes-venv         # pyproject.toml:20 requires-python ">=3.11,<3.14"
 
 # 非 editable install——用位置参数传源码路径（不是 -e .），
-# 这样 setuptools 在临时目录构建 wheel，装进 venv 的 site-packages，
-# 不会往 submodule 工作区写 egg-info 之类的东西。
+# 这样 setuptools 在临时目录构建 wheel，装进 venv 的 site-packages。
+# 但这**不代表**源码目录一干二净：setuptools 仍会在源码目录本身留下
+# build/ 与 hermes_agent.egg-info/（详见下方坑 1，装完必须清理并核对）。
 uv pip install --python "$SCRATCH/hermes-venv/bin/python" \
   /path/to/kernels/hermes
 
-# api_server 平台需要 aiohttp（gateway/platforms/api_server.py:60-64 try/except 兜底，
+# api_server 平台需要 aiohttp（gateway/platforms/api_server.py:77-81 try/except 兜底，
 # 但不装就直接不可用）——aiohttp 只在 messaging/slack/matrix/sms/teams/homeassistant
 # 几个 extra 里，装那些 extra 会连带拉 python-telegram-bot/discord.py 等一堆用不上的
 # 依赖，本轮直接单独装 aiohttp 更干净：
 uv pip install --python "$SCRATCH/hermes-venv/bin/python" "aiohttp==3.14.1"
 ```
 
-**坑 1（`[实测]`）：普通（非 editable）install 仍会在 submodule 里留下 `build/` 目录。**
+**坑 1（`[实测]`，T-055 复核收窄）：普通（非 editable）install 仍会在 submodule 里留下
+`build/` 目录**和** `hermes_agent.egg-info/` 目录，两者都要清理。**
 `uv pip install <path>`（哪怕不带 `-e`）触发 setuptools 的标准 build 流程时，会在**源码目录本身**
 （不是 venv、不是 scratchpad）创建 `build/bdist.*` + `build/lib/*` staging 目录（entire 源码树拷了一份
-进去）。这不是 editable install 才有的 egg-info 问题，是 `[tool.setuptools]` 这类项目的构建产物落点
-默认就是源码目录旁边。**装完必须 `rm -rf kernels/hermes/build` 并核对 `git status` 干净**——本轮已
-如此清理，`build/` 未被跟踪（不在 `.gitignore` 里也没关系，因为从未 commit，`git status --porcelain`
-清空后确认过）。
+进去），**同时**也会生成 `hermes_agent.egg-info/`（`PKG-INFO`/`SOURCES.txt`/`entry_points.txt` 等）——
+这不是只有 editable install 才有的问题，非 editable install 同样会落这个目录，此前 recipe 说"不会往
+submodule 工作区写 egg-info 之类的东西"是**错误声称**（T-055 对抗复核现场反证：egg-info 目录留在
+`kernels/hermes/` 直到本轮复核才发现并清理）。
+
+`hermes_agent.egg-info/` 恰好被 `kernels/hermes/.gitignore:59` 一行遮蔽（`hermes_agent.egg-info/`），
+所以**普通 `git status`/`git status --porcelain` 看不到它**，会造成"工作区干净"的假象。
+**装完必须同时做三件事**：`rm -rf kernels/hermes/build kernels/hermes/hermes_agent.egg-info`，
+然后核对 `git -C kernels/hermes status --porcelain`（应为空）**并且**
+`git -C kernels/hermes status --ignored --short`（应为空，专门用来抓被 `.gitignore` 遮蔽的残留）。
+只核对不带 `--ignored` 的 `git status` 不足以证明"submodule 工作区无残留"。
 
 **坑 2（`[实测]`）：任何不带 `HERMES_HOME` 的 `hermes` CLI 调用都会碰用户全局 `~/.hermes`。**
 本轮最初跑 `hermes --help`/`hermes gateway --help` 这类看起来"只读、不会有副作用"的命令时，**没有**
 显式设置 `HERMES_HOME`，结果在 `~/.hermes/logs/` 下创建了两个空文件（`agent.log`/`errors.log`，
 0 字节，见 `hermes_constants.py:56-64` `HERMES_HOME` 解析逻辑——未设时落到平台默认 `~/.hermes`）。
 影响面很小（只有两个空日志文件，没有 config.yaml/state.db/凭证），但这是一个真实的隔离缝隙，已发现并
-清理（`rm -rf ~/.hermes`，清理前确认目录内容全部是本轮新建的空文件）。**教训：隔离 recipe 里的每一条
+清理（精确删除那两个本轮产生的 0 字节日志文件后 `rmdir` 空目录，**不是** `rm -rf ~/.hermes`——那样会
+误删宿主机既有用户状态；具体前置校验+精确删除脚本见 §7 收尾清理）。**教训：隔离 recipe 里的每一条
 `hermes` 命令都要显式带 `HERMES_HOME`，包括看起来无害的 `--help`。** 类比 openclaw recipe 里记录的
 "`/tmp/openclaw/openclaw-<date>.log` 是个不受 state dir 控制的全局固定路径"那条已知隔离缝隙
 （`OPENCLAW-ISOLATED-RUN-RECIPE.md` §5 末尾），hermes 这边是同一类问题的另一个实例。
@@ -185,8 +198,13 @@ curl http://127.0.0.1:8646/health/detailed -H "Authorization: Bearer $API_SERVER
    `self._model_routes`（gateway 启动时由 `_parse_model_routes(extra.get("model_routes"))` 解析，
    `[源码]` `:1037-1039` 构造函数里调用）里查 alias，命中则返回该条目的
    `{model, provider?, api_key?, base_url?}`。
-2. 三处 HTTP handler 都在派发前调用这个方法：`:2863`（responses 路径）、`:3983`
-   （chat/completions 路径）、`:5025`（sessions chat 路径）。
+2. 三处 HTTP handler 都在派发前调用这个方法（T-055 对抗复核纠正映射错误）：
+   `_handle_chat_completions` 的 `:2863`（`/v1/chat/completions`，本轮 e2e 实测走的正是这条）、
+   `_handle_responses` 的 `:3983`（`/v1/responses`）、`_handle_runs` 的 `:5025`（`/v1/runs`）。
+   **`/api/sessions/{session_id}/chat`**（`_handle_session_chat`，`gateway/platforms/api_server.py:
+   2550-2575`）调用 `_run_agent` 时**不解析、也不传入 `route`**——这条路径不受 `model_routes`
+   覆盖，**不在**本轮 e2e 闭合范围内，不要把"api_server 三个主 HTTP 入口都覆盖"误读成
+   "api_server 下所有端点都覆盖"。
 3. 拿到 `route` 后，在 `_run_agent`（构造 `AIAgent` 之前）里：
    - `route.get("model")` → 覆盖 `model`（`:1905`）
    - `route.get("api_key")` → 覆盖 `runtime_kwargs["api_key"]`（`:1910`）
@@ -203,17 +221,25 @@ curl http://127.0.0.1:8646/health/detailed -H "Authorization: Bearer $API_SERVER
 ## 6. 已知隔离缝隙（诚实记录，非阻断项）
 
 - **`~/.hermes/logs/` 边界泄漏**（见 §1 坑 2）：任何不带 `HERMES_HOME` 的裸 `hermes` 调用都会摸到
-  用户全局家目录，哪怕只是 `--help`。本轮已发现两个空日志文件并清理（`rm -rf ~/.hermes`，清理前
-  确认全部内容为本轮产生的空文件，未删除任何预先存在的用户数据——`ls -la` 时间戳与本轮起始时间
-  精确吻合）。**后续复用本 recipe 时，每一条 `hermes ...` 命令前都应显式 `export HERMES_HOME=...`
-  或用 `HERMES_HOME=... hermes ...` 内联形式，不留任何窗口期。**
-- **`build/` 构建产物**（见 §1 坑 1）：`uv pip install <源码路径>`（非 editable）仍会在源码目录里
-  留 `build/`，装完必须清理，`git status` 核对干净后才算隔离达标。
-- **model_routes 是静态配置**（见 §0 结论）：新增一个 per-session alias 需要重启 gateway 进程或
-  执行 `/platform resume api_server` 控制台命令（`[源码]` 引用见 `gateway/platforms/api_server.py:
-  5619` 注释；该热重载命令本身**本轮未实测**，只实测了"改配置文件 + 重启整个进程"这条更笨重但确凿
-  可行的路径）。这不是 hermes 的缺陷，是 PRE-① 报告已预告的"配置时静态登记 vs 运行时任意下发"之间
-  的既有差距，本轮 e2e 的作用是坐实"静态登记这条路径本身能不能打通到真实计费归因"，答案是能。
+  用户全局家目录，哪怕只是 `--help`。本轮已发现两个空日志文件并**精确清理**（前置校验确认
+  `~/.hermes` 内没有 config.yaml/state.db/sessions/ 等既有用户状态，只删本轮产生的 0 字节
+  `agent.log`/`errors.log`，目录清空后才 `rmdir`——**不是** `rm -rf ~/.hermes`，那样在复用场景下
+  可能连带删掉宿主机既有用户数据；具体脚本见 §7）。**后续复用本 recipe 时，每一条 `hermes ...`
+  命令前都应显式 `export HERMES_HOME=...` 或用 `HERMES_HOME=... hermes ...` 内联形式，不留任何
+  窗口期。**
+- **`build/` + `hermes_agent.egg-info/` 构建产物**（见 §1 坑 1）：`uv pip install <源码路径>`
+  （非 editable）仍会在源码目录里同时留下 `build/` 和 `hermes_agent.egg-info/`——后者被
+  `.gitignore:59` 遮蔽，普通 `git status` 看不到。装完必须 `rm -rf` 两者，并且核对同时用
+  `git status`（tracked）**和** `git status --ignored --short`（ignored）两条命令确认干净，
+  才算隔离达标；只查前者会漏看 egg-info 残留（T-055 对抗复核现场即抓到这个漏洞）。
+- **model_routes 是静态配置**（见 §0 结论）：新增一个 per-session alias 需要重启整个 gateway
+  进程；`gateway/platforms/api_server.py:5619` 注释里的 `/platform resume api_server` 只是端口
+  绑定失败（`EADDRINUSE`）后的恢复手段，`gateway/slash_commands.py:1204-1237` 显示 `/platform
+  resume` 只对已进入 `_failed_platforms` 且处于 paused 状态的平台生效——正常 connected 的
+  `api_server` 执行它会直接返回"nothing to resume"，**不能**用来热加载新增的 model_routes
+  alias（T-055 对抗复核纠正：recipe 早期版本误将这条端口恢复路径当成配置热重载手段）。这不是
+  hermes 的缺陷，是 PRE-① 报告已预告的"配置时静态登记 vs 运行时任意下发"之间的既有差距，本轮
+  e2e 的作用是坐实"静态登记这条路径本身能不能打通到真实计费归因"，答案是能。
 
 ---
 
@@ -223,9 +249,27 @@ curl http://127.0.0.1:8646/health/detailed -H "Authorization: Bearer $API_SERVER
 kill -TERM <gateway PID>     # 优雅退出，$SCRATCH/hermes-home/.clean_shutdown 会被写入
 lsof -iTCP:8646 -sTCP:LISTEN # 应无输出（端口已释放）
 ps aux | grep -i hermes | grep -v grep   # 应无残留进程
-git -C kernels/hermes status  # nothing to commit, working tree clean
-git -C kernels/hermes diff    # 空
-rm -rf ~/.hermes              # 清理 §6 提到的边界泄漏（确认内容为本轮产生后再删）
+
+# submodule 工作区核对——tracked + ignored 都要查（见坑 1，egg-info 被 .gitignore 遮蔽）：
+rm -rf kernels/hermes/build kernels/hermes/hermes_agent.egg-info
+git -C kernels/hermes status                        # nothing to commit, working tree clean
+git -C kernels/hermes diff                          # 空
+git -C kernels/hermes status --ignored --short       # 空（专门确认无被忽略的残留）
+
+# 清理 §6 提到的 ~/.hermes 边界泄漏——不要粗暴 rm -rf 整个目录，它可能是宿主机
+# 既有的用户状态目录。先做前置校验：只有当里面看起来只是本轮裸 CLI 意外创建的
+# 空日志文件时才精确删除，目录清空后才 rmdir；一旦发现 config.yaml/state.db/
+# sessions/ 等既有用户状态迹象，就不要动，只报告。
+if [ -f ~/.hermes/config.yaml ] || [ -f ~/.hermes/state.db ] || [ -d ~/.hermes/sessions ]; then
+  echo "~/.hermes 存在既有用户状态，跳过自动清理，人工确认后再处理 logs/ 下的空文件" >&2
+else
+  for f in ~/.hermes/logs/agent.log ~/.hermes/logs/errors.log; do
+    # -s 判断非空——只删本轮产生的 0 字节文件，非空文件一律不碰。
+    [ -f "$f" ] && [ ! -s "$f" ] && rm -f "$f"
+  done
+  rmdir ~/.hermes/logs 2>/dev/null   # 目录非空会静默失败，不会误删仍有内容的目录
+  rmdir ~/.hermes 2>/dev/null
+fi
 ```
 `hermes-venv/` 与 `hermes-home/` 均留在 scratchpad，自然回收（throwaway，不入版本控制）。
 
