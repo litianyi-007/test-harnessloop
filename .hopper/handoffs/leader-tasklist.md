@@ -1038,3 +1038,34 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`PASS`（CI 守门真有牙齿 → rounds/0007 可收官）| `PASS_WITH_NOTE` | `REWORK`（逐条 file:line + 可复现）| `FAIL`。
 **产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-054-output.md`。**Read-only**：证伪临时改动必须还原并说明；忽略跨仓/别目录全局 skill。中文。
+
+## T-055（SG-7 hermes per-session key e2e 对抗审，单 codex）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: codex（轮换,T-054 为 grok）· 只读 · 可跑 node/python/git,严禁 csi
+
+**评审对象**（主仓库 commit `47177412`）：`app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md` + `HERMES-RUN-EVIDENCE.md`。权威对照:`~/.llm-wiki/agent-app-design/research/pre1-hermes-source-conformance.md`(PRE-① claim)+ `kernels/hermes` 源码只读(api_server.py 的 _resolve_route/model_routes overlay)。`git show 47177412`。
+
+**背景**:SG-7 = PRE-①「hermes api_server model_routes per-session baseUrl/key 零改动」claim 的 e2e 检验(对照 SG-6 openclaw 零改动被 e2e 证伪的先例)。结论:**claim 证实**——两 session 两独立 newapi token 真实 Kimi 往返,/api/log 逐字段归因(log45→token4/log46→token5),kernels/hermes 零 diff。主会话已独立亲查 new-api 计费 + hermes git 状态。由 Sonnet 执行,需异构对抗复核。
+
+**对抗核验重点(证伪"零改动证实"是否可信)**:
+1. **零改动真实性**:`git -C kernels/hermes status/diff` 亲验干净;evidence 声称的机制 file:line(api_server.py:1795 _resolve_route / :1905-1912 AIAgent kwargs overlay)与源码实况一致?model_routes 是纯配置特性(config.yaml platforms.api_server.extra.model_routes)而非隐藏改动?
+2. **归因证据真实**:可亲查——new-api(base/凭证在 `.harnessloop/local/channel-params.json`,root 登录)`/api/log/` 的 id 45/46 是否真归 token_id 4/5(sg7-hermes-session-a/b)、model=kimi-for-coding、usage 与 evidence 记载吻合?两条是否真是独立 token(非同 token 两次)?
+3. **e2e 链真实性**:evidence 里的往返是真实 Kimi 回复(非 mock/固定串)的佐证是否充分(usage 计费/时间戳/内容)?"prompt 244 含 cache 分账吻合"的算术是否成立?
+4. **recipe 可复现与隔离纪律**:步骤完整可复现?两个坑(build/ staging 落 submodule、裸 CLI 碰全局 ~/.hermes)的记载与防范是否到位?有无遗留污染(全局 ~/.hermes、系统 python、Pi)?
+5. **诚实标注充分性**:model_routes 静态注册 caveat(动态加 alias 需重启)如实且与 PRE-① flag 对齐?new-api token 掩码发现(T-009 推断修正)+ scp SQLite workaround 的安全性记载(只读/即删)如实?有无过度声称(如把"api_server 路径闭合"说成"hermes 全路径闭合"——ACP 路径本轮未走应如实标注)?
+
+**Verdict**:`PASS`(SG-7 可收官)| `PASS_WITH_NOTE` | `REWORK`(逐条 file:line + 可复现)| `FAIL`。
+**产出**:五项逐条 + verdict。落盘 `.hopper/handoffs/T-055-output.md`。**Read-only**:不改任何文件(kernels/hermes 尤其);查询 new-api 只读(log/token 列表),不建不删任何资源;忽略跨仓/别目录全局 skill。中文。
+
+## T-056（SG-7 收残确认性再审，单 codex，接续 T-055）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续自己 T-055,持原 findings）· 只读 · 可跑 git/python/node,严禁 csi
+
+**评审对象**（主仓库 commit `fead0dde`,收 T-055 第 4/5 项）：`app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md` + `HERMES-RUN-EVIDENCE.md` + `kernels/hermes` 卫生状态。对照你自己 T-055 的 findings（`.hopper/handoffs/T-055-output.md`）。`git show fead0dde`。
+
+**只验两件事**：
+1. **T-055 第 4/5 项逐条真闭合**：egg-info 已清且 `git -C kernels/hermes status --ignored --short` 空(亲验)/验收步骤改双查/`rm -rf ~/.hermes` 改为前置校验+精确删除(检查 recipe 现文本)/3 处 handler 映射改正(:2863=Chat Completions、:3983=Responses、:5025=/v1/runs,可对源码抽验)/sessions-chat 不在闭合范围已明示/`platform resume` 热加载说法已删(仅剩否定说明)/evidence "全程未修改"已收窄为"无 tracked source diff"/Pi SQLite limitation 已如实标注。
+2. **修订无新错**：两文档现有全部 file:line 引用抽验若干(尤其收残新改的 :77-81/:2550-2575)是否与源码实况一致;修订未引入新的过度声称。核心 e2e 结论(T-055 已过的 1/2/3 项)不重开、不必再查 new-api/不必再调 Kimi。
+
+**Verdict**：`CONFIRMABLE`（SG-7 可收官）| `MUST-FIX`（问题点 + file:line + 可复现）。
+**产出**：两项逐条 + verdict。落盘 `.hopper/handoffs/T-056-output.md`。**Read-only**：不改任何文件;忽略跨仓/别目录全局 skill。中文。

@@ -1,0 +1,2611 @@
+Reading additional input from stdin...
+OpenAI Codex v0.145.0
+--------
+workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019f99cc-b832-7440-a648-f5909d2338fe
+--------
+user
+# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+
+You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+on your role — it overrides anything you may read locally.
+
+1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+   specialist." Nothing is listening downstream — if you delegate, the task fails.
+3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+   complete, closed loop.
+5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+   output, and proceed. The loop is closed — begin now and finish.
+
+---
+
+# Task-type: code-review-adversarial
+
+Anchor: `.hopper/tasks/code-review-adversarial.md::root`
+
+## Purpose
+
+Independently review a change, hunting for defects the author would miss. Review only — no edits.
+
+## Input shape
+
+- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+- Positive scope (files allowed) and negative scope (files that must not change)
+- Budget: time and vendor-cost ceiling
+
+## Output shape (output.md)
+
+The output should contain, in this order:
+
+- **Summary**: what was delivered, in two to four sentences
+- **Files touched**: paths with a one-line rationale each (or "none")
+- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+- **Decisions / deviations**: judgment calls or scope changes (or "none")
+- **Open questions**: list, or "none"
+- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+- **Next recommendation**: what should happen next
+
+## Notes
+
+This frame describes the SHAPE of the work and the expected output, not an
+identity to adopt. The vendor CLI brings its own behavior; the frame only states
+what the protocol expects back.
+
+---
+
+## Task spec
+
+## T-055（SG-7 hermes per-session key e2e 对抗审，单 codex）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: codex（轮换,T-054 为 grok）· 只读 · 可跑 node/python/git,严禁 csi
+
+**评审对象**（主仓库 commit `47177412`）：`app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md` + `HERMES-RUN-EVIDENCE.md`。权威对照:`~/.llm-wiki/agent-app-design/research/pre1-hermes-source-conformance.md`(PRE-① claim)+ `kernels/hermes` 源码只读(api_server.py 的 _resolve_route/model_routes overlay)。`git show 47177412`。
+
+**背景**:SG-7 = PRE-①「hermes api_server model_routes per-session baseUrl/key 零改动」claim 的 e2e 检验(对照 SG-6 openclaw 零改动被 e2e 证伪的先例)。结论:**claim 证实**——两 session 两独立 newapi token 真实 Kimi 往返,/api/log 逐字段归因(log45→token4/log46→token5),kernels/hermes 零 diff。主会话已独立亲查 new-api 计费 + hermes git 状态。由 Sonnet 执行,需异构对抗复核。
+
+**对抗核验重点(证伪"零改动证实"是否可信)**:
+1. **零改动真实性**:`git -C kernels/hermes status/diff` 亲验干净;evidence 声称的机制 file:line(api_server.py:1795 _resolve_route / :1905-1912 AIAgent kwargs overlay)与源码实况一致?model_routes 是纯配置特性(config.yaml platforms.api_server.extra.model_routes)而非隐藏改动?
+2. **归因证据真实**:可亲查——new-api(base/凭证在 `.harnessloop/local/channel-params.json`,root 登录)`/api/log/` 的 id 45/46 是否真归 token_id 4/5(sg7-hermes-session-a/b)、model=kimi-for-coding、usage 与 evidence 记载吻合?两条是否真是独立 token(非同 token 两次)?
+3. **e2e 链真实性**:evidence 里的往返是真实 Kimi 回复(非 mock/固定串)的佐证是否充分(usage 计费/时间戳/内容)?"prompt 244 含 cache 分账吻合"的算术是否成立?
+4. **recipe 可复现与隔离纪律**:步骤完整可复现?两个坑(build/ staging 落 submodule、裸 CLI 碰全局 ~/.hermes)的记载与防范是否到位?有无遗留污染(全局 ~/.hermes、系统 python、Pi)?
+5. **诚实标注充分性**:model_routes 静态注册 caveat(动态加 alias 需重启)如实且与 PRE-① flag 对齐?new-api token 掩码发现(T-009 推断修正)+ scp SQLite workaround 的安全性记载(只读/即删)如实?有无过度声称(如把"api_server 路径闭合"说成"hermes 全路径闭合"——ACP 路径本轮未走应如实标注)?
+
+**Verdict**:`PASS`(SG-7 可收官)| `PASS_WITH_NOTE` | `REWORK`(逐条 file:line + 可复现)| `FAIL`。
+**产出**:五项逐条 + verdict。落盘 `.hopper/handoffs/T-055-output.md`。**Read-only**:不改任何文件(kernels/hermes 尤其);查询 new-api 只读(log/token 列表),不建不删任何资源;忽略跨仓/别目录全局 skill。中文。
+
+codex
+我会按五个对抗核验项独立取证：先核对 commit、Hermes 源码与工作树，再只读查询 new-api 日志/令牌，最后把逐项证据和 verdict 写入指定输出文件；除该交付文件外不改动任何内容，也不会输出凭证。
+exec
+/bin/zsh -lc "pwd && rg --files -g 'HERMES-ISOLATED-RUN-RECIPE.md' -g 'HERMES-RUN-EVIDENCE.md' -g 'api_server.py' -g 'pre1-hermes-source-conformance.md' -g 'channel-params.json' -g '.gitmodules' -g 'config.yaml' | sed -n '1,160p' && git status --short && git show --stat --oneline --decorate --no-renames 47177412 && git show --format=fuller --no-ext-diff --unified=80 47177412 -- app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md HERMES-RUN-EVIDENCE.md app/kernel-client/HERMES-RUN-EVIDENCE.md" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 395ms:
+ M .harnessloop/state/current.md
+ M .hopper/handoffs/leader-tasklist.md
+ M .hopper/queue.md
+ ? kernels/openclaw
+?? .harnessloop/goals/20260718-002-agent-app/rounds/0008/
+?? .hopper/handoffs/T-055-output.log
+?? .hopper/handoffs/T-055-output.md
+?? .hopper/handoffs/T-055-progress.log
+4717741 (HEAD -> main) feat: SG-7 hermes per-session key 接线 e2e——零改动 claim 证实(C-3 path① 第二内核闭合)
+ app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md | 233 ++++++++++++++++++++++++
+ app/kernel-client/HERMES-RUN-EVIDENCE.md        | 227 +++++++++++++++++++++++
+ 2 files changed, 460 insertions(+)
+commit 47177412dddf1b15ade0e6ca911594cff3d96850
+Author:     litianyi <litianyi@corp.netease.com>
+AuthorDate: Sat Jul 25 23:02:08 2026 +0800
+Commit:     litianyi <litianyi@corp.netease.com>
+CommitDate: Sat Jul 25 23:02:08 2026 +0800
+
+    feat: SG-7 hermes per-session key 接线 e2e——零改动 claim 证实(C-3 path① 第二内核闭合)
+    
+    PRE-① 裁定的「hermes api_server HTTP 平台 model_routes per-session baseUrl/key 零改动」claim 经真实系统 e2e 检验**成立**(对照 SG-6 openclaw 零改动被证伪需 3 补丁):
+    - Stage A recipe(HERMES-ISOLATED-RUN-RECIPE.md):uv venv py3.11 隔离装 + HERMES_HOME 隔离 + gateway :8646;两个真实坑记录(非 editable install 仍在 submodule 落 build/ staging[已清]/裸 hermes CLI 无 HERMES_HOME 会碰全局 ~/.hermes[已清])
+    - Stage B evidence(HERMES-RUN-EVIDENCE.md):new-api 建 2 测试 token(id=4/5)→ config.yaml model_routes 两 alias 各持独立 key → 两 session PING-A/B 真实 Kimi 回复 → /api/log 逐字段归因:log45→token4(completion 22)/log46→token5(completion 15),prompt 244 含 cache 分账吻合——主会话独立亲查 new-api 复验一致
+    - 零改动机制 file:line:api_server.py:1795 _resolve_route 按 model alias 查 model_routes,:1905-1912 overlay 进 AIAgent kwargs;git -C kernels/hermes diff 全程干净(主会话亲验 0 行)
+    - 诚实标注:model_routes 静态注册(起机时解析,动态加 alias 需重启/未测的 platform resume)——与 PRE-① 既有 flag 一致非新缺口;发现 new-api GET /api/token/:id 也只返回掩码 key(T-009 推断部分修正),workaround=只读 scp SQLite 查后即删
+    - hermes 路径不经 D3-proxy:per-session key 本身即归因载体,与 openclaw header-affinity 换凭证构成 C-3 path① 两内核两种落法对照
+
+diff --git a/app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md b/app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md
+new file mode 100644
+index 0000000..fb500c0
+--- /dev/null
++++ b/app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md
+@@ -0,0 +1,233 @@
++# SG-7 hermes kernel 隔离运行 recipe（api_server HTTP 平台 + per-session key）
++
++> **保全说明**：本文件产于 rounds/0008（SG-7：hermes per-session key 接线 e2e），格式对齐
++> `app/kernel-client/OPENCLAW-ISOLATED-RUN-RECIPE.md` 的 recipe 惯例（前置/步骤/坑/验证命令）。
++> 状态标注: `[源码]` = 读 `kernels/hermes/<path>:<line>` 坐实；`[实测]` = 本轮 throwaway 试跑实测
++> （已清理，见文末）；`[推断]` = 未直接验证的推断。
++
++范围: `kernels/hermes` submodule pin `17155e3ae04d376dd8eba2e65f3dd966e67ab1ba`（2026-07-22，
++`pyproject.toml:10` `version = "0.19.0"`，与 PRE-① 源码核验的引用基线一致，本轮未发现该 pin 有漂移）。
++隔离端口 8646，隔离 `HERMES_HOME` 在 scratchpad 下，全程未连接/未污染用户全局 `~/.hermes`（**除一处
++已发现并清理的边界泄漏，见 §6**）。本轮验证的是 PRE-①裁定的「hermes 走 `api_server` HTTP 平台
++per-session baseUrl/key = 原生零改动」claim；**未走** ACP 路径（PRE-① 判定该路径需要小 patch，本轮
++不涉及）。
++
++---
++
++## 0. 关键结论先说
++
++**PRE-① claim 成立，未证伪**：本轮全程 `git -C kernels/hermes status/diff` 保持干净（见 §7），
++两个独立 session 各持独立 new-api token 的 per-session 归因 e2e 通过（完整证据见
++`HERMES-RUN-EVIDENCE.md`）。机制入口是 `gateway/platforms/api_server.py` 的 `model_routes` 配置块，
++**不是**环境变量、**不是**运行时 API——是 `config.yaml` 里 `platforms.api_server.extra.model_routes`
++一段静态映射，gateway 启动时读入一次（见 §5）。
++
++**诚实标注一个尺度落差**（PRE-① 已预见，本轮 e2e 证实）：这条路径实现的是「每个预先在 config.yaml
++里登记的 alias 各自绑定一个 upstream key/base_url」，不是「运行时对任意新建 session 现铸现分配一个
++key」。要新增一个 alias，需要编辑 `config.yaml` 后重启 gateway 进程或执行 gateway 控制台命令
++`/platform resume api_server`（`[源码]` `gateway/platforms/api_server.py:5619` 注释原文提到这条恢复
++路径，本轮**未实测**该热重载命令本身，只实测了"改配置+重启进程"这条路径）。这与"运行时任意下发"之间
++仍有一步距离，PRE-① 原文已用"配置时静态登记，不是运行时任意动态下发"准确预告过这一点，本轮 e2e 未推翻
++也未加宽这个判断，只是把"静态登记这条路径本身能不能打通到真实计费归因"从理论坐实为实测。
++
++---
++
++## 1. 依赖安装（venv 隔离，非 editable install）
++
++```bash
++SCRATCH=<scratchpad>                      # 本轮用 .../scratchpad
++cd "$SCRATCH"
++uv venv --python 3.11 hermes-venv         # pyproject.toml:20 requires-python ">=3.11,<3.14"
++
++# 非 editable install——用位置参数传源码路径（不是 -e .），
++# 这样 setuptools 在临时目录构建 wheel，装进 venv 的 site-packages，
++# 不会往 submodule 工作区写 egg-info 之类的东西。
++uv pip install --python "$SCRATCH/hermes-venv/bin/python" \
++  /path/to/kernels/hermes
++
++# api_server 平台需要 aiohttp（gateway/platforms/api_server.py:60-64 try/except 兜底，
++# 但不装就直接不可用）——aiohttp 只在 messaging/slack/matrix/sms/teams/homeassistant
++# 几个 extra 里，装那些 extra 会连带拉 python-telegram-bot/discord.py 等一堆用不上的
++# 依赖，本轮直接单独装 aiohttp 更干净：
++uv pip install --python "$SCRATCH/hermes-venv/bin/python" "aiohttp==3.14.1"
++```
++
++**坑 1（`[实测]`）：普通（非 editable）install 仍会在 submodule 里留下 `build/` 目录。**
++`uv pip install <path>`（哪怕不带 `-e`）触发 setuptools 的标准 build 流程时，会在**源码目录本身**
++（不是 venv、不是 scratchpad）创建 `build/bdist.*` + `build/lib/*` staging 目录（entire 源码树拷了一份
++进去）。这不是 editable install 才有的 egg-info 问题，是 `[tool.setuptools]` 这类项目的构建产物落点
++默认就是源码目录旁边。**装完必须 `rm -rf kernels/hermes/build` 并核对 `git status` 干净**——本轮已
++如此清理，`build/` 未被跟踪（不在 `.gitignore` 里也没关系，因为从未 commit，`git status --porcelain`
++清空后确认过）。
++
++**坑 2（`[实测]`）：任何不带 `HERMES_HOME` 的 `hermes` CLI 调用都会碰用户全局 `~/.hermes`。**
++本轮最初跑 `hermes --help`/`hermes gateway --help` 这类看起来"只读、不会有副作用"的命令时，**没有**
++显式设置 `HERMES_HOME`，结果在 `~/.hermes/logs/` 下创建了两个空文件（`agent.log`/`errors.log`，
++0 字节，见 `hermes_constants.py:56-64` `HERMES_HOME` 解析逻辑——未设时落到平台默认 `~/.hermes`）。
++影响面很小（只有两个空日志文件，没有 config.yaml/state.db/凭证），但这是一个真实的隔离缝隙，已发现并
++清理（`rm -rf ~/.hermes`，清理前确认目录内容全部是本轮新建的空文件）。**教训：隔离 recipe 里的每一条
++`hermes` 命令都要显式带 `HERMES_HOME`，包括看起来无害的 `--help`。** 类比 openclaw recipe 里记录的
++"`/tmp/openclaw/openclaw-<date>.log` 是个不受 state dir 控制的全局固定路径"那条已知隔离缝隙
++（`OPENCLAW-ISOLATED-RUN-RECIPE.md` §5 末尾），hermes 这边是同一类问题的另一个实例。
++
++---
++
++## 2. 隔离 `HERMES_HOME` + 配置文件
++
++`HERMES_HOME` 是 hermes 的状态根目录 env var 覆盖（`[源码]` `hermes_constants.py:64`
++`os.environ.get("HERMES_HOME", "")`），一旦显式设置，`config.yaml`/`.env`/`state.db`/`sessions/`
++等全部落在它下面（`[源码]` `hermes_constants.py:1187` `config.yaml` 路径解析、`:1202` `.env` 路径解析
++均以 `HERMES_HOME` 为根；`[实测]` `hermes config path`/`hermes config env-path` 在设置
++`HERMES_HOME="$SCRATCH/hermes-home"` 后分别打印 `$SCRATCH/hermes-home/config.yaml` /
++`$SCRATCH/hermes-home/.env`，与预期一致）。
++
++```bash
++mkdir -p "$SCRATCH/hermes-home"
++```
++
++`$SCRATCH/hermes-home/.env`：
++
++```bash
++# API_SERVER_ENABLED/KEY/PORT/HOST 官方文档明确标注只走 env var（config.yaml 暂不支持这几个字段，
++# website/docs/user-guide/features/api-server.md:427-432 "Not yet supported — use environment
++# variables"）。
++API_SERVER_ENABLED=true
++API_SERVER_KEY=<openssl rand -hex 24 生成，本轮示例见 evidence 文档>
++API_SERVER_PORT=8646
++API_SERVER_HOST=127.0.0.1
++```
++
++`$SCRATCH/hermes-home/config.yaml`：
++
++```yaml
++# 默认 model 块只是给 _resolve_runtime_agent_kwargs() 无路由匹配时的兜底
++# （gateway/platforms/api_server.py 里这个函数在 route 解析之前无条件调用一次，
++# 见 §5），本轮两个真实 session 全部走下面 model_routes 别名，会完整覆盖
++# api_key/base_url，不吃这个默认值。
++model:
++  provider: auto            # 必须是 auto/空——runtime_provider.py:1650-1682 的
++                             # "provider auto 但 config.yaml 有显式 base_url 且不是
++                             # 已知云厂商域名 → 走 OpenAI 兼容解析器" 分支靠这个触发
++  base_url: "http://<newapi-host>:3000/v1"
++  api_key: "<任一默认 token，仅用于兜底路径，不影响两个真实测试 session>"
++  default: "kimi-for-coding"
++
++platforms:
++  api_server:
++    enabled: true
++    extra:
++      # 官方 features/api-server.md 文档原文写"config.yaml: Not yet supported"，
++      # 但那句话说的是 host/port/key 这几个 env-only 字段——model_routes 反而
++      # *只能*走 config.yaml（源码 gateway/platforms/api_server.py:1024 docstring
++      # 原文 "Config format (platforms.api_server.extra in the gateway config)"，
++      # 且全仓搜索没有任何 MODEL_ROUTES 环境变量），文档这句话不覆盖这个字段，
++      # 别被误导成"model_routes 也没法配"。
++      model_routes:
++        session-a:
++          model: "kimi-for-coding"     # upstream 实际要打的模型名
++          api_key: "<newapi token A>"  # per-route upstream 凭证，本轮即 per-session 归因载体
++          base_url: "http://<newapi-host>:3000/v1"
++        session-b:
++          model: "kimi-for-coding"
++          api_key: "<newapi token B>"
++          base_url: "http://<newapi-host>:3000/v1"
++```
++
++`platforms.api_server.enabled: true` 这一行在源码里其实是多余的（真正决定平台是否启动的是
++`.env` 的 `API_SERVER_ENABLED`，`[源码]` `gateway/config.py:2005-2006` `is_truthy_value(getenv(
++"API_SERVER_ENABLED", ""))`），留着无害，图个配置自解释。
++
++---
++
++## 3. 起隔离 gateway
++
++```bash
++source "$SCRATCH/hermes-venv/bin/activate"
++export HERMES_HOME="$SCRATCH/hermes-home"
++hermes gateway run > "$SCRATCH/hermes-gw.log" 2>&1 &
++```
++
++`gateway run` 是前台命令（`hermes gateway --help` 里的说明："Run gateway in foreground (recommended
++for WSL, Docker, Termux)"），适合隔离场景手动控制生命周期，对齐 openclaw recipe 用
++`node scripts/run-node.mjs gateway`（同样前台跑 + 手动 kill）的做法。
++
++`[实测]` 启动日志只有一行 WARNING（无 Telegram/Discord 等平台配置时的正常提示，不是错误）：
++```
++WARNING gateway.run: No env user allowlists configured. Messaging platforms default to
++pairing/allowlist policies and will deny unknown senders unless you configure platform
++allowlists...
++```
++`[实测]` 约 8 秒后端口进入 LISTEN：`lsof -iTCP:8646 -sTCP:LISTEN` 能看到该 Python 进程。
++
++---
++
++## 4. 健康判据
++
++`[实测]`：
++```bash
++curl http://127.0.0.1:8646/health
++# → {"status": "ok", "platform": "hermes-agent", "version": "0.19.0"}
++
++curl http://127.0.0.1:8646/health/detailed -H "Authorization: Bearer $API_SERVER_KEY"
++# → readiness.checks.{state_db,config,model,disk,gateway,background_queues} 全 "ok"，
++#   platforms.api_server.state == "connected"
++```
++`/health` 不需要鉴权（公开存活探针），`/health/detailed` 需要 `API_SERVER_KEY`（`[源码]`
++`website/docs/.../api-server.md:230-238` 描述与实测行为一致）。
++
++---
++
++## 5. per-session key 机制的源码坐实（零改动路径）
++
++请求发到 `/v1/chat/completions`，body 里的 `"model"` 字段就是 alias 名（不是真实要打的模型名）：
++
++1. `_resolve_route(model_alias)`（`[源码]` `gateway/platforms/api_server.py:1795-1799`）在
++   `self._model_routes`（gateway 启动时由 `_parse_model_routes(extra.get("model_routes"))` 解析，
++   `[源码]` `:1037-1039` 构造函数里调用）里查 alias，命中则返回该条目的
++   `{model, provider?, api_key?, base_url?}`。
++2. 三处 HTTP handler 都在派发前调用这个方法：`:2863`（responses 路径）、`:3983`
++   （chat/completions 路径）、`:5025`（sessions chat 路径）。
++3. 拿到 `route` 后，在 `_run_agent`（构造 `AIAgent` 之前）里：
++   - `route.get("model")` → 覆盖 `model`（`:1905`）
++   - `route.get("api_key")` → 覆盖 `runtime_kwargs["api_key"]`（`:1910`）
++   - `route.get("base_url")` → 覆盖 `runtime_kwargs["base_url"]`（`:1912`）
++   - 若还给了 `route.get("provider")`（本轮未用），额外重新解析该 provider 的凭证链（`:1889-1901`）
++   - 这一整段判断的前提是 `route and not session_override`（`:1885-1888`）——只有当会话没有显式
++     `/model` 覆盖时，route 配置才生效，符合"静态路由是默认值、用户显式操作优先"的直觉
++4. 最终 `AIAgent(model=model, **runtime_kwargs, ...)`（`:1930` 附近）拿到的就是这一路由专属的
++   `api_key`/`base_url`——**这条链路里没有任何一步碰 `kernels/hermes` 源码，是配置驱动的既有生产
++   代码路径**，PRE-① 报告 §2.4 的判定在本轮 e2e 里精确复现。
++
++---
++
++## 6. 已知隔离缝隙（诚实记录，非阻断项）
++
++- **`~/.hermes/logs/` 边界泄漏**（见 §1 坑 2）：任何不带 `HERMES_HOME` 的裸 `hermes` 调用都会摸到
++  用户全局家目录，哪怕只是 `--help`。本轮已发现两个空日志文件并清理（`rm -rf ~/.hermes`，清理前
++  确认全部内容为本轮产生的空文件，未删除任何预先存在的用户数据——`ls -la` 时间戳与本轮起始时间
++  精确吻合）。**后续复用本 recipe 时，每一条 `hermes ...` 命令前都应显式 `export HERMES_HOME=...`
++  或用 `HERMES_HOME=... hermes ...` 内联形式，不留任何窗口期。**
++- **`build/` 构建产物**（见 §1 坑 1）：`uv pip install <源码路径>`（非 editable）仍会在源码目录里
++  留 `build/`，装完必须清理，`git status` 核对干净后才算隔离达标。
++- **model_routes 是静态配置**（见 §0 结论）：新增一个 per-session alias 需要重启 gateway 进程或
++  执行 `/platform resume api_server` 控制台命令（`[源码]` 引用见 `gateway/platforms/api_server.py:
++  5619` 注释；该热重载命令本身**本轮未实测**，只实测了"改配置文件 + 重启整个进程"这条更笨重但确凿
++  可行的路径）。这不是 hermes 的缺陷，是 PRE-① 报告已预告的"配置时静态登记 vs 运行时任意下发"之间
++  的既有差距，本轮 e2e 的作用是坐实"静态登记这条路径本身能不能打通到真实计费归因"，答案是能。
++
++---
++
++## 7. 收尾清理（`[实测]`）
++
++```bash
++kill -TERM <gateway PID>     # 优雅退出，$SCRATCH/hermes-home/.clean_shutdown 会被写入
++lsof -iTCP:8646 -sTCP:LISTEN # 应无输出（端口已释放）
++ps aux | grep -i hermes | grep -v grep   # 应无残留进程
++git -C kernels/hermes status  # nothing to commit, working tree clean
++git -C kernels/hermes diff    # 空
++rm -rf ~/.hermes              # 清理 §6 提到的边界泄漏（确认内容为本轮产生后再删）
++```
++`hermes-venv/` 与 `hermes-home/` 均留在 scratchpad，自然回收（throwaway，不入版本控制）。
++
++完整 e2e 归因证据（新建的两个 new-api token、两次真实 Kimi 往返、`new-api /api/log/` 逐字段核对）
++见 `app/kernel-client/HERMES-RUN-EVIDENCE.md`。
+diff --git a/app/kernel-client/HERMES-RUN-EVIDENCE.md b/app/kernel-client/HERMES-RUN-EVIDENCE.md
+new file mode 100644
+index 0000000..5437416
+--- /dev/null
++++ b/app/kernel-client/HERMES-RUN-EVIDENCE.md
+@@ -0,0 +1,227 @@
++# SG-7 hermes per-session key e2e 证据（rounds/0008）
++
++> 配套 recipe：`app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md`。本文档只放 Stage A/B 的
++> 逐字段证据，机制的源码坐实见 recipe §5。key 值按 scope-lock 要求脱敏（用 new-api 自身列表接口
++> 返回的掩码形式，如 `w83m**********dCjL`），token 名/id 保留（非敏感，供归因核对）。
++
++## 环境
++
++- hermes：`kernels/hermes` submodule pin `17155e3ae04d376dd8eba2e65f3dd966e67ab1ba`
++  （`pyproject.toml` `version = "0.19.0"`），隔离 venv（Python 3.11），`HERMES_HOME` 隔离在
++  scratchpad，隔离端口 `127.0.0.1:8646`。
++- new-api：`http://10.244.132.76:3000`（Pi 部署，SG-9 先例），channel id=1（`kimi-coding`，
++  type=14 Anthropic 兼容，upstream model `kimi-for-coding`）。
++
++---
++
++## Stage A：健康检查 + 默认路径最小往返
++
++`GET /health`：
++```json
++{"status": "ok", "platform": "hermes-agent", "version": "0.19.0"}
++```
++
++`GET /health/detailed`（节选）：
++```json
++{
++  "status": "ok",
++  "readiness": {"status": "ok", "checks": {
++    "state_db": {"status": "ok"}, "config": {"status": "ok"}, "model": {"status": "ok"},
++    "disk": {"status": "ok", ...}, "gateway": {"status": "ok", "state": "running",
++      "connected_platforms": 1, "platforms": 1},
++    "background_queues": {"status": "ok", "active_api_runs": 0, ...}
++  }},
++  "platforms": {"api_server": {"state": "connected", "error_code": null}},
++  "pid": 9182
++}
++```
++
++默认路径（无 `model_routes` 别名，走 config.yaml `model.*` 兜底配置）最小 prompt 往返：
++
++请求：
++```json
++POST /v1/chat/completions
++{"model":"hermes-agent","messages":[{"role":"user","content":"reply with exactly: HELLO-DEFAULT"}]}
++```
++
++响应：
++```json
++{
++  "id": "chatcmpl-eda549f7c6804d6c98693033bb568",
++  "model": "hermes-agent",
++  "choices": [{"message": {"role": "assistant", "content": "HELLO-DEFAULT"}, "finish_reason": "stop"}],
++  "usage": {"prompt_tokens": 11514, "completion_tokens": 28, "total_tokens": 11542}
++}
++```
++
++真实 Kimi 回复内容精确等于要求的 `HELLO-DEFAULT`，`prompt_tokens` 高（~1.15 万）是 hermes agent
++完整 system prompt + toolset 描述的正常量级，不是异常。Stage A 达成：隔离 gateway 起、`api_server`
++平台 connected、真实往返打通。
++
++---
++
++## Stage B：per-session key 归因 e2e
++
++### B.1 建两个测试 token（new-api root Management API）
++
++登录：`POST /api/user/login {"username":"root","password":"<NEWAPI_ROOT_PASSWORD>"}` → `success:true`，
++`role:100`（root）。
++
++建 token（`POST /api/token/`，`New-Api-User: 1`）：
++```json
++{"name":"sg7-hermes-session-a", "unlimited_quota":true, "remain_quota":500000, "expired_time":-1}
++{"name":"sg7-hermes-session-b", "unlimited_quota":true, "remain_quota":500000, "expired_time":-1}
++```
++两次调用均 `{"success":true,"message":""}`（new-api 创建响应不含明文 key，符合 T-009/T-031/
++`app/server/README.md` 已记录的已知缺口）。
++
++`GET /api/token/?p=0&size=20` 核对新建条目：
++
++| id | name | group | unlimited_quota |
++|---|---|---|---|
++| 4 | sg7-hermes-session-a | (空=default) | true |
++| 5 | sg7-hermes-session-b | (空=default) | true |
++
++**取明文 key 的方法（新记录，供后续轮参考）**：`GET /api/token/:id`（T-009 称为 `GetTokenKey`）
++在本实例上实测**仍只返回掩码**（`"key":"w83m**********dCjL"`），并未如 T-009 推断的那样回明文——
++这与 `POST /api/token/` 缺 id/明文的已知缺口是**同一个更宽的缺口**（管理面拿不到明文 key，不止创建
++时拿不到）。本轮绕行取法：SSH 到 Pi（`PI_SSH_KEY` channel），`docker inspect new-api` 确认无
++`SQL_DSN` 环境变量（即用默认 SQLite，`/home/ubuntu/newapi-deploy/data/one-api.db`），`scp` 一份
++**只读副本**到本机 scratchpad，本机 `sqlite3` 查 `SELECT id,name,key FROM tokens WHERE id IN (4,5)`
++拿到明文 key，随后**立即删除**本机副本（不留存、不入库）。全程未修改 Pi 上任何文件（`scp` 单向拉取，
++未 `docker exec` 写操作）。掩码形式：
++
++| id | name | key（掩码） |
++|---|---|---|
++| 4 | sg7-hermes-session-a | `w83m**********dCjL` |
++| 5 | sg7-hermes-session-b | `A5eZ**********bkfF` |
++
++两个明文 key 已登记 `.harnessloop/local/channel-params.json`（gitignored）
++`NEWAPI_SG7_HERMES_SESSION_A_TOKEN` / `NEWAPI_SG7_HERMES_SESSION_B_TOKEN`。
++
++**直连验证（绕开 hermes，先确认 token 本身可用）**：
++```bash
++curl http://10.244.132.76:3000/v1/chat/completions \
++  -H "Authorization: Bearer <token A>" \
++  -d '{"model":"kimi-for-coding","messages":[{"role":"user","content":"reply with exactly: PING-A"}],"max_tokens":20}'
++```
++返回真实 Kimi 响应（`reasoning_content` 非空，`finish_reason:"length"`——`max_tokens:20` 对这个
++带推理链的模型偏小，本轮真实 hermes 调用未设该上限，未复现这个截断）。计费落 new-api `/api/log/`
++id=43（见 B.3 表，token_id=4）。这一步确认 token 本身在打通 hermes 之前就已可用，隔离了"token 有
++问题"和"hermes 接线有问题"两类失败可能。
++
++### B.2 hermes 两 session 各发最小 prompt
++
++`config.yaml` `platforms.api_server.extra.model_routes` 登记两个 alias（见 recipe §2），
++`api_key`/`base_url` 分别指向 token A/B + new-api。
++
++请求 A：
++```json
++POST /v1/chat/completions
++X-Hermes-Session-Id: sg7-session-a
++{"model":"session-a","messages":[{"role":"user","content":"reply with exactly: PING-A"}]}
++```
++响应 A：
++```json
++{
++  "model": "session-a",
++  "choices": [{"message": {"content": "PING-A"}, "finish_reason": "stop"}],
++  "usage": {"prompt_tokens": 11508, "completion_tokens": 22, "total_tokens": 11530}
++}
++```
++
++请求 B：
++```json
++POST /v1/chat/completions
++X-Hermes-Session-Id: sg7-session-b
++{"model":"session-b","messages":[{"role":"user","content":"reply with exactly: PING-B"}]}
++```
++响应 B：
++```json
++{
++  "model": "session-b",
++  "choices": [{"message": {"content": "PING-B"}, "finish_reason": "stop"}],
++  "usage": {"prompt_tokens": 11508, "completion_tokens": 15, "total_tokens": 11523}
++}
++```
++
++两次真实 Kimi 回复内容精确等于各自要求的 `PING-A`/`PING-B`。
++
++**`GET /v1/models` 佐证**（route 别名确实注册为可寻址模型，`root` 字段暴露了它们各自解析到的真实
++upstream 模型名）：
++```json
++{"data": [
++  {"id": "hermes-agent", "root": "hermes-agent", "parent": null},
++  {"id": "session-a", "root": "kimi-for-coding", "parent": "hermes-agent"},
++  {"id": "session-b", "root": "kimi-for-coding", "parent": "hermes-agent"}
++]}
++```
++
++### B.3 new-api `/api/log/` 归因核对（逐字段）
++
++`GET /api/log/?p=0&page_size=10`（root Management API）返回的相关条目：
++
++| log id | token_name | token_id | model_name | channel_name | completion_tokens | prompt_tokens(log) | cache_tokens(other) | prompt_tokens(log)+cache_tokens |
++|---|---|---|---|---|---|---|---|---|
++| 45 | sg7-hermes-session-a | **4** | kimi-for-coding | kimi-coding | **22** | 244 | 11264 | **11508** |
++| 46 | sg7-hermes-session-b | **5** | kimi-for-coding | kimi-coding | **15** | 244 | 11264 | **11508** |
++
++逐字段断言：
++- **token 归因正确**：请求 A（alias `session-a`）的计费精确落在 `token_id=4`/`token_name=
++  sg7-hermes-session-a`；请求 B（alias `session-b`）精确落在 `token_id=5`/`token_name=
++  sg7-hermes-session-b`——**没有交叉、没有聚合到同一个 token**，这是本轮要证明的核心断言。
++- **model 归因正确**：两条日志 `model_name` 均为 `kimi-for-coding`，与 route 配置的
++  `route.model` 一致，且 new-api 侧渠道正确路由到 `kimi-coding` channel（真实 Kimi 上游）。
++- **usage 与响应精确吻合**：`completion_tokens` 逐条精确相等（A: 22=22，B: 15=15，都是
++  hermes 响应体自报的数字，不是估算）。`prompt_tokens` 表面上不直接相等（hermes 报
++  11508，new-api log 只报 244）——差额精确等于该条日志 `other` 字段里的
++  `cache_tokens:11264`（new-api 把 hermes 发来的长 system/tool prompt 命中的部分算作
++  prompt-cache 命中、拆开计费统计，`244(未命中)+11264(命中)=11508`，与 hermes 侧
++  `prompt_tokens` **精确相等**，两条日志（A/B）都是如此）——这不是巧合，是 new-api 
++  Claude-Messages 兼容层的标准计费字段拆分（`other.usage_semantic:"anthropic"`），
++  证明这两条日志确实就是对应这两次 hermes 调用的真实计费记录，不是碰巧数字接近。
++- 两条日志的 `request_path` 均为 `/v1/chat/completions`，`request_id` 各不相同（
++  `...qFuKbCAJ` / `...dMzfUoEd`），`created_at` 时间戳与两次 curl 调用发起时间吻合，
++  `is_stream:true`（hermes 内部对上游走的是流式请求，即便对外 `/v1/chat/completions`
++  这次调用本身不是 stream 模式，这是 hermes→upstream 内部实现细节，不影响归因结论）。
++
++**结论：per-session key 归因 e2e 通过，逐字段（token_id/token_name/model_name/
++completion_tokens/prompt_tokens 折算后）精确吻合，无编造、无估算。**
++
++---
++
++## 零改动核验
++
++```
++$ git -C kernels/hermes status
++On branch main
++Your branch is behind 'origin/main' by 17365 commits, and can be fast-forwarded.
++  (use "git pull" to update your local branch)
++
++nothing to commit, working tree clean
++
++$ git -C kernels/hermes diff --stat
++(空输出)
++```
++
++本轮全程未修改 `kernels/hermes` 任何文件；`build/` 构建产物（安装依赖时产生）已在提交前清理
++（详见 recipe §1 坑 1）；`~/.hermes/logs/` 的两个空日志文件（隔离缝隙，详见 recipe §6）已清理。
++
++主仓库改动仅为本轮新建文件：
++```
++$ git status --porcelain (相关部分)
++?? app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md
++?? app/kernel-client/HERMES-RUN-EVIDENCE.md
++ M .harnessloop/local/channel-params.json   (新增两个测试 token 参数，gitignored)
++```
++
++---
++
++## 收尾状态
++
++- 隔离 hermes gateway 进程已 `kill -TERM`，优雅退出（`.clean_shutdown` 落盘），端口 8646 已释放，
++  无残留进程。
++- `hermes-venv/`、`hermes-home/` 留在 scratchpad，throwaway，自然回收。
++- 新建的两个 new-api token（id=4/5）**保留**（供后续轮复用，与 SG-8.5 的 `sg8.5-kimi-e2e`（id=3）
++  同等对待，未删除）。
++- 本地拉取的 SQLite 只读副本（含明文 key 等敏感字段）已删除，未留存。
+
+codex
+初步读取显示两份评审文档确实只由该 commit 新增，且已经明确排除 ACP 路径。接下来我会重点验证容易“看起来吻合但其实未闭环”的部分：submodule 的未跟踪/忽略产物、源码 overlay 条件、日志 45/46 的原始字段与令牌列表是否互相独立。
+exec
+/bin/zsh -lc "git rev-parse HEAD
+
+git submodule status -- kernels/hermes
+
+git -C kernels/hermes status --short --untracked-files=all
+
+git -C kernels/hermes diff --stat
+
+git -C kernels/hermes diff --cached --stat
+
+git -C kernels/hermes status --ignored --short | sed -n '1,120p'
+
+nl -ba kernels/hermes/gateway/platforms/api_server.py | sed -n '990,1060p;1770,1950p;2840,2885p;3960,4005p;5000,5045p;5590,5640p'
+
+nl -ba /Users/litianyi/.llm-wiki/agent-app-design/research/pre1-hermes-source-conformance.md | sed -n '1,280p'
+
+if [ -f .harnessloop/local/channel-params.json ]; then jq -r 'paths(scalars) | map(tostring) | join(\".\")' .harnessloop/local/channel-params.json | sed -n '1,240p'; else echo 'channel params missing'; fi
+
+if [ -f .hopper/handoffs/T-055-output.md ]; then echo 'EXISTING_OUTPUT'; sed -n '1,260p' .hopper/handoffs/T-055-output.md; fi" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 597ms:
+ 17155e3ae04d376dd8eba2e65f3dd966e67ab1ba kernels/hermes (heads/main)
+!! hermes_agent.egg-info/
+   990	    Runs an aiohttp web server that accepts OpenAI-format requests
+   991	    and routes them through hermes-agent's AIAgent.
+   992	    """
+   993	
+   994	    # Stateless request/response: every route (the OpenAI-spec
+   995	    # /v1/chat/completions and /v1/responses, and the proprietary /v1/runs SSE
+   996	    # stream) tears down its channel when the turn ends. There is no persistent
+   997	    # outbound channel to push a background completion to a client that already
+   998	    # received its response, and ``send()`` is a no-op stub. So async-delivery
+   999	    # tools (terminal notify_on_complete / watch_patterns, delegate_task
+  1000	    # background=True) must NOT promise delivery on this path — see
+  1001	    # ``async_delivery_supported()``.
+  1002	    supports_async_delivery: bool = False
+  1003	
+  1004	    # Same statelessness applies to the startup auto-resume prompt: no client
+  1005	    # is waiting to answer "session restored — what next?", so a resumed turn
+  1006	    # should complete the interrupted work rather than acknowledge (#57056).
+  1007	    interactive_resume: bool = False
+  1008	
+  1009	    def __init__(self, config: PlatformConfig):
+  1010	        super().__init__(config, Platform.API_SERVER)
+  1011	        extra = config.extra or {}
+  1012	        self._host: str = extra.get("host", os.getenv("API_SERVER_HOST", DEFAULT_HOST))
+  1013	        raw_port = extra.get("port")
+  1014	        if raw_port is None:
+  1015	            raw_port = os.getenv("API_SERVER_PORT", str(DEFAULT_PORT))
+  1016	        self._port: int = _coerce_port(raw_port, DEFAULT_PORT)
+  1017	        self._api_key: str = extra.get("key", os.getenv("API_SERVER_KEY", ""))
+  1018	        self._cors_origins: tuple[str, ...] = self._parse_cors_origins(
+  1019	            extra.get("cors_origins", os.getenv("API_SERVER_CORS_ORIGINS", "")),
+  1020	        )
+  1021	        self._model_name: str = self._resolve_model_name(
+  1022	            extra.get("model_name", os.getenv("API_SERVER_MODEL_NAME", "")),
+  1023	        )
+  1024	        # model_routes: maps incoming ``model`` field values to specific
+  1025	        # provider/model configs so one API server instance can serve
+  1026	        # multiple clients on different backends.
+  1027	        #
+  1028	        # Config format (platforms.api_server.extra in the gateway config):
+  1029	        #   model_routes:
+  1030	        #     minimax-m2:          # alias the client sends as the "model" field
+  1031	        #       model: "minimax/minimax-m1"
+  1032	        #       provider: "openrouter"   # optional — resolved via the provider
+  1033	        #                                # credential chain when set
+  1034	        #       api_key: "sk-…"          # optional — per-route UPSTREAM provider
+  1035	        #                                # key override (NOT caller auth; never logged)
+  1036	        #       base_url: "https://…"    # optional — per-route base URL override
+  1037	        self._model_routes: Dict[str, Dict[str, Any]] = self._parse_model_routes(
+  1038	            extra.get("model_routes"),
+  1039	        )
+  1040	        self._app: Optional["web.Application"] = None
+  1041	        self._runner: Optional["web.AppRunner"] = None
+  1042	        self._site: Optional["web.TCPSite"] = None
+  1043	        self._response_store = ResponseStore()
+  1044	        # Active run streams: run_id -> asyncio.Queue of SSE event dicts
+  1045	        self._run_streams: Dict[str, "asyncio.Queue[Optional[Dict]]"] = {}
+  1046	        # Creation timestamps for orphaned-run TTL sweep
+  1047	        self._run_streams_created: Dict[str, float] = {}
+  1048	        # Runs with a connected SSE consumer; their queue is actively draining.
+  1049	        self._run_stream_subscribers: set[str] = set()
+  1050	        # Active run agent/task references for stop support
+  1051	        self._active_run_agents: Dict[str, Any] = {}
+  1052	        self._active_run_tasks: Dict[str, "asyncio.Task"] = {}
+  1053	        # Stop is cooperative: the executor thread may outlive the HTTP request.
+  1054	        self._stopping_run_ids: set[str] = set()
+  1055	        # Pollable run status for dashboards and external control-plane UIs.
+  1056	        self._run_statuses: Dict[str, Dict[str, Any]] = {}
+  1057	        # Active approval session key for each run_id.  The approval core
+  1058	        # resolves requests by session key, while API clients address the
+  1059	        # in-flight run by run_id.
+  1060	        self._run_approval_sessions: Dict[str, str] = {}
+  1770	                )
+  1771	            return {}
+  1772	
+  1773	        allowed_keys = ("model", "provider", "api_key", "base_url")
+  1774	        routes: Dict[str, Dict[str, Any]] = {}
+  1775	        for alias, cfg in raw.items():
+  1776	            alias_str = str(alias).strip()
+  1777	            if not alias_str or not isinstance(cfg, dict):
+  1778	                logger.warning(
+  1779	                    "api_server model_routes: dropping invalid route entry %r", alias_str or alias
+  1780	                )
+  1781	                continue
+  1782	            route = {
+  1783	                key: str(cfg[key]).strip()
+  1784	                for key in allowed_keys
+  1785	                if cfg.get(key) is not None and str(cfg[key]).strip()
+  1786	            }
+  1787	            if not route.get("model"):
+  1788	                logger.warning(
+  1789	                    "api_server model_routes: route %r has no 'model'; dropping", alias_str
+  1790	                )
+  1791	                continue
+  1792	            routes[alias_str] = route
+  1793	        return routes
+  1794	
+  1795	    def _resolve_route(self, model_alias: Any) -> Optional[Dict[str, Any]]:
+  1796	        """Return the model_routes entry for *model_alias*, or None."""
+  1797	        if not self._model_routes or not isinstance(model_alias, str):
+  1798	            return None
+  1799	        return self._model_routes.get(model_alias)
+  1800	
+  1801	    def _session_model_override_for(self, session_key: Optional[str]) -> Optional[Dict[str, Any]]:
+  1802	        """Return the gateway's session ``/model`` override for *session_key*, if any.
+  1803	
+  1804	        The gateway tracks per-session ``/model`` switches in
+  1805	        ``GatewayRunner._session_model_overrides``.  API-server requests that
+  1806	        share such a session key must keep honouring the explicit session
+  1807	        override even when the request's ``model`` field matches a configured
+  1808	        route — a user-issued ``/model`` always wins over static config.
+  1809	        """
+  1810	        if not session_key:
+  1811	            return None
+  1812	        try:
+  1813	            from gateway.run import _gateway_runner_ref
+  1814	            runner = _gateway_runner_ref()
+  1815	            if runner is None:
+  1816	                return None
+  1817	            override = runner._session_model_overrides.get(session_key)
+  1818	            return dict(override) if isinstance(override, dict) else None
+  1819	        except Exception:
+  1820	            return None
+  1821	
+  1822	    def _create_agent(
+  1823	        self,
+  1824	        ephemeral_system_prompt: Optional[str] = None,
+  1825	        session_id: Optional[str] = None,
+  1826	        stream_delta_callback=None,
+  1827	        tool_progress_callback=None,
+  1828	        tool_start_callback=None,
+  1829	        tool_complete_callback=None,
+  1830	        gateway_session_key: Optional[str] = None,
+  1831	        route: Optional[Dict[str, Any]] = None,
+  1832	    ) -> Any:
+  1833	        """
+  1834	        Create an AIAgent instance using the gateway's runtime config.
+  1835	
+  1836	        Uses _resolve_runtime_agent_kwargs() to pick up model, api_key,
+  1837	        base_url, etc. from config.yaml / env vars.  Toolsets are resolved
+  1838	        from config.yaml platform_toolsets.api_server (same as all other
+  1839	        gateway platforms), falling back to the hermes-api-server default.
+  1840	
+  1841	        ``gateway_session_key`` is a stable per-channel identifier supplied
+  1842	        by the client (via ``X-Hermes-Session-Key``).  Unlike ``session_id``
+  1843	        which scopes the short-term transcript and rotates on /new, this
+  1844	        key is meant to persist across transcripts so long-term memory
+  1845	        providers (e.g. Honcho) can scope their per-chat state correctly
+  1846	        — matching the semantics of the native gateway's ``session_key``.
+  1847	
+  1848	        ``route`` is an optional ``model_routes`` entry (per-client model
+  1849	        routing).  When set — and no session ``/model`` override exists for
+  1850	        this session — its model/provider/api_key/base_url override the
+  1851	        global defaults for this agent instance only.
+  1852	        """
+  1853	        from run_agent import AIAgent
+  1854	        from gateway.run import (
+  1855	            _checkpoint_agent_kwargs,
+  1856	            _current_max_iterations,
+  1857	            _resolve_runtime_agent_kwargs,
+  1858	            _resolve_gateway_model,
+  1859	            _load_gateway_config,
+  1860	            GatewayRunner,
+  1861	        )
+  1862	        from hermes_cli.tools_config import _get_platform_tools
+  1863	
+  1864	        runtime_kwargs = _resolve_runtime_agent_kwargs()
+  1865	        reasoning_config = GatewayRunner._load_reasoning_config()
+  1866	        model = _resolve_gateway_model()
+  1867	
+  1868	        # When the primary provider's auth fails (expired token / 429 quota
+  1869	        # cap), _resolve_runtime_agent_kwargs() falls through to the fallback
+  1870	        # provider chain, whose runtime dict carries its own ``model`` key.
+  1871	        # Pop it and let it override the config model, mirroring the native
+  1872	        # gateway path (_resolve_session_agent_runtime in run.py). Otherwise
+  1873	        # the explicit ``model=model`` below collides with the ``**runtime_kwargs``
+  1874	        # spread → "got multiple values for keyword argument 'model'", 500ing
+  1875	        # every /v1/chat/completions request while a fallback is active.
+  1876	        runtime_model = runtime_kwargs.pop("model", None)
+  1877	        if runtime_model:
+  1878	            model = runtime_model
+  1879	
+  1880	        # Per-client model routing (model_routes config).  The route was
+  1881	        # resolved from the request's ``model`` field by the HTTP handler.
+  1882	        # Precedence (highest first): session ``/model`` override → model_routes
+  1883	        # route → global config — an explicit user-issued ``/model`` on the
+  1884	        # session always beats static per-client route config.
+  1885	        session_override = self._session_model_override_for(
+  1886	            gateway_session_key or session_id
+  1887	        )
+  1888	        if route and not session_override:
+  1889	            if route.get("provider"):
+  1890	                # Resolve real credentials for the routed provider (mirrors
+  1891	                # the channel_overrides path in gateway/run.py) so a route
+  1892	                # without an explicit api_key/base_url still gets the right
+  1893	                # provider auth instead of the default provider's key.
+  1894	                try:
+  1895	                    from gateway.run import _resolve_runtime_agent_kwargs_for_provider
+  1896	                    provider_kwargs = _resolve_runtime_agent_kwargs_for_provider(
+  1897	                        route["provider"]
+  1898	                    )
+  1899	                    provider_kwargs.pop("model", None)
+  1900	                    runtime_kwargs.update(provider_kwargs)
+  1901	                except Exception:
+  1902	                    # Fall back to just switching the provider name; explicit
+  1903	                    # per-route api_key/base_url below can still complete auth.
+  1904	                    runtime_kwargs["provider"] = route["provider"]
+  1905	            if route.get("model"):
+  1906	                model = route["model"]
+  1907	            # Per-route secrets are upstream provider credentials. Never log
+  1908	            # them (compare _check_auth: caller auth stays the global bearer
+  1909	            # key checked with hmac.compare_digest).
+  1910	            if route.get("api_key"):
+  1911	                runtime_kwargs["api_key"] = route["api_key"]
+  1912	            if route.get("base_url"):
+  1913	                runtime_kwargs["base_url"] = route["base_url"]
+  1914	            logger.debug(
+  1915	                "api_server model route applied: model=%s provider=%s",
+  1916	                model,
+  1917	                runtime_kwargs.get("provider"),
+  1918	            )
+  1919	        elif route and session_override:
+  1920	            logger.debug(
+  1921	                "api_server model route skipped: session /model override wins for %s",
+  1922	                gateway_session_key or session_id,
+  1923	            )
+  1924	
+  1925	        user_config = _load_gateway_config()
+  1926	        enabled_toolsets = sorted(_get_platform_tools(user_config, "api_server"))
+  1927	
+  1928	        max_iterations = _current_max_iterations()
+  1929	
+  1930	        # Load fallback provider chain so the API server platform has the
+  1931	        # same fallback behaviour as Telegram/Discord/Slack (fixes #4954).
+  1932	        fallback_model = GatewayRunner._load_fallback_model()
+  1933	
+  1934	        agent = AIAgent(
+  1935	            model=model,
+  1936	            **runtime_kwargs,
+  1937	            **_checkpoint_agent_kwargs(user_config),
+  1938	            max_iterations=max_iterations,
+  1939	            quiet_mode=True,
+  1940	            verbose_logging=False,
+  1941	            ephemeral_system_prompt=ephemeral_system_prompt or None,
+  1942	            enabled_toolsets=enabled_toolsets,
+  1943	            session_id=session_id,
+  1944	            platform="api_server",
+  1945	            stream_delta_callback=stream_delta_callback,
+  1946	            tool_progress_callback=tool_progress_callback,
+  1947	            tool_start_callback=tool_start_callback,
+  1948	            tool_complete_callback=tool_complete_callback,
+  1949	            session_db=self._ensure_session_db(),
+  1950	            fallback_model=fallback_model,
+  2840	            except Exception as e:
+  2841	                logger.warning("Failed to load session history for %s: %s", session_id, e)
+  2842	                history = []
+  2843	        else:
+  2844	            # Derive a stable session ID from the conversation fingerprint so
+  2845	            # that consecutive messages from the same Open WebUI (or similar)
+  2846	            # conversation map to the same Hermes session.  The first user
+  2847	            # message + system prompt are constant across all turns.
+  2848	            first_user = ""
+  2849	            for cm in conversation_messages:
+  2850	                if cm.get("role") == "user":
+  2851	                    first_user = cm.get("content", "")
+  2852	                    break
+  2853	            session_id = _derive_chat_session_id(system_prompt, first_user)
+  2854	            # history already set from request body above
+  2855	
+  2856	        completion_id = f"chatcmpl-{uuid.uuid4().hex[:29]}"
+  2857	        model_name = body.get("model", self._model_name)
+  2858	        created = int(time.time())
+  2859	
+  2860	        # Per-client model routing: if the requested model matches a
+  2861	        # configured model_routes alias, this request's agent is created
+  2862	        # with that route's model/provider instead of the global default.
+  2863	        route = self._resolve_route(model_name)
+  2864	
+  2865	        if stream:
+  2866	            import queue as _q
+  2867	            _stream_q: _q.Queue = _q.Queue()
+  2868	
+  2869	            def _on_delta(delta):
+  2870	                # Filter out None — the agent fires stream_delta_callback(None)
+  2871	                # to signal the CLI display to close its response box before
+  2872	                # tool execution, but the SSE writer uses None as end-of-stream
+  2873	                # sentinel.  Forwarding it would prematurely close the HTTP
+  2874	                # response, causing Open WebUI (and similar frontends) to miss
+  2875	                # the final answer after tool calls.  The SSE loop detects
+  2876	                # completion via agent_task.done() instead.
+  2877	                if delta is not None:
+  2878	                    _stream_q.put(delta)
+  2879	
+  2880	            # Track which tool_call_ids we've emitted a "running" lifecycle
+  2881	            # event for, so a "completed" event without a matching "running"
+  2882	            # (e.g. internal/filtered tools) is silently dropped instead of
+  2883	            # producing an orphaned event clients can't correlate.
+  2884	            _started_tool_call_ids: set[str] = set()
+  2885	
+  3960	            stored_session_id = stored.get("session_id")
+  3961	            # If no instructions provided, carry forward from previous
+  3962	            if instructions is None:
+  3963	                instructions = stored.get("instructions")
+  3964	
+  3965	        # Append new input messages to history (all but the last become history)
+  3966	        for msg in input_messages[:-1]:
+  3967	            conversation_history.append(msg)
+  3968	
+  3969	        # Last input message is the user_message
+  3970	        user_message: Any = input_messages[-1].get("content", "") if input_messages else ""
+  3971	        if not _content_has_visible_payload(user_message):
+  3972	            return web.json_response(_openai_error("No user message found in input"), status=400)
+  3973	
+  3974	        # Truncation support
+  3975	        if body.get("truncation") == "auto":
+  3976	            conversation_history = _auto_truncate_response_history(conversation_history)
+  3977	
+  3978	        # Reuse session from previous_response_id chain so the dashboard
+  3979	        # groups the entire conversation under one session entry.
+  3980	        session_id = stored_session_id or str(uuid.uuid4())
+  3981	
+  3982	        # Per-client model routing for /v1/responses (see model_routes).
+  3983	        route = self._resolve_route(body.get("model"))
+  3984	
+  3985	        stream = _coerce_request_bool(body.get("stream"), default=False)
+  3986	        if stream:
+  3987	            # Streaming branch — emit OpenAI Responses SSE events as the
+  3988	            # agent runs so frontends can render text deltas and tool
+  3989	            # calls in real time.  See _write_sse_responses for details.
+  3990	            import queue as _q
+  3991	            _stream_q: _q.Queue = _q.Queue()
+  3992	
+  3993	            def _on_delta(delta):
+  3994	                # None from the agent is a CLI box-close signal, not EOS.
+  3995	                # Forwarding would kill the SSE stream prematurely; the
+  3996	                # SSE writer detects completion via agent_task.done().
+  3997	                if delta is not None:
+  3998	                    _stream_q.put(delta)
+  3999	
+  4000	            def _on_tool_progress(event_type, name, preview, args, **kwargs):
+  4001	                """Queue non-start tool progress events if needed in future.
+  4002	
+  4003	                The structured Responses stream uses ``tool_start_callback``
+  4004	                and ``tool_complete_callback`` for exact call-id correlation,
+  4005	                so progress events are currently ignored here.
+  5000	        # Also wire stream_delta_callback so message.delta events flow through.
+  5001	        def _text_cb(delta: Optional[str]) -> None:
+  5002	            if delta is None:
+  5003	                return
+  5004	            if run_id not in self._run_streams:
+  5005	                return
+  5006	            try:
+  5007	                loop.call_soon_threadsafe(_put_event_if_active, {
+  5008	                    "event": "message.delta",
+  5009	                    "run_id": run_id,
+  5010	                    "timestamp": time.time(),
+  5011	                    "delta": delta,
+  5012	                })
+  5013	            except Exception:
+  5014	                pass
+  5015	
+  5016	        self._set_run_status(
+  5017	            run_id,
+  5018	            "queued",
+  5019	            created_at=created_at,
+  5020	            session_id=session_id,
+  5021	            model=body.get("model", self._model_name),
+  5022	        )
+  5023	
+  5024	        # Per-client model routing for /v1/runs (see model_routes).
+  5025	        route = self._resolve_route(body.get("model"))
+  5026	        # Background task outlives the HTTP response (and thus the middleware
+  5027	        # profile scope). Capture now and re-enter inside the task/executor.
+  5028	        request_profile = _api_request_profile.get()
+  5029	
+  5030	        async def _run_and_close():
+  5031	            try:
+  5032	                self._set_run_status(run_id, "running")
+  5033	                if run_id in self._stopping_run_ids:
+  5034	                    _put_event_if_active({
+  5035	                        "event": "run.cancelled",
+  5036	                        "run_id": run_id,
+  5037	                        "timestamp": time.time(),
+  5038	                    })
+  5039	                    self._set_run_status(
+  5040	                        run_id,
+  5041	                        "cancelled",
+  5042	                        last_event="run.cancelled",
+  5043	                    )
+  5044	                    return
+  5045	                with self._profile_scope(request_profile):
+  5590	            # webhook adapter, #65482):
+  5591	            #   - macOS (BSD semantics): two sockets with SO_REUSEADDR can
+  5592	            #     silently split traffic while both report success — disable.
+  5593	            #   - Linux: SO_REUSEADDR only permits rebinding past TIME_WAIT
+  5594	            #     (a second live listener needs SO_REUSEPORT, never set), so
+  5595	            #     keep the default (enabled) for instant restart rebinds.
+  5596	            self._site = web.TCPSite(
+  5597	                self._runner,
+  5598	                self._host,
+  5599	                self._port,
+  5600	                reuse_address=False if sys.platform == "darwin" else None,
+  5601	            )
+  5602	            try:
+  5603	                await self._site.start()
+  5604	            except OSError as exc:
+  5605	                await self._runner.cleanup()
+  5606	                self._runner = None
+  5607	                self._site = None
+  5608	                if getattr(exc, "errno", None) == errno.EADDRINUSE:
+  5609	                    # A port conflict is a configuration error, not a
+  5610	                    # transient blip — another process holds the port for
+  5611	                    # its lifetime. A bare ``return False`` makes the
+  5612	                    # reconnect watcher in gateway.run treat it as retryable
+  5613	                    # and loop forever at the backoff cap (observed: 1568+
+  5614	                    # retries over 5 days across multi-profile setups all
+  5615	                    # defaulting to the same port, #52132), filling
+  5616	                    # errors.log and leaking the adapter's ResponseStore
+  5617	                    # fds each retry. Non-retryable drops it from the
+  5618	                    # reconnect queue; the operator recovers with
+  5619	                    # ``/platform resume api_server`` after changing the port.
+  5620	                    self._set_fatal_error(
+  5621	                        "api_server_port_in_use",
+  5622	                        f"Port {self._port} already in use. Set "
+  5623	                        f"platforms.api_server.port in config.yaml to a "
+  5624	                        f"different value, then `/platform resume api_server`.",
+  5625	                        retryable=False,
+  5626	                    )
+  5627	                logger.error(
+  5628	                    "[%s] Could not bind %s:%d: %s. Set a different port in "
+  5629	                    "config.yaml: platforms.api_server.port",
+  5630	                    self.name, self._host, self._port, exc,
+  5631	                )
+  5632	                return False
+  5633	
+  5634	            self._mark_connected()
+  5635	            logger.info(
+  5636	                "[%s] API server listening on http://%s:%d (model: %s)",
+  5637	                self.name, self._host, self._port, self._model_name,
+  5638	            )
+  5639	            return True
+  5640	
+     1	---
+     2	title: "Pre-1 hermes 源码核验：D1/T-003/T-035 关键假设逐条核对（发现「无 soft steer」被真源码推翻）"
+     3	type: research
+     4	tags: [p2-kernel, hermas, local-kernel, architecture-decision]
+     5	created: 2026-07-22
+     6	updated: 2026-07-22
+     7	published_at: 2026-07-22
+     8	ingested_at: 2026-07-22
+     9	sources:
+    10	  - /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kernels/hermes
+    11	  - /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-003-output.md
+    12	  - /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-035-output.md
+    13	  - kernel/d1-kernelport-spec-v3-5.md
+    14	  - kernel/kernel-ecosystem-facts.md
+    15	component: P2-kernel
+    16	design_status: draft
+    17	---
+    18	
+    19	# Pre-1 hermes 源码核验：D1/T-003/T-035 关键假设逐条核对
+    20	
+    21	> **方法**：只读 `kernels/hermes/`（`NousResearch/hermes-agent`，本地快照 git HEAD `17155e3a`，2026-07-22，
+    22	> `pyproject.toml:10` `version = "0.19.0"`，`acp_registry/agent.json` 同步声明 `hermes-agent[acp]==0.19.0`）。
+    23	> 未改一行内核源码。以下用真实 `file:line` 核对 [[kernel-ecosystem-facts]] §2/§2a、
+    24	> [[d1-kernelport-spec-v3-5]]（D1 v3.5）对 hermes 的断言，以及 T-003/T-035 两份 hopper 调研 handoff。
+    25	
+    26	## 0. 结论速览
+    27	
+    28	| 维度 | 结果 |
+    29	|---|---|
+    30	| 核验条目数 | 17 条（T-003/T-035/D1 对 hermes 的具体断言） |
+    31	| **属实**（源码印证） | 12 条 |
+    32	| **已变/不符**（源码与设计假设矛盾，或设计假设本身表述有误） | **2 条（含 1 条关键：「无 soft steer」被证伪）** |
+    33	| **从"未能确认"升级为"已确认"**（T-003/T-005 标注信息稀缺，本次源码补全） | 2 条 |
+    34	| **需 runtime 才能定论**（源码只能证明"能力存在"，具体端到端行为需活体验证） | 1 条 |
+    35	| **C-3（per-session baseUrl/key）判定** | **原生支持，但支持路径不是 ACP 协议本身，而是 `gateway/platforms/api_server.py` 的 `model_routes`；ACP 路径若要用则需一个小 patch。判定倾向 path①，不必退回 path②** |
+    36	| **改动总评** | **不需要 fork/深度改动**；若走 `api_server` HTTP 平台走 per-session baseUrl/key 是**零改动**（原生 config 特性）；若坚持走 ACP 协议做同样的事，是**一个小 patch**（利用已有 `set_config_option` 扩展点回填，量级 <50 行，不涉及协议 schema 变更）；此外强烈建议追加一个**不改动就能拿到的免费能力**——hermes 的 `interrupt(mode:'steer')` 其实**已经支持**，只是 D1 适配器层目前把它写死 reject，这处不是 hermes 的缺口，是设计侧需要更新的一行判断 |
+    37	
+    38	---
+    39	
+    40	## 1. 问题一：设计对 hermes 的关键假设逐条核验
+    41	
+    42	### 1.1 ACP adapter / 传输形态 — 属实
+    43	
+    44	| # | 断言（出处） | 判定 | 源码证据 |
+    45	|---|---|---|---|
+    46	| 1 | hermes 有独立 `acp_adapter/` 目录，是 ACP 适配层（kernel-ecosystem-facts §2） | **属实** | `kernels/hermes/acp_adapter/` 含 `server.py`(2092行)、`session.py`(659行)、`permissions.py`(175行)、`edit_approval.py`(338行)、`entry.py`(271行)、`tools.py`(1347行)、`events.py`(279行) 等 11 个文件 |
+    47	| 2 | ACP 是 stdio JSON-RPC（T-003 §2.2） | **属实** | `acp_adapter/entry.py:246-262`：`import acp; ... asyncio.run(acp.run_agent(agent, use_unstable_protocol=True))`；模块 docstring（entry.py:1-14）明写 "stdout is reserved for ACP JSON-RPC transport"；依赖 `pyproject.toml:221` `acp = ["agent-client-protocol==0.9.0"]` |
+    48	| 3 | `acp_registry/agent.json` 是真实、可被编辑器发现的注册元数据 | **属实（补充证据）** | `acp_registry/agent.json`：`"id":"hermes-agent"`、`"distribution":{"uvx":{"package":"hermes-agent[acp]==0.19.0","args":["hermes-acp"]}}`，版本与 `pyproject.toml:10` 一致 |
+    49	
+    50	### 1.2 cancel / 会话生命周期 — 属实
+    51	
+    52	| # | 断言 | 判定 | 源码证据 |
+    53	|---|---|---|---|
+    54	| 4 | ACP 只有 `cancel(session_id)`（session 级中断），无 delete/destroy/stop 动词（D1 v3.5 line 97、kernel-ecosystem-facts §2a） | **属实** | `acp_adapter/server.py:1215-1227` `async def cancel(self, session_id, **kwargs)`；`server.py` 全文 `async def ` 方法清单（`initialize/authenticate/new_session/load_session/resume_session/cancel/fork_session/list_sessions/prompt/set_session_model/set_session_mode/set_config_option`）中**没有** delete/destroy/stop |
+    55	| 5 | cancel → `cancel_event.set()` + `agent.interrupt()` → `stop_reason="cancelled"` | **属实** | `server.py:1215-1227`（cancel 实现）+ `server.py:1693-1694` `stop_reason = "cancelled" if cancelled else "end_turn"`；`run_agent.py:2788` `def interrupt(self, message=None)` |
+    56	| 6 | 持久删除仅 CLI `hermes sessions delete`（kernel-ecosystem-facts §2a） | **已变（需修正表述，非"仅此一路"）** | ACP 侧确实没有 delete 动词（属实的部分）；但**系统级并非只有 CLI 一条删除路径**：`hermes_cli/main.py:14827-14831`（CLI `sessions delete`）之外，`hermes_cli/web_server.py:11268` `@app.delete("/api/sessions/{session_id}")` 与 `gateway/platforms/api_server.py`（docstring 第 10 行）`GET/PATCH/DELETE /api/sessions/{session_id}` **也提供 HTTP DELETE**。原表述"仅 CLI 一条持久删除路径"不准确，应改为"ACP 协议内无 delete 动词，删除需绕出 ACP，走 CLI 或另外两个 HTTP 面之一" |
+    57	| 7 | SessionManager 持有 session_id/history/cancel_event/cwd/model | **属实** | `acp_adapter/session.py:159-172` `@dataclass class SessionState`：字段精确匹配 `session_id, agent, cwd, model, history, cancel_event, is_running, queued_prompts, runtime_lock, current_prompt_text, interrupted_prompt_text` |
+    58	
+    59	### 1.3 「无 soft steer」——已变，被源码证伪（关键发现）
+    60	
+    61	| # | 断言 | 判定 | 源码证据 |
+    62	|---|---|---|---|
+    63	| 8 | D1 v3.5 INV-5：「hermes：ACP 只有 `cancel(session_id)`（session 级，无 soft 对应）」（line 83）；「`interrupt(mode:'steer')` 在 hermes 上不受支持，必须 reject」（line 238、444） | **已变/不符 —— 被真源码证伪** | 见下方专门说明 |
+    64	
+    65	**证据链（同 run 软注入，即 D1 所谓 "soft steer"，在 hermes 上确凿存在且已接入生产路径）**：
+    66	
+    67	1. `run_agent.py:2899-2933` `AIAgent.steer(text) -> bool`：docstring 原文 ——
+    68	   > "Inject a user message into the next tool result without interrupting. Unlike interrupt(), this does NOT stop the current tool call. The text is stashed and the agent loop appends it to the LAST tool result's content once the current tool batch finishes."
+    69	   这正是 openclaw `queueMode:"steer"` 的同类语义：**不中断当前执行，把引导文本注入下一次工具结果**。
+    70	2. 这不是孤立/未接线的方法：`agent/tool_executor.py:1035,1048,1102,1720,1761,1818` 六处调用点 `agent._apply_pending_steer_to_tool_results(messages, ...)`，在工具执行返回后把 pending steer 文本真正拼进 tool result——是已布线进主执行循环的生产代码，不是死代码或测试桩。
+    71	3. **ACP 侧确实暴露了它**：`acp_adapter/server.py:1989-2006` `_cmd_steer`：当 `state.is_running and hasattr(state.agent, "steer")` 时调用 `state.agent.steer(steer_text)`，返回 `"⏩ Steer queued for the active turn: ..."`；触发方式是把 `/steer <text>` 作为普通文本发进 ACP `prompt()`（`server.py:1335-1354` 对空闲会话做了专门的降级重写逻辑，明确区分"有 active run 时走真正的软注入"与"空闲时退化为普通 prompt"两条分支）。
+    72	4. **不是 ACP 独有的边角能力**：CLI 侧同款命令 `hermes_cli/commands.py:112` `CommandDef("steer", "Inject a message after the next tool call without interrupting", "Session", ...)`；messaging Gateway 侧 `gateway/run.py:5443-6017` 一整套 `effective_mode == "steer"` 分支（`can_steer`/`steered` 变量、`running_agent.steer()` 调用），说明这是横跨 CLI / Gateway / ACP 三个入口的**一等公民能力**，而非 ACP 专属 hack。
+    73	
+    74	**对 D1 的影响**：D1 v3.5 §11 C-5 原本把"hermes ACP 是否具备任何形式的同 run 软注入机制"列为**非阻塞性验证项**，并预先写好了条件规则——"若确认存在：`capabilities().interruptModes` 对 hermes 放宽为包含 `'steer'`，不视为对本 spec 的推翻，是能力协商模型天然支持的正常扩展"（v3.5 line 743）。本次源码核验的结果正是"确认存在"，**按 D1 自己的规则应该触发这条放宽**：hermes 的 `capabilities().interruptModes` 不应再对 `'steer'` 恒为空，`interrupt(mode:'steer')` 不应恒 reject。这不需要改 hermes 一行代码——只需要 KernelPort 适配器把 `interrupt(session,{mode:'steer',text})` 映射为「向 ACP 发一条 `/steer <text>` 的 `prompt()` 调用」，且仅在 `state.is_running` 时才是真软注入（空闲时 hermes 自己会降级为普通 prompt，适配器应据此把空闲态的 steer 请求也归类为"降级"而非"拒绝"）。
+    75	
+    76	### 1.4 审批（approval）— 属实
+    77	
+    78	| # | 断言 | 判定 | 源码证据 |
+    79	|---|---|---|---|
+    80	| 9 | ACP 审批映射 `allow_once`/`allow_always`/`allow_session`/`deny`，映射 + timeout/bridge 错误 → deny（fail-closed） | **属实** | `acp_adapter/permissions.py:21-27` `_OPTION_ID_TO_HERMES = {"allow_once":"once","allow_session":"session","allow_always":"always","deny":"deny","deny_always":"deny"}`；`permissions.py:159-164` 超时/异常 → `return "deny"` |
+    81	| 10 | edit approval 可能忽略配置的 `approvals.timeout`，硬编码约 60s | **属实** | `acp_adapter/permissions.py:114` `timeout: float = 60.0`（默认值，调用处 `server.py:1421` `make_approval_callback(conn.request_permission, loop, session_id)` **未传入自定义 timeout**，即吃默认 60.0）；`acp_adapter/edit_approval.py:290` 同款 `timeout: float = 60.0` |
+    82	| 11 | CLI TTY 交互式审批无公开可编程协议 | **属实（源码支持，未做穷举排除法验证）** | `hermes_cli/callbacks.py:186` `def approval_callback(cli, command, description) -> str`——直接绑定 TUI 对象 `cli` 做交互式 prompt，未见 JSON/stdio 化的旁路（置信度：中，未逐个排查是否存在隐藏 flag） |
+    83	| 12 | 中途 `capabilities_changed` 事件不存在 | **属实** | `acp_adapter/` 全目录 grep `capabilities_changed`/`capability_changed` 零命中；`server.py:865-897` `initialize()` 一次性静态返回 `AgentCapabilities(...)`，无后续推送通道 |
+    84	| 13 | 移除 tool 会触发 session reset 以重建 tool manifest | **属实** | `hermes_cli/cli_commands_mixin.py:433-435`：`"/tools disable/enable saves the change to config and resets the session so the new tool set takes effect cleanly (no prompt-cache breakage mid-conversation)"`（CLI 侧确认；ACP 侧本就没有 tool enable/disable 入口，`_cmd_tools` 只读，见下条） |
+    85	
+    86	### 1.5 Per-profile capabilities（CLI vs ACP）— 属实
+    87	
+    88	| # | 断言 | 判定 | 源码证据 |
+    89	|---|---|---|---|
+    90	| 14 | ACP 走精简/固定 toolset，CLI 可编程增删 | **属实** | `acp_adapter/session.py:129` `_expand_acp_enabled_toolsets(...)` 默认 `["hermes-acp"]` 固定 profile；`acp_adapter/server.py:1803-1834` `_cmd_tools` 只读列出工具，**没有** enable/disable 分支（对照 CLI 侧 `hermes_cli/tools_config.py` 有完整增删 API） |
+    91	
+    92	### 1.6 从「未能确认」升级为「已确认」（T-003/T-005 信息稀缺项，本轮源码补全）
+    93	
+    94	| # | T-003/T-005 原状态 | 本轮源码结论 |
+    95	|---|---|---|
+    96	| 15 | "Hermes api_server 对外 HTTP 会话 API 未能确认完整契约" | **已确认存在，且契约相当完整** —— `gateway/platforms/api_server.py` docstring（文件头 1-25 行）列出完整契约：`POST /v1/chat/completions`、`POST /v1/responses`（+`GET`/`DELETE`）、`GET /v1/models`、`GET /v1/capabilities`、`GET/POST/PATCH/DELETE /api/sessions[/{id}]`、`POST /api/sessions/{id}/fork`、`POST /api/sessions/{id}/chat[/stream]`、**`POST /v1/runs`（返回 run_id）+ `GET /v1/runs/{run_id}` + `GET /v1/runs/{run_id}/events`（SSE）+ `POST /v1/runs/{run_id}/approval` + `POST /v1/runs/{run_id}/stop`**——这一组 `/v1/runs/*` 接口本身就是一个相当贴近 KernelPort 窄腰的 run 级 start/subscribe/approval/stop HTTP 契约，且不受 ACP scope 限制。这是本轮最值得回填进 D1 Scope 讨论的新事实（当前 D1 v3.5 scope 明确只覆盖 openclaw+hermes 两个 daemon/gateway 型内核的 ACP/CLI 路径，未把 hermes 自己的 `api_server` 平台当作第三条候选传输线路评估过） |
+    97	| 16 | new-api 注入链契约第④步"是否可行取决于 openclaw/hermes 是否支持 per-session 换 key"（D1 §11 C-3） | 见下方问题二完整判定 |
+    98	
+    99	### 1.7 需 runtime 才能定论
+   100	
+   101	| # | 断言 | 判定 |
+   102	|---|---|---|
+   103	| 17 | ACP `session/load` 历史 replay 的实际时序（是否总能在 client 判定"加载完成"前送达全部历史）与 `_replay_session_history` 的异常吞噬策略（`server.py:1156-1169` 捕获异常但静默"partial transcript may be missing"）在高延迟/大历史场景下的真实行为 | **需 runtime**——源码显示这是"尽力而为"设计（best-effort，文档化的已知取舍），但具体退化边界只能靠真实大会话做一次 live probe 验证，源码只能证明"存在这个显式的降级路径"，不能证明"永远不丢" |
+   104	
+   105	---
+   106	
+   107	## 2. 问题二（C-3）：hermes 是否原生支持 per-session LLM 出口 baseUrl/key
+   108	
+   109	**判定：原生支持——但支持它的不是 D1 目前唯一考虑的 ACP 传输线路，而是 hermes 自己的 `gateway/platforms/api_server.py` 平台的 `model_routes` 特性。倾向 path①（session 级归因可行），不必退化到 path②（部署级聚合）。** 分三层证据说明：
+   110	
+   111	### 2.1 全局/部署级默认配置（这一层确实是共享的，印证 D1 v3.2 §2.1 注释"baseUrl 是租户/环境级配置"没错）
+   112	
+   113	`cli-config.yaml.example:8-46`：`model.provider`/`model.base_url`/`model.api_key`（或 `.env` 里的 `OPENROUTER_API_KEY` 等）是单一部署的默认凭证，所有 session 共享——这部分和设计假设一致。
+   114	
+   115	### 2.2 Python/AIAgent 库层：per-instance 原生支持（属实，证据最直接）
+   116	
+   117	`run_agent.py:423-429` `AIAgent.__init__(self, base_url: str = None, api_key: str = None, provider: str = None, ...)`——**每个 AIAgent 实例都可以独立传入 base_url/api_key**。ACP 的每个 session 本来就对应一个独立的 `AIAgent` 实例（`acp_adapter/session.py:199-205` `create_session` → `_make_agent` → `AIAgent(**kwargs)`），所以"per-session 不同出口"在对象模型层面从来没有被禁止过。
+   118	
+   119	再往下一层，`hermes_cli/runtime_provider.py:1522-1528` `def resolve_runtime_provider(*, requested=None, explicit_api_key=None, explicit_base_url=None, target_model=None)`——**凭证解析函数本身已经支持"显式覆盖"参数**，这不是要新写的能力，是已经存在但当前 ACP 适配器没有调用到的能力。
+   120	
+   121	### 2.3 ACP 适配器目前的实际接线（缺口所在）
+   122	
+   123	`acp_adapter/session.py:590-648` `_make_agent(...)` 调用 `resolve_runtime_provider(requested=requested_provider or config_provider)`——**没有传 `explicit_api_key`/`explicit_base_url`**，即便这两个关键字参数在下游函数里现成可用。`acp_adapter/server.py` 的 ACP 方法里，`new_session`（`server.py:1113-1131`，仅接受 `cwd, mcp_servers`）与 `set_session_model`（`server.py:2022-2054`，`model_id` 经 `_resolve_model_selection` 解析为"已配置的 provider 名 + model"，不是任意内联 base_url/key）**都不接受调用方传入的裸 baseUrl/key**——这是 ACP 协议层面目前确实存在的缺口，直接对应 D1 §11 C-3 的疑虑。
+   124	
+   125	但**已有一个天然的、无需改协议 schema 的挂载点**：`server.py:2072-2090` `set_config_option(config_id, session_id, value)` 是一个已经存在的、通用的 key-value 配置写入 RPC，当前实现是"接受任意 config_id 存进 `state.config_options`"（`server.py:2081-2089`），但**这些值目前没有被 `_make_agent` 读回**。把 `_make_agent` 改成读取 `state.config_options.get("baseUrl")`/`get("apiKey")` 并透传给 `resolve_runtime_provider(explicit_api_key=..., explicit_base_url=...)`，是一个**局部小 patch**（预计 <50 行，两个文件：`session.py` 加两个可选参数直传、`server.py::set_config_option` 或 `_make_agent` 调用处读取 `state.config_options`），不涉及 ACP 协议本身的 schema 变更（`set_config_option` 早已是通用透传通道）。
+   126	
+   127	### 2.4 更强的原生证据：`gateway/platforms/api_server.py` 的 `model_routes`（零 patch 路径）
+   128	
+   129	这是本轮最重要的补充发现。hermes 自带的 OpenAI 兼容 HTTP 网关平台**原生支持"per-alias 独立 upstream 凭证"**：
+   130	
+   131	- `gateway/platforms/api_server.py:1024-1037`（docstring + 解析代码）：
+   132	  ```
+   133	  model_routes: maps incoming `model` field values to specific
+   134	    model_routes:
+   135	      <alias>:
+   136	        model: "..."
+   137	        provider: "..."          # optional — per-route UPSTREAM provider
+   138	        api_key: "sk-…"          # optional — per-route UPSTREAM provider
+   139	        base_url: "https://…"    # optional — per-route base URL override
+   140	  ```
+   141	- `gateway/platforms/api_server.py:1900-1913`：客户端请求里的 `model` 字段被解析成 `route`，`route.get("api_key")`/`route.get("base_url")` 直接写入 `runtime_kwargs["api_key"]`/`runtime_kwargs["base_url"]`，最终传给 `AIAgent(**runtime_kwargs)`——**这条链路完整闭合，是生产代码，不是设计草稿**。
+   142	- 结合 `/v1/runs`、`/api/sessions/{id}/chat` 等有状态会话接口（见 §1.6 第 15 条），客户端在每次请求/每个 session 里指定不同的 `model` 别名，就能让**不同 session 落到不同的 newapi baseUrl + key** 上——这正是 D1 §7 注入链契约第④步需要的能力，且是 hermes **已经实现、无需改一行源码**的路径，前提是这些 alias 在 `model_routes` 配置块里预先登记（配置时静态登记，不是运行时任意动态下发——这一点和"任意 session 现铸现用"之间还有一步之遥，但比 ACP 路径成熟得多）。
+   143	
+   144	### 2.5 判定小结
+   145	
+   146	| 路径 | 是否原生支持 per-session baseUrl/key | 改动量级 |
+   147	|---|---|---|
+   148	| 全局默认（`cli-config.yaml`/`.env`） | 否，本就是共享层 | — |
+   149	| Python `AIAgent` 库嵌入 | **是**（构造参数直接支持） | 无需改 |
+   150	| `gateway/platforms/api_server.py`（`model_routes`） | **是**（原生 per-alias upstream key/baseUrl，已生产可用） | **无需改**，只需在部署配置里预注册 alias |
+   151	| ACP 协议（`hermes acp` stdio） | **否（目前）**，但有现成挂载点 | **小 patch**（利用已有 `set_config_option` 回填 `_make_agent`，<50 行，不改协议 schema） |
+   152	
+   153	**对 D1 的建议**：C-3 不必默认走"验证不可行 → 退化到 `user_tenant_aggregate` 聚合计费"的悲观分支。只要 app 侧愿意接受"走 `api_server` HTTP 平台而非 ACP 作计费敏感场景的传输线路"，或者接受给 ACP 打一个几十行的小 patch，`billingAttribution: 'session'` 都是可以真实达成的，不是无法验证的假设。
+   154	
+   155	---
+   156	
+   157	## 3. 问题三：改动可能性总评
+   158	
+   159	**不需要 fork hermes，也不需要对其做实质性改动（无中改/大改）。** 分层给出量级：
+   160	
+   161	- **无需改**：ACP 会话生命周期（new/load/resume/fork/list/cancel）、审批桥接（allow_once/allow_session/allow_always/deny + fail-closed 超时）、per-profile 工具集裁剪（`hermes-acp` 固定集）、`interrupt(mode:'steer')` 的落地——**这条尤其值得强调：steer 已经在 hermes 里现成可用，D1 适配器只需要在自己的映射层把"发一条 `/steer <text>` 的 prompt()"接到 `interrupt(mode:'steer')` 上即可，零 hermes 改动**。
+   162	- **零改动即可拿到 per-session 计费凭证隔离**：如果把 `gateway/platforms/api_server.py`（HTTP，`/v1/runs` 系列）而非 `hermes acp`（stdio ACP）当作面向 newapi 计费场景的传输线路，`model_routes` 特性原生支持 per-alias 独立 base_url/api_key，不需要碰源码，只需要在部署配置里按 session 池预注册若干 alias。
+   163	- **小 patch（量级：两个文件、预计 <50 行，不改协议 schema）**：如果坚持用 ACP（stdio）作为传输线路、且要求「运行时任意下发」而非「配置时预注册」的 per-session baseUrl/key，需要把 `acp_adapter/session.py::_make_agent` 和 `acp_adapter/server.py::set_config_option`/相关调用处打通——把已经存在的 `set_config_option` 通用透传通道里的值，回填进已经存在的 `resolve_runtime_provider(explicit_api_key=, explicit_base_url=)` 参数。这两个下游能力都已就位，缺的只是几行"接线"代码。
+   164	- **需要 app 侧（不是 hermes 侧）改的**：D1 KernelPort 适配器需要把"ACP 侧确实没有的东西"（delete/destroy/stop 动词、mid-session capability 变更事件）继续按现状做适配器内收敛，这些是 D1 自己的设计工作，不涉及改 hermes。
+   165	- **无实质改动（不存在"需要大改核心 agent loop / 消息模型"的项）**：本轮核验的 17 条断言里，唯一一条推翻设计假设的（steer）恰好是"hermes 已经做得比设计假设的更好"，而不是"hermes 缺东西需要真正大改"。C-3 的缺口也定位在"协议层几行接线"而非"底层凭证解析能力缺失"（凭证解析函数早就支持 explicit_api_key/explicit_base_url）。
+   166	
+   167	**一句话总评**：hermes 作为可切内核，源码层面已经具备 D1 需要的绝大多数能力（包括一项设计误判为"不支持"、实际早已支持且已生产接线的 soft steer），真正的缺口全部是"协议层未透传"级别的小接线活，没有发现任何需要触及 agent 执行核心或重写模块的实质性改动理由。
+version
+channels.raspberry-pi-deploy.notes
+channels.raspberry-pi-deploy.parameters.PI_HOST.sensitivity
+channels.raspberry-pi-deploy.parameters.PI_HOST.storage
+channels.raspberry-pi-deploy.parameters.PI_HOST.value
+channels.raspberry-pi-deploy.parameters.PI_HOST.required_for.0
+channels.raspberry-pi-deploy.parameters.PI_HOST.status
+channels.raspberry-pi-deploy.parameters.PI_USER.sensitivity
+channels.raspberry-pi-deploy.parameters.PI_USER.storage
+channels.raspberry-pi-deploy.parameters.PI_USER.value
+channels.raspberry-pi-deploy.parameters.PI_USER.required_for.0
+channels.raspberry-pi-deploy.parameters.PI_USER.status
+channels.raspberry-pi-deploy.parameters.PI_SSH_KEY.sensitivity
+channels.raspberry-pi-deploy.parameters.PI_SSH_KEY.storage
+channels.raspberry-pi-deploy.parameters.PI_SSH_KEY.path
+channels.raspberry-pi-deploy.parameters.PI_SSH_KEY.required_for.0
+channels.raspberry-pi-deploy.parameters.PI_SSH_KEY.status
+channels.raspberry-pi-deploy.parameters.PI_SSH_KEY.notes
+channels.newapi.notes
+channels.newapi.parameters.NEWAPI_BASE_URL.sensitivity
+channels.newapi.parameters.NEWAPI_BASE_URL.storage
+channels.newapi.parameters.NEWAPI_BASE_URL.env
+channels.newapi.parameters.NEWAPI_BASE_URL.value
+channels.newapi.parameters.NEWAPI_BASE_URL.required_for.0
+channels.newapi.parameters.NEWAPI_BASE_URL.required_for.1
+channels.newapi.parameters.NEWAPI_BASE_URL.status
+channels.newapi.parameters.NEWAPI_BASE_URL.notes
+channels.newapi.parameters.NEWAPI_ADMIN_TOKEN.sensitivity
+channels.newapi.parameters.NEWAPI_ADMIN_TOKEN.storage
+channels.newapi.parameters.NEWAPI_ADMIN_TOKEN.env
+channels.newapi.parameters.NEWAPI_ADMIN_TOKEN.required_for.0
+channels.newapi.parameters.NEWAPI_ADMIN_TOKEN.status
+channels.newapi.parameters.NEWAPI_ADMIN_TOKEN.notes
+channels.newapi.parameters.NEWAPI_UPSTREAM_LLM_KEY.sensitivity
+channels.newapi.parameters.NEWAPI_UPSTREAM_LLM_KEY.storage
+channels.newapi.parameters.NEWAPI_UPSTREAM_LLM_KEY.env
+channels.newapi.parameters.NEWAPI_UPSTREAM_LLM_KEY.value
+channels.newapi.parameters.NEWAPI_UPSTREAM_LLM_KEY.required_for.0
+channels.newapi.parameters.NEWAPI_UPSTREAM_LLM_KEY.status
+channels.newapi.parameters.NEWAPI_UPSTREAM_LLM_KEY.notes
+channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.sensitivity
+channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.storage
+channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.value
+channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.required_for.0
+channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.status
+channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.notes
+channels.newapi.parameters.NEWAPI_UPSTREAM_BASE_URL.sensitivity
+channels.newapi.parameters.NEWAPI_UPSTREAM_BASE_URL.storage
+channels.newapi.parameters.NEWAPI_UPSTREAM_BASE_URL.value
+channels.newapi.parameters.NEWAPI_UPSTREAM_BASE_URL.required_for.0
+channels.newapi.parameters.NEWAPI_UPSTREAM_BASE_URL.status
+channels.newapi.parameters.NEWAPI_UPSTREAM_BASE_URL.notes
+channels.newapi.parameters.NEWAPI_UPSTREAM_TYPE.sensitivity
+channels.newapi.parameters.NEWAPI_UPSTREAM_TYPE.storage
+channels.newapi.parameters.NEWAPI_UPSTREAM_TYPE.value
+channels.newapi.parameters.NEWAPI_UPSTREAM_TYPE.required_for.0
+channels.newapi.parameters.NEWAPI_UPSTREAM_TYPE.status
+channels.newapi.parameters.NEWAPI_D3PROXY_TOKEN.sensitivity
+channels.newapi.parameters.NEWAPI_D3PROXY_TOKEN.storage
+channels.newapi.parameters.NEWAPI_D3PROXY_TOKEN.value
+channels.newapi.parameters.NEWAPI_D3PROXY_TOKEN.required_for.0
+channels.newapi.parameters.NEWAPI_D3PROXY_TOKEN.status
+channels.newapi.parameters.NEWAPI_D3PROXY_TOKEN.notes
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_A_TOKEN.sensitivity
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_A_TOKEN.storage
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_A_TOKEN.value
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_A_TOKEN.required_for.0
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_A_TOKEN.status
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_A_TOKEN.notes
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_B_TOKEN.sensitivity
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_B_TOKEN.storage
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_B_TOKEN.value
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_B_TOKEN.required_for.0
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_B_TOKEN.status
+channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_B_TOKEN.notes
+channels.d3proxy.notes
+channels.d3proxy.parameters.SESSION_PROXY_STATIC_AUTH_KEY.sensitivity
+channels.d3proxy.parameters.SESSION_PROXY_STATIC_AUTH_KEY.storage
+channels.d3proxy.parameters.SESSION_PROXY_STATIC_AUTH_KEY.value
+channels.d3proxy.parameters.SESSION_PROXY_STATIC_AUTH_KEY.required_for.0
+channels.d3proxy.parameters.SESSION_PROXY_STATIC_AUTH_KEY.status
+channels.d3proxy.parameters.SESSION_PROXY_STATIC_AUTH_KEY.notes
+channels.d3proxy.parameters.D3PROXY_LOCAL_PORT.sensitivity
+channels.d3proxy.parameters.D3PROXY_LOCAL_PORT.storage
+channels.d3proxy.parameters.D3PROXY_LOCAL_PORT.value
+channels.d3proxy.parameters.D3PROXY_LOCAL_PORT.required_for.0
+channels.d3proxy.parameters.D3PROXY_LOCAL_PORT.status
+channels.d3proxy.parameters.D3PROXY_LOCAL_PORT.notes
+channels.d3proxy.parameters.D3_SEED_SESSION_ID.sensitivity
+channels.d3proxy.parameters.D3_SEED_SESSION_ID.storage
+channels.d3proxy.parameters.D3_SEED_SESSION_ID.value
+channels.d3proxy.parameters.D3_SEED_SESSION_ID.required_for.0
+channels.d3proxy.parameters.D3_SEED_SESSION_ID.status
+channels.d3proxy.parameters.D3_SEED_SESSION_ID.notes
+EXISTING_OUTPUT
+---
+task_id: T-055
+adapter: codex
+model: gpt-5.6-sol
+status: in-progress
+pid: 13939
+start_time: "2026-07-25T15:02:36.833Z"
+end_time: null
+exit_code: null
+duration_ms: null
+mode: background
+phase: starting
+last_progress_at: "2026-07-25T15:02:36.834Z"
+last_progress: Background task queued.
+progress_seq: 1
+progress_log: ./T-055-progress.log
+raw_log: ./T-055-output.log
+vendor_session_id: null
+terminal_event_emitted: false
+host_native: null
+session_id: null
+log: ./T-055-output.log
+started_by_pid: 13937
+---
+
+# T-055 — codex (background, in-progress)
+
+Output streaming to `T-055-output.log`. Status updates here.
+
+exec
+/bin/zsh -lc "rg -n \"X-Hermes-Session|x-hermes-session|_create_agent\\(|route=route|model_routes|platform resume|api_server\" kernels/hermes/gateway/platforms/api_server.py | sed -n '1,320p'
+
+nl -ba kernels/hermes/gateway/platforms/api_server.py | sed -n '2520,2635p;2850,2960p;3140,3210p;3970,4065p;4170,4245p;4980,5085p;5120,5195p;5580,5635p'
+
+rg -n \"hermes_agent\\.egg-info|egg-info|build/\" kernels/hermes/.gitignore kernels/hermes/pyproject.toml kernels/hermes/setup.cfg kernels/hermes/setup.py 2>/dev/null || true
+
+git -C kernels/hermes check-ignore -v hermes_agent.egg-info hermes_agent.egg-info/PKG-INFO 2>/dev/null || true
+
+if [ -d kernels/hermes/hermes_agent.egg-info ]; then find kernels/hermes/hermes_agent.egg-info -maxdepth 1 -type f -exec stat -f '%N|birth=%SB|modify=%Sm|size=%z' -t '%Y-%m-%dT%H:%M:%S%z' {} \\; | sort; fi
+
+if [ -e /Users/litianyi/.hermes ]; then echo GLOBAL_HERMES_PRESENT; find /Users/litianyi/.hermes -maxdepth 3 -print | sed -n '1,160p'; else echo GLOBAL_HERMES_ABSENT; fi
+
+lsof -nP -iTCP:8646 -sTCP:LISTEN || true
+pgrep -af '[h]ermes|gateway.*run' || true
+
+find .harnessloop/goals/20260718-002-agent-app/rounds/0008 -maxdepth 4 -print 2>/dev/null | sed -n '1,240p'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 204ms:
+kernels/hermes/hermes_agent.egg-info/PKG-INFO|birth=2026-07-25T22:50:14+0800|modify=2026-07-25T22:50:14+0800|size=25008
+kernels/hermes/hermes_agent.egg-info/SOURCES.txt|birth=2026-07-25T22:50:13+0800|modify=2026-07-25T22:50:14+0800|size=97844
+kernels/hermes/hermes_agent.egg-info/dependency_links.txt|birth=2026-07-25T22:50:12+0800|modify=2026-07-25T22:50:14+0800|size=1
+kernels/hermes/hermes_agent.egg-info/entry_points.txt|birth=2026-07-25T22:50:12+0800|modify=2026-07-25T22:50:14+0800|size=114
+kernels/hermes/hermes_agent.egg-info/requires.txt|birth=2026-07-25T22:50:13+0800|modify=2026-07-25T22:50:14+0800|size=2853
+kernels/hermes/hermes_agent.egg-info/top_level.txt|birth=2026-07-25T22:50:13+0800|modify=2026-07-25T22:50:14+0800|size=260
+GLOBAL_HERMES_ABSENT
+13939
+13948
+13966
+15861
+.harnessloop/goals/20260718-002-agent-app/rounds/0008
+.harnessloop/goals/20260718-002-agent-app/rounds/0008/scope-lock.md
+
+codex
+源码核对已经发现一处实质性隔离问题：普通状态/diff 虽干净，但 `kernels/hermes/hermes_agent.egg-info/` 仍以 `.gitignore` 忽略项存在，创建时间正落在本轮试跑窗口；recipe 反而声称不会写 egg-info，且 evidence 没有披露该残留。我会继续确认它对“零源码改动”和“无遗留污染”两个不同断言的影响，并完成服务端原始日志复核。
+2026-07-25T15:04:28.735936Z ERROR codex_core::tools::router: error=exec_command failed for `/bin/zsh -lc 'set -euo pipefail
+params=.harnessloop/local/channel-params.json
+api_base=$(jq -r '"'.channels.newapi.parameters.NEWAPI_BASE_URL.value' \""'$params")
+root_pw=$(jq -r '"'.channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.value' \""'$params")
+token_a=$(jq -r '"'.channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_A_TOKEN.value' \""'$params")
+token_b=$(jq -r '"'.channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_B_TOKEN.value' \""'$params")
+cookie_jar=$(mktemp)
+cleanup_cookie() { rm -f "$cookie_jar"; }
+trap cleanup_cookie EXIT
+login_payload=$(jq -nc --arg p "$root_pw" '"'{username:\"root\",password:"'$p}'"')
+login_json="'$(curl -fsS -c "$cookie_jar" -H '"'Content-Type: application/json' --data \""'$login_payload" "$api_base/api/user/login")
+printf '"'%s\\n' \""'$login_json" | jq '"'{success,message,role:(.data.role // .role // null)}'
+logs_json="'$(curl -fsS -b "$cookie_jar" -H '"'New-Api-User: 1' \""'$api_base/api/log/?p=0&page_size=100")
+printf '"'%s\\n' \""'$logs_json" | jq '"'{success,message,data_shape:(.data|type),items:[(.data.items // .data // [])[] | select(.id==45 or .id==46) | {id,created_at,token_id,token_name,model_name,channel_id,channel_name,prompt_tokens,completion_tokens,quota,request_id,request_path,is_stream,other}]}'
+tokens_json="'$(curl -fsS -b "$cookie_jar" -H '"'New-Api-User: 1' \""'$api_base/api/token/?p=0&size=100")
+printf '"'%s\\n' \""'$tokens_json" | jq '"'{success,message,items:[(.data.items // .data // [])[] | select(.id==4 or .id==5) | {id,name,group,unlimited_quota,status,used_quota,remain_quota,expired_time}]}'
+get4="'$(curl -fsS -b "$cookie_jar" -H '"'New-Api-User: 1' \""'$api_base/api/token/4")
+get5=$(curl -fsS -b "$cookie_jar" -H '"'New-Api-User: 1' \""'$api_base/api/token/5")
+mask4=$(printf '"'%s\\n' \""'$get4" | jq -r '"'.data.key // \"\"')
+mask5="'$(printf '"'%s\\n' \""'$get5" | jq -r '"'.data.key // \"\"')
+mask_matches() { local clear=\""'$1" masked="$2"; local prefix="${masked%%'"\\**}\"; local suffix=\""'${masked##*'"\\*}\"; [[ -n \""'$clear" && "$clear" != null && "$clear" == "$prefix"* && "$clear" == *"$suffix" && "$masked" == *'"'*'* ]]; }
+match4=false; match5=false
+if mask_matches \""'$token_a" "$mask4"; then match4=true; fi
+if mask_matches "$token_b" "$mask5"; then match5=true; fi
+if [[ "$token_a" != "$token_b" && -n "$token_a" && -n "$token_b" && "$token_a" != null && "$token_b" != null ]]; then distinct=true; else distinct=false; fi
+jq -nc --argjson get4_success "$(printf '"'%s\\n' \""'$get4" | jq '"'.success')\" --argjson get5_success \""'$(printf '"'%s\\n' \""'$get5" | jq '"'.success')\" --argjson token_values_distinct \""'$distinct" --argjson local_a_matches_id4_mask "$match4" --argjson local_b_matches_id5_mask "$match5" --argjson token_a_length "${#token_a}" --argjson token_b_length "${#token_b}" '"'{get4_success:"'$get4_success,get5_success:$get5_success,token_values_distinct:$token_values_distinct,local_a_matches_id4_mask:$local_a_matches_id4_mask,local_b_matches_id5_mask:$local_b_matches_id5_mask,token_a_length:$token_a_length,token_b_length:$token_b_length}'"'"`: CreateProcess { message: "Rejected(\"`/bin/zsh -lc 'set -euo pipefail\\nparams=.harnessloop/local/channel-params.json\\napi_base=$(jq -r '\\\"'.channels.newapi.parameters.NEWAPI_BASE_URL.value' \\\\\\\"\\\"'$params\\\")\\nroot_pw=$(jq -r '\\\"'.channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.value' \\\\\\\"\\\"'$params\\\")\\ntoken_a=$(jq -r '\\\"'.channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_A_TOKEN.value' \\\\\\\"\\\"'$params\\\")\\ntoken_b=$(jq -r '\\\"'.channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_B_TOKEN.value' \\\\\\\"\\\"'$params\\\")\\ncookie_jar=$(mktemp)\\ncleanup_cookie() { rm -f \\\"$cookie_jar\\\"; }\\ntrap cleanup_cookie EXIT\\nlogin_payload=$(jq -nc --arg p \\\"$root_pw\\\" '\\\"'{username:\\\\\\\"root\\\\\\\",password:\\\"'$p}'\\\"')\\nlogin_json=\\\"'$(curl -fsS -c \\\"$cookie_jar\\\" -H '\\\"'Content-Type: application/json' --data \\\\\\\"\\\"'$login_payload\\\" \\\"$api_base/api/user/login\\\")\\nprintf '\\\"'%s\\\\\\\\n' \\\\\\\"\\\"'$login_json\\\" | jq '\\\"'{success,message,role:(.data.role // .role // null)}'\\nlogs_json=\\\"'$(curl -fsS -b \\\"$cookie_jar\\\" -H '\\\"'New-Api-User: 1' \\\\\\\"\\\"'$api_base/api/log/?p=0&page_size=100\\\")\\nprintf '\\\"'%s\\\\\\\\n' \\\\\\\"\\\"'$logs_json\\\" | jq '\\\"'{success,message,data_shape:(.data|type),items:[(.data.items // .data // [])[] | select(.id==45 or .id==46) | {id,created_at,token_id,token_name,model_name,channel_id,channel_name,prompt_tokens,completion_tokens,quota,request_id,request_path,is_stream,other}]}'\\ntokens_json=\\\"'$(curl -fsS -b \\\"$cookie_jar\\\" -H '\\\"'New-Api-User: 1' \\\\\\\"\\\"'$api_base/api/token/?p=0&size=100\\\")\\nprintf '\\\"'%s\\\\\\\\n' \\\\\\\"\\\"'$tokens_json\\\" | jq '\\\"'{success,message,items:[(.data.items // .data // [])[] | select(.id==4 or .id==5) | {id,name,group,unlimited_quota,status,used_quota,remain_quota,expired_time}]}'\\nget4=\\\"'$(curl -fsS -b \\\"$cookie_jar\\\" -H '\\\"'New-Api-User: 1' \\\\\\\"\\\"'$api_base/api/token/4\\\")\\nget5=$(curl -fsS -b \\\"$cookie_jar\\\" -H '\\\"'New-Api-User: 1' \\\\\\\"\\\"'$api_base/api/token/5\\\")\\nmask4=$(printf '\\\"'%s\\\\\\\\n' \\\\\\\"\\\"'$get4\\\" | jq -r '\\\"'.data.key // \\\\\\\"\\\\\\\"')\\nmask5=\\\"'$(printf '\\\"'%s\\\\\\\\n' \\\\\\\"\\\"'$get5\\\" | jq -r '\\\"'.data.key // \\\\\\\"\\\\\\\"')\\nmask_matches() { local clear=\\\\\\\"\\\"'$1\\\" masked=\\\"$2\\\"; local prefix=\\\"${masked%%'\\\"\\\\\\\\**}\\\\\\\"; local suffix=\\\\\\\"\\\"'${masked##*'\\\"\\\\\\\\*}\\\\\\\"; [[ -n \\\\\\\"\\\"'$clear\\\" && \\\"$clear\\\" != null && \\\"$clear\\\" == \\\"$prefix\\\"* && \\\"$clear\\\" == *\\\"$suffix\\\" && \\\"$masked\\\" == *'\\\"'*'* ]]; }\\nmatch4=false; match5=false\\nif mask_matches \\\\\\\"\\\"'$token_a\\\" \\\"$mask4\\\"; then match4=true; fi\\nif mask_matches \\\"$token_b\\\" \\\"$mask5\\\"; then match5=true; fi\\nif [[ \\\"$token_a\\\" != \\\"$token_b\\\" && -n \\\"$token_a\\\" && -n \\\"$token_b\\\" && \\\"$token_a\\\" != null && \\\"$token_b\\\" != null ]]; then distinct=true; else distinct=false; fi\\njq -nc --argjson get4_success \\\"$(printf '\\\"'%s\\\\\\\\n' \\\\\\\"\\\"'$get4\\\" | jq '\\\"'.success')\\\\\\\" --argjson get5_success \\\\\\\"\\\"'$(printf '\\\"'%s\\\\\\\\n' \\\\\\\"\\\"'$get5\\\" | jq '\\\"'.success')\\\\\\\" --argjson token_values_distinct \\\\\\\"\\\"'$distinct\\\" --argjson local_a_matches_id4_mask \\\"$match4\\\" --argjson local_b_matches_id5_mask \\\"$match5\\\" --argjson token_a_length \\\"${#token_a}\\\" --argjson token_b_length \\\"${#token_b}\\\" '\\\"'{get4_success:\\\"'$get4_success,get5_success:$get5_success,token_values_distinct:$token_values_distinct,local_a_matches_id4_mask:$local_a_matches_id4_mask,local_b_matches_id5_mask:$local_b_matches_id5_mask,token_a_length:$token_a_length,token_b_length:$token_b_length}'\\\"'\\\"` rejected: rm -f style commands are not permitted. Use a safer approach\")" }
+exec
+/bin/zsh -lc 'set -euo pipefail
+params=.harnessloop/local/channel-params.json
+api_base=$(jq -r '"'.channels.newapi.parameters.NEWAPI_BASE_URL.value' \""'$params")
+root_pw=$(jq -r '"'.channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.value' \""'$params")
+login_payload=$(jq -nc --arg pw "$root_pw" '"'{username:\"root\",password:"'$pw}'"')
+login_response="'$(curl -fsS -i -H '"'Content-Type: application/json' --data \""'$login_payload" "$api_base/api/user/login")
+session_cookie=$(printf '"'%s\\n' \""'$login_response" | awk '"'BEGIN{IGNORECASE=1} /"'^Set-Cookie:/{sub(/''^[''^:]*:[ ]*/,""); sub(/;.*/,""); gsub(/'"\\r/,\"\"); print; exit}')
+login_body="'$(printf '"'%s\\n' \""'$login_response" | awk '"'f{print} /"'^'"\\r?"'$/{f=1}'"')
+printf '%s\\n' \""'$login_body" | jq '"'{success,message,role:(.data.role // .role // null)}'
+if [[ -z \""'$session_cookie" ]]; then echo '"'session_cookie_missing'; exit 1; fi
+logs_json="'$(curl -fsS -H "Cookie: $session_cookie" -H '"'New-Api-User: 1' \""'$api_base/api/log/?p=0&page_size=100")
+printf '"'%s\\n' \""'$logs_json" | jq '"'{success,message,data_type:(.data|type),data_keys:(.data|keys)}'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 361ms:
+{
+  "success": true,
+  "message": "",
+  "role": 100
+}
+{
+  "success": true,
+  "message": "",
+  "data_type": "object",
+  "data_keys": [
+    "items",
+    "page",
+    "page_size",
+    "total"
+  ]
+}
+
+exec
+/bin/zsh -lc 'set -euo pipefail
+params=.harnessloop/local/channel-params.json
+api_base=$(jq -r '"'.channels.newapi.parameters.NEWAPI_BASE_URL.value' \""'$params")
+root_pw=$(jq -r '"'.channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.value' \""'$params")
+token_a=$(jq -r '"'.channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_A_TOKEN.value' \""'$params")
+token_b=$(jq -r '"'.channels.newapi.parameters.NEWAPI_SG7_HERMES_SESSION_B_TOKEN.value' \""'$params")
+login_payload=$(jq -nc --arg pw "$root_pw" '"'{username:\"root\",password:"'$pw}'"')
+login_response="'$(curl -fsS -i -H '"'Content-Type: application/json' --data \""'$login_payload" "$api_base/api/user/login")
+session_cookie=$(printf '"'%s\\n' \""'$login_response" | awk '"'BEGIN{IGNORECASE=1} /"'^Set-Cookie:/{sub(/''^[''^:]*:[ ]*/,""); sub(/;.*/,""); gsub(/'"\\r/,\"\"); print; exit}')
+logs_json="'$(curl -fsS -H "Cookie: $session_cookie" -H '"'New-Api-User: 1' \""'$api_base/api/log/?p=0&page_size=100")
+printf '"'%s\\n' \""'$logs_json" | jq '"'{success,total:.data.total,items:[.data.items[] | select(.id==45 or .id==46) | ((if (.other|type)==\"string\" then ((.other|fromjson?) // {}) else (.other // {}) end) as "'$o | {id,created_at,token_id,token_name,model_name,channel_id,channel_name,prompt_tokens,completion_tokens,request_id,request_path,is_stream,cache_tokens:($o.cache_tokens // $o.usage.cache_tokens // null),usage_semantic:($o.usage_semantic // null)})]}'"'
+tokens_json="'$(curl -fsS -H "Cookie: $session_cookie" -H '"'New-Api-User: 1' \""'$api_base/api/token/?p=0&size=100")
+printf '"'%s\\n' \""'$tokens_json" | jq '"'{success,total:.data.total,items:[.data.items[] | select(.id==4 or .id==5) | {id,name,group,unlimited_quota,status,used_quota,remain_quota,expired_time}]}'
+get4="'$(curl -fsS -H "Cookie: $session_cookie" -H '"'New-Api-User: 1' \""'$api_base/api/token/4")
+get5=$(curl -fsS -H "Cookie: $session_cookie" -H '"'New-Api-User: 1' \""'$api_base/api/token/5")
+mask4=$(printf '"'%s\\n' \""'$get4" | jq -r '"'.data.key // \"\"')
+mask5="'$(printf '"'%s\\n' \""'$get5" | jq -r '"'.data.key // \"\"')
+prefix4="'$(printf '"'%s' \""'$mask4" | cut -d '"'*' -f 1)
+suffix4="'$(printf '"'%s' \""'$mask4" | awk -F'"'*' '{print "'$NF}'"')
+prefix5="'$(printf '"'%s' \""'$mask5" | cut -d '"'*' -f 1)
+suffix5="'$(printf '"'%s' \""'$mask5" | awk -F'"'*' '{print "'$NF}'"')
+match4=false
+match5=false
+distinct=false
+masks_are_masked=false
+if [[ \""'$token_a" == "$prefix4"* && "$token_a" == *"$suffix4" && "$mask4" == *'"'*'* ]]; then match4=true; fi
+if [[ \""'$token_b" == "$prefix5"* && "$token_b" == *"$suffix5" && "$mask5" == *'"'*'* ]]; then match5=true; fi
+if [[ -n \""'$token_a" && -n "$token_b" && "$token_a" != null && "$token_b" != null && "$token_a" != "$token_b" ]]; then distinct=true; fi
+if [[ "$mask4" == *'"'*'* && \""'$mask5" == *'"'*'* ]]; then masks_are_masked=true; fi
+jq -nc --argjson get4_success \""'$(printf '"'%s\\n' \""'$get4" | jq '"'.success')\" --argjson get5_success \""'$(printf '"'%s\\n' \""'$get5" | jq '"'.success')\" --argjson local_tokens_distinct \""'$distinct" --argjson local_a_matches_id4_mask "$match4" --argjson local_b_matches_id5_mask "$match5" --argjson api_returns_masked_keys "$masks_are_masked" '"'{get4_success:"'$get4_success,get5_success:$get5_success,local_tokens_distinct:$local_tokens_distinct,local_a_matches_id4_mask:$local_a_matches_id4_mask,local_b_matches_id5_mask:$local_b_matches_id5_mask,api_returns_masked_keys:$api_returns_masked_keys}'"'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 585ms:
+{
+  "success": true,
+  "total": 49,
+  "items": [
+    {
+      "id": 46,
+      "created_at": 1784991352,
+      "token_id": 5,
+      "token_name": "sg7-hermes-session-b",
+      "model_name": "kimi-for-coding",
+      "channel_id": null,
+      "channel_name": "kimi-coding",
+      "prompt_tokens": 244,
+      "completion_tokens": 15,
+      "request_id": "202607251455508416172528268d9d6dMzfUoEd",
+      "request_path": null,
+      "is_stream": true,
+      "cache_tokens": 11264,
+      "usage_semantic": "anthropic"
+    },
+    {
+      "id": 45,
+      "created_at": 1784991346,
+      "token_id": 4,
+      "token_name": "sg7-hermes-session-a",
+      "model_name": "kimi-for-coding",
+      "channel_id": null,
+      "channel_name": "kimi-coding",
+      "prompt_tokens": 244,
+      "completion_tokens": 22,
+      "request_id": "202607251455445585183788268d9d6qFuKbCAJ",
+      "request_path": null,
+      "is_stream": true,
+      "cache_tokens": 11264,
+      "usage_semantic": "anthropic"
+    }
+  ]
+}
+{
+  "success": true,
+  "total": 5,
+  "items": [
+    {
+      "id": 5,
+      "name": "sg7-hermes-session-b",
+      "group": "",
+      "unlimited_quota": true,
+      "status": 1,
+      "used_quota": 432113,
+      "remain_quota": 67887,
+      "expired_time": -1
+    },
+    {
+      "id": 4,
+      "name": "sg7-hermes-session-a",
+      "group": "",
+      "unlimited_quota": true,
+      "status": 1,
+      "used_quota": 866513,
+      "remain_quota": -366513,
+      "expired_time": -1
+    }
+  ]
+}
+{"get4_success":true,"get5_success":true,"local_tokens_distinct":true,"local_a_matches_id4_mask":true,"local_b_matches_id5_mask":true,"api_returns_masked_keys":true}
+
+exec
+/bin/zsh -lc "nl -ba kernels/hermes/setup.py | sed -n '1,105p'
+
+nl -ba kernels/hermes/.gitignore | sed -n '45,70p'
+
+nl -ba kernels/hermes/gateway/platforms/api_server.py | sed -n '2310,2445p;2760,2835p;2955,2985p;4740,4810p'
+
+rg -n \"_handle_create_session|body\\.get\\(\\\"model\\\"|route = self\\._resolve_route|_handle_session_chat\" kernels/hermes/gateway/platforms/api_server.py
+
+rg -n \"def _cmd_platform|platform resume|resume_platform|resume.*api_server\" kernels/hermes/gateway kernels/hermes/hermes_cli | sed -n '1,240p'
+
+stat -f 'repo egg-info dir: birth=%SB modify=%Sm' -t '%Y-%m-%dT%H:%M:%S%z' kernels/hermes/hermes_agent.egg-info
+
+ps -p 13939,13948,13966,15861 -o pid=,ppid=,lstart=,command= | sed -n '1,20p'
+
+git show -s --format='commit=%H author=%aI commit=%cI' 47177412
+
+for ts in 1784991346 1784991352; do TZ=Asia/Shanghai date -r \""'$ts" '"'+%s=%Y-%m-%dT%H:%M:%S%z'; done" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 172ms:
+commit=47177412dddf1b15ade0e6ca911594cff3d96850 author=2026-07-25T23:02:08+08:00 commit=2026-07-25T23:02:08+08:00
+1784991346=2026-07-25T22:55:46+0800
+1784991352=2026-07-25T22:55:52+0800
+
+exec
+/bin/zsh -lc "rg -n -C 12 'resume' kernels/hermes/gateway/slash_commands.py | sed -n '1,280p'
+
+rg -n \"def (pause|resume)|resume_platform|_paused_platforms|platform.*resume\" kernels/hermes/gateway/run.py kernels/hermes/gateway/slash_commands.py | sed -n '1,240p'
+
+nl -ba kernels/hermes/gateway/slash_commands.py | sed -n '1120,1265p'
+
+nl -ba kernels/hermes/gateway/run.py | sed -n '5070,5190p;6710,6815p' 2>/dev/null
+
+set -euo pipefail
+params=.harnessloop/local/channel-params.json
+api_base="'$(jq -r '"'.channels.newapi.parameters.NEWAPI_BASE_URL.value' \""'$params")
+root_pw=$(jq -r '"'.channels.newapi.parameters.NEWAPI_ROOT_PASSWORD.value' \""'$params")
+login_payload=$(jq -nc --arg pw "$root_pw" '"'{username:\"root\",password:"'$pw}'"')
+login_response="'$(curl -fsS -i -H '"'Content-Type: application/json' --data \""'$login_payload" "$api_base/api/user/login")
+session_cookie=$(printf '"'%s\\n' \""'$login_response" | awk '"'BEGIN{IGNORECASE=1} /"'^Set-Cookie:/{sub(/''^[''^:]*:[ ]*/,""); sub(/;.*/,""); gsub(/'"\\r/,\"\"); print; exit}')
+logs_json="'$(curl -fsS -H "Cookie: $session_cookie" -H '"'New-Api-User: 1' \""'$api_base/api/log/?p=0&page_size=100")
+printf '"'%s\\n' \""'$logs_json" | jq '"'[.data.items[] | select(.id==45 or .id==46) | ((if (.other|type)==\"string\" then ((.other|fromjson?) // {}) else (.other // {}) end) as "'$o | {id,other_keys:($o|keys),request_path:($o.request_path // null),channel_id:($o.channel_id // null),cache_tokens:($o.cache_tokens // null),usage_semantic:($o.usage_semantic // null),model_ratio:($o.model_ratio // null),completion_ratio:($o.completion_ratio // null),response_time:($o.response_time // null)})]'"'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 363ms:
+[
+  {
+    "id": 46,
+    "other_keys": [
+      "admin_info",
+      "billing_source",
+      "cache_creation_ratio",
+      "cache_creation_tokens",
+      "cache_ratio",
+      "cache_tokens",
+      "claude",
+      "completion_ratio",
+      "frt",
+      "group_ratio",
+      "model_price",
+      "model_ratio",
+      "request_conversion",
+      "request_path",
+      "stream_status",
+      "usage_semantic",
+      "user_group_ratio"
+    ],
+    "request_path": "/v1/chat/completions",
+    "channel_id": null,
+    "cache_tokens": 11264,
+    "usage_semantic": "anthropic",
+    "model_ratio": 37.5,
+    "completion_ratio": 1,
+    "response_time": null
+  },
+  {
+    "id": 45,
+    "other_keys": [
+      "admin_info",
+      "billing_source",
+      "cache_creation_ratio",
+      "cache_creation_tokens",
+      "cache_ratio",
+      "cache_tokens",
+      "claude",
+      "completion_ratio",
+      "frt",
+      "group_ratio",
+      "model_price",
+      "model_ratio",
+      "request_conversion",
+      "request_path",
+      "stream_status",
+      "usage_semantic",
+      "user_group_ratio"
+    ],
+    "request_path": "/v1/chat/completions",
+    "channel_id": null,
+    "cache_tokens": 11264,
+    "usage_semantic": "anthropic",
+    "model_ratio": 37.5,
+    "completion_ratio": 1,
+    "response_time": null
+  }
+]
+
+codex
+服务端复核确认核心计费归因完全吻合：日志 45/46 分别命中 token 4/5，模型、completion、cache 拆账、请求 ID 和 22:55:46/22:55:52 时间均一致，且本地两枚明文 token 互不相同并分别匹配 API 返回的掩码。与此同时又确认了两处文档机制误述：三个 handler 名称写错一处（实际第三个是 `/v1/runs`，不是 sessions chat），以及 `/platform resume api_server` 不能给正在连接的平台热重载新 alias。
+exec
+/bin/zsh -lc "rg -n \"PRE-①|model_routes|静态|resume|build/|egg-info|\\.hermes|ACP|三处|2863|3983|5025|scp|SQLite|只读|立即删除|prompt_tokens|cache_tokens|log id|token_id|request_path|created_at|未走|全路径|路径闭合\" app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md app/kernel-client/HERMES-RUN-EVIDENCE.md | sed -n '1,360p'
+
+nl -ba app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md | sed -n '1,95p;112,180p;181,240p'
+
+nl -ba app/kernel-client/HERMES-RUN-EVIDENCE.md | sed -n '1,120p;120,235p'
+
+printf 'system_python='; command -v python3 || true
+python3 -m pip show hermes-agent 2>&1 | sed -n '1,60p'
+printf 'hermes_cli='; command -v hermes || true
+
+find /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop /tmp /private/tmp -maxdepth 8 \\( -name 'one-api.db' -o -name '*newapi*.db' -o -name 'hermes-home' -o -name 'hermes-venv' \\) -print 2>/dev/null | sed -n '1,240p'
+
+find /Users/litianyi/Documents/Code/_ai-goods -maxdepth 8 \\( -name 'one-api.db' -o -name '*newapi*.db' -o -name 'hermes-home' -o -name 'hermes-venv' \\) -print 2>/dev/null | sed -n '1,240p'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 21494ms:
+WARNING: Package(s) not found: hermes-agent
+hermes_cli=/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home
+
+codex
+保留的隔离 scratchpad 仍在临时目录中，这不是全局污染，但提供了更强的事后取证机会。我会只读检查其实际 config、gateway 日志和 state DB，以验证两条响应内容是否真的落入 Hermes 会话，而不只依赖文档摘录；同时确认未残留 SQLite 明文副本。
+exec
+/bin/zsh -lc 'scratch=/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad
+find "$scratch" -maxdepth 3 -type f -exec stat -f '"'%N|modify=%Sm|size=%z' -t '%Y-%m-%dT%H:%M:%S%z' {} \\; | sed -n '1,320p'
+
+rg -l 'PING-A|PING-B|HELLO-DEFAULT|qFuKbCAJ|dMzfUoEd|chatcmpl-eda549' \""'$scratch" 2>/dev/null | sed -n '"'1,160p'
+
+rg -n 'PING-A|PING-B|HELLO-DEFAULT|qFuKbCAJ|dMzfUoEd|chatcmpl-eda549|api_server model route applied' \""'$scratch/hermes-gw.log" 2>/dev/null | sed -n '"'1,240p'
+
+db=\""'$scratch/hermes-home/state.db"
+if [ -f "$db" ]; then sqlite3 -readonly "$db" '"'.tables'; sqlite3 -readonly \""'$db" "PRAGMA table_info(sessions);"; sqlite3 -readonly "$db" "PRAGMA table_info(messages);"; fi' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 1522ms:
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-cfg-validate/state/openclaw.json|modify=2026-07-23T19:23:29+0800|size=726
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg87-swift-runner|modify=2026-07-24T20:19:14+0800|size=2639424
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/catalog-test.json|modify=2026-07-22T15:12:37+0800|size=666
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/T-004-review.md|modify=2026-07-21T15:03:31+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg87-runner-v4|modify=2026-07-25T01:56:17+0800|size=2696688
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg87-runner-v3|modify=2026-07-25T01:11:28+0800|size=2696016
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/T-005-facts.md|modify=2026-07-21T15:31:38+0800|size=1571
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg4-shell-verify|modify=2026-07-23T14:33:15+0800|size=2179664
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg85-p3-dynamic-probe.mjs|modify=2026-07-23T17:36:31+0800|size=5912
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg85-e2e-probe.mjs|modify=2026-07-23T16:41:25+0800|size=4046
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/csharp-json-check/obj/jsoncheck.csproj.nuget.g.props|modify=2026-07-24T17:52:54+0800|size=1124
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/csharp-json-check/obj/jsoncheck.csproj.nuget.dgspec.json|modify=2026-07-24T17:52:54+0800|size=2251
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/csharp-json-check/obj/project.nuget.cache|modify=2026-07-24T17:52:54+0800|size=378
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/csharp-json-check/obj/jsoncheck.csproj.nuget.g.targets|modify=2026-07-24T17:52:54+0800|size=149
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/csharp-json-check/obj/project.assets.json|modify=2026-07-24T17:52:54+0800|size=1957
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/csharp-json-check/CrossDecode.cs|modify=2026-07-24T17:53:56+0800|size=1193
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/csharp-json-check/jsoncheck.csproj|modify=2026-07-24T17:52:54+0800|size=1265
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/csharp-json-check/Program.cs|modify=2026-07-24T17:52:54+0800|size=1421
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/run1.log|modify=2026-07-24T20:10:29+0800|size=12565
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3-gateway.log|modify=2026-07-23T18:08:19+0800|size=14828
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/seed-list.cjs|modify=2026-07-24T13:24:48+0800|size=612
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/pre1-openclaw-source-conformance.md|modify=2026-07-22T23:01:32+0800|size=32551
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/attempt-d.swift|modify=2026-07-23T03:23:17+0800|size=63242
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/secrets.env|modify=2026-07-23T18:04:23+0800|size=537
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/channel_type.go|modify=2026-07-23T16:11:07+0800|size=14
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/channel_controller.go|modify=2026-07-23T16:11:40+0800|size=60235
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/run2.log|modify=2026-07-24T20:11:51+0800|size=12722
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/token3_key.json|modify=2026-07-23T16:13:19+0800|size=95
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/.lock|modify=2026-07-25T22:50:09+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/ja.yaml|modify=2026-07-25T22:50:15+0800|size=35742
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/tr.yaml|modify=2026-07-25T22:50:15+0800|size=30693
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/zh.yaml|modify=2026-07-25T22:50:15+0800|size=28528
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/hu.yaml|modify=2026-07-25T22:50:15+0800|size=32246
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/en.yaml|modify=2026-07-25T22:50:15+0800|size=29354
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/pt.yaml|modify=2026-07-25T22:50:15+0800|size=30985
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/it.yaml|modify=2026-07-25T22:50:15+0800|size=30778
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/uk.yaml|modify=2026-07-25T22:50:15+0800|size=41066
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/ru.yaml|modify=2026-07-25T22:50:15+0800|size=40954
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/de.yaml|modify=2026-07-25T22:50:15+0800|size=31191
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/ko.yaml|modify=2026-07-25T22:50:15+0800|size=32713
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/fr.yaml|modify=2026-07-25T22:50:15+0800|size=31503
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/ga.yaml|modify=2026-07-25T22:50:15+0800|size=31865
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/es.yaml|modify=2026-07-25T22:50:15+0800|size=31134
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/zh-hant.yaml|modify=2026-07-25T22:50:15+0800|size=29065
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/locales/af.yaml|modify=2026-07-25T22:50:15+0800|size=29888
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/activate.bat|modify=2026-07-25T22:50:03+0800|size=2774
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/markdown_py|modify=2026-07-25T22:50:16+0800|size=468
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/activate.ps1|modify=2026-07-25T22:50:03+0800|size=2762
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/dotenv|modify=2026-07-25T22:50:16+0800|size=466
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/distro|modify=2026-07-25T22:50:16+0800|size=466
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/activate.fish|modify=2026-07-25T22:50:03+0800|size=4296
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/idna|modify=2026-07-25T22:50:16+0800|size=461
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/websockets|modify=2026-07-25T22:50:16+0800|size=467
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/pydoc.bat|modify=2026-07-25T22:50:03+0800|size=1217
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/activate_this.py|modify=2026-07-25T22:50:03+0800|size=2383
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/httpx|modify=2026-07-25T22:50:16+0800|size=458
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/tqdm|modify=2026-07-25T22:50:16+0800|size=461
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/markdown-it|modify=2026-07-25T22:50:16+0800|size=474
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/fastapi|modify=2026-07-25T22:50:16+0800|size=464
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/pygmentize|modify=2026-07-25T22:50:16+0800|size=469
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/cffi-gen-src|modify=2026-07-25T22:50:16+0800|size=469
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/jp.py|modify=2026-07-25T22:55:32+0800|size=1867
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/hermes-acp|modify=2026-07-25T22:50:16+0800|size=470
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/hermes-agent|modify=2026-07-25T22:50:16+0800|size=462
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/uvicorn|modify=2026-07-25T22:50:16+0800|size=465
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/activate|modify=2026-07-25T22:50:03+0800|size=4194
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/hermes|modify=2026-07-25T22:50:16+0800|size=468
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/activate.nu|modify=2026-07-25T22:50:03+0800|size=3866
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/normalizer|modify=2026-07-25T22:50:16+0800|size=487
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/deactivate.bat|modify=2026-07-25T22:50:03+0800|size=1730
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/openai|modify=2026-07-25T22:50:16+0800|size=463
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/watchfiles|modify=2026-07-25T22:50:16+0800|size=465
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/bin/activate.csh|modify=2026-07-25T22:50:03+0800|size=2724
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/pyvenv.cfg|modify=2026-07-25T22:50:03+0800|size=158
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/CACHEDIR.TAG|modify=2026-07-25T22:50:03+0800|size=43
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-venv/.gitignore|modify=2026-07-25T22:50:03+0800|size=1
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openapi-broken.yaml|modify=2026-07-25T15:07:22+0800|size=56542
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-stopfix-swift|modify=2026-07-24T23:55:05+0800|size=2728208
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-stageA-verify|modify=2026-07-24T14:01:43+0800|size=2260272
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/transcript-e81662f4.json|modify=2026-07-24T13:30:37+0800|size=14607
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/attempt-a.swift|modify=2026-07-23T03:21:02+0800|size=9799
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-stageb-client|modify=2026-07-24T17:12:49+0800|size=2440656
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/test-output.log|modify=2026-07-24T17:51:32+0800|size=10725
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3-gw.log|modify=2026-07-23T17:47:30+0800|size=9802
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-gw-attempt1.log|modify=2026-07-25T22:56:44+0800|size=3919
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/e2e_body2.json|modify=2026-07-23T16:13:43+0800|size=118
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-kernel-client|modify=2026-07-24T13:56:35+0800|size=2260272
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/attempt-c.swift|modify=2026-07-23T03:21:46+0800|size=63242
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/swift-json-check/crossdecode.swift|modify=2026-07-24T17:54:09+0800|size=1041
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/swift-json-check/jsoncheck|modify=2026-07-24T17:52:19+0800|size=2156456
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/swift-json-check/main.swift|modify=2026-07-24T17:52:08+0800|size=1495
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/swift-json-check/crossdecode|modify=2026-07-24T17:54:19+0800|size=2187672
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/api-router.go|modify=2026-07-23T16:12:59+0800|size=21911
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/t050-ajv-check.mjs|modify=2026-07-25T01:48:50+0800|size=4440
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/workspace/IDENTITY.md|modify=2026-07-23T16:41:00+0800|size=1278
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/workspace/HEARTBEAT.md|modify=2026-07-23T16:41:00+0800|size=244
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/workspace/BOOTSTRAP.md|modify=2026-07-23T16:41:00+0800|size=3691
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/workspace/USER.md|modify=2026-07-23T16:41:00+0800|size=537
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/workspace/SOUL.md|modify=2026-07-23T16:41:00+0800|size=1518
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/workspace/AGENTS.md|modify=2026-07-23T16:41:00+0800|size=7196
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/workspace/TOOLS.md|modify=2026-07-23T16:41:00+0800|size=876
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/state/openclaw.json.last-good|modify=2026-07-23T17:35:01+0800|size=805
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/state/openclaw.json|modify=2026-07-23T17:34:19+0800|size=805
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3/state/config-journal-fingerprint.key|modify=2026-07-23T16:38:57+0800|size=32
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/channel.go|modify=2026-07-23T16:11:22+0800|size=7864
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-notea-swift|modify=2026-07-25T01:11:17+0800|size=2798896
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/remediation-spec.md|modify=2026-07-23T13:18:34+0800|size=11648
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/cookies.txt|modify=2026-07-23T16:10:40+0800|size=533
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso2/state/config-journal-fingerprint.key|modify=2026-07-23T14:17:30+0800|size=32
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-validate-min/state/openclaw.json|modify=2026-07-23T17:35:11+0800|size=668
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/seed-upsert.cjs|modify=2026-07-24T13:25:00+0800|size=1518
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs-decode/probe.csproj|modify=2026-07-25T14:56:19+0800|size=663
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs-decode/obj/probe.csproj.nuget.g.targets|modify=2026-07-25T14:56:20+0800|size=149
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs-decode/obj/project.nuget.cache|modify=2026-07-25T14:56:20+0800|size=372
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs-decode/obj/probe.csproj.nuget.dgspec.json|modify=2026-07-25T14:56:20+0800|size=2221
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs-decode/obj/probe.csproj.nuget.g.props|modify=2026-07-25T14:56:20+0800|size=1124
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs-decode/obj/project.assets.json|modify=2026-07-25T14:56:20+0800|size=1939
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs-decode/Program.cs|modify=2026-07-25T14:56:19+0800|size=1120
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg85-iso-token.txt|modify=2026-07-23T16:38:49+0800|size=49
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/model_token.go|modify=2026-07-23T16:12:46+0800|size=14685
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/T-006-review.md|modify=2026-07-21T16:05:30+0800|size=1957
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/newapi-config.mjs|modify=2026-07-23T16:08:59+0800|size=5262
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg87-swift-runner-v2|modify=2026-07-25T00:48:59+0800|size=2693816
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/seed-session.mjs|modify=2026-07-23T17:34:15+0800|size=2414
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg85-probe-run3.log|modify=2026-07-23T16:44:44+0800|size=38215
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg85-probe-run2.log|modify=2026-07-23T16:42:20+0800|size=44046
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/gw-run.log|modify=2026-07-23T14:12:35+0800|size=3356
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/stageb-run1.log|modify=2026-07-24T17:16:36+0800|size=45571
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/d3proxy.log|modify=2026-07-24T17:12:54+0800|size=29726
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-kernel-client-final|modify=2026-07-24T13:59:50+0800|size=2260280
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/e2e_body.json|modify=2026-07-23T16:13:28+0800|size=117
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso/state/config-journal-fingerprint.key|modify=2026-07-23T14:09:54+0800|size=32
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-fix-tests|modify=2026-07-24T15:32:30+0800|size=2427760
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/full-run.log|modify=2026-07-23T14:12:12+0800|size=18443
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/probe2.csproj.nuget.dgspec.json|modify=2026-07-25T14:55:19+0800|size=2191
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/probe3.csproj.nuget.g.targets|modify=2026-07-25T14:55:33+0800|size=149
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/probe.csproj.nuget.g.targets|modify=2026-07-25T14:48:57+0800|size=149
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/probe2.csproj.nuget.g.props|modify=2026-07-25T14:55:19+0800|size=1124
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/probe2.csproj.nuget.g.targets|modify=2026-07-25T14:55:19+0800|size=149
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/probe3.csproj.nuget.g.props|modify=2026-07-25T14:55:33+0800|size=1124
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/probe3.csproj.nuget.dgspec.json|modify=2026-07-25T14:55:33+0800|size=2191
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/project.nuget.cache|modify=2026-07-25T14:55:33+0800|size=366
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/probe.csproj.nuget.dgspec.json|modify=2026-07-25T14:48:57+0800|size=2186
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/probe.csproj.nuget.g.props|modify=2026-07-25T14:48:57+0800|size=1124
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/obj/project.assets.json|modify=2026-07-25T14:55:33+0800|size=1921
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/probe3.csproj|modify=2026-07-25T14:55:33+0800|size=369
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/Program2.cs|modify=2026-07-25T14:55:19+0800|size=126
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-cs/Program3.cs|modify=2026-07-25T14:55:33+0800|size=195
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/e2e_response2.json|modify=2026-07-23T16:13:46+0800|size=1063
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/ra-l4-dev-readiness-assessment.md|modify=2026-07-22T15:45:33+0800|size=38069
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/log_entry.txt|modify=2026-07-25T03:48:05+0800|size=2607
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-iso3-token.txt|modify=2026-07-23T17:34:31+0800|size=49
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/t048/swift-fixture-runner-baseline|modify=2026-07-25T00:16:26+0800|size=2665776
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/t048/validate-fixture-messages.mjs|modify=2026-07-25T00:43:38+0800|size=3068
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/t048/booltest2.swift|modify=2026-07-25T00:34:24+0800|size=824
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/t048/swift-fixture-runner-final|modify=2026-07-25T00:44:59+0800|size=2693816
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/t048/swift-fixture-runner-final2|modify=2026-07-25T00:45:32+0800|size=2693816
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/t048/booltest.swift|modify=2026-07-25T00:34:07+0800|size=1455
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/t048/swift-fixture-runner|modify=2026-07-25T00:36:18+0800|size=2693816
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/tsgo-core.log|modify=2026-07-23T12:04:35+0800|size=121
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-stageB-cli|modify=2026-07-24T17:21:07+0800|size=2440656
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/ts-probe/probe3.ts|modify=2026-07-25T14:59:53+0800|size=779
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/ts-probe/probe.ts|modify=2026-07-25T14:52:56+0800|size=858
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/ts-probe/probe2.ts|modify=2026-07-25T14:54:29+0800|size=315
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-fix-cli|modify=2026-07-24T15:32:26+0800|size=2364968
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/token_controller.go|modify=2026-07-23T16:12:29+0800|size=9283
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/run_2.log|modify=2026-07-24T20:13:33+0800|size=12493
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg85-gw.log|modify=2026-07-23T16:40:36+0800|size=2871
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/T-007-review.md|modify=2026-07-21T16:56:33+0800|size=1486
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/newapi-quota-check.mjs|modify=2026-07-23T16:35:25+0800|size=1534
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/run_3.log|modify=2026-07-24T20:13:40+0800|size=12493
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/run_1.log|modify=2026-07-24T20:13:26+0800|size=12493
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-note1-swift|modify=2026-07-24T18:38:19+0800|size=2621136
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/bundled.schema.json|modify=2026-07-23T03:20:15+0800|size=80180
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-fix2-tests|modify=2026-07-24T16:16:06+0800|size=2588832
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/add_token_payload.json|modify=2026-07-23T16:13:12+0800|size=227
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/auth_header.txt|modify=2026-07-23T16:13:28+0800|size=73
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/e2e_response.json|modify=2026-07-23T16:13:34+0800|size=1031
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/add_channel_payload.json|modify=2026-07-23T16:12:11+0800|size=329
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/newapi-log-check.mjs|modify=2026-07-23T16:45:52+0800|size=1225
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg85-gw3.log|modify=2026-07-23T16:48:36+0800|size=2902
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-sessionB.log|modify=2026-07-23T18:07:57+0800|size=26187
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-sessionA-round2.log|modify=2026-07-23T18:07:04+0800|size=26673
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg5-fix2-cli|modify=2026-07-24T16:16:02+0800|size=2400592
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/swift-build/swift-fixture-runner|modify=2026-07-24T20:17:02+0800|size=2639432
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/seed-check.cjs|modify=2026-07-24T13:24:36+0800|size=518
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg85-gw2.log|modify=2026-07-23T16:43:48+0800|size=8935
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/sg4-openclaw-run-recipe.md|modify=2026-07-23T14:14:55+0800|size=20895
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/rpc-probe.mjs|modify=2026-07-23T14:12:00+0800|size=3642
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe/probe.swift|modify=2026-07-25T14:48:36+0800|size=372
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe/probe2.swift|modify=2026-07-25T14:55:15+0800|size=162
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe/probe5|modify=2026-07-25T14:55:59+0800|size=2039272
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe/probe4.swift|modify=2026-07-25T14:55:30+0800|size=248
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe/probe3.swift|modify=2026-07-25T14:55:30+0800|size=306
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe/main.swift|modify=2026-07-25T14:55:47+0800|size=1036
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe/probe|modify=2026-07-25T14:48:36+0800|size=61288
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/openclaw-gateway.log|modify=2026-07-23T13:58:48+0800|size=1513
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/probe-sessionA-round1.log|modify=2026-07-23T18:06:11+0800|size=25765
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/bundle-test.mjs|modify=2026-07-23T03:20:06+0800|size=628
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/seed-check.mjs|modify=2026-07-24T13:24:18+0800|size=405
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/kanban.db.dispatch.lock|modify=2026-07-25T22:55:07+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/cache/openrouter_model_metadata.json|modify=2026-07-25T22:55:33+0800|size=257446
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/kanban.db.init.lock|modify=2026-07-25T22:55:07+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/auth.lock|modify=2026-07-25T22:55:32+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/bin/tirith|modify=2026-07-25T22:55:03+0800|size=19327152
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/gateway-starts.log|modify=2026-07-25T22:54:59+0800|size=17
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/gateway.lock|modify=2026-07-25T22:55:01+0800|size=411
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/state.db|modify=2026-07-25T22:56:44+0800|size=217088
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/gateway_state.json|modify=2026-07-25T22:56:44+0800|size=676
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/config.yaml|modify=2026-07-25T22:54:43+0800|size=881
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/kanban.db|modify=2026-07-25T22:55:07+0800|size=118784
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/.clean_shutdown|modify=2026-07-25T22:56:44+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/state/gateway.heartbeat|modify=2026-07-25T22:56:31+0800|size=127
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/.skills_prompt_snapshot.json|modify=2026-07-25T22:55:34+0800|size=83
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/channel_directory.json|modify=2026-07-25T22:55:01+0800|size=67
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/logs/gateway.log|modify=2026-07-25T22:56:44+0800|size=3434
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/logs/gateway-exit-diag.log|modify=2026-07-25T22:56:44+0800|size=665
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/logs/errors.log|modify=2026-07-25T22:56:44+0800|size=4134
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/logs/gateway-shutdown-diag.log|modify=2026-07-25T22:56:44+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/logs/agent.log|modify=2026-07-25T22:56:44+0800|size=17012
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/.env|modify=2026-07-25T22:54:34+0800|size=221
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/kanban/.dispatcher.lock|modify=2026-07-25T22:55:02+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/SOUL.md|modify=2026-07-25T22:54:57+0800|size=513
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/response_store.db|modify=2026-07-25T22:56:44+0800|size=20480
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/state.db-wal|modify=2026-07-25T22:56:44+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/state.db-shm|modify=2026-07-25T22:55:01+0800|size=32768
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/cron/ticker_last_success|modify=2026-07-25T22:56:02+0800|size=17
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/cron/ticker_heartbeat|modify=2026-07-25T22:56:02+0800|size=17
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/cron/.tick.lock|modify=2026-07-25T22:56:02+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/cron/.jobs.lock|modify=2026-07-25T22:55:02+0800|size=0
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/cron/executions.db|modify=2026-07-25T22:55:25+0800|size=20480
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/model_channel.go|modify=2026-07-23T16:11:33+0800|size=34210
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/hermes-home/logs/agent.log
+async_delegations             messages_fts_trigram        
+compression_locks             messages_fts_trigram_config 
+delivery_obligations          messages_fts_trigram_data   
+gateway_routing               messages_fts_trigram_docsize
+messages                      messages_fts_trigram_idx    
+messages_fts                  messages_fts_trigram_src    
+messages_fts_config           schema_version              
+messages_fts_data             session_model_usage         
+messages_fts_docsize          sessions                    
+messages_fts_idx              state_meta                  
+0|id|TEXT|0||1
+1|source|TEXT|1||0
+2|user_id|TEXT|0||0
+3|session_key|TEXT|0||0
+4|chat_id|TEXT|0||0
+5|chat_type|TEXT|0||0
+6|thread_id|TEXT|0||0
+7|display_name|TEXT|0||0
+8|origin_json|TEXT|0||0
+9|expiry_finalized|INTEGER|0|0|0
+10|model|TEXT|0||0
+11|model_config|TEXT|0||0
+12|system_prompt|TEXT|0||0
+13|parent_session_id|TEXT|0||0
+14|started_at|REAL|1||0
+15|ended_at|REAL|0||0
+16|end_reason|TEXT|0||0
+17|message_count|INTEGER|0|0|0
+18|tool_call_count|INTEGER|0|0|0
+19|input_tokens|INTEGER|0|0|0
+20|output_tokens|INTEGER|0|0|0
+21|cache_read_tokens|INTEGER|0|0|0
+22|cache_write_tokens|INTEGER|0|0|0
+23|reasoning_tokens|INTEGER|0|0|0
+24|cwd|TEXT|0||0
+25|git_branch|TEXT|0||0
+26|git_repo_root|TEXT|0||0
+27|billing_provider|TEXT|0||0
+28|billing_base_url|TEXT|0||0
+29|billing_mode|TEXT|0||0
+30|estimated_cost_usd|REAL|0||0
+31|actual_cost_usd|REAL|0||0
+32|cost_status|TEXT|0||0
+33|cost_source|TEXT|0||0
+34|pricing_version|TEXT|0||0
+35|title|TEXT|0||0
+36|api_call_count|INTEGER|0|0|0
+37|handoff_state|TEXT|0||0
+38|handoff_platform|TEXT|0||0
+39|handoff_error|TEXT|0||0
+40|compression_failure_cooldown_until|REAL|0||0
+41|compression_failure_error|TEXT|0||0
+42|compression_fallback_streak|INTEGER|1|0|0
+43|profile_name|TEXT|0||0
+44|rewind_count|INTEGER|1|0|0
+45|archived|INTEGER|1|0|0
+0|id|INTEGER|0||1
+1|session_id|TEXT|1||0
+2|role|TEXT|1||0
+3|content|TEXT|0||0
+4|tool_call_id|TEXT|0||0
+5|tool_calls|TEXT|0||0
+6|tool_name|TEXT|0||0
+7|effect_disposition|TEXT|0||0
+8|timestamp|REAL|1||0
+9|token_count|INTEGER|0||0
+10|finish_reason|TEXT|0||0
+11|reasoning|TEXT|0||0
+12|reasoning_content|TEXT|0||0
+13|reasoning_details|TEXT|0||0
+14|codex_reasoning_items|TEXT|0||0
+15|codex_message_items|TEXT|0||0
+16|platform_message_id|TEXT|0||0
+17|observed|INTEGER|0|0|0
+18|active|INTEGER|1|1|0
+19|compacted|INTEGER|1|0|0
+20|api_content|TEXT|0||0
+
+exec
+/bin/zsh -lc 'scratch=/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad
+db="$scratch/hermes-home/state.db"
+printf '"'%s\\n' 'SESSIONS'
+sqlite3 -readonly -header -column \""'$db" "SELECT id,source,model,message_count,input_tokens,output_tokens,datetime(started_at,'"'unixepoch','localtime') AS started_local,datetime(ended_at,'unixepoch','localtime') AS ended_local,end_reason FROM sessions WHERE id IN ('sg7-session-a','sg7-session-b') ORDER BY id;\"
+printf '%s\\n' 'MESSAGES'
+sqlite3 -readonly -header -column \""'$db" "SELECT session_id,role,content,token_count,finish_reason,datetime(timestamp,'"'unixepoch','localtime') AS timestamp_local FROM messages WHERE session_id IN ('sg7-session-a','sg7-session-b') ORDER BY timestamp,id;\"
+printf '%s\\n' 'DEFAULT_MATCHES'
+sqlite3 -readonly -header -column \""'$db" "SELECT session_id,role,content,token_count,finish_reason,datetime(timestamp,'"'unixepoch','localtime') AS timestamp_local FROM messages WHERE content LIKE '%HELLO-DEFAULT%' ORDER BY timestamp,id;\"
+printf '%s\\n' 'LOG_MATCHES'
+rg -n 'PING-A|PING-B|HELLO-DEFAULT|api_server model route applied' \""'$scratch/hermes-home/logs/agent.log" "$scratch/hermes-home/logs/gateway.log" "$scratch/hermes-gw-attempt1.log" 2>/dev/null | sed -n '"'1,240p'
+printf '%s\\n' 'CONFIG_DERIVED_CHECKS'
+\""'$scratch/hermes-venv/bin/python" - <<'"'PY'
+import json
+from pathlib import Path
+import yaml
+scratch = Path('/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad')
+repo = Path('/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop')
+cfg = yaml.safe_load((scratch/'hermes-home/config.yaml').read_text())
+params = json.loads((repo/'.harnessloop/local/channel-params.json').read_text())
+routes = cfg['platforms']['api_server']['extra']['model_routes']
+a = routes.get('session-a', {})
+b = routes.get('session-b', {})
+pa = params['channels']['newapi']['parameters']['NEWAPI_SG7_HERMES_SESSION_A_TOKEN']['value']
+pb = params['channels']['newapi']['parameters']['NEWAPI_SG7_HERMES_SESSION_B_TOKEN']['value']
+print(json.dumps({
+  'aliases': sorted(routes),
+  'models': {k: routes[k].get('model') for k in sorted(routes)},
+  'route_keys_distinct': bool(a.get('api_key')) and bool(b.get('api_key')) and a['api_key'] "'!= b['"'api_key'],
+  'session_a_key_matches_registry': a.get('api_key') == pa,
+  'session_b_key_matches_registry': b.get('api_key') == pb,
+  'base_urls_equal': bool(a.get('base_url')) and a.get('base_url') == b.get('base_url'),
+  'global_default_key_is_route_a': cfg.get('model',{}).get('api_key') == a.get('api_key'),
+  'global_default_key_is_route_b': cfg.get('model',{}).get('api_key') == b.get('api_key'),
+}, ensure_ascii=False, indent=2))
+PY" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 292ms:
+{
+  "aliases": [
+    "session-a",
+    "session-b"
+  ],
+  "models": {
+    "session-a": "kimi-for-coding",
+    "session-b": "kimi-for-coding"
+  },
+  "route_keys_distinct": true,
+  "session_a_key_matches_registry": true,
+  "session_b_key_matches_registry": true,
+  "base_urls_equal": true,
+  "global_default_key_is_route_a": true,
+  "global_default_key_is_route_b": false
+}
+
+codex
+核验已闭环：核心 SG-7 计费链真实、无需改 Hermes 源码这一点成立；但评审文档还不能直接收官，因为隔离残留、热重载说明和 handler 覆盖范围存在可复现的反证。我将 verdict 定为 `REWORK`，明确区分“核心 e2e 结论成立”与“recipe/诚实标注需修正”，无需重新消耗真实模型调用。
+apply patch
+patch: completed
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-055-output.md
+diff --git a/.hopper/handoffs/T-055-output.md b/.hopper/handoffs/T-055-output.md
+index 09cd7ad30e6b4aaba6e838e44318b2436eac2944..a68144afe03a4502dfe1b203db01aaf67360ff32
+--- a/.hopper/handoffs/T-055-output.md
++++ b/.hopper/handoffs/T-055-output.md
+@@ -1,28 +1,102 @@
+----
+-task_id: T-055
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 13939
+-start_time: "2026-07-25T15:02:36.833Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-25T15:02:36.834Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-055-progress.log
+-raw_log: ./T-055-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-055-output.log
+-started_by_pid: 13937
+----
++**Summary**
++
++独立对抗复核确认 SG-7 的核心 e2e 结论可信：commit `47177412` 未改 Hermes tracked source，`model_routes` 的 route→`AIAgent` 凭证 overlay 是 pin `17155e3a` 的原生配置能力；new-api 日志、隔离 config、Hermes state DB 三方共同坐实两 session 使用两枚独立 token 完成真实 Kimi 往返。  
++但两份文档尚不能按原样收官：submodule 内遗留了被 `.gitignore` 隐藏的 `hermes_agent.egg-info/`，recipe 对此作了相反陈述；另有 handler 覆盖范围与 `/platform resume api_server` 热重载能力两处源码级误述。核心“`/v1/chat/completions` + 静态 alias 零源码改动可实现独立归因”无需重跑，文档与清理纪律需要返工。
++
++**Files touched**
++
++- `.hopper/handoffs/T-055-output.md`：写入本次只读对抗评审交付；评审对象、`kernels/hermes` 与远端资源均未修改。
++
++**Acceptance verification (3/5)**
++
++1. **通过（按“tracked source 零改动”口径）— 零改动真实性**
++
++   - pin 与目标一致：
++
++     ```text
++     $ git rev-parse HEAD
++     47177412dddf1b15ade0e6ca911594cff3d96850
++     $ git submodule status -- kernels/hermes
++      17155e3ae04d376dd8eba2e65f3dd966e67ab1ba kernels/hermes (heads/main)
++     ```
++
++   - `git -C kernels/hermes status --short --untracked-files=all`、`diff --stat`、`diff --cached --stat` 均为空，故没有 tracked/untracked 源码改动。
++   - 源码机制成立：`gateway/platforms/api_server.py:1024-1039` 从 `platforms.api_server.extra.model_routes` 构造静态映射，`:1795-1799` 按请求 model alias 查 route，`:1885-1913` 在无 session `/model` override 时覆盖 `model/api_key/base_url`，`:1934-1936` 把结果传入 `AIAgent`。隔离 `config.yaml` 的派生检查还确认 `session-a/session-b` 两 route key 非空且互异，并分别精确匹配登记的 token A/B。
++   - 限定：这证明“零源码改动”，不等于工作目录“零落盘”；被忽略的残留见第 4 项。
++
++2. **通过 — 归因证据真实**
++
++   - 使用 `.harnessloop/local/channel-params.json` 的 root 凭证只读登录，返回 `success:true, role:100`。`GET /api/log/?p=0&page_size=100` 的现场结果：
++
++     ```text
++     log 45: token_id=4, token_name=sg7-hermes-session-a,
++             model_name=kimi-for-coding, channel_name=kimi-coding,
++             prompt_tokens=244, completion_tokens=22,
++             cache_tokens=11264, usage_semantic=anthropic,
++             request_id=...qFuKbCAJ, other.request_path=/v1/chat/completions,
++             is_stream=true, created_at=2026-07-25T22:55:46+08:00
++     log 46: token_id=5, token_name=sg7-hermes-session-b,
++             model_name=kimi-for-coding, channel_name=kimi-coding,
++             prompt_tokens=244, completion_tokens=15,
++             cache_tokens=11264, usage_semantic=anthropic,
++             request_id=...dMzfUoEd, other.request_path=/v1/chat/completions,
++             is_stream=true, created_at=2026-07-25T22:55:52+08:00
++     ```
++
++   - `GET /api/token/?p=0&size=100` 现场返回 id 4/5，名称分别为 `sg7-hermes-session-a/b`，均为独立启用 token。进一步只做布尔派生、未输出 key：`local_tokens_distinct=true`、`local_a_matches_id4_mask=true`、`local_b_matches_id5_mask=true`，且 `GET /api/token/{4,5}` 均只返回掩码。不存在“同一 token 调两次”的替代解释。
++
++3. **通过 — e2e 链与 usage 算术真实**
++
++   - 保留的隔离 `state.db` 提供了独立于 evidence 文本的响应记录：
++
++     ```text
++     sg7-session-a user      "reply with exactly: PING-A"  22:55:44
++     sg7-session-a assistant "PING-A" finish_reason=stop   22:55:46
++     sg7-session-b user      "reply with exactly: PING-B"  22:55:50
++     sg7-session-b assistant "PING-B" finish_reason=stop   22:55:52
++     ```
++
++     同一 DB 也保存了默认路径的 `HELLO-DEFAULT` 请求/响应（22:55:35/22:55:37）；`agent.log` 在对应 session/model/platform 下记录三次 turn。
++   - state DB 的 session A/B `input_tokens=244`、`output_tokens=22/15` 与 new-api 日志逐项相等；new-api 的 cache 拆账满足两条均为 `244 + 11264 = 11508`，completion 分别 `22`、`15`，与 evidence 的 Hermes 响应 usage 完全一致。日志时间与 DB assistant 落盘时间精确到同一秒，且 request ID 不同。
++   - 隔离 config 同时证明两个 alias 指向 `kimi-for-coding`、key A/B 各自匹配本地登记值；结合真实计费日志、持久化响应内容和时间相关性，mock/固定串无法合理解释整条证据链。
++
++4. **不通过 — recipe 可复现性与隔离纪律**
+ 
+-# T-055 — codex (background, in-progress)
++   - `HERMES-ISOLATED-RUN-RECIPE.md:42-46` 声称非 editable install“不会往 submodule 工作区写 egg-info”，但现场反证：
+ 
+-Output streaming to `T-055-output.log`. Status updates here.
++     ```text
++     $ git -C kernels/hermes status --ignored --short
++     !! hermes_agent.egg-info/
++     $ git -C kernels/hermes check-ignore -v hermes_agent.egg-info/PKG-INFO
++     .gitignore:59:hermes_agent.egg-info/ hermes_agent.egg-info/PKG-INFO
++     $ stat kernels/hermes/hermes_agent.egg-info
++     birth=2026-07-25T22:50:12+0800, modify=22:50:14+0800
++     ```
++
++     时间位于本轮 venv/install（22:50）窗口，目录含 `PKG-INFO`、`SOURCES.txt` 等。普通 `git status/diff` 因 `.gitignore:59` 看不到它；`HERMES-RUN-EVIDENCE.md:207` 的“全程未修改任何文件”与“已清理”口径因此过宽。tracked source 仍为零 diff，但“无遗留污染”不成立。
++   - 正向收尾项复核通过：`~/.hermes` 不存在，8646 无 listener，未见 Hermes gateway 残进程，隔离 home 有 `.clean_shutdown`；系统 `python3 -m pip show hermes-agent` 返回 `Package(s) not found`；在 workspace、`/tmp`、`/private/tmp` 与 `_ai-goods` 有界搜索未发现 `one-api.db`/new-api SQLite 副本。`hermes-venv/` 与 `hermes-home/` 仍位于声明的 scratchpad，属于文档明确保留的临时隔离区。
++   - `:228` 把 `rm -rf ~/.hermes` 放进通用收尾 recipe，即使注释要求先确认，也是不安全的宽目标；复用时可能删除既有用户状态。应改为对本轮精确创建的空文件做前置校验和精确删除，并只在目录为空时 `rmdir`。
++   - Pi 源 SQLite “只读 scp、未修改”的操作语义合理，本地副本也未残留，但现有材料没有远端前后 stat/hash 或命令 transcript，不能事后独立证明 Pi 文件未写。
++
++5. **不通过 — 诚实标注与源码引用准确性**
++
++   - 做对的部分：`HERMES-ISOLATED-RUN-RECIPE.md:25-31` 明确是“预注册 alias”，不是运行时任意给 session 现铸 key，与 PRE-① `pre1-hermes-source-conformance.md:127-153` 一致；`:10-13` 明确排除 ACP；evidence `:85-100` 的 token API 只回掩码已现场复现，SQLite workaround 也明确标成绕行。
++   - handler 说明错误：recipe `:188-189` 把 `api_server.py:2863` 写成 Responses、`:3983` 写成 Chat Completions、`:5025` 写成 sessions chat。源码实况分别是 **Chat Completions、Responses、`/v1/runs`**；`/api/sessions/{id}/chat` 在 `:2550-2575` 调 `_run_agent` 时没有解析或传入 route。该错误把原生 route 覆盖范围扩张到了未经支持/未经本轮测试的 sessions-chat 路径。
++   - 热重载说明错误：recipe `:27-29`、`:212-215` 称新增 alias 可执行 `/platform resume api_server`。`api_server.py:5619` 的注释仅处理端口绑定失败后的恢复；`gateway/slash_commands.py:1204-1237` 显示 resume 只接受 `_failed_platforms` 中且已 paused 的平台，正常 connected 的 api_server 会返回 “nothing to resume”。本轮实际验证且源码支持的可靠方式只有重启 gateway。
++   - 因此文档虽诚实排除了 ACP，却仍对 api_server 内部的 sessions-chat 覆盖与 alias 热加载作了过度声称。
++
++**Decisions / deviations**
++
++- 判断口径：把“tracked source 零改动”与“submodule 工作目录无残留”分开评价；前者成立，后者被 ignored egg-info 反证。除指定输出文件外严格只读，未清理该残留、未重跑付费请求、未创建或删除 new-api 资源。
++
++**Open questions**
++
++- Pi 上源 SQLite 未被修改目前只有单向 `scp` 的操作叙述，没有可独立复核的远端前后 stat/hash 或审计记录；这不影响已验证的 e2e 归因，但不足以把该隔离子断言提升为独立实证。
++
++**Verdict**
++
++REWORK
++
++**Next recommendation**
++
++保留 SG-7 核心 e2e 结果，不必再次调用 Kimi。先清理 `kernels/hermes/hermes_agent.egg-info/`，将清理/验收改为同时检查 `build/`、`hermes_agent.egg-info/` 与 `git status --ignored --short`；把“任何文件未修改”收窄为“无 tracked source diff”；修正三个 handler 的真实映射并明确 sessions-chat 不在本轮闭合范围；删除 `/platform resume api_server` 可热加载 alias 的说法，仅保留 gateway restart；最后用精确、带前置校验的全局日志清理替代 `rm -rf ~/.hermes`。完成这些文档与隔离修正后，可直接复审收官。
+
+diff --git a/.hopper/handoffs/T-055-output.md b/.hopper/handoffs/T-055-output.md
+index 09cd7ad30e6b4aaba6e838e44318b2436eac2944..a68144afe03a4502dfe1b203db01aaf67360ff32
+--- a/.hopper/handoffs/T-055-output.md
++++ b/.hopper/handoffs/T-055-output.md
+@@ -1,28 +1,102 @@
+----
+-task_id: T-055
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 13939
+-start_time: "2026-07-25T15:02:36.833Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-25T15:02:36.834Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-055-progress.log
+-raw_log: ./T-055-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-055-output.log
+-started_by_pid: 13937
+----
++**Summary**
++
++独立对抗复核确认 SG-7 的核心 e2e 结论可信：commit `47177412` 未改 Hermes tracked source，`model_routes` 的 route→`AIAgent` 凭证 overlay 是 pin `17155e3a` 的原生配置能力；new-api 日志、隔离 config、Hermes state DB 三方共同坐实两 session 使用两枚独立 token 完成真实 Kimi 往返。  
++但两份文档尚不能按原样收官：submodule 内遗留了被 `.gitignore` 隐藏的 `hermes_agent.egg-info/`，recipe 对此作了相反陈述；另有 handler 覆盖范围与 `/platform resume api_server` 热重载能力两处源码级误述。核心“`/v1/chat/completions` + 静态 alias 零源码改动可实现独立归因”无需重跑，文档与清理纪律需要返工。
++
++**Files touched**
++
++- `.hopper/handoffs/T-055-output.md`：写入本次只读对抗评审交付；评审对象、`kernels/hermes` 与远端资源均未修改。
++
++**Acceptance verification (3/5)**
++
++1. **通过（按“tracked source 零改动”口径）— 零改动真实性**
++
++   - pin 与目标一致：
++
++     ```text
++     $ git rev-parse HEAD
++     47177412dddf1b15ade0e6ca911594cff3d96850
++     $ git submodule status -- kernels/hermes
++      17155e3ae04d376dd8eba2e65f3dd966e67ab1ba kernels/hermes (heads/main)
++     ```
++
++   - `git -C kernels/hermes status --short --untracked-files=all`、`diff --stat`、`diff --cached --stat` 均为空，故没有 tracked/untracked 源码改动。
++   - 源码机制成立：`gateway/platforms/api_server.py:1024-1039` 从 `platforms.api_server.extra.model_routes` 构造静态映射，`:1795-1799` 按请求 model alias 查 route，`:1885-1913` 在无 session `/model` override 时覆盖 `model/api_key/base_url`，`:1934-1936` 把结果传入 `AIAgent`。隔离 `config.yaml` 的派生检查还确认 `session-a/session-b` 两 route key 非空且互异，并分别精确匹配登记的 token A/B。
++   - 限定：这证明“零源码改动”，不等于工作目录“零落盘”；被忽略的残留见第 4 项。
++
++2. **通过 — 归因证据真实**
++
++   - 使用 `.harnessloop/local/channel-params.json` 的 root 凭证只读登录，返回 `success:true, role:100`。`GET /api/log/?p=0&page_size=100` 的现场结果：
++
++     ```text
++     log 45: token_id=4, token_name=sg7-hermes-session-a,
++             model_name=kimi-for-coding, channel_name=kimi-coding,
++             prompt_tokens=244, completion_tokens=22,
++             cache_tokens=11264, usage_semantic=anthropic,
++             request_id=...qFuKbCAJ, other.request_path=/v1/chat/completions,
++             is_stream=true, created_at=2026-07-25T22:55:46+08:00
++     log 46: token_id=5, token_name=sg7-hermes-session-b,
++             model_name=kimi-for-coding, channel_name=kimi-coding,
++             prompt_tokens=244, completion_tokens=15,
++             cache_tokens=11264, usage_semantic=anthropic,
++             request_id=...dMzfUoEd, other.request_path=/v1/chat/completions,
++             is_stream=true, created_at=2026-07-25T22:55:52+08:00
++     ```
++
++   - `GET /api/token/?p=0&size=100` 现场返回 id 4/5，名称分别为 `sg7-hermes-session-a/b`，均为独立启用 token。进一步只做布尔派生、未输出 key：`local_tokens_distinct=true`、`local_a_matches_id4_mask=true`、`local_b_matches_id5_mask=true`，且 `GET /api/token/{4,5}` 均只返回掩码。不存在“同一 token 调两次”的替代解释。
++
++3. **通过 — e2e 链与 usage 算术真实**
++
++   - 保留的隔离 `state.db` 提供了独立于 evidence 文本的响应记录：
++
++     ```text
++     sg7-session-a user      "reply with exactly: PING-A"  22:55:44
++     sg7-session-a assistant "PING-A" finish_reason=stop   22:55:46
++     sg7-session-b user      "reply with exactly: PING-B"  22:55:50
++     sg7-session-b assistant "PING-B" finish_reason=stop   22:55:52
++     ```
++
++     同一 DB 也保存了默认路径的 `HELLO-DEFAULT` 请求/响应（22:55:35/22:55:37）；`agent.log` 在对应 session/model/platform 下记录三次 turn。
++   - state DB 的 session A/B `input_tokens=244`、`output_tokens=22/15` 与 new-api 日志逐项相等；new-api 的 cache 拆账满足两条均为 `244 + 11264 = 11508`，completion 分别 `22`、`15`，与 evidence 的 Hermes 响应 usage 完全一致。日志时间与 DB assistant 落盘时间精确到同一秒，且 request ID 不同。
++   - 隔离 config 同时证明两个 alias 指向 `kimi-for-coding`、key A/B 各自匹配本地登记值；结合真实计费日志、持久化响应内容和时间相关性，mock/固定串无法合理解释整条证据链。
++
++4. **不通过 — recipe 可复现性与隔离纪律**
+ 
+-# T-055 — codex (background, in-progress)
++   - `HERMES-ISOLATED-RUN-RECIPE.md:42-46` 声称非 editable install“不会往 submodule 工作区写 egg-info”，但现场反证：
+ 
+-Output streaming to `T-055-output.log`. Status updates here.
++     ```text
++     $ git -C kernels/hermes status --ignored --short
++     !! hermes_agent.egg-info/
++     $ git -C kernels/hermes check-ignore -v hermes_agent.egg-info/PKG-INFO
++     .gitignore:59:hermes_agent.egg-info/ hermes_agent.egg-info/PKG-INFO
++     $ stat kernels/hermes/hermes_agent.egg-info
++     birth=2026-07-25T22:50:12+0800, modify=22:50:14+0800
++     ```
++
++     时间位于本轮 venv/install（22:50）窗口，目录含 `PKG-INFO`、`SOURCES.txt` 等。普通 `git status/diff` 因 `.gitignore:59` 看不到它；`HERMES-RUN-EVIDENCE.md:207` 的“全程未修改任何文件”与“已清理”口径因此过宽。tracked source 仍为零 diff，但“无遗留污染”不成立。
++   - 正向收尾项复核通过：`~/.hermes` 不存在，8646 无 listener，未见 Hermes gateway 残进程，隔离 home 有 `.clean_shutdown`；系统 `python3 -m pip show hermes-agent` 返回 `Package(s) not found`；在 workspace、`/tmp`、`/private/tmp` 与 `_ai-goods` 有界搜索未发现 `one-api.db`/new-api SQLite 副本。`hermes-venv/` 与 `hermes-home/` 仍位于声明的 scratchpad，属于文档明确保留的临时隔离区。
++   - `:228` 把 `rm -rf ~/.hermes` 放进通用收尾 recipe，即使注释要求先确认，也是不安全的宽目标；复用时可能删除既有用户状态。应改为对本轮精确创建的空文件做前置校验和精确删除，并只在目录为空时 `rmdir`。
++   - Pi 源 SQLite “只读 scp、未修改”的操作语义合理，本地副本也未残留，但现有材料没有远端前后 stat/hash 或命令 transcript，不能事后独立证明 Pi 文件未写。
++
++5. **不通过 — 诚实标注与源码引用准确性**
++
++   - 做对的部分：`HERMES-ISOLATED-RUN-RECIPE.md:25-31` 明确是“预注册 alias”，不是运行时任意给 session 现铸 key，与 PRE-① `pre1-hermes-source-conformance.md:127-153` 一致；`:10-13` 明确排除 ACP；evidence `:85-100` 的 token API 只回掩码已现场复现，SQLite workaround 也明确标成绕行。
++   - handler 说明错误：recipe `:188-189` 把 `api_server.py:2863` 写成 Responses、`:3983` 写成 Chat Completions、`:5025` 写成 sessions chat。源码实况分别是 **Chat Completions、Responses、`/v1/runs`**；`/api/sessions/{id}/chat` 在 `:2550-2575` 调 `_run_agent` 时没有解析或传入 route。该错误把原生 route 覆盖范围扩张到了未经支持/未经本轮测试的 sessions-chat 路径。
++   - 热重载说明错误：recipe `:27-29`、`:212-215` 称新增 alias 可执行 `/platform resume api_server`。`api_server.py:5619` 的注释仅处理端口绑定失败后的恢复；`gateway/slash_commands.py:1204-1237` 显示 resume 只接受 `_failed_platforms` 中且已 paused 的平台，正常 connected 的 api_server 会返回 “nothing to resume”。本轮实际验证且源码支持的可靠方式只有重启 gateway。
++   - 因此文档虽诚实排除了 ACP，却仍对 api_server 内部的 sessions-chat 覆盖与 alias 热加载作了过度声称。
++
++**Decisions / deviations**
++
++- 判断口径：把“tracked source 零改动”与“submodule 工作目录无残留”分开评价；前者成立，后者被 ignored egg-info 反证。除指定输出文件外严格只读，未清理该残留、未重跑付费请求、未创建或删除 new-api 资源。
++
++**Open questions**
++
++- Pi 上源 SQLite 未被修改目前只有单向 `scp` 的操作叙述，没有可独立复核的远端前后 stat/hash 或审计记录；这不影响已验证的 e2e 归因，但不足以把该隔离子断言提升为独立实证。
++
++**Verdict**
++
++REWORK
++
++**Next recommendation**
++
++保留 SG-7 核心 e2e 结果，不必再次调用 Kimi。先清理 `kernels/hermes/hermes_agent.egg-info/`，将清理/验收改为同时检查 `build/`、`hermes_agent.egg-info/` 与 `git status --ignored --short`；把“任何文件未修改”收窄为“无 tracked source diff”；修正三个 handler 的真实映射并明确 sessions-chat 不在本轮闭合范围；删除 `/platform resume api_server` 可热加载 alias 的说法，仅保留 gateway restart；最后用精确、带前置校验的全局日志清理替代 `rm -rf ~/.hermes`。完成这些文档与隔离修正后，可直接复审收官。
+
+exec
+/bin/zsh -lc 'set -euo pipefail
+out=.hopper/handoffs/T-055-output.md
+wc -l -c "$out"
+rg -n '"'"'^'"\\*\\*(Summary|Files touched|Acceptance verification \\(3/5\\)|Decisions / deviations|Open questions|Verdict|Next recommendation)\\*\\*"'$|''^REWORK$'"' \""'$out"
+rg -n '"'NEWAPI_.*TOKEN.*value|password|api_key: ["'^<]|Bearer [A-Za-z0-9]'"' \""'$out" || true
+sed -n '"'1,260p' \""'$out"
+printf '"'%s\\n' 'HERMES_FINAL_STATUS'
+git -C kernels/hermes status --short --untracked-files=all
+git -C kernels/hermes status --ignored --short | sed -n '1,20p'
+printf '%s\\n' 'MAIN_RELEVANT_STATUS'
+git status --short -- .hopper/handoffs/T-055-output.md app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md app/kernel-client/HERMES-RUN-EVIDENCE.md kernels/hermes" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+diff --git a/.hopper/handoffs/T-055-output.md b/.hopper/handoffs/T-055-output.md
+index 09cd7ad30e6b4aaba6e838e44318b2436eac2944..a68144afe03a4502dfe1b203db01aaf67360ff32
+--- a/.hopper/handoffs/T-055-output.md
++++ b/.hopper/handoffs/T-055-output.md
+@@ -1,28 +1,102 @@
+----
+-task_id: T-055
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 13939
+-start_time: "2026-07-25T15:02:36.833Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-25T15:02:36.834Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-055-progress.log
+-raw_log: ./T-055-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-055-output.log
+-started_by_pid: 13937
+----
++**Summary**
++
++独立对抗复核确认 SG-7 的核心 e2e 结论可信：commit `47177412` 未改 Hermes tracked source，`model_routes` 的 route→`AIAgent` 凭证 overlay 是 pin `17155e3a` 的原生配置能力；new-api 日志、隔离 config、Hermes state DB 三方共同坐实两 session 使用两枚独立 token 完成真实 Kimi 往返。  
++但两份文档尚不能按原样收官：submodule 内遗留了被 `.gitignore` 隐藏的 `hermes_agent.egg-info/`，recipe 对此作了相反陈述；另有 handler 覆盖范围与 `/platform resume api_server` 热重载能力两处源码级误述。核心“`/v1/chat/completions` + 静态 alias 零源码改动可实现独立归因”无需重跑，文档与清理纪律需要返工。
++
++**Files touched**
++
++- `.hopper/handoffs/T-055-output.md`：写入本次只读对抗评审交付；评审对象、`kernels/hermes` 与远端资源均未修改。
++
++**Acceptance verification (3/5)**
++
++1. **通过（按“tracked source 零改动”口径）— 零改动真实性**
++
++   - pin 与目标一致：
++
++     ```text
++     $ git rev-parse HEAD
++     47177412dddf1b15ade0e6ca911594cff3d96850
++     $ git submodule status -- kernels/hermes
++      17155e3ae04d376dd8eba2e65f3dd966e67ab1ba kernels/hermes (heads/main)
++     ```
++
++   - `git -C kernels/hermes status --short --untracked-files=all`、`diff --stat`、`diff --cached --stat` 均为空，故没有 tracked/untracked 源码改动。
++   - 源码机制成立：`gateway/platforms/api_server.py:1024-1039` 从 `platforms.api_server.extra.model_routes` 构造静态映射，`:1795-1799` 按请求 model alias 查 route，`:1885-1913` 在无 session `/model` override 时覆盖 `model/api_key/base_url`，`:1934-1936` 把结果传入 `AIAgent`。隔离 `config.yaml` 的派生检查还确认 `session-a/session-b` 两 route key 非空且互异，并分别精确匹配登记的 token A/B。
++   - 限定：这证明“零源码改动”，不等于工作目录“零落盘”；被忽略的残留见第 4 项。
++
++2. **通过 — 归因证据真实**
++
++   - 使用 `.harnessloop/local/channel-params.json` 的 root 凭证只读登录，返回 `success:true, role:100`。`GET /api/log/?p=0&page_size=100` 的现场结果：
++
++     ```text
++     log 45: token_id=4, token_name=sg7-hermes-session-a,
++             model_name=kimi-for-coding, channel_name=kimi-coding,
++             prompt_tokens=244, completion_tokens=22,
++             cache_tokens=11264, usage_semantic=anthropic,
++             request_id=...qFuKbCAJ, other.request_path=/v1/chat/completions,
++             is_stream=true, created_at=2026-07-25T22:55:46+08:00
++     log 46: token_id=5, token_name=sg7-hermes-session-b,
++             model_name=kimi-for-coding, channel_name=kimi-coding,
++             prompt_tokens=244, completion_tokens=15,
++             cache_tokens=11264, usage_semantic=anthropic,
++             request_id=...dMzfUoEd, other.request_path=/v1/chat/completions,
++             is_stream=true, created_at=2026-07-25T22:55:52+08:00
++     ```
++
++   - `GET /api/token/?p=0&size=100` 现场返回 id 4/5，名称分别为 `sg7-hermes-session-a/b`，均为独立启用 token。进一步只做布尔派生、未输出 key：`local_tokens_distinct=true`、`local_a_matches_id4_mask=true`、`local_b_matches_id5_mask=true`，且 `GET /api/token/{4,5}` 均只返回掩码。不存在“同一 token 调两次”的替代解释。
++
++3. **通过 — e2e 链与 usage 算术真实**
++
++   - 保留的隔离 `state.db` 提供了独立于 evidence 文本的响应记录：
++
++     ```text
++     sg7-session-a user      "reply with exactly: PING-A"  22:55:44
++     sg7-session-a assistant "PING-A" finish_reason=stop   22:55:46
++     sg7-session-b user      "reply with exactly: PING-B"  22:55:50
++     sg7-session-b assistant "PING-B" finish_reason=stop   22:55:52
++     ```
++
++     同一 DB 也保存了默认路径的 `HELLO-DEFAULT` 请求/响应（22:55:35/22:55:37）；`agent.log` 在对应 session/model/platform 下记录三次 turn。
++   - state DB 的 session A/B `input_tokens=244`、`output_tokens=22/15` 与 new-api 日志逐项相等；new-api 的 cache 拆账满足两条均为 `244 + 11264 = 11508`，completion 分别 `22`、`15`，与 evidence 的 Hermes 响应 usage 完全一致。日志时间与 DB assistant 落盘时间精确到同一秒，且 request ID 不同。
++   - 隔离 config 同时证明两个 alias 指向 `kimi-for-coding`、key A/B 各自匹配本地登记值；结合真实计费日志、持久化响应内容和时间相关性，mock/固定串无法合理解释整条证据链。
++
++4. **不通过 — recipe 可复现性与隔离纪律**
+ 
+-# T-055 — codex (background, in-progress)
++   - `HERMES-ISOLATED-RUN-RECIPE.md:42-46` 声称非 editable install“不会往 submodule 工作区写 egg-info”，但现场反证：
+ 
+-Output streaming to `T-055-output.log`. Status updates here.
++     ```text
++     $ git -C kernels/hermes status --ignored --short
++     !! hermes_agent.egg-info/
++     $ git -C kernels/hermes check-ignore -v hermes_agent.egg-info/PKG-INFO
++     .gitignore:59:hermes_agent.egg-info/ hermes_agent.egg-info/PKG-INFO
++     $ stat kernels/hermes/hermes_agent.egg-info
++     birth=2026-07-25T22:50:12+0800, modify=22:50:14+0800
++     ```
++
++     时间位于本轮 venv/install（22:50）窗口，目录含 `PKG-INFO`、`SOURCES.txt` 等。普通 `git status/diff` 因 `.gitignore:59` 看不到它；`HERMES-RUN-EVIDENCE.md:207` 的“全程未修改任何文件”与“已清理”口径因此过宽。tracked source 仍为零 diff，但“无遗留污染”不成立。
++   - 正向收尾项复核通过：`~/.hermes` 不存在，8646 无 listener，未见 Hermes gateway 残进程，隔离 home 有 `.clean_shutdown`；系统 `python3 -m pip show hermes-agent` 返回 `Package(s) not found`；在 workspace、`/tmp`、`/private/tmp` 与 `_ai-goods` 有界搜索未发现 `one-api.db`/new-api SQLite 副本。`hermes-venv/` 与 `hermes-home/` 仍位于声明的 scratchpad，属于文档明确保留的临时隔离区。
++   - `:228` 把 `rm -rf ~/.hermes` 放进通用收尾 recipe，即使注释要求先确认，也是不安全的宽目标；复用时可能删除既有用户状态。应改为对本轮精确创建的空文件做前置校验和精确删除，并只在目录为空时 `rmdir`。
++   - Pi 源 SQLite “只读 scp、未修改”的操作语义合理，本地副本也未残留，但现有材料没有远端前后 stat/hash 或命令 transcript，不能事后独立证明 Pi 文件未写。
++
++5. **不通过 — 诚实标注与源码引用准确性**
++
++   - 做对的部分：`HERMES-ISOLATED-RUN-RECIPE.md:25-31` 明确是“预注册 alias”，不是运行时任意给 session 现铸 key，与 PRE-① `pre1-hermes-source-conformance.md:127-153` 一致；`:10-13` 明确排除 ACP；evidence `:85-100` 的 token API 只回掩码已现场复现，SQLite workaround 也明确标成绕行。
++   - handler 说明错误：recipe `:188-189` 把 `api_server.py:2863` 写成 Responses、`:3983` 写成 Chat Completions、`:5025` 写成 sessions chat。源码实况分别是 **Chat Completions、Responses、`/v1/runs`**；`/api/sessions/{id}/chat` 在 `:2550-2575` 调 `_run_agent` 时没有解析或传入 route。该错误把原生 route 覆盖范围扩张到了未经支持/未经本轮测试的 sessions-chat 路径。
++   - 热重载说明错误：recipe `:27-29`、`:212-215` 称新增 alias 可执行 `/platform resume api_server`。`api_server.py:5619` 的注释仅处理端口绑定失败后的恢复；`gateway/slash_commands.py:1204-1237` 显示 resume 只接受 `_failed_platforms` 中且已 paused 的平台，正常 connected 的 api_server 会返回 “nothing to resume”。本轮实际验证且源码支持的可靠方式只有重启 gateway。
++   - 因此文档虽诚实排除了 ACP，却仍对 api_server 内部的 sessions-chat 覆盖与 alias 热加载作了过度声称。
++
++**Decisions / deviations**
++
++- 判断口径：把“tracked source 零改动”与“submodule 工作目录无残留”分开评价；前者成立，后者被 ignored egg-info 反证。除指定输出文件外严格只读，未清理该残留、未重跑付费请求、未创建或删除 new-api 资源。
++
++**Open questions**
++
++- Pi 上源 SQLite 未被修改目前只有单向 `scp` 的操作叙述，没有可独立复核的远端前后 stat/hash 或审计记录；这不影响已验证的 e2e 归因，但不足以把该隔离子断言提升为独立实证。
++
++**Verdict**
++
++REWORK
++
++**Next recommendation**
++
++保留 SG-7 核心 e2e 结果，不必再次调用 Kimi。先清理 `kernels/hermes/hermes_agent.egg-info/`，将清理/验收改为同时检查 `build/`、`hermes_agent.egg-info/` 与 `git status --ignored --short`；把“任何文件未修改”收窄为“无 tracked source diff”；修正三个 handler 的真实映射并明确 sessions-chat 不在本轮闭合范围；删除 `/platform resume api_server` 可热加载 alias 的说法，仅保留 gateway restart；最后用精确、带前置校验的全局日志清理替代 `rm -rf ~/.hermes`。完成这些文档与隔离修正后，可直接复审收官。
+
+ succeeded in 344ms:
+!! hermes_agent.egg-info/
+MAIN_RELEVANT_STATUS
+?? .hopper/handoffs/T-055-output.md
+
+codex
+已完成对抗评审并落盘：[T-055-output.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-055-output.md)。
+
+Verdict：`REWORK`。核心 SG-7 e2e 结论成立，但发现 ignored `egg-info` 残留、handler 范围误述及无效的热重载说明；无需重跑付费 e2e。
+diff --git a/.hopper/handoffs/T-055-output.md b/.hopper/handoffs/T-055-output.md
+index 09cd7ad30e6b4aaba6e838e44318b2436eac2944..a68144afe03a4502dfe1b203db01aaf67360ff32
+--- a/.hopper/handoffs/T-055-output.md
++++ b/.hopper/handoffs/T-055-output.md
+@@ -1,28 +1,102 @@
+----
+-task_id: T-055
+-adapter: codex
+-model: gpt-5.6-sol
+-status: in-progress
+-pid: 13939
+-start_time: "2026-07-25T15:02:36.833Z"
+-end_time: null
+-exit_code: null
+-duration_ms: null
+-mode: background
+-phase: starting
+-last_progress_at: "2026-07-25T15:02:36.834Z"
+-last_progress: Background task queued.
+-progress_seq: 1
+-progress_log: ./T-055-progress.log
+-raw_log: ./T-055-output.log
+-vendor_session_id: null
+-terminal_event_emitted: false
+-host_native: null
+-session_id: null
+-log: ./T-055-output.log
+-started_by_pid: 13937
+----
++**Summary**
++
++独立对抗复核确认 SG-7 的核心 e2e 结论可信：commit `47177412` 未改 Hermes tracked source，`model_routes` 的 route→`AIAgent` 凭证 overlay 是 pin `17155e3a` 的原生配置能力；new-api 日志、隔离 config、Hermes state DB 三方共同坐实两 session 使用两枚独立 token 完成真实 Kimi 往返。  
++但两份文档尚不能按原样收官：submodule 内遗留了被 `.gitignore` 隐藏的 `hermes_agent.egg-info/`，recipe 对此作了相反陈述；另有 handler 覆盖范围与 `/platform resume api_server` 热重载能力两处源码级误述。核心“`/v1/chat/completions` + 静态 alias 零源码改动可实现独立归因”无需重跑，文档与清理纪律需要返工。
++
++**Files touched**
++
++- `.hopper/handoffs/T-055-output.md`：写入本次只读对抗评审交付；评审对象、`kernels/hermes` 与远端资源均未修改。
++
++**Acceptance verification (3/5)**
++
++1. **通过（按“tracked source 零改动”口径）— 零改动真实性**
++
++   - pin 与目标一致：
++
++     ```text
++     $ git rev-parse HEAD
++     47177412dddf1b15ade0e6ca911594cff3d96850
++     $ git submodule status -- kernels/hermes
++      17155e3ae04d376dd8eba2e65f3dd966e67ab1ba kernels/hermes (heads/main)
++     ```
++
++   - `git -C kernels/hermes status --short --untracked-files=all`、`diff --stat`、`diff --cached --stat` 均为空，故没有 tracked/untracked 源码改动。
++   - 源码机制成立：`gateway/platforms/api_server.py:1024-1039` 从 `platforms.api_server.extra.model_routes` 构造静态映射，`:1795-1799` 按请求 model alias 查 route，`:1885-1913` 在无 session `/model` override 时覆盖 `model/api_key/base_url`，`:1934-1936` 把结果传入 `AIAgent`。隔离 `config.yaml` 的派生检查还确认 `session-a/session-b` 两 route key 非空且互异，并分别精确匹配登记的 token A/B。
++   - 限定：这证明“零源码改动”，不等于工作目录“零落盘”；被忽略的残留见第 4 项。
++
++2. **通过 — 归因证据真实**
++
++   - 使用 `.harnessloop/local/channel-params.json` 的 root 凭证只读登录，返回 `success:true, role:100`。`GET /api/log/?p=0&page_size=100` 的现场结果：
++
++     ```text
++     log 45: token_id=4, token_name=sg7-hermes-session-a,
++             model_name=kimi-for-coding, channel_name=kimi-coding,
++             prompt_tokens=244, completion_tokens=22,
++             cache_tokens=11264, usage_semantic=anthropic,
++             request_id=...qFuKbCAJ, other.request_path=/v1/chat/completions,
++             is_stream=true, created_at=2026-07-25T22:55:46+08:00
++     log 46: token_id=5, token_name=sg7-hermes-session-b,
++             model_name=kimi-for-coding, channel_name=kimi-coding,
++             prompt_tokens=244, completion_tokens=15,
++             cache_tokens=11264, usage_semantic=anthropic,
++             request_id=...dMzfUoEd, other.request_path=/v1/chat/completions,
++             is_stream=true, created_at=2026-07-25T22:55:52+08:00
++     ```
++
++   - `GET /api/token/?p=0&size=100` 现场返回 id 4/5，名称分别为 `sg7-hermes-session-a/b`，均为独立启用 token。进一步只做布尔派生、未输出 key：`local_tokens_distinct=true`、`local_a_matches_id4_mask=true`、`local_b_matches_id5_mask=true`，且 `GET /api/token/{4,5}` 均只返回掩码。不存在“同一 token 调两次”的替代解释。
++
++3. **通过 — e2e 链与 usage 算术真实**
++
++   - 保留的隔离 `state.db` 提供了独立于 evidence 文本的响应记录：
++
++     ```text
++     sg7-session-a user      "reply with exactly: PING-A"  22:55:44
++     sg7-session-a assistant "PING-A" finish_reason=stop   22:55:46
++     sg7-session-b user      "reply with exactly: PING-B"  22:55:50
++     sg7-session-b assistant "PING-B" finish_reason=stop   22:55:52
++     ```
++
++     同一 DB 也保存了默认路径的 `HELLO-DEFAULT` 请求/响应（22:55:35/22:55:37）；`agent.log` 在对应 session/model/platform 下记录三次 turn。
++   - state DB 的 session A/B `input_tokens=244`、`output_tokens=22/15` 与 new-api 日志逐项相等；new-api 的 cache 拆账满足两条均为 `244 + 11264 = 11508`，completion 分别 `22`、`15`，与 evidence 的 Hermes 响应 usage 完全一致。日志时间与 DB assistant 落盘时间精确到同一秒，且 request ID 不同。
++   - 隔离 config 同时证明两个 alias 指向 `kimi-for-coding`、key A/B 各自匹配本地登记值；结合真实计费日志、持久化响应内容和时间相关性，mock/固定串无法合理解释整条证据链。
++
++4. **不通过 — recipe 可复现性与隔离纪律**
+ 
+-# T-055 — codex (background, in-progress)
++   - `HERMES-ISOLATED-RUN-RECIPE.md:42-46` 声称非 editable install“不会往 submodule 工作区写 egg-info”，但现场反证：
+ 
+-Output streaming to `T-055-output.log`. Status updates here.
++     ```text
++     $ git -C kernels/hermes status --ignored --short
++     !! hermes_agent.egg-info/
++     $ git -C kernels/hermes check-ignore -v hermes_agent.egg-info/PKG-INFO
++     .gitignore:59:hermes_agent.egg-info/ hermes_agent.egg-info/PKG-INFO
++     $ stat kernels/hermes/hermes_agent.egg-info
++     birth=2026-07-25T22:50:12+0800, modify=22:50:14+0800
++     ```
++
++     时间位于本轮 venv/install（22:50）窗口，目录含 `PKG-INFO`、`SOURCES.txt` 等。普通 `git status/diff` 因 `.gitignore:59` 看不到它；`HERMES-RUN-EVIDENCE.md:207` 的“全程未修改任何文件”与“已清理”口径因此过宽。tracked source 仍为零 diff，但“无遗留污染”不成立。
++   - 正向收尾项复核通过：`~/.hermes` 不存在，8646 无 listener，未见 Hermes gateway 残进程，隔离 home 有 `.clean_shutdown`；系统 `python3 -m pip show hermes-agent` 返回 `Package(s) not found`；在 workspace、`/tmp`、`/private/tmp` 与 `_ai-goods` 有界搜索未发现 `one-api.db`/new-api SQLite 副本。`hermes-venv/` 与 `hermes-home/` 仍位于声明的 scratchpad，属于文档明确保留的临时隔离区。
++   - `:228` 把 `rm -rf ~/.hermes` 放进通用收尾 recipe，即使注释要求先确认，也是不安全的宽目标；复用时可能删除既有用户状态。应改为对本轮精确创建的空文件做前置校验和精确删除，并只在目录为空时 `rmdir`。
++   - Pi 源 SQLite “只读 scp、未修改”的操作语义合理，本地副本也未残留，但现有材料没有远端前后 stat/hash 或命令 transcript，不能事后独立证明 Pi 文件未写。
++
++5. **不通过 — 诚实标注与源码引用准确性**
++
++   - 做对的部分：`HERMES-ISOLATED-RUN-RECIPE.md:25-31` 明确是“预注册 alias”，不是运行时任意给 session 现铸 key，与 PRE-① `pre1-hermes-source-conformance.md:127-153` 一致；`:10-13` 明确排除 ACP；evidence `:85-100` 的 token API 只回掩码已现场复现，SQLite workaround 也明确标成绕行。
++   - handler 说明错误：recipe `:188-189` 把 `api_server.py:2863` 写成 Responses、`:3983` 写成 Chat Completions、`:5025` 写成 sessions chat。源码实况分别是 **Chat Completions、Responses、`/v1/runs`**；`/api/sessions/{id}/chat` 在 `:2550-2575` 调 `_run_agent` 时没有解析或传入 route。该错误把原生 route 覆盖范围扩张到了未经支持/未经本轮测试的 sessions-chat 路径。
++   - 热重载说明错误：recipe `:27-29`、`:212-215` 称新增 alias 可执行 `/platform resume api_server`。`api_server.py:5619` 的注释仅处理端口绑定失败后的恢复；`gateway/slash_commands.py:1204-1237` 显示 resume 只接受 `_failed_platforms` 中且已 paused 的平台，正常 connected 的 api_server 会返回 “nothing to resume”。本轮实际验证且源码支持的可靠方式只有重启 gateway。
++   - 因此文档虽诚实排除了 ACP，却仍对 api_server 内部的 sessions-chat 覆盖与 alias 热加载作了过度声称。
++
++**Decisions / deviations**
++
++- 判断口径：把“tracked source 零改动”与“submodule 工作目录无残留”分开评价；前者成立，后者被 ignored egg-info 反证。除指定输出文件外严格只读，未清理该残留、未重跑付费请求、未创建或删除 new-api 资源。
++
++**Open questions**
++
++- Pi 上源 SQLite 未被修改目前只有单向 `scp` 的操作叙述，没有可独立复核的远端前后 stat/hash 或审计记录；这不影响已验证的 e2e 归因，但不足以把该隔离子断言提升为独立实证。
++
++**Verdict**
++
++REWORK
++
++**Next recommendation**
++
++保留 SG-7 核心 e2e 结果，不必再次调用 Kimi。先清理 `kernels/hermes/hermes_agent.egg-info/`，将清理/验收改为同时检查 `build/`、`hermes_agent.egg-info/` 与 `git status --ignored --short`；把“任何文件未修改”收窄为“无 tracked source diff”；修正三个 handler 的真实映射并明确 sessions-chat 不在本轮闭合范围；删除 `/platform resume api_server` 可热加载 alias 的说法，仅保留 gateway restart；最后用精确、带前置校验的全局日志清理替代 `rm -rf ~/.hermes`。完成这些文档与隔离修正后，可直接复审收官。
+
+tokens used
+132,879
+已完成对抗评审并落盘：[T-055-output.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.hopper/handoffs/T-055-output.md)。
+
+Verdict：`REWORK`。核心 SG-7 e2e 结论成立，但发现 ignored `egg-info` 残留、handler 范围误述及无效的热重载说明；无需重跑付费 e2e。

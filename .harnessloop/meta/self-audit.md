@@ -721,3 +721,63 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 - Reason: 本轮未发现新的 harnessloop 框架缺陷；本轮五个值得沉淀的观察点均属项目/委派实践层面，非框架缺陷——①**"写断言"本身就是一种审查行为再添两例**：给 `EmptyPayload`/`WireCapabilityDescriptorPayload` 写 type-level 保真断言这一相对机械的动作揪出了 TS 结构化类型系统层面的精度缺陷（`EmptyPayload` 裸 `{}` 不触发 excess-property check）与更深一层的跨语言运行时解码边界缺口（Swift/C# 生产解码路径静默忽略未知键），是本项目"下游连环证伪上游"模式的第 7/8 例，延续既有观察，非新框架问题；②**证伪式审查主题（"CI 绿灯是否真的会红"）与 teeth 纪律延续见效**——grok T-054 亲手做破坏性反证（幂等守门注 marker、加回被排除字段）确认每一道守门真有牙齿，是 rounds/0006 起沉淀的 teeth 纪律在 CI 守门场景下的延续验证，属项目内工程实践沉淀而非框架缺陷；③**首绿未经迭代**——两次独立 push 均一把过绿，证实"本地逐步模拟 CI 每一步再 push"这一策略有效，可作为后续轮的实践参考，非框架层面动作；④**hopper `||` 表格观察点**——`.hopper/queue.md` Brief 文本含 `||` 字面量切歪 markdown 表格列致 vendor 绑定解析失败、报错未指向真实原因，是 hopper 插件"边用边验证"产出的候选改进点，是否升级为正式 evolution issue（针对 hopper 插件本身，走 hopper 自身迭代回路而非本 harnessloop evolution-issue 通道）留待主会话/用户后续决定，本条如实记录观察即可；⑤收敛守卫（第 3 个 MUST-FIX 即 checkpoint）本轮设置但全程未触发（0 次 MUST-FIX），机制正常运作
 - Issue path: 无新增（如后续需针对 hopper `||` 表格解析问题开 issue，走 hopper 插件自身迭代回路，非本 harnessloop evolution-issue 通道；本条观察记于 rounds/0007/round-summary.md Open Risks 与本条 Evolution Issue Decision）
 - Redaction notes: 无涉密内容（仅引用 commit 短号、hopper task ID、CI run ID、字段名；凭证值未出现在本文件）
+
+---
+
+# Self Audit
+
+## Audit Metadata
+
+- Audit ID: AUDIT-20260725-ROUND0008-SG7-HERMES
+- Trigger: round-close rounds/0008
+- Active goal: 20260718-002-agent-app
+- Active round: 0008（SG-7 hermes per-session key 接线，api_server `model_routes` 路径 e2e 闭合，已达成）
+- Auditor: main session（claude-sonnet-5）
+- Timestamp: 2026-07-25
+
+## Loop Health
+
+| Check | Status | Evidence path | Notes |
+| --- | --- | --- | --- |
+| Dead loop risk | pass | rounds/0008/scope-lock.md; rounds/0008/round-summary.md | 单阶段轮，本轮为首次对 SG-7 执行 continue 驱动+关键节点独立审查，非重试；★审查闸经 T-055 REWORK→收残→T-056 CONFIRMABLE 一轮收敛（收敛守卫阈值 3，本轮 1 次，未触发），每一步均有新证据支撑，非无新证据的重复动作 |
+| Self-contradiction | pass | rounds/0008/round-summary.md; rounds/0008/decision.md; goal-breakdown.md SG-6/SG-7/SG-8 行 | 无矛盾：SG-7 done（api_server 路径闭合，ACP 路径未走）与 scope-lock 授权边界（二选一路径任一端到端验证通过）一致；SG-8.2 如实保持 pending（其验收清单指定的 `/api/log/self` 互验路径未走）与 SG-8 整体状态维持 pending 表述一致；SG-6 行新增的对照注与 SG-6 原有"3 处极小补丁"结论不冲突，仅新增跨行对照 |
+| Goal drift | pass | rounds/0008/scope-lock.md | 未偏离 scope-lock 目标（api_server 路径 e2e 检验，二选一路径任一即可）；ACP 路径未走、sessions-chat 路径排除均属 scope-lock 预先声明的诚实分层判断，非临时回避；Rollback Condition（零改动被证伪→停下走 fork 决策）本轮未触发，因 claim 经检验成立 |
+| Evidence drift | pass | state/evidence-index.md E19 | 新增 E19 覆盖 SG-7 hermes per-session key e2e 交付物，无 stale |
+| Validation drift | pass | rounds/0008/scope-lock.md「Verification Commands Or Checks」；rounds/0008/round-summary.md | 验证方法（隔离 hermes 起 + per-session 归因 + 零改动核验 + ★审查闸）已在 scope-lock 中显式列出并在 round-summary 中逐项对照回填，非静默变更；本轮新增"隔离 recipe 双查纪律"（普通 git status/diff + `--ignored`）作为方法论收残产出，已在 recipe 文档中固化 |
+| Handoff stagnation | pass | `.hopper/queue.md` T-055/T-056 | 2 个 hopper 派发（同 vendor codex 接续）均已闭合，无 failed；T-056 接续 T-055 自身 findings 复核，非另起炉灶，无停滞 |
+| Cost/context runaway | pass |  | recipe/evidence/对抗审 handoff 走 `app/kernel-client/HERMES-*.md`、`.hopper/handoffs/`，主会话摘要引用，未把大量原始日志灌入本文件 |
+| Recoverable blocker stalled | pass | rounds/0008/round-summary.md | 本轮无 blocker；零改动 claim 未被证伪，未触发 Rollback Condition 的 fork 决策路径 |
+
+Status values: `pass`, `warn`, `fail`, `unknown`.
+
+## Deterministic Signals
+
+| Signal | Current value | Previous value | Threshold | Status |
+| --- | --- | --- | --- | --- |
+| Recent feedback sequence | positive（round 0008，SG-7 hermes per-session key 接线，有证据、收敛，1 次 REWORK 后收残即 CONFIRMABLE） | positive（round 0007，SG-3 增量+SG-8.6 CI 守门主体） | no repeated neutral/negative without new evidence | pass |
+| Repeated next action count | 1（本轮首次对 SG-7 执行 continue 驱动全流程，非重复） | 1（rounds/0007 提议 SG-7/SG-8.x/Stage C/两个 defer 项） | max 2 identical actions | pass |
+| Scope-lock version | rounds/0008 v1（新建，全程未扩围） | rounds/0007 v1 | must change after failed action unless rollback | pass |
+| Goal contract version/hash | goal-breakdown SG-7 行 pending→done、SG-6 行新增对照注、SG-8 行补记 SG-7 done 但 SG-8.2 保持 pending 的说明、首批目标表头追加 rounds/0008 摘要，均显式留痕，非静默变更 | 前值（SG-7 行 pending「新增」、SG-6 行无对照注） | no silent change | pass |
+| Threshold version/hash | 本批未改动 thresholds.md（沿用既有 SG-7 行验证方法，记于 scope-lock/round-summary，未新增独立阈值行；延续 rounds/0003-0007 的既有格局） | 前值 | no silent change | pass |
+| Verification command set | 新增隔离 hermes recipe（uv venv + `HERMES_HOME` 隔离 + gateway `:8646`）+ new-api token 归因查询 + `git -C kernels/hermes` 双查（普通+`--ignored`）+ hopper 派 codex 两轮（对抗审+确认性再审），显式记于 round-summary.md | 既有 swiftc/dotnet build+test、CI workflow、hopper 派发序列等 | no silent change | pass |
+| Stale evidence count | 0（E19 新鲜） | 0 | 0 for acceptance | pass |
+| Open handoff age | 0（T-055/T-056 已闭合，无 failed） | 0（T-054 已闭合） | project-defined | pass |
+| Main-session raw context risk | 低（recipe/evidence/对抗审 transcript 走 `app/kernel-client/`、`.hopper/handoffs/`，主会话摘要引用） | 低 | raw logs stay in evidence files | pass |
+| Delegation model/effort verified | 写码（隔离 hermes recipe + evidence + token 归因验证）由主会话 claude-sonnet-5 子代理执行（code-impl 绝不派第三方），未派第三方 vendor；关键节点独立审查（★审查闸）按既定规则 hopper 派 codex/grok 随机池，本轮随机落在 codex，两轮均正常产出 verdict（T-055 REWORK、T-056 CONFIRMABLE），未遇 vendor 执行层失败或安全过滤器中止；codex 独立挖出 evidence 文档未引用的隔离 state.db 佐证，延续"异构审查连续抓到主会话/实现方漏掉的真问题"观察（第 5 次同类，接续 rounds/0006 T-048/T-050、rounds/0007 grok T-054 的类似观察） | 历轮同规则；rounds/0006/0007 均观察到异构审查独立佐证价值 | required for high-risk delegation | pass |
+| Recoverable blocker next action | 不适用（无 blocker；零改动 claim 未被证伪，Rollback Condition 路径未触发） | 同 | read-only investigation before user pause | pass |
+
+## Local Repair Decision
+
+- Required repair: 无——本轮延续 rounds/0002-0007 建立的做法，SG-7 先有 scope-lock（rounds/0008/scope-lock.md）再执行，收盘时完整走 round-summary → decision → state 回写（current.md/evidence-index.md/goal-breakdown.md/self-audit.md），闭环完整、无绕开
+- Smallest safe next action: 待选 **SG-8.x**（PRE-1/3/7 runtime 探针）/ **SG-8 其余子项**（SG-8.1/8.2/8.3/8.4）/ **Stage C**（D4 §4.6 产品行为 parity 首批，rounds/0006 结转项）/ 两个 rounds/0007 新发现的 defer 项修复轮（TS `EmptyPayload` 精度缺陷/解码边界 strict-decode 设计决策）/ T-009 token 掩码 conformance 修正 / hopper `||` 表格观察点处理，继续逐个走 round 闭环
+- Blocker type: none
+- Recovery eligible: 不适用（无 blocker）
+- Human confirmation required: 否（SG-7 本身已完整交付；下一步 SG 选择待后续与用户或主会话统一裁定，不阻塞本轮收盘）
+- Block execution until repaired: 否
+
+## Evolution Issue Decision
+
+- Create upstream evolution issue: no
+- Reason: 本轮未发现新的 harnessloop 框架缺陷；本轮五个值得沉淀的观察点均属项目/委派实践层面，非框架缺陷——①**零改动 claim 的 e2e 检验方法论再度坐实、且这次是双方向验证**：SG-6 openclaw 与 SG-7 hermes 是同一上游设计裁决（PRE-① C-3 path①"零改动"）在两个异构内核上的检验，结局相反——openclaw 被证伪（3 补丁）、hermes 被证实（tracked+untracked+ignored 全空）。"源码核验结论必须过 e2e 才算数"这一方法论原则已在证伪与证实两个方向上各得到一次独立验证，不是单一方向的巧合，是本项目最有分量的方法论沉淀之一；②**审查者独立佐证挖掘 > 被动核对再添一例**：codex T-055 不仅核对了 brief 指定的核验点，还独立挖出隔离 `state.db` 这一 evidence 文档本身未引用的佐证源，并精确区分"tracked source 零改动"与"工作区零落盘"两个不同口径，延续 rounds/0006（T-048/T-050 揪臆造字段与表面绕过）、rounds/0007（grok T-054 亲手破坏性反证）观察到的"异构审查连续抓到主会话/实现方漏掉的真问题"模式，第 5 次同类观察；③**文档 file:line 错引用是本轮主要返工源**：T-055 REWORK 的 5 处里有 3+1 处（3 处 handler 映射 + 主会话自查另修 1 处）属 file:line 引用准确性问题，均为机械级、不涉及核心 e2e 结论——提示 recipe/evidence 类交付物在写作阶段就应对每条源码引用逐条复核，而非事后靠审查兜底，属项目内工程实践沉淀而非框架缺陷；④**隔离卫生新纪律**：`.gitignore` 遮蔽的残留（本例 `hermes_agent.egg-info/`）用普通 `git status/diff` 查不出来，必须补 `git status --ignored --short` 才能坐实"无残留"，本轮起已固化为隔离 recipe 的双查纪律，属项目内方法论升级；⑤收敛守卫（第 3 次 MUST-FIX/REWORK 即 checkpoint 用户）本轮设置但全程仅 1 次 REWORK，未触发，机制正常运作
+- Issue path: 无新增
+- Redaction notes: 无涉密内容（仅引用 commit 短号、hopper task ID、file:line 引用、new-api 字段名；凭证值未出现在本文件）
