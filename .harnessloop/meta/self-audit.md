@@ -841,3 +841,63 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 - Reason: 本轮未发现新的 harnessloop 框架缺陷；本轮五个值得沉淀的观察点均属项目/委派实践层面，非框架缺陷——①**双轨并行探针方法论首次验证**：本轮是本项目首次对两个独立内核采用并行子代理探针，wall-clock 大致减半、两轨证据零交叉污染、零冲突合并，值得作为后续多内核/多组件探针批的默认执行模式，属项目内工程实践沉淀；②**审查焦点从"结论是否成立"收窄到"措辞宽窄是否诚实"**：grok T-057 的核心贡献不是发现新缺陷（探针本身合格），而是纠正 SG-8.1④ 汇总层措辞过宽的问题（映射层 pass 与 mint HTTP 501 residual 需拆层，否则读者会误判 mint e2e 已通）——延续本项目历轮"异构审查连续抓到主会话/实现方漏掉的真问题"模式，但本次问题类型是判定诚实性而非事实错误，是审查机制成熟度的新维度；③**探针批发现密度延续方法论验证**：5 处发现里 2 个是 openclaw 既有行为 conformance 实况坐实（②③）、1 个是 hermes 真实 bug（④）、1 个是 D3 已知 stub 缺口再确认（mint 501）、1 个是断言基建缺口（⑤）——是"runtime 探针不可被源码核验替代"方法论观察的第 3 次独立验证（前两次：rounds/0004 SG-8.5 揪 openclaw 2 处真实 bug、rounds/0006 揪 SG-5 `stop()` D1 §6.2 缺口）；④**PRE-7 阈值判定"前提必须同读"的纪律**：本轮首次把一个 PASS 判定显式绑定在配置前提（`provider:custom`）之上，若剥离前提单独引用会产生误导性结论——已在 thresholds.md/round-summary/decision 三处一致落笔，是本项目"诚实分层"纪律在阈值判定场景的新应用；⑤收敛守卫（第 3 次 MUST-FIX/REWORK 即 checkpoint 用户）本轮设置但全程 0 次 REWORK，未触发，机制正常运作。**本轮同时是首批 SG（SG-1..SG-9）全部主体完成的收官节点**，本身不构成框架缺陷发现，是项目里程碑而非 harnessloop 协议问题
 - Issue path: 无新增
 - Redaction notes: 无涉密内容（仅引用 commit 短号、hopper task ID、file:line 引用、new-api 字段名；凭证值未出现在本文件）
+
+---
+
+# Self Audit
+
+## Audit Metadata
+
+- Audit ID: AUDIT-20260726-ROUND0010-SG11-CLOSEOUT
+- Trigger: round-close rounds/0010
+- Active goal: 20260718-002-agent-app
+- Active round: 0010（SG-11 conformance 修正批——第二批首轮，轻量文档修订，主体已达成）
+- Auditor: main session（claude-sonnet-5）
+- Timestamp: 2026-07-26
+
+## Loop Health
+
+| Check | Status | Evidence path | Notes |
+| --- | --- | --- | --- |
+| Dead loop risk | pass | rounds/0010/scope-lock.md; rounds/0010/round-summary.md | 本轮是本项目首次对已积累的多处 runtime 发现执行"修正批"模式（发现→wiki 回写→异构确认审），非重试；★审查闸（codex T-060）一次即产出 verdict（MUST-FIX，处方级），未出现无新证据的重复动作；处方级收残（对照表行号+多余花括号）用复现命令自验一次通过，未反复迭代 |
+| Self-contradiction | pass | rounds/0010/round-summary.md; rounds/0010/decision.md; rounds/0010/evidence/correction-table.md | 无矛盾：7 项修正的 wiki 回写内容与 rounds/0009 evidence（track-a/track-b）逐条一致；PRE-7 阈值结论"有条件 PASS"在 wiki 新 §4.2 与 thresholds.md 既有回填行表述一致，未出现剥离前提单独引用 PASS 的写法；D3 mint 501"再确认非新发现"表述与 SG-8.1④ 既有登记状态一致 |
+| Goal drift | pass | rounds/0010/scope-lock.md | 未偏离 scope-lock 目标（7 项修正清单回写 wiki，不改契约语义）；`git diff-tree` 确认仅 4 允许文件改动，未借机扩围触碰 D1/D2/D5 契约文本或 `app/`/`kernels/`/三插件；未擅自代用户决定 hermes 上游 issue 报不报，按 Rollback Condition 条款止于建议草案 |
+| Evidence drift | pass | state/evidence-index.md E21 | 新增 E21 覆盖 SG-11 修正批 wiki commits + 修正对照表，无 stale |
+| Validation drift | pass | rounds/0010/scope-lock.md「Verification Commands Or Checks」 | 验证方法（修正对照表逐条核对+wiki diff+★审查闸 hopper codex）已在 scope-lock 中显式列出并在 round-summary 中回填，非静默变更 |
+| Handoff stagnation | pass | `.hopper/queue.md` T-060 | 1 个 hopper 派发已闭合，无 failed；无 open handoff 停滞 |
+| Cost/context runaway | pass |  | 修正对照表/wiki diff 走 `rounds/0010/evidence/`、`~/.llm-wiki/agent-app-design`、`.hopper/handoffs/`，主会话摘要引用，未把大量 wiki 原文灌入本文件 |
+| Recoverable blocker stalled | pass | rounds/0010/round-summary.md | 本轮无 blocker；MUST-FIX 为处方级机械精度问题，收残后未停滞 |
+
+Status values: `pass`, `warn`, `fail`, `unknown`.
+
+## Deterministic Signals
+
+| Signal | Current value | Previous value | Threshold | Status |
+| --- | --- | --- | --- | --- |
+| Recent feedback sequence | positive（round 0010，SG-11 修正批主体 done，有证据、收敛，1 次★审查闸 MUST-FIX 经处方级收残闭合） | positive（round 0009，SG-8 收尾批主体 done） | no repeated neutral/negative without new evidence | pass |
+| Repeated next action count | 1（本轮首次执行"修正批"这一新性质的动作，非重复；下一步转为 SG-10 Mac UI 壳主线启动，同样是新性质动作） | 1（rounds/0009 提议"第二批 SG 规划"） | max 2 identical actions | pass |
+| Scope-lock version | rounds/0010 v1（新建，全程未扩围） | rounds/0009 v1 | must change after failed action unless rollback | pass |
+| Goal contract version/hash | goal-breakdown.md「批次记录」追加 rounds/0010 摘要、SG-11 行状态由 pending 转为 done、「第二批开发子目标」intro 段更新批次序进度，均显式留痕，非静默变更 | 前值（SG-11 行 pending） | no silent change | pass |
+| Threshold version/hash | 本轮未新增/修改 thresholds.md 阈值行（沿用 rounds/0009 已回填的 PRE-7 阈值行，本轮只是把该结论回写进 wiki，未改阈值本身） | 前值（PRE-7 阈值行 rounds/0009 新增） | no silent change | pass |
+| Verification command set | 新增修正对照表逐条核对（旧表述→新事实→证据出处→落点 file:line）+ wiki diff 核验（`git diff-tree`/`git show --unified=0`）+ hopper 派 codex 单人验收审（T-060）+ 处方级收残自验（`nl -ba`/`git show <parent>:<file> \| nl -ba \| sed`复现命令），显式记于 round-summary.md | 既有双轨探针（rounds/0009）、swiftc/dotnet build+test、CI workflow、hopper 派发序列等 | no silent change | pass |
+| Stale evidence count | 0（E21 新鲜） | 0 | 0 for acceptance | pass |
+| Open handoff age | 0（T-060 已闭合，无 failed） | 0（T-057 已闭合） | project-defined | pass |
+| Main-session raw context risk | 低（wiki diff/评审 transcript 走 `rounds/0010/evidence/`、`.hopper/handoffs/`、wiki 仓自身 commit，主会话摘要引用） | 低 | raw logs stay in evidence files | pass |
+| Delegation model/effort verified | 写文档（wiki 修正）由主会话 claude-sonnet-5 子代理执行（code-impl/写入类任务绝不派第三方 vendor），未派第三方 vendor；关键节点独立审查（★审查闸）按既定规则 hopper 派 codex/grok 随机池，本轮随机落在 codex 单人验收审，一次即产出可用 verdict（MUST-FIX），未遇 vendor 执行层失败或安全过滤器中止；codex 精确区分"事实结论"与"交付物精度"两个维度分别判断，延续"异构审查连续抓到主会话/实现方漏掉的真问题"观察（第 7 次同类，焦点从 rounds/0009 的"措辞诚实性"进一步细化到"机械引用精度"） | 历轮同规则；rounds/0006-0009 均观察到异构审查独立佐证价值 | required for high-risk delegation | pass |
+| Recoverable blocker next action | 不适用（无 blocker；MUST-FIX 为处方级机械精度问题，收残后未停滞） | 同 | read-only investigation before user pause | pass |
+
+## Local Repair Decision
+
+- Required repair: 无——本轮延续 rounds/0002-0009 建立的做法，SG-11 先有 scope-lock（rounds/0010/scope-lock.md）再执行，收盘时完整走 round-summary → decision → state 回写（current.md/evidence-index.md/goal-breakdown.md/self-audit.md），闭环完整、无绕开；处方级 MUST-FIX（对照表行号+多余花括号）已用 codex 给出的复现命令自验修正到位，未留残留
+- Smallest safe next action: **SG-10 Mac UI 壳主线 L1**（最小可见 app，第二批主线启动，新开 scope-lock）；SG-12/13 按批次序建议在 SG-10 各阶段间穿插；SG-14 随 SG-10 各阶段同步；hermes 上游 issue 报不报待用户决策（非阻断，wiki §4.3 已备中立建议）
+- Blocker type: none
+- Recovery eligible: 不适用（无 blocker）
+- Human confirmation required: 否（SG-11 本身已完整交付且第二批 SG 方向已于 rounds/0009 user-confirmed，下一步开 SG-10 不需要用户就方向再次确认）；是（hermes 上游 issue 报不报为独立决策类待办，非本轮收盘阻断项）
+- Block execution until repaired: 否
+
+## Evolution Issue Decision
+
+- Create upstream evolution issue: no
+- Reason: 本轮未发现新的 harnessloop 框架缺陷；本轮五个值得沉淀的观察点均属项目/委派实践层面，非框架缺陷——①**"修正批"模式首次跑通、顺畅收敛**：从 rounds/0009 收盘时判断"conformance 文档需要一轮修正批"到本轮实际落地一轮完成（7 项修正全回写 4 个 wiki 文件、修正对照表齐全、审查闸一次收敛），是"runtime 发现→wiki 回写→异构确认审"这一新工作模式的首次完整验证，值得作为后续同类批次（如后续若再积累多处 runtime 发现）的默认执行模式，属项目内工程实践沉淀；②**T-060 的 MUST-FIX 全部是引用精度问题，而非事实错误**：修正对照表两处机械误差（父提交旧行号 `L103`/`L34` 未在提交后文档上重新核对为 `L112`/`L43`；引文多写一个右花括号）均因为写作对照表时引用的是修订前版本的行号/原文——这是一个具体、可操作的教训："引用行号/逐字引文必须在修订后的最终文档上重新核对，不能沿用起草过程中的旧版本坐标"，已沉淀为对照表类交付物的写作纪律，属项目内工程实践沉淀而非框架缺陷；③**处方级收残不再 gate 的判例第二次沿用**：延续 rounds/0006 T-030 先例（当时收残 commit 经 codex 复核直接判 CONFIRMABLE），本轮 codex T-060 自身也把"事实结论"与"交付物精度"分开评估，7 项主体事实未被推翻时，机械精度问题的处方级修正+复现命令自验即可闭合，不需要重新派发第二次评审——该判例现有两次独立实例支持（rounds/0006 收残 commit + rounds/0010 wiki 修正），值得固化为通用纪律；④**side work（并行调研）与 round 执行零冲突，但协议对此无显式建模**：用户指定的 harnessloop plugin 自主驱动能力评估调研（T-058/T-059）与 rounds/0010 SG-11 在同一时间窗口内并行推进，两者 scope 完全不重叠（一个是修文档、一个是评估插件本身），未观察到任何资源竞争或状态混淆——harnessloop 协议目前没有为"round 执行期间的非 round side work"提供显式的记录/隔离机制，本轮如实记录为观察（该 side work 自身的评估报告已包含此类协议问题的候选清单，此处不重复展开）；⑤收敛守卫（第 3 次 MUST-FIX/REWORK 即 checkpoint 用户）本轮设置但全程仅 1 次 MUST-FIX（处方级），未触发，机制正常运作
+- Issue path: 无新增
+- Redaction notes: 无涉密内容（仅引用 commit 短号、hopper task ID、file:line 引用、new-api 字段名；凭证值未出现在本文件）
