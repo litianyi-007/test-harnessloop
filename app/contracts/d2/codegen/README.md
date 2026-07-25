@@ -14,8 +14,9 @@ authority 是 D1 散文，见 `~/.llm-wiki/agent-app-design/architecture/d4-cros
 ```bash
 cd app/contracts/d2/codegen
 npm install
-npm run gen   # validate -> gen:ts -> typecheck:ts -> gen:swift -> typecheck:swift ->
-              # verify:swift -> gen:csharp -> typecheck:csharp -> verify:csharp ->
+npm run gen   # validate -> gen:ts -> typecheck:ts -> typecheck:ts-type-fidelity -> gen:swift ->
+              # typecheck:swift -> verify:swift -> verify:type-fidelity-swift -> gen:csharp ->
+              # typecheck:csharp -> verify:csharp -> verify:type-fidelity-csharp ->
               # typecheck:fixtures-runner -> run:fixtures
 ```
 
@@ -26,12 +27,15 @@ npm run gen   # validate -> gen:ts -> typecheck:ts -> gen:swift -> typecheck:swi
 | `npm run validate` | Ajv（draft 2020-12）加载全部 25 个 schema、编译顶层判别联合，确认 `$ref` 图无悬空引用；同时做 `fixtures/` 全部 fixture 的 JSON 语法自检 |
 | `npm run gen:ts` | `json-schema-to-typescript` 从 `schema/message.schema.json` 生成 `app/generated/ts/d2.d.ts` |
 | `npm run typecheck:ts` | `tsc --strict` 验证 `d2.d.ts` 本身合法可编译 |
+| `npm run typecheck:ts-type-fidelity` | `tsc --strict` 编译 `verify/ts/type-fidelity.ts`（SG-3 type-level 保真断言，见下「type-level 保真断言」一节） |
 | `npm run gen:swift` | `quicktype-core` 生成叶子 DTO（`app/generated/swift/D2.swift`）+ 拷贝手写判别联合包装层（`DiscriminatedUnions.swift`） |
-| `npm run typecheck:swift` | `swiftc -typecheck` 验证两个 Swift 文件合法可编译 |
+| `npm run typecheck:swift` | `swiftc -typecheck` 验证两个 Swift 文件 + `verify/swift/type-fidelity.swift`（positive control）合法可编译 |
 | `npm run verify:swift` | 编译 `verify/swift/main.swift` 并运行，跑最小判别测试三项 |
+| `npm run verify:type-fidelity-swift` | 用 `swiftc -typecheck -D <FLAG>` 分别点燃 `type-fidelity.swift` 里两个负例，断言各自编译失败（见下「type-level 保真断言」一节） |
 | `npm run gen:csharp` | `quicktype-core` 生成叶子 DTO（`app/generated/csharp/D2.cs`）+ 拷贝手写判别联合包装层（`DiscriminatedUnions.cs`） |
 | `npm run typecheck:csharp` | `dotnet build` 编译 `verify/csharp/`（引用 `generated/csharp/` 真实产物，不拷贝） |
-| `npm run verify:csharp` | `dotnet run` 跑最小判别测试三项 |
+| `npm run verify:csharp` | `dotnet run` 跑最小判别测试三项；CI 下（`CI=true`）dotnet 缺失硬失败，本地软跳过 |
+| `npm run verify:type-fidelity-csharp` | 用 `dotnet build -p:DefineConstants=<FLAG>` 分别点燃 `verify/csharp-type-fidelity/TypeFidelity.cs` 里两个负例，断言各自编译失败；CI 下 dotnet 缺失同样硬失败 |
 | `npm run typecheck:fixtures-runner` | `tsc --strict` 验证 fixture DSL 类型 + runner 本身合法 |
 | `npm run run:fixtures` | 跑 `fixtures/ts-runner/runner.ts`，驱动 `fixtures/` 下全部 fixture |
 
@@ -39,6 +43,38 @@ npm run gen   # validate -> gen:ts -> typecheck:ts -> gen:swift -> typecheck:swi
 `D2.swift` 4845 行 + `DiscriminatedUnions.swift`、C# `D2.cs` 3703 行 +
 `DiscriminatedUnions.cs`，三端最小判别测试（result/failure 互斥、11 事件判别、三层错误不串号）
 各自 11 项断言全 PASS。
+
+## type-level 保真断言（SG-3 验收缺口，rounds/0007）
+
+`EmptyPayload`（精确空对象）与 `WireCapabilityDescriptorPayload`（排除 `protocolVersion`）两处
+经 JSON Schema `additionalProperties:false` 表达的精确性，此前在三端生成产物上零断言覆盖。本轮
+在 `verify/{swift,csharp,ts}/type-fidelity.*` 补齐了**编译期构造/字面量级**的负例断言（真实
+`swiftc`/`dotnet build`/`tsc` 负例必须失败，不是注释式自证），并用 teeth（临时手改
+`app/generated/` 真实产物注入缺陷 → 断言必须转 FAIL → `git checkout` 还原 → 再确认 PASS）验证
+过断言确实有牙齿，过程记录在 round 0007 handoff。
+
+- `verify/swift/type-fidelity.swift`：`sg3PositiveControl()` 是对照组；两个负例包在同名
+  `#if SG3_NEGATIVE_*` 编译条件后，默认不参与编译，由 `scripts/verify-type-fidelity-swift.mjs`
+  用 `-D` 逐一点燃并断言必须编译失败。
+- `verify/csharp-type-fidelity/TypeFidelity.cs`：同构，用 `#if SG3_NEGATIVE_*` + `dotnet build
+  -p:DefineConstants=<FLAG>`，由 `scripts/verify-type-fidelity-csharp.mjs` 编排。
+- `verify/ts/type-fidelity.ts`：用 `@ts-expect-error`（tsc 对"下一行其实没报错"的
+  `@ts-expect-error` 本身会报 `TS2578 Unused directive`，是编译器强制检查，不是注释）。
+  **只覆盖 WireCapabilityDescriptorPayload 一侧**——EmptyPayload 那一半是已知缺陷，见下。
+
+**已知缺陷（SG-1 codegen scope，本轮未修，如实记录不 fudge）**：`app/generated/ts/d2.d.ts` 的
+`export interface EmptyPayload {}` 是 TS 对裸空接口的特殊处理（等价于"任意非
+null/undefined 值"，不是"零属性的精确形状"）——`const bad: EmptyPayload = { extra: 1 }` 在当前
+生成产物上不会报错。对照：`Record<string, never>` 或任意"至少一个属性"的接口都会正常拒绝多余
+属性，唯独裸空接口不会（`WireCapabilityDescriptorPayload` 有 12 个必填字段，不触发这个特例，
+所以它的负例断言正常成立）。证据与手工跑法见
+`verify/ts/type-fidelity-known-gap.ts`（**未接入** `npm run gen`/CI：接入的话要么要用被本轮明确
+禁止的 `|| true` 之类软放水掩盖一个已知未修的缺陷，要么让 CI 永久卡红在一个本轮明确不修、已如实
+上报 blocker 的问题上，两者都不对）。Swift/C# 的编译期构造断言本身是真实、成立的（nominal 类型
+系统天然拒绝多余/排除字段），但另有一个不在本轮"type-level"断言范围内、额外探针发现的**运行期**
+缺陷：两端生成的 `Codable`/`System.Text.Json` 默认反序列化对多余键/被排除键（如
+wire 上真的携带 `protocolVersion`）一律静默丢弃，不拒绝——同一份 blocker，详见 round 0007
+handoff。
 
 ## Swift/C# 生成器选型（本轮定稿）
 
@@ -79,7 +115,9 @@ codegen/
     generate-csharp.mjs       # schema -> C# 叶子 DTO + 拷贝手写判别联合包装层
     validate-schemas.mjs      # Ajv 结构校验 + fixture JSON 语法自检
     typecheck-csharp.mjs      # dotnet build 薄封装（dotnet 不可用时如实报告"待验"）
-    verify-csharp.mjs         # dotnet run 薄封装（同上）
+    verify-csharp.mjs         # dotnet run 薄封装（同上；CI=true 时 dotnet 缺失改硬失败）
+    verify-type-fidelity-swift.mjs   # SG-3 type-level 断言编排（Swift 侧，-D 逐一点燃负例）
+    verify-type-fidelity-csharp.mjs  # SG-3 type-level 断言编排（C# 侧，DefineConstants 逐一点燃负例）
     lib/
       leaf-types.mjs          # Swift/C# 叶子类型注册表（唯一来源）
       file-schema-store.mjs   # quicktype JSONSchemaStore 的文件系统实现
@@ -87,10 +125,18 @@ codegen/
       discriminated-unions.swift  # 手写 Swift 判别联合包装层（唯一来源）
       DiscriminatedUnions.cs      # 手写 C# 判别联合包装层（唯一来源）
   verify/
-    swift/main.swift          # Swift 最小判别测试可执行程序
+    swift/
+      main.swift               # Swift 最小判别测试可执行程序
+      type-fidelity.swift      # SG-3 type-level 断言（positive control + 两个 #if 负例）
     csharp/
       verify-csharp.csproj    # 最小 .NET 7 项目，直接编译 app/generated/csharp/ 真实产物
       Program.cs              # C# 最小判别测试可执行程序
+    csharp-type-fidelity/
+      verify-csharp-type-fidelity.csproj  # 独立小项目，专做 SG-3 编译期负例验证（不需要运行）
+      TypeFidelity.cs                     # positive control + 两个 #if 负例
+    ts/
+      type-fidelity.ts             # SG-3 type-level 断言（CI 门禁，见上「type-level 保真断言」）
+      type-fidelity-known-gap.ts   # 未接入 CI 的已知缺陷证据（EmptyPayload TS 侧不精确）
 ```
 
 ## 下一步（本轮未做，占位）

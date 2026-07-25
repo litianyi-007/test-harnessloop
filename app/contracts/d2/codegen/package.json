@@ -8,15 +8,18 @@
     "validate": "node scripts/validate-schemas.mjs",
     "gen:ts": "node scripts/generate-ts.mjs",
     "typecheck:ts": "tsc --noEmit --strict --target es2020 --typeRoots ./nonexistent-typeroots ../../../generated/ts/d2.d.ts",
+    "typecheck:ts-type-fidelity": "tsc --noEmit --strict --target es2022 --module esnext --moduleResolution bundler --allowImportingTsExtensions --types node verify/ts/type-fidelity.ts",
     "gen:swift": "node scripts/generate-swift.mjs",
-    "typecheck:swift": "swiftc -typecheck ../../../generated/swift/D2.swift ../../../generated/swift/DiscriminatedUnions.swift",
+    "typecheck:swift": "swiftc -typecheck ../../../generated/swift/D2.swift ../../../generated/swift/DiscriminatedUnions.swift verify/swift/type-fidelity.swift",
     "verify:swift": "swiftc ../../../generated/swift/D2.swift ../../../generated/swift/DiscriminatedUnions.swift verify/swift/main.swift -o /tmp/d2-swift-verify && /tmp/d2-swift-verify",
+    "verify:type-fidelity-swift": "node scripts/verify-type-fidelity-swift.mjs",
     "gen:csharp": "node scripts/generate-csharp.mjs",
     "typecheck:csharp": "node scripts/typecheck-csharp.mjs",
     "verify:csharp": "node scripts/verify-csharp.mjs",
+    "verify:type-fidelity-csharp": "node scripts/verify-type-fidelity-csharp.mjs",
     "typecheck:fixtures-runner": "tsc --noEmit --strict --target es2022 --module esnext --moduleResolution bundler --allowImportingTsExtensions --types node ../fixtures/ts-runner/runner.ts ../fixtures/ts-runner/mock-kernel-client.ts ../fixtures/dsl.ts",
     "run:fixtures": "node ../fixtures/ts-runner/runner.ts",
-    "gen": "npm run validate && npm run gen:ts && npm run typecheck:ts && npm run gen:swift && npm run typecheck:swift && npm run verify:swift && npm run gen:csharp && npm run typecheck:csharp && npm run verify:csharp && npm run typecheck:fixtures-runner && npm run run:fixtures"
+    "gen": "npm run validate && npm run gen:ts && npm run typecheck:ts && npm run typecheck:ts-type-fidelity && npm run gen:swift && npm run typecheck:swift && npm run verify:swift && npm run verify:type-fidelity-swift && npm run gen:csharp && npm run typecheck:csharp && npm run verify:csharp && npm run verify:type-fidelity-csharp && npm run typecheck:fixtures-runner && npm run run:fixtures"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

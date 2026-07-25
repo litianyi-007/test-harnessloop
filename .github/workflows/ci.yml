@@ -1,0 +1,152 @@
+name: CI
+
+# 全仓首个 CI（SG-8.6 主体 + SG-3 增量收口，rounds/0007）。成本审慎拆两个 job：
+#   - ubuntu：TS/dotnet 全链（codegen 生成 + 幂等守门 + openapi 校验 + C# 判别测试/type-level
+#     断言 + TS/C# 两端金标 parity runner + app/server 单测）。
+#   - macos：仅 Swift 必需步骤（typecheck/判别测试/type-level 断言/金标 parity runner），且
+#     `needs: ubuntu`——ubuntu 先红就不再烧 macOS 分钟。
+# 纪律：不 checkout submodules（全链不需要 kernels/）；无 secret；无 continue-on-error；无
+# `|| true`；每个 step 失败即整个 job 红。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ubuntu:
+    name: ubuntu (TS + dotnet)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (no submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            app/contracts/d2/codegen/package-lock.json
+            app/server/package-lock.json
+
+      - name: codegen — npm ci
+        working-directory: app/contracts/d2/codegen
+        run: npm ci
+
+      - name: codegen — validate schemas + fixture JSON syntax
+        working-directory: app/contracts/d2/codegen
+        run: npm run validate
+
+      - name: codegen — generate TS
+        working-directory: app/contracts/d2/codegen
+        run: npm run gen:ts
+
+      - name: codegen — typecheck TS (d2.d.ts itself)
+        working-directory: app/contracts/d2/codegen
+        run: npm run typecheck:ts
+
+      - name: codegen — TS type-level fidelity assertions (SG-3)
+        working-directory: app/contracts/d2/codegen
+        run: npm run typecheck:ts-type-fidelity
+
+      - name: codegen — generate Swift sources (no swiftc needed here; typecheck/verify run on macOS job)
+        working-directory: app/contracts/d2/codegen
+        run: npm run gen:swift
+
+      - name: codegen — generate C# sources
+        working-directory: app/contracts/d2/codegen
+        run: npm run gen:csharp
+
+      - name: codegen — idempotency gate (regen must produce zero diff)
+        run: git diff --exit-code -- app/generated/
+
+      - name: openapi — lint D3 spec (redocly)
+        run: npx --yes @redocly/cli@1 lint app/contracts/d3/openapi.yaml
+
+      - name: Setup .NET 7.0.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: codegen — typecheck C# (dotnet build against real generated product)
+        working-directory: app/contracts/d2/codegen
+        run: npm run typecheck:csharp
+
+      - name: codegen — verify C# (discriminated-union minimal tests; CI hard-fails if dotnet missing)
+        working-directory: app/contracts/d2/codegen
+        run: npm run verify:csharp
+
+      - name: codegen — C# type-level fidelity assertions (SG-3)
+        working-directory: app/contracts/d2/codegen
+        run: npm run verify:type-fidelity-csharp
+
+      - name: codegen — typecheck fixtures DSL + TS runner
+        working-directory: app/contracts/d2/codegen
+        run: npm run typecheck:fixtures-runner
+
+      - name: TS golden parity runner (13/13 fixtures must PASS)
+        working-directory: app/contracts/d2/codegen
+        run: npm run run:fixtures
+
+      - name: C# golden parity runner (fixtures/csharp-runner; 12 PASS + 1 expected DEGRADED, exit 0)
+        working-directory: app/contracts/d2/fixtures/csharp-runner
+        run: |
+          dotnet build
+          dotnet run --no-build
+
+      - name: app/server — npm ci
+        working-directory: app/server
+        run: npm ci
+
+      - name: app/server — jest unit/integration tests
+        working-directory: app/server
+        run: npm test
+
+  macos:
+    name: macos (Swift)
+    runs-on: macos-latest
+    needs: ubuntu
+    steps:
+      - name: Checkout (no submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Setup Node 22 (only to drive the type-fidelity orchestration script; no npm install needed)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: codegen — typecheck Swift (D2.swift + DiscriminatedUnions.swift + type-fidelity positive control)
+        working-directory: app/contracts/d2/codegen
+        run: npm run typecheck:swift
+
+      - name: codegen — verify Swift (discriminated-union minimal tests, 11/11 PASS)
+        working-directory: app/contracts/d2/codegen
+        run: npm run verify:swift
+
+      - name: codegen — Swift type-level fidelity assertions (SG-3)
+        working-directory: app/contracts/d2/codegen
+        run: npm run verify:type-fidelity-swift
+
+      - name: Swift golden parity runner (13 fixtures; 12 PASS + 1 expected DEGRADED, exit 0)
+        run: |
+          swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift \
+                 app/kernel-client/swift/KernelClient.swift app/kernel-client/swift/OpenclawWire.swift \
+                 app/kernel-client/swift/EventMapping.swift \
+                 app/kernel-client/swift/OpenclawGatewayKernelClient.swift \
+                 app/contracts/d2/fixtures/swift-runner/FixtureDSL.swift \
+                 app/contracts/d2/fixtures/swift-runner/PartialMatch.swift \
+                 app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift \
+                 app/contracts/d2/fixtures/swift-runner/SwiftRunnerMain.swift \
+                 -o /tmp/swift-fixture-runner
+          /tmp/swift-fixture-runner

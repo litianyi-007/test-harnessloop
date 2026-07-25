@@ -1,8 +1,10 @@
 node_modules/
 
-# dotnet build 产物（verify/csharp/ 最小项目的编译输出，非 codegen 产物）
+# dotnet build 产物（verify/csharp/、verify/csharp-type-fidelity/ 最小项目的编译输出，非 codegen 产物）
 verify/csharp/bin/
 verify/csharp/obj/
+verify/csharp-type-fidelity/bin/
+verify/csharp-type-fidelity/obj/
 
 # swiftc 编译产物一律输出到 /tmp（见 package.json verify:swift 脚本），本目录不产生 Swift 构建物
 

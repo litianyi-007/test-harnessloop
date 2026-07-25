@@ -1,0 +1,21 @@
+<!-- Type-level 保真断言（SG-3 验收缺口，rounds/0007）——见 TypeFidelity.cs 头部注释。
+     独立于 verify/csharp/（那个项目跑最小判别测试三项），本项目只做编译期负例验证，不需要
+     运行，所以不设 OutputType（默认 Library），也没有 Program.cs/Main。直接编译
+     app/generated/csharp/ 的真实产物，不拷贝。 -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS8618;CS8601;CS8602;CS8603;CS8625</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../../../generated/csharp/D2.cs" />
+    <Compile Include="../../../../../generated/csharp/DiscriminatedUnions.cs" />
+    <Compile Include="TypeFidelity.cs" />
+  </ItemGroup>
+
+</Project>
