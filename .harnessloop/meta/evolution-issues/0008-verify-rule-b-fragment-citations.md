@@ -4,7 +4,7 @@
 
 - Issue ID: TH-0008
 - Issue class: skill-gap
-- Status: open
+- Status: fixed-by-demotion（降级收口，2026-07-26；非"完全修复"，见文末结案段）
 - Source project: test-harnessloop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop)
 - Created by: claude-sonnet-5 subagent (scribe), orchestrated by claude-fable-5
 - Created at: 2026-07-16
@@ -63,7 +63,7 @@ round 0003 实现级对抗评审文件（rounds/0003/reviews/adversarial-review.
 
 ## Resolution
 
-- Resolution status: open
+- Resolution status: fixed-by-demotion（见文末「结案 2026-07-26」）
 - Upstream change: 待定（尚未修复；本次仅记录问题并用 `verify:ignore` 手工止血三处引用）
 - Backported to local policy: no
 - Backport path: 无
@@ -75,3 +75,40 @@ round 0003 实现级对抗评审文件（rounds/0003/reviews/adversarial-review.
 - **它现在是硬前置**：`docs/harnessloop-evolution-plan-20260726.md` 把本条列为 **B1（后做第一优先）**，并写死一条硬约束——**在 TH-0008 关闭且同语料复测误报率降到个位数百分比之前，禁止任何会导致 round 内 `reviews/` 被填满的协议硬要求**（即计划中的 B2：让 decision.md 声明 `- Review: <path>`）。理由：goal 002 十轮 `reviews/` 全为 0，Rule A/B 从未在该 goal 上真正激活；现在强制填充等于把一个已确诊 50% 误报的生成器指向仓库里最不受控的文本，会立刻规模化复现"改被检文件转绿"的病理（该病理已在本项目发生过三次）。
 - **与本批 v0.12.0 的关系**：v0.12.0 的 E2 只做了"让 Rule A 停止空跑 + 覆盖遥测"，**未触碰 Rule B 的解析基准**——因此本条依然 open，且其修复是解锁"审查产物入协议账本"的唯一钥匙。
 - **交叉引用**：TH-0011（Rule A 空跑，已由 v0.12.0 E1+E2 关闭）是同一族"机械门覆盖面"问题的另一半；两者一起构成"门到底检了什么"的完整答案。
+
+## 结案 2026-07-26：**降级收口（fixed-by-demotion）**，非"完全修复"
+
+**结论措辞由异构确认审给出**（grok T-065，刻意换视角——T-062/063/064 三轮均为 codex）：应记为 `fixed-by-demotion`，**不可写成"后缀问题已解决"**。
+
+### 修复链（四个版本、四轮异构对抗审）
+
+| 版本 | 动作 | 审查结果 |
+|---|---|---|
+| v0.13.0 | 五项放宽：locator 剥离 / 嵌套 submodule 基准 / 后缀唯一回退 / `~/`+绝对路径豁免；刻意不修外部 wiki 路径 | 误报 **50% → 26%**；codex T-062 判 **REWORK**（5 个假阴性） |
+| v0.14.0 | 收 5 条：命中后复验具体路径（一举修断链 symlink + 陈旧索引 + 尾斜杠）、索引换源 `git ls-files`（修剪枝伪唯一）、双层 containment（修 `../` 逃逸）、Windows 绝对路径 | codex T-063 判 **MUST-FIX**（2 条更深的：untracked 伪唯一、symlink 绕过两层 containment） |
+| v0.15.0 | 宇宙扩为 tracked+untracked-not-ignored；containment 改 canonical（两侧 `resolve`） | codex T-064 判 **MUST-FIX**（3 条：ignored 伪唯一、已删 tracked 幽灵多义、`normpath` 预折叠改变 `symlink/..` 语义） |
+| **v0.16.0** | **用户裁定降级**：后缀回退不再消解 dangling，改为在 violation detail 里给提示 + `citations_suffix_hinted` 计数；并修 T-064 的 B/C 两个真 bug | grok T-065 判 **CONFIRMABLE** |
+
+### 为什么是降级而不是第四次加固
+
+三轮对抗审证明：后缀唯一回退的"唯一性宇宙"**永远无法恰好等于"真实存在、且评审者可能指的那些文件"**。边界从 `tracked` → `untracked` → `ignored` 换了三次，**同形的伪唯一漏报每次都跟着换**（T-064 MUST-FIX A 与 T-063 MUST-FIX 1 是同一形状的不同边界）。这是方案固有性质，不是可以补完的洞。
+
+用户裁定（2026-07-26，AskUserQuestion）：**把不可靠的机制移到不能造成假绿的位置**，而不是再换一次边界。
+
+### 降级后的实际状态
+
+- **假阴性面（判定路径）归零**：后缀回退不再能把任何不可解析的引用判为 pass。T-062→T-064 追了三轮的那一整族伪唯一/逃逸场景，grok T-065 逐个复跑，**现在一律 dangling**。T-064 MUST-FIX A 与 T-063 MUST-FIX 1 从"判定问题"降级为"提示精度问题"。
+- **提示价值保留**：唯一命中时 violation detail 附 `— a unique suffix match exists at <路径>; if that is the intended file, cite it by a resolvable path or mark the line <!-- verify:ignore -->`，可读可诊断。
+- **误报率 28.7% → 37.8%**（+96 条，其中 87 条带提示 ≈91%）。**归因修正（grok T-065 指出）**：其中约 4 条实为 MUST-FIX C 的 containment 收紧带来的**少假绿收益**，不应全算作降级代价；v0.16.0 commit message 把 +96 全记为降级代价「略粗」，此处更正。
+- **零迁移**：本项目 14 轮 12 条引用 `citations_suffix_hinted=0`，从未依赖后缀回退；未加任何 `verify:ignore`、未改任何评审文档（v0.12.0 E1 纪律）。
+- `validate.py` 由 129 → **175 检查**，历史反例全部转为"必须 dangling"断言，三次 mutation 全部按预期翻红。
+
+### 仍然存在的固有残留（已登记，不再追）
+
+1. **后缀语义碰撞**：唯一后缀存在 ≠ 它就是评审者想引的那个文件（`mistyped/config.yaml` → `vendor/mistyped/config.yaml`）。降级后**只影响提示质量，不影响判定**。
+2. **大小写宿主依赖**：`exists()`/`is_dir()` 的大小写敏感性由文件系统决定（Linux 严格、macOS/Windows 默认不敏感），Rule B 无法也不该自行归一化。
+3. **外部设计 wiki 路径**（133 条，占残留 56%）：harnessloop 无从知道项目把设计文档放在仓外何处。要闭合需引入"项目声明额外解析基准"这一新协议面，属独立决策，本链条明确不做。
+
+### 对计划中 B2 的影响（需后续决策）
+
+`docs/harnessloop-evolution-plan-20260726.md` 的 B2（让 `reviews/` 首次真正被填充、从而首次激活 Rule A/B）原前置是"TH-0008 关闭 **且** 误报率降到个位数百分比"。现状：TH-0008 已降级收口，但误报率是 **37.8%**（降级的正确代价）。**该前置判据需要重新表述**——按"假阴性面归零 + 误报可诊断（91% 带提示）"来判，还是坚持数字门槛并先做"外部解析基准"协议面决策，留待主会话与用户裁定。

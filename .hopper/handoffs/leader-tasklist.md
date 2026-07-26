@@ -1149,3 +1149,80 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（计划可直接执行）| `MUST-FIX`（逐条给问题 + file:line + 可复现；说明是"必须改计划"还是"执行时注意"）。
 **产出**：五项逐条 + verdict + 若 CONFIRMABLE 则给执行注意事项。落盘 `.hopper/handoffs/T-061-output.md`。**Read-only**：不改任何文件（复算可跑脚本但勿写入）；忽略跨仓/别目录全局 skill。中文。
+
+## T-062（harnessloop v0.13.0 收 TH-0008 对抗审，单 codex）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: codex（轮换；T-061 为 grok）· 只读
+
+**评审对象**：`harnessloop` submodule commit `d6234cf`（v0.13.0）——`plugins/harnessloop/skills/harnessloop-loop/scripts/verify_protocol.py` + `scripts/validate.py`。`git -C harnessloop show d6234cf`。
+**issue 背景**：`.harnessloop/meta/evolution-issues/0008-*.md`（TH-0008，open 自 setup-wizard 期；含 2026-07-26 量化更新）。
+
+**本次改动**：Rule B（dangling-citation）误报从 **1054 引用/532 dangling=50%** 降到 **900/235=26%**（主会话独立复测一致）。五项：①剥离尾部 `:<行号>`/`:<起>-<止>`/`::<锚点>` 后重解析；②`submodule_roots` 支持 `.gitmodules` 多段 path（`kernels/openclaw`、`kernels/hermes` 此前不是解析基准）；③后缀唯一回退（按路径段比较、≥2 段、唯一命中才豁免、噪声目录剪枝、全树索引一次）；④`~/` 与 `/` 绝对路径豁免；⑤**刻意不修**外部设计 wiki 路径（133 条，占残留 56%）。
+
+**核心风险(本次评审的重点)**：这次修复的本质是**拿更宽的解析换更少的误报**，一旦换过头就变成漏报——而漏报比误报危险得多（悬空引用是"证据链断了"的信号）。TH-0008 自己把该风险标为"中高"。
+
+**对抗核验重点**：
+1. **假阴性(最重)**：五项放宽里，有没有哪一项会把**真正悬空**的引用放过？逐项构造反例试图证明。尤其：后缀唯一回退在什么情况下会"恰好唯一命中一个无关文件"（reviewer 写错路径但巧合是某真实文件的唯一后缀）？行号剥离后若文件不存在是否仍报？
+2. **四条假阴性守卫是否真有牙**：拼错路径/后缀多义/单段裸文件名/行号指向不存在文件——**自己做 mutation**（改坏 `verify_protocol.py` 对应逻辑 → `HARNESSLOOP_SKIP_CLAUDE=1 python3 harnessloop/scripts/validate.py` 必须 FAIL → 还原）。有没有哪条守卫其实被别的机制兜住而形同虚设（实现方自述曾发现嵌套-submodule 的 mutation 被后缀回退悄悄兜住，加 decoy 才真正翻转——请核实该修法是否彻底）？
+3. **段边界比较可否绕过**：`suffix_unique_match` 声称按路径段比较而非字符串 endswith。试 `../` 归一化、大小写差异（macOS 大小写不敏感文件系统）、符号链接、尾部斜杠、空段等边界。
+4. **索引与确定性**：噪声目录剪枝（`.git`/`node_modules`/`dist`/`build`/`bin`/`obj`/`.venv`/`__pycache__`/`.artifacts`/`coverage`）会不会误剪掉真实被引用的路径（例如项目里真有名为 `build/` 的源码目录）？索引一次是否会因运行期间文件变化产生不确定结果？
+5. **边界声明诚实性**：模块 docstring 对"外部 wiki 路径刻意不修"的说明是否与实况一致（133/235）？有没有把"未修"说成"已修"或反之？
+
+**Verdict**：`PASS`（TH-0008 可判 fixed）| `PASS_WITH_NOTE` | `REWORK`（逐条 file:line + 可复现）| `FAIL`。
+**产出**：五项逐条 + verdict。落盘 `.hopper/handoffs/T-062-output.md`。**Read-only**：mutation 用的临时改动必须还原并说明；忽略跨仓/别目录全局 skill。中文。
+
+## T-063（harnessloop v0.14.0 收 T-062 REWORK 确认审，单 codex，接续 T-062）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续自己 T-062，持有原始最小反例脚本）· 只读
+
+**评审对象**：`harnessloop` submodule commit `b44deb4`（v0.14.0）。`git -C harnessloop show b44deb4`。对照你自己 T-062 的五个最小反例与判定（`.hopper/handoffs/T-062-output.md`）。
+
+**背景**：v0.13.0 把 Rule B 误报 50%→26%；你 T-062 判 REWORK，指出 5 个可复现假阴性。v0.14.0 逐条收：`_exists_as`（尾斜杠须 `is_dir()` + 命中后复验具体路径，一并修断链 symlink 与陈旧索引）、索引换源为 `git ls-files --recurse-submodules`（修剪枝伪唯一，并去掉无协议依据的噪声目录硬编码；非 git 回退保留旧盲点且 docstring 已声明）、`_resolve_in_project`/`_any_base_resolves` + `submodule_roots` 双层 containment（修父目录逃逸）、Windows 盘符/UNC 识别为项目外。新增 coverage 字段 `citations_exempt_external` 把 `~/`、绝对路径豁免这块此前静默的无牙面计出来。
+
+**只验四件事**：
+1. **五个反例是否真闭合**：**直接复跑你 T-062 的原始最小反例脚本**（trailing_slash_file / broken_symlink / noise_pruned_ambiguity / submodule_parent_escape / stale_index_after_delete），逐个报修前修后。注意 `suffix_unique_match` 签名已变为 `(cleaned, index, project)`。
+2. **换源有无引入新洞**：`git ls-files` 作为唯一性宇宙——真实存在但**未被 git 跟踪**的文件现在不参与歧义判定，会不会因此产生新的伪唯一？`--recurse-submodules` 对嵌套 submodule 是否真覆盖？非 git 回退路径的盲点是否与 docstring 声明**完全一致**（不得声称已修）？
+3. **containment 两层是否可绕**：symlink 指向项目外、`..` 多层、`.gitmodules` 里的绝对路径或 `../` path、以及 base 自身是 symlink 的情形。
+4. **诚实性**：`citations_exempt_external` 计数是否正确且与 `harnessloop-loop/SKILL.md` 的 Mechanical Gate Boundary IN 列一一对应；docstring 登记的两条固有残留（后缀语义碰撞、大小写宿主依赖）是否与实现实况一致，有无把"未修"说成"已修"。
+
+**Verdict**：`CONFIRMABLE`（TH-0008 可判 fixed）| `MUST-FIX`（逐条 file:line + 可复现）。
+**产出**：四项逐条 + verdict。落盘 `.hopper/handoffs/T-063-output.md`。**Read-only**：mutation/反例用的临时改动必须还原并说明；忽略跨仓/别目录全局 skill。中文。
+
+## T-064（harnessloop v0.15.0 收 T-063 MUST-FIX 确认审，单 codex，接续 T-063）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: codex（接续自己 T-062/T-063，持有全部原始反例）· 只读
+
+**评审对象**：`harnessloop` submodule commit `1153b7f`（v0.15.0）。`git -C harnessloop show 1153b7f`。对照你 T-063 的两条 MUST-FIX 与其复现（`.hopper/handoffs/T-063-output.md` 第 2、3 节）。
+
+**背景（本修复链已走三轮）**：v0.13.0 降误报 50%→26% → 你 T-062 判 REWORK（5 个假阴性）→ v0.14.0 收 → 你 T-063 判 MUST-FIX（2 个更深的假阴性）→ v0.15.0 收：
+- **untracked 伪唯一**：唯一性宇宙从 git-tracked 改为「工作区里真实存在且未被 gitignore」= tracked + untracked-but-not-ignored。注意实现方发现 `git ls-files --cached --others --recurse-submodules` 组合 git 不支持（`unsupported mode`），改用三次 NUL 安全查询合并去重 + `git submodule foreach --recursive` 覆盖嵌套 submodule 的未跟踪文件。
+- **symlink containment 逃逸**：新 `_canonical`/`_is_contained` 对候选与 project root **两边**都 `resolve(strict=False)` 后比较；三条路径（`_resolve_in_project`/`_any_base_resolves`、`submodule_roots`、`suffix_unique_match` 命中复验）统一走同一套；containment 与存在性刻意分两步。
+- docstring 三处过强声称改准 + `--help` 同步。
+
+**只验四件事**：
+1. **两条 MUST-FIX 是否真闭合**：**复跑你 T-063 的原始反例**（untracked_pseudo_unique、symlink_containment_escape 的三条路径），逐个报修前修后。
+2. **新宇宙有无新洞**：tracked+untracked-not-ignored 作为唯一性宇宙——gitignored 但真实存在的文件现在仍不参与歧义，会不会构成新的伪唯一面（与 T-063 那条同形但换了边界）？`submodule foreach --recursive` 对嵌套 submodule 的未跟踪文件覆盖是否完整？非 git 回退路径现在处于什么状态、docstring 是否仍如实？
+3. **canonical containment 是否可绕**：多级 symlink、symlink 指向 project root 内但经项目外中转、`.gitmodules` 里 path 是 symlink、以及 project root 本身在 symlink 下（macOS `/tmp`）的组合。三条路径是否**各自独立**受保护（T-063 曾发现两层防御其实共享盲点的情形）。
+4. **诚实性**：docstring 三处修正（canonical containment / 索引宇宙 / --help）与实现实况是否逐字一致；两条既有固有残留（后缀语义碰撞、大小写宿主依赖）是否仍如实登记、未被悄悄升级为"已修"。
+
+**Verdict**：`CONFIRMABLE`（TH-0008 可判 fixed）| `MUST-FIX`（逐条 file:line + 可复现）。
+**产出**：四项逐条 + verdict。落盘 `.hopper/handoffs/T-064-output.md`。**Read-only**：反例/mutation 临时改动必须还原并说明；忽略跨仓/别目录全局 skill。中文。
+
+## T-065（harnessloop v0.16.0 TH-0008 终局确认审，单 grok，换异构视角收尾）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: grok（**刻意换异构**：T-062/063/064 均为 codex，本轮由未参与过该链条的视角做终局确认，避免同一模型的稳定盲区）· 只读
+
+**评审对象**：`harnessloop` submodule commit `77543d6`（v0.16.0）。`git -C harnessloop show 77543d6`。
+**链条背景（务必先读，否则无法判断"降级"是否合理）**：`.hopper/handoffs/T-062/T-063/T-064-output.md`（codex 三轮，逐轮加深的假阴性）+ `.harnessloop/meta/evolution-issues/0008-*.md`。
+
+**本轮性质**：这不是又一次"修 bug"，而是一次**方案降级的定案确认**。三轮对抗审证明后缀唯一回退的"唯一性宇宙"永远无法恰好等于"真实存在且评审者可能指的那些文件"（边界 tracked→untracked→ignored 换了三次，同形伪唯一每次跟着换），用户裁定：**后缀回退不再影响判定，降级为纯提示**。
+
+**只验五件事**：
+1. **假阴性面是否真归零（最重）**：把你能构造的所有伪唯一/逃逸场景跑一遍——ignored 冲突、untracked 冲突、已删 tracked 幽灵、断链 symlink、尾斜杠、剪枝、多级 symlink、`link/..`、`.gitmodules` 里的 `../`、project root 在 symlink 下等。降级后**这些应当一律 dangling**（后缀命中只给提示不消解）。有没有任何路径仍能让一个**不可解析**的引用 pass？
+2. **MUST-FIX B/C 是否真闭合**：复跑 codex T-064 的两个反例（`link/../escape.md`、`.gitmodules path=smod/../mod`；tracked-then-deleted 幽灵项）。注意 C 的修法是"去掉交给 containment 前的词法 normpath 预折叠"，请确认没有别的地方还残留同样的预折叠。
+3. **提示是否准确无误导**：唯一命中才给提示、给的路径确实是那个匹配、多义/无命中不给；`citations_suffix_hinted` 计数与实际提示条数一致；提示措辞不会诱导评审者盲目采信（它只是"很可能"，不是"就是"）。
+4. **零迁移与误报归因是否诚实**：本项目 14 轮 `citations_suffix_hinted=0`、0 violations 是否属实（自己跑）；误报率 28.7%→37.8%（+96 条，87 条带提示）的归因是否成立、有没有把语料增长与降级代价混为一谈。
+5. **措辞诚实性**：docstring 是否把降级的意义写准（"假阴性面归零"而**不是**"后缀问题已解决"）；两条固有残留（语义碰撞、大小写宿主依赖）是否仍如实登记；据此判断 TH-0008 的结案措辞应为 **"降级收口 / fixed-by-demotion"** 还是可以写 fixed——给出你的建议措辞。
+
+**Verdict**：`CONFIRMABLE`（TH-0008 可按你建议的措辞结案）| `MUST-FIX`（逐条 file:line + 可复现）。
+**产出**：五项逐条 + verdict + 建议的结案措辞。落盘 `.hopper/handoffs/T-065-output.md`。**Read-only**：构造/mutation 的临时改动必须还原并说明；忽略跨仓/别目录全局 skill。中文。
