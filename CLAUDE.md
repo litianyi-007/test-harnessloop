@@ -59,6 +59,18 @@
   chronicler 本身，chronicler 用 haiku 只管素材拉取）做一次编辑 pass，提炼进
   `~/.llm-wiki/surebeli-ip/drafts/`。
 
+## 凭证守门（2026-07-26 泄漏事件后强制）
+
+本仓是 **PUBLIC**，且 evidence/vendor 原始日志由子代理自动写入——真实凭证曾因此进公开历史
+（`docs/security-incident-20260726.md`）。新 clone / 换机器后**必须先装本地钩子**（`.git/hooks` 不版本化）：
+
+```bash
+printf '#!/usr/bin/env bash\nexec "$(git rev-parse --show-toplevel)/scripts/check-secrets.sh" --staged\n' > .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```
+
+- 轮换任何凭证后重跑 `./scripts/check-secrets.sh --update-digests`（让 CI 的 L1-digest 跟上）。
+- `.hopper/AGENTS.md` 纪律：任务 brief 里**绝不写真实凭证**，一律给参数名 + "从环境变量/channel-params 读"。
+
 ## 约束
 
 - app 的开发过程必须走 harnessloop 框架（skill 真实调用名带双前缀：`harnessloop:harnessloop-init` → `harnessloop:harnessloop-loop` / `harnessloop:harnessloop-continue` 等；`harnessloop:init` 这类短写只是触发短语，不是合法 skill 名），不要绕开框架直接开发——绕开就失去了验证意义。

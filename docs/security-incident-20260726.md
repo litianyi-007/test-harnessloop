@@ -53,7 +53,30 @@ token id=3 全部 35 条调用逐条核对，全部可归因于本项目自身�
 
 ## 6. 待办与遗留
 
-- [ ] 在 GitGuardian 控制台把该告警标记为 resolved（rotated + purged）。
-- [ ] `channel-params.json` 的**参数名与实际 token 归属对齐**（本次删错 token 的直接诱因）——建议每个 token 参数补 `token_id` 与 `token_name` 字段。
-- [ ] 评估 `.hopper/handoffs/*-raw.txt|*.log`（vendor 原始输出）是否仍适合进 public 仓：它们是审查可追溯性的核心证据，但也是本次泄漏的第二载体。
-- [ ] 该事件已并入 `docs/harnessloop-evaluation-20260726.md` 的问题域（"evidence/vendor 日志无 secret 守门"属协议外系统性缺口）。
+- [ ] **（用户待办）** 在 GitGuardian 控制台把该告警标记为 resolved（rotated + purged）——仅账号持有人可操作。
+- [x] `channel-params.json` **参数名与实际 token 归属对齐**（本次删错 token 的直接诱因）：已给每个 token 参数补 `owner_note`（真实 `token id` + `name`），并新增 `_naming_discipline` 条目要求新增/轮换时同步更新。当前对齐状态：`NEWAPI_D3PROXY_TOKEN` → id=6 `d3proxy-token-v2`；`NEWAPI_SG7_HERMES_SESSION_A/B_TOKEN` → id=4/5。
+- [x] **决策（user-confirmed 2026-07-26）：`.hopper/handoffs/*-raw.txt|*.log` 继续进 public 仓。** 理由：它们是异构审查可追溯性的核心证据（本项目"用插件验证插件"的关键语料）。风险由新增的三层守门（L1 精确值 + L2 形态 + pre-commit/CI 双执行点）承接；并已就此决定做了一次**语义级敏感内容普查**（多镜头并行 + 对抗核实 + 扫描器盲区评估），结论见下方 §7。
+- [x] 该事件已并入 `docs/harnessloop-evaluation-20260726.md` 的问题域（"evidence/vendor 日志无 secret 守门"属协议外系统性缺口）。
+
+## 7. 语义级普查（2026-07-26，决定"vendor raw log 继续进 public"后立即执行）
+
+**方法**：5 镜头并行扫全部 tracked 语料（533 文件；重点 `.hopper/handoffs/` 159 个 raw/log 共 38MB）→ 原始信号 38 条 → 逐条对抗核实（默认立场"这不是真风险"）→ 合成。
+
+**结论：存量语料 0 条真实风险。** 无有效 key/token、无 JWT、无私钥/PEM、无 URL 内嵌凭证、无公网 IP/MAC/序列号、无第三方隐私数据。被证伪的典型误报已存档（`sk-` 多为 `task-`/`risk-` 子串；`DB_PASSWORD=postgres`/`change-me-*` 是开发默认值；"高熵串"多为 git SHA / npm integrity / UUID；"内网 IP"多为 semver）。三项阈下知情项（家用 Pi 内网拓扑、一处 mDNS 主机名快照、日志里的本人 commit 邮箱）经核实不构成可利用风险，无需处置。
+
+**但普查抓到守门自身的假绿（比存量风险严重得多）**：`check-secrets.sh` 首版的 L1 依赖 gitignored 的 `channel-params.json`，**CI checkout 里没有该文件 → 整个 L1 静默跳过 → 却仍打印"✅ L1+L2 通过"**。即面向公网那道防线实际只有 L2，而本次泄漏恰恰只有 L1 抓得住。**这与本项目反复抓到的"绿灯≠真守门"是同一病灶，只不过这次犯在自己的安全脚本上。**
+
+**同日加固（均已实测）**：
+- **L1-digest**：新增 `scripts/secret-digests.txt`（加盐 SHA-256，**不含明文**，由 `--update-digests` 生成），CI 无明文也能跑 L1；轮换凭证后需重跑生成。短/弱口令不入摘要（防离线爆破），仅本地 L1-exact 覆盖。
+- **诚实横幅**：成功信息改为声明**实际运行层**（如 `L1-digest + L2`）；两种 L1 都没跑时显式告警。
+- **抗折行绕过**：所有比对同时在"原文"与"去空白流"上做；去空白前先剥 `git diff` 的 `+/-` 行首标记——实测正是这个 `+` 会把折行 token 粘断，使 L1/L2 同时失效。
+- **短口令门槛**：参数名含 `pass|pwd|secret|token|key` 的把长度门槛从 16 降到 8。
+- **L2 前缀扩表**：补 PEM 私钥块、URL 内嵌口令（含 `postgres://user:pass@`）、`github_pat_`、`glpat-`、`AIza`、Slack webhook、`hf_`、`npm_`、`dop_v1_`、SendGrid。
+- **钩子安装写进 CLAUDE.md**（`.git/hooks` 不版本化，换机器会静默裸奔）。
+
+**四场景铁齿验证**：本地全树 → `L1-exact + L1-digest + L2` 全跑通过；模拟 CI（隐藏明文）→ 如实标注 `L1-digest + L2`；真实 key 入暂存 → L1-digest 拦截；**token 被折成两行** → L1-digest 仍拦截；干净内容 → 放行。
+
+**仍建议但未做（留给你定）**：
+1. **在"写"的一端脱敏**：在 hopper 捕获 vendor stdout 的位置串一个 filter，落盘前就把已知凭证替换为 `***REDACTED***`（预防 > 检测，属 `hopper-plugin` 侧改动）。
+2. **`*-raw.txt` 与 `*-output.log` 逐字节重复**（实测约 20 对）：只 track 其中一种可使暴露面与仓库体积同时减半，且不损失信息。
+3. warn-only 的语义 lint（高熵兜底 + `/Users/<name>`、RFC1918、`*.local`、企业邮箱域），只在新增 handoffs 上跑、输出到 job summary 不阻断。
