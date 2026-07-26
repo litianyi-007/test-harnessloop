@@ -1130,3 +1130,22 @@ hopper 默认 timeout 处理。
 4. **无落点判定**:validate-schemas 项"wiki 无落点"的检索结论可信(D4/facts 确无相关断言叙述)?
 
 **Verdict**:`CONFIRMABLE`(SG-11 可收官)| `MUST-FIX`(逐条 file:line + 可复现)。落盘 `.hopper/handoffs/T-060-output.md`。**Read-only**:不改任何文件(wiki 尤其);忽略跨仓/别目录全局 skill。中文。
+
+## T-061（harnessloop 进化计划 定案前独立确认，单 grok）
+
+**Task-type**: `code-review-acceptance` · **Vendor**: grok（轮换；T-060 为 codex。本计划由 Claude 多代理产出，需异构确认）· **只读**
+
+**评审对象**：`docs/harnessloop-evolution-plan-20260726.md`（本次进化定案计划，18 提案经内部对抗证伪后 5 条存活）。
+**语料**：插件源码 `harnessloop/plugins/harnessloop/`（skills/、scripts/verify_protocol.py、check_setup.py、references/ 模板、harnessloop/scripts/validate.py）、真实使用记录 `.harnessloop/`（goals/20260718-002-agent-app/rounds/0001-0010、state/、meta/self-audit.md、meta/evolution-issues/）、评估报告 `docs/harnessloop-evaluation-20260726.md` 与双轨原始 `.hopper/handoffs/T-058/T-059-output.md`。
+
+**背景**：项目本意是"用 app 验证 harnessloop 插件"。该计划的核心诊断是：`verify_protocol.py` 的 Rule A 挂在 `if checked_files:` 守卫下，导致 round 无 evidence/reviews 文件时**整体空跑却仍打印 "All mechanical protocol gates passed"**；且 `validate.py` 的 fixture 全部预建 evidence/reviews 目录，**测试集盲点与门盲点同构**，所以门空跑而 CI 长绿。计划据此只做 5 条（E1 边界声明 / E2 脱守卫+覆盖遥测 / E3 门执行留痕 / E4 Verdict+Residuals 硬化 / E5 反僵化护栏），砍掉 16 条。
+
+**只验五件事（逐条给判断 + 证据 + 你自己的复算）**：
+1. **地基数字是否属实**（计划所有结论建在这些实测上，请**自己重跑复算**，不要采信转述）：全库 round 数与"9 轮零工件受检"；Rule A 历史累计判过 8 个文件、Rule B 3 个文件；`.hopper/handoffs` 61 文件 1037 引用 / 524 判 dangling（50% 误报）；round-summary vs decision 的 containment 22–34%；`goal-breakdown.md` 139537B / 单行最长 18174 字符；goal 002 十份 decision.md 对 `verify_protocol` grep 0/10；14/14 轮 scope-lock 存在且 spans≥2（决定 E2 "零迁移"承诺是否成立）。**任一关键数字对不上，整条相关结论要重估。**
+2. **E1–E5 是否真该做**：尤其 (a) **E2** 计划自称"B 档、未经独立对抗轮"——它把 scope-lock 检查移出守卫会不会在真实语料上产生新红？覆盖遥测会不会算错？(b) **E4** 是唯一进协议正文的硬约束（`Verdict: pass` 且 `Residuals` 非 none → violation）——同文件枚举比较是否真的零解析器、零内容判断？`pass-with-residual` 会不会沦为默认对冲词而使该字段失去意义（计划自己承认了，问你认不认这个代价）？(c) 每条的 **teeth** 是否真有牙齿，还是又一个假绿？
+3. **16 条被证伪的有无误杀**：重点看评估报告判 S0 的两项被全砍——**状态文件结构化**（三提案全砍，理由是落点与病灶错位、法定 `## Subgoals` 表是死表）与**收官自动化**（三方案全砍，理由含"70% 重复"实测只有 22–34%）。这些证伪理由站得住吗？有没有该救回来的？
+4. **核心辩题裁定**：判据是"当且仅当缺席可从协议已要求的工件里、用**同文件内枚举比较**这一级操作机械检出，才吸收进协议正文"。这个判据过窄（把 teeth/异构审查/诚实分层全挡在外）还是合理？逐条看 6 个机制的裁定（措辞诚实性吸收 / teeth 只进插件 CI / 异构审查记录待 TH-0008 关闭 / 诚实分层降为提示句 / 收敛守卫不吸收 / 驱动力不吸收）。
+5. **遗漏**：以你独立视角看，10 轮真实使用记录里有没有**计划完全没提到**的高价值改进点？
+
+**Verdict**：`CONFIRMABLE`（计划可直接执行）| `MUST-FIX`（逐条给问题 + file:line + 可复现；说明是"必须改计划"还是"执行时注意"）。
+**产出**：五项逐条 + verdict + 若 CONFIRMABLE 则给执行注意事项。落盘 `.hopper/handoffs/T-061-output.md`。**Read-only**：不改任何文件（复算可跑脚本但勿写入）；忽略跨仓/别目录全局 skill。中文。
