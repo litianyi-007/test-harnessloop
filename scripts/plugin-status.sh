@@ -92,6 +92,39 @@ if entries:
 PYEOF
 }
 
+# 上游新鲜度。这个回路的真实踩坑点（2026-07-28）：hopper submodule 落后
+# upstream 65 个提交而无人察觉，在陈旧基线上做完的一版改动整个作废、必须在
+# 上游最新提交之上重做。CLAUDE.md 的「直接改 submodule 再 push」隐含假设了
+# submodule 是最新的，这一步把那个假设变成可见事实。
+#
+# 诚实横幅纪律（同 check-secrets.sh）：fetch 可能失败（离线/无权限/超时），
+# 失败时必须如实说明对比基准是本地缓存的远端 ref、可能过时——绝不把「没刷新」
+# 报成「已是最新」。
+show_upstream() {
+  local submodule="$1" ref fetched="fresh" behind ahead note
+  if ! git -C "$submodule" fetch --quiet origin 2>/dev/null; then
+    fetched="stale"
+  fi
+  ref="$(git -C "$submodule" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  [[ -z "$ref" ]] && ref="origin/main"
+  if ! git -C "$submodule" rev-parse --verify -q "$ref" >/dev/null 2>&1; then
+    echo "upstream  (无 ${ref} 引用，跳过对比)"
+    return 0
+  fi
+  behind="$(git -C "$submodule" rev-list --count "HEAD..$ref" 2>/dev/null || echo '?')"
+  ahead="$(git -C "$submodule" rev-list --count "$ref..HEAD" 2>/dev/null || echo '?')"
+  if [[ "$fetched" == fresh ]]; then
+    note="基准 ${ref}（本次已 fetch）"
+  else
+    note="基准 ${ref}（fetch 失败/离线，可能过时）"
+  fi
+  echo "upstream 落后 ${behind} / 领先 ${ahead} —— ${note}"
+  if [[ "$behind" != 0 && "$behind" != '?' ]]; then
+    echo "警告     先 git -C $submodule pull --ff-only 再动手；在陈旧基线上做的"
+    echo "         改动会撞 non-fast-forward，且版本号会与上游已发布版本冲突"
+  fi
+}
+
 show_one() {
   local key="$1" submodule_name marketplace pid plugin_name submodule
   submodule_name="$(plugin_submodule "$key")"
@@ -108,6 +141,7 @@ show_one() {
     return 0
   fi
   git -C "$submodule" log -1 --format='commit   %h  %s'
+  show_upstream "$submodule"
   local dirty
   dirty=$(git -C "$submodule" status --short | wc -l | tr -d ' ')
 

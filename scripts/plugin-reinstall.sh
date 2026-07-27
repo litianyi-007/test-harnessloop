@@ -105,6 +105,26 @@ on_error() {
 }
 trap on_error ERR
 
+# 上游新鲜度提醒（与 plugin-status.sh 的 show_upstream 同源判据）。重装是
+# 「编辑 → 生效」链条的中点，此时若 submodule 落后 upstream，装进去的就是一个
+# 陈旧基线上的版本；真实踩坑见 2026-07-28 hopper 落后 65 提交那次。
+# 只警告不阻断：本地实验性改动本来就可能有意停在旧基线上。
+warn_if_behind() {
+  local submodule="$1" ref behind fetched="fresh"
+  git -C "$submodule" fetch --quiet origin 2>/dev/null || fetched="stale"
+  ref="$(git -C "$submodule" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  [[ -z "$ref" ]] && ref="origin/main"
+  git -C "$submodule" rev-parse --verify -q "$ref" >/dev/null 2>&1 || return 0
+  behind="$(git -C "$submodule" rev-list --count "HEAD..${ref}" 2>/dev/null || echo 0)"
+  if [[ "$behind" != 0 ]]; then
+    echo "warn: 落后 ${ref} ${behind} 个提交$([[ "$fetched" == stale ]] && echo "（fetch 失败，该数字可能偏小）")"
+    echo "      在陈旧基线上改动 → push 会撞 non-fast-forward，版本号也会与上游已发布版冲突"
+    echo "      建议先 git -C ${submodule} pull --ff-only"
+  elif [[ "$fetched" == stale ]]; then
+    echo "warn: fetch 失败/离线——无法确认是否落后 upstream，下面的重装基于本地状态"
+  fi
+}
+
 reinstall_one() {
   local key="$1"
   CURRENT_PLUGIN="$key"
@@ -125,6 +145,8 @@ reinstall_one() {
   local rel_source plugin_src_dir
   rel_source="$(resolve_plugin_source "$submodule" "$plugin_name")"
   plugin_src_dir="$(cd "$submodule" && cd "$rel_source" && pwd)"
+
+  warn_if_behind "$submodule"
 
   echo "==> 校验 manifest"
   claude plugin validate "$submodule"

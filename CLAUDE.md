@@ -15,11 +15,16 @@
 
 `scripts/plugin-reinstall.sh [harnessloop|hopper|kata|all]` 每次运行都会把对应插件的全局 marketplace 重指到本项目的 submodule（不是 GitHub），所以插件改动不需要 push 就能生效（不带参数默认 `all`，三个插件依次重装；当前指向用 `scripts/plugin-status.sh [harnessloop|hopper|kata|all]` 确认）：
 
+0. **先确认 submodule 没落后 upstream**（`scripts/plugin-status.sh <plugin>` 与 `plugin-reinstall.sh` 都会自动 fetch 并报「落后 N / 领先 M」；落后时给出警告）。**这一步不是形式**：2026-07-28 实测 hopper submodule 落后上游 65 个提交而无人察觉，在陈旧基线上做完的一整版改动（含版本 bump 与 CHANGELOG）全部作废、必须在上游最新提交之上重做。落后就先 `git -C <submodule> pull --ff-only`。fetch 失败/离线时脚本会如实标注「可能过时」，不会把「没刷新」报成「已是最新」。
 1. 直接编辑源码：harnessloop 在 `harnessloop/plugins/harnessloop/`（skills 等）；hopper 在 `hopper-plugin/`（marketplace.json 里 `source` 是 `./`，即 submodule 根目录本身就是插件源码目录，不是子目录）；kata 在 `kata/plugin/`（marketplace.json 里 `source` 是 `./plugin`）。**不需要先 commit**——已实测：安装复制的是 submodule 工作区（含未提交改动）。
 2. 运行 `scripts/plugin-reinstall.sh harnessloop`、`scripts/plugin-reinstall.sh hopper`、`scripts/plugin-reinstall.sh kata` 或不带参数一次重装三者（校验 manifest → 卸载 → 重装）。
 3. **重启 Claude Code 会话**后新版本才会加载。
 4. 复验之前失败的场景，结果记入 `docs/validation-log.md`。
-5. 验证通过的插件改动在对应 submodule（`harnessloop/`、`hopper-plugin/` 或 `kata/`）内 commit；push 到各自 GitHub 仓库已是既定授权流程（`surebeli/harnessloop`、`surebeli/test-harnessloop`、`surebeli/hopper-plugin`、`surebeli/kata` 四仓同权，批次验收通过后无需逐次确认，见 `.harnessloop/state/control-contract.md`）——但三个插件（harnessloop / hopper-plugin / kata）push 前均须先 bump 版本信息，保持各自版本文件一致后才能 push；具体版本文件位置以各仓库实际布局为准（hopper-plugin: `.claude-plugin/marketplace.json`、`package.json` 及 CLI 版本串等；kata: `plugin/.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json`、`CHANGELOG.md` 等；harnessloop 的版本 bump 已是既有发布惯例）。
+5. 验证通过的插件改动在对应 submodule（`harnessloop/`、`hopper-plugin/` 或 `kata/`）内 commit；push 到各自 GitHub 仓库已是既定授权流程（`surebeli/harnessloop`、`surebeli/test-harnessloop`、`surebeli/hopper-plugin`、`surebeli/kata` 四仓同权，批次验收通过后无需逐次确认，见 `.harnessloop/state/control-contract.md`）——但三个插件（harnessloop / hopper-plugin / kata）push 前均须先 bump 版本信息，保持各自版本文件一致后才能 push；各插件的版本文件清单如下（2026-07-28 实测枚举；此前这里写的是「……等」，那个「等」藏了 hopper 的 4 处，实际漏改了一半，是仓库自己的一致性测试把人拦下来的）：
+
+   - **harnessloop（3 处）**：`package.json`、`.claude-plugin/marketplace.json`、`plugins/harnessloop/.claude-plugin/plugin.json`。（无 CHANGELOG；发布记录写在 commit message 与 `docs/` 规格文档的实施记录节。）
+   - **hopper-plugin（7 处 + CHANGELOG）**：`package.json`、`.claude-plugin/plugin.json`、`.codex-plugin/plugin.json`、`.claude-plugin/marketplace.json`（**顶层 `version` 与 `plugins[0].version` 两处**）、`cli/bin/hopper-dispatch` 的 `const VERSION`、`package-lock.json` 的 `version`、`commands/smoke.md`、`commands/vendors.md`，外加 `CHANGELOG.md` 新增条目。改完 `cli/` 下任何文件都要跑 `npm run sync:plugin` 同步 vendored 副本 `plugins/hopper/`（有测试守卫会红）。**别只靠这份清单**——`npm test` 里有 `version consistency` 与 `release metadata` 两条守卫会枚举真实位置，以它们为准；`tests/unit/vendored-plugin-sync.test.js` 里的版本号也是硬编码、需同步改。
+   - **kata（4 处 + CHANGELOG）**：`plugin/.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json` 的 `plugins[0].version`、**顶层 `plugin.json`**、**`SKILL.md` frontmatter 的 `version:` 行**，外加 `CHANGELOG.md`。后两处最容易漏——枚举方法：`grep -rl <当前版本号> kata --exclude-dir=.git --exclude-dir=node_modules | grep -v /tests/`（`tests/_codex_install/` 下的 SKILL.md 是安装快照产物，不手改）。
 
 用 `scripts/plugin-status.sh [harnessloop|hopper|kata|all]` 可对照 submodule 状态与全局实际安装的版本。
 
