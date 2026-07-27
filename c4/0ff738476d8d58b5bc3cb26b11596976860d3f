@@ -5,19 +5,15 @@ docs/harnessloop-runtime-evals-autonomy-audit-20260728.md
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.16",
   "base_commit_sha": "c40ff738476d8d58b5bc3cb26b11596976860d3f",
-  "prompts": {
-    "s_c587ecf7bbc3e2::t_7e08218ad13fc4": {
+  "prompts": {},
+  "sessions": {
+    "s_c587ecf7bbc3e2": {
       "agent_id": {
         "tool": "claude",
         "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
         "model": "claude-fable-5"
       },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 261,
-      "total_deletions": 0,
-      "accepted_lines": 261,
-      "overriden_lines": 0
+      "human_author": "litianyi <litianyi@corp.netease.com>"
     }
   }
 }
