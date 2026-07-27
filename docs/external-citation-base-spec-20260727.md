@@ -133,7 +133,15 @@ relpath      := 非空；不得以 "/" 或 "~" 开头；不得匹配 ^[A-Za-z]:/
 
 **畸形 relpath 停在 alias 域内报错，绝不退回项目域**——否则「引用的形状在运行时决定它的域」这个反模式又回来了（`symlink_dotdot_normpath_order` 同族）。
 
-**一个 alias 恰好一个 root，一个 root 恰好一个 base（root 本身）。** 禁止多 root（那就是顺序=fallback），禁止两 alias 指向同一 canonical root（影子 alias 绕过审计）。**不禁止 root 之间嵌套**（见第 7 节）。
+**一个 alias 恰好一个 root，一个 root 恰好一个 base（root 本身）。** 禁止多 root（那就是顺序=fallback），禁止两 alias 指向同一 root（影子 alias 绕过审计）。**嵌套允许，但必须显式声明**（见第 7 节）。
+
+> **修订 2026-07-27（user-confirmed，起因 T-069 F1.2）。** 本条初稿写的是「禁止两 alias 指向同一 **canonical** root」＋「不禁止嵌套」，两句放在一起是自相矛盾的：T-069 实测 `wiki` 绑整棵树、`kern` 绑 `wiki/kernel`，两套不同的 `purpose`/`approved_by`，`@@wiki/kernel/facts.md` 与 `@@kern/facts.md` 解析到**同一个文件**且零 violation——本条想防的审计绕过，走嵌套即可达成，禁令形同虚设。
+>
+> 两处同时修订：
+>
+> 1. **「canonical root」改为「同一 root」，同一性由文件系统身份（`samefile`：st_dev/st_ino）判定，不由 canonical 路径串相等判定。** 起因 T-069 F1.1：`Path.resolve()` 不折叠大小写，在大小写不敏感卷（APFS/HFS+ 默认、NTFS）上 `/x/Wiki` 与 `/x/wiki` 是同一目录却有两个不相等的 canonical 串，按串分组的守卫让两个 alias 同时 available、整门 exit 0。硬链接、bind mount、firmlink 属同一类，同一判据一并覆盖。
+> 2. **嵌套的处置从「不禁止」改为「必须显式声明」。** 本条的目的是审计可见性，不是拓扑洁癖；靠禁止拿不到这个属性（禁止只会把「同一棵树的子目录用更紧的 `approved_by` 单独授权」这个合法用法一起杀掉），靠**让重叠成为 tracked 文件里可 diff 的事实**才拿得到。落法见 §7。
+
 
 ### 2.5 containment：每基准独立 canonical domain 的精确定义
 
@@ -395,7 +403,7 @@ dangling=0  exit 0
 | **`--rewrite-plan` 批量改写 + `--rewrite-plan-scan` glob** | facet 5 P3，判 redesign | 由机器（不是作者）判定 146 次「这条引用属于外部域」；`.hopper/handoffs/` 同目录有子代理自动写入的 vendor 原始日志，glob 读取面直接接在 2026-07-26 事故上；且它依赖 harnessloop 协议里不存在的「账本外评审暂存区」，对直接写进 `rounds/*/reviews/` 的项目退化成纯粹的「改被检文件转绿」，违反 SKILL.md 现行纪律行 |
 | **`citations_exempt_external_aliasable`** | facet 2 P5，判 drop | 只覆盖三条转绿出口里**最贵**的一条（`~/` 改写）；最便宜的两条（删扩展名、加 ignore）它看不见；未绑定机器上恒为 0——恰恰是最有逃逸动机的场景。同样预算换 `citations_ignored_explicit` + `citations_shape_dropped` 价值高一个量级 |
 | **`external_roots_digest` / `marker_digest` 进 coverage** | facet 3 P5 / P2 | 只写数字：无验证方、无跨轮比对（P5 自己排除 join）、可被 `git diff` 完全替代，代价是 coverage 行变长危及「decision.md 逐字记录」纪律的可执行性 |
-| **root 之间禁止嵌套（第 7 闸）** | facet 4 P3 | 自述理由是「万一将来有人误改成并集语义」。在 per-alias 单域 + 字面 `..` 拒绝之下它买不到任何东西，却让 `@@design -> ~/.llm-wiki/agent-app-design` + `@@notes -> ~/.llm-wiki` 这种诚实声明非法，**把用户推向「只声明一个宽根」**——恰好放大唯一无法机械关闭的残留。改为 AST 级单域结构断言（断言 `resolve_external_citation` 内 containment 调用点恰好一处且实参是 `root.root`） |
+| **root 之间禁止嵌套（第 7 闸）** | facet 4 P3 | 自述理由是「万一将来有人误改成并集语义」。在 per-alias 单域 + 字面 `..` 拒绝之下它买不到任何东西，却让 `@@design -> ~/.llm-wiki/agent-app-design` + `@@notes -> ~/.llm-wiki` 这种诚实声明非法，**把用户推向「只声明一个宽根」**——恰好放大唯一无法机械关闭的残留。改为 AST 级单域结构断言（断言 `resolve_external_citation` 内 containment 调用点恰好一处且实参是 `root.root`））。**后续（2026-07-27，user-confirmed，起因 T-069 F1.2）：本行的否决依然成立——一刀切禁止嵌套仍会把用户推向只声明一个宽根。但「不禁止」被实测证明让 §2.4 的影子 alias 禁令形同虚设（父 root 与子 root 各有一套 `purpose`/`approved_by`，却解析到同一个文件，零 violation）。裁决为第三条路：**嵌套合法，但必须在版本化声明里写 `nested_under: "<最近声明祖先的 alias>"`**；未声明的祖先/后代关系报 `reference-root-undeclared-nesting`，声明了但这台机器上并非真嵌套报 `reference-root-nesting-mismatch`，两者都只 fail-closed **后代**（祖先自己的声明是完整的，连坐它是拿邻居的疏漏罚它）。审计属性由此靠「重叠是 diff 里可见的事实」实现，而不是靠禁止——`@@design -> ~/.llm-wiki/agent-app-design` + `@@notes -> ~/.llm-wiki` 这个本行当初要保住的诚实声明，现在写一行 `nested_under: "notes"` 即合法。祖先判定与同一性判定同用 `samefile` 而非字符串前缀（大小写不敏感卷上 `/x/Wiki` 不是 `/x/wiki/kernel` 任何 parent 的字符串，却确实是它的父目录）。** |
 | **canonical root 深度 ≥ N 的宽度代理** | facet 3 P1 | `/Users/x`、`/Volumes/ext` 深度都是 2 都放行；挡不住任何有意义的「过宽」，却误杀 `/srv`、`/data` 这类合法扁平布局。N 是魔数 |
 | **`external-root-unavailable` 降级为非阻断 / 两层状态机 / `optional: true` / `--allow-missing-roots`** | facet 2 critique required change 4 | 一旦不可用不判红，「声明一个本机永不存在的 root」就是一条**完全静默的批量豁免通道**，且比现状更糟（现状 `~/x.md` 至少每条计入 `citations_exempt_external`）。保持 fail-closed，改用**每条引用一条** violation 让噪声随可疑面缩放 |
 | **`reference-roots.json` 进 `check_setup.py` 五文件门 / `N/6`** | facet 2 P3 一致否决 | 为一个绝大多数项目用不上的可选能力，全局污染向导头条数字；且同一份工件两个门是漂移温床。焊死断言：`len(FILES_ORDER)==5 and not any('reference' in f for f in FILES_ORDER)` |
