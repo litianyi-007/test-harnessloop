@@ -933,3 +933,33 @@ TH-0008 的后缀唯一回退，其"唯一性宇宙"的边界被换了三次—�
 ### Evolution Issue Decision
 
 TH-0008 结案为 `fixed-by-demotion`（措辞由 grok T-065 建议，非自评）。三条固有残留已登记不再追。**遗留决策**：计划中 B2 的前置判据"误报率降到个位数"与降级后的 37.8% 冲突，需重新表述或先做"项目声明额外解析基准"的协议面决策——留待用户裁定，不由主会话单方改判据。
+
+---
+
+## AUDIT-20260727-HOPPER-TERMINAL-SIGNAL
+
+- Audit ID: AUDIT-20260727-HOPPER-TERMINAL-SIGNAL
+- Trigger: 同一现象第 3 次出现（T-042 / T-046 / T-067 三次 `status: failed`，性质各不相同）
+- Scope: 被测插件 `hopper`（不是 harnessloop 协议面）；观察来自 harnessloop 外部解析基准 PR-3 的对抗审派单
+
+### 观察
+
+hopper 把任务终态压成单一 `status: failed`，但底下实际是**四个正交信号**，压成一个是**有损**的：
+
+| 任务 | `status` | `exit_code` | 有无 verdict | 真实性质 |
+|---|---|---|---|---|
+| T-042 | failed | **0** | **有，完整** | 审完了，尾部 `XAI_API_KEY` 失效——**产物有效** |
+| T-046 | failed | 1 | 无 | codex 跑 `csi` 触发自身安全过滤器——无效，须改派 |
+| T-067 | failed | 1 | 无 | codex **被评审内容本身**触发安全过滤器——无效，须改派 |
+
+**判据沉淀（已在本轮实用）**：终态判定不看 `status`、不看 `exit_code`、不采信 vendor 自述 success，**只看有没有真 verdict**。B2a 回填 14 轮 `Review` 字段时正是靠这条才没把 T-042 误判为"未发生的评审"——它是 rounds/0001 唯一合格的声明对象。
+
+**给 hopper 的改进方向（尚未实施，登记备查）**：`*-output.md` frontmatter 应把 `status` 拆开——至少区分 `transport-failed`（进程/认证/网络挂了）与 `content-produced`（产物已落盘，可能带尾部错误）。当前 `adapter_status: unknown-fail` 这个值本身就说明适配层知道自己分不清。
+
+### 一处讽刺，但值得记
+
+T-067 被拦的内容**恰恰是本项目的安全加固代码**——containment 检查、symlink 逃逸拒绝、禁止目录名单。防御性代码在送审时被当成攻击素材拦下。改派 grok（T-068）时在 brief 里补了一句防御语境说明、**未改任何评审范围**，即通过。这提示：跨 vendor 派单时，"这是防御性工作"的语境是需要显式写进 brief 的元信息，不能指望 vendor 自行推断。
+
+### 对抗审收益（本轮实证）
+
+T-068（grok）在核心命题上判 PASS（alias-only 未被架空），但抓到一处**规格写了字、实现没落地**的缺口：§2.4「禁止两 alias 指向同一 canonical root」。主会话自评与 codex 前四轮均未发现——因为它不在任何一条"能不能逃逸"的攻击线上，而在"治理/审计面"上。**异构轮换的价值这次体现在"审查视角"而不是"审查深度"上。**

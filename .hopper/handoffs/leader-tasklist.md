@@ -1252,3 +1252,62 @@ hopper 默认 timeout 处理。
 
 **Verdict**：`CONFIRMABLE`（提案可执行，按你的修正意见）| `MUST-FIX`（提案有实质缺陷，逐条说明并给替代）。
 **产出**：四项逐条 + verdict + 你建议的最终执行顺序。落盘 `.hopper/handoffs/T-066-output.md`。**Read-only**：可跑脚本复算，不改任何文件；忽略跨仓/别目录全局 skill。中文。
+
+## T-067（harnessloop v0.21.0 外部解析基准 对抗审第 1 轮，单 codex）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: codex · 只读 · 可跑 python/git，严禁 csi
+
+**评审对象**：`harnessloop` submodule commit `d815746`（v0.21.0，PR-3 外部解析基准本体）。`git -C harnessloop show d815746`。
+**规格（唯一权威）**：`docs/external-citation-base-spec-20260727.md` —— §2.1–2.7 设计、§3 守卫清单 G1–G20、§4 OUT 列措辞、§5 PR-3。规格由 11 agent 五面设计 + 逐面对抗证伪合成，**每条决定都有实测支撑**；评审时若认为某条设计本身错了，请指出并给证据，但不要仅因"我会这样写"而判错。
+
+**链条背景（决定本轮该多狠）**：本仓的 containment 面在 T-062→T-065 连挨 **4 轮** MUST-FIX/REWORK（假阴性每轮换个边界复发）；紧接着 PR-2（v0.20.0）又在**产物侧**发现三个活洞（round/reviews/evidence 目录本身是 symlink → 门读取项目外内容且 Rule A 无感）。外部基准**天然在项目外**，是本插件迄今最大的新信任面。规格自己要求 PR-3 至少预留 2 轮对抗审。
+
+**本轮核心命题：alias-only 能否被架空。** 如果存在任何一条路径，让一个**未显式写 `@@alias/`** 的引用被外部 root 解析，本设计就退化成 T-066 明令禁止的全局 fallback（与刚被降级的后缀回退同病）。
+
+**逐项证伪（自己构造，不要采信报告）**：
+1. **G13（第一条命）**：声明并绑定 wiki 后，裸前缀 `kernel/facts.md`（root 下真实存在）必须**仍报 dangling**。找有没有别的路径能让它解析：suffix hint、`citation_bases`、locator 剥离后的二次解析、未声明 alias 的回落分支、`subpaths` 白名单、`_resolve_in_root` 的任何调用点。
+2. **G16 语料级不变量**：对真实 `.hopper/handoffs`（67 文件）在"声明 wiki / 不声明"两态下跑，dangling 总数必须**一条不变**（语料零 `@@` span）。任何隐式回退都会让数字下降。
+3. **G9**：`@@wiki/link/../escape.md`（root 内**恰有**同名诱饵）——fixture 必须断言**解析到的具体路径**，不只断言 verdict。核实实现是否 raw join + canonical，而非 `normpath` 预折叠。
+4. **G6 身份**：sentinel（`expect_present`）能否被"同名不同树"骗过？构造一棵含相同 sentinel 路径的假树试试。
+5. **G4 禁止名单**：必须在 canonical **之后**判。试 `fakehome/w2 -> <项目父目录>` 这类符号链接能否击穿字面检查。
+6. **G14 索引隔离**：外部树是否真的从不进 `build_suffix_index`（monkeypatch `Path.resolve`/`os.walk`/`subprocess.run` 断言索引期零调用落在 declared root 内）。
+7. **G20 + 新增旗标**：默认输出/`--json` 不得出现 root 绝对路径；实现方新增了 `--show-root-paths`，核实它是否**真的 verdict-inert**（开关前后 `--json` 与 exit code 逐字节相同），以及它是否越出了 scope-lock 允许的改动面。
+8. **两域不相交**：是否存在第三条路径（既非 alias 域也非项目域，或两域交叉）？畸形 relpath 是否真的停在 alias 域报错、绝不退回项目域？
+9. **零迁移**：无声明项目 `--json` 与 v0.20.0 violations 多重集是否逐条相同、coverage 是否仅新增全零 key。
+10. **实现方自陈的两处判断**（请裁定是否可接受）：(a) `check_setup.py` 未接线 advisory（规格该条是条件句，且 scope-lock 未点名该文件）；(b) 把"两处 SKILL.md"读成"同一文件的两处"。
+
+**Verdict**：`PASS` / `PASS_WITH_NOTE` / `REWORK` / `FAIL`（逐条给 file:line + 可复现）。
+**产出**：十项逐条 + verdict。落盘 `.hopper/handoffs/T-067-output.md`。**Read-only**：mutation/构造的临时改动必须还原并说明；忽略跨仓/别目录全局 skill。中文。
+
+## T-068（= T-067 重派 grok：外部解析基准对抗审第 1 轮）
+
+**Task-type**: `code-review-adversarial` · **Vendor**: grok（**重派原因**：T-067 派 codex，被 codex **自身的 cybersecurity 过滤器**中止——这次不是跑 `csi`（T-046 先例），而是**被评审内容本身**（containment / symlink 逃逸 / 禁止名单等安全加固代码）触发过滤器，exit 1、无 verdict。按既定纪律不采信 exit code、改派同池另一 vendor。）
+
+**范围与要求：与 `## T-067` 一节完全相同**（评审对象 `harnessloop` commit `d815746` v0.21.0；规格 `docs/external-citation-base-spec-20260727.md`；十项逐条证伪；核心命题=alias-only 能否被架空）。请直接按 T-067 那一节执行，产出落盘 `.hopper/handoffs/T-068-output.md`。
+
+**补充说明（给评审者的上下文，不改变范围）**：本轮被审代码大量涉及"路径逃逸/符号链接/禁止名单"，这是**防御性加固**——目的是让机械门拒绝读取项目外内容，不是攻击工具。评审即在此防御语境内进行。
+
+## T-069（外部解析基准对抗审**第 2 轮**）
+
+**Task-type**: `code-review-adversarial` · **只读评审，不改任何代码**
+
+**为什么有第 2 轮**：`docs/external-citation-base-spec-20260727.md` 要求这一协议面至少两轮独立对抗审。第 1 轮是 T-068（grok，判 `PASS_WITH_NOTE`）。本轮换一家、换视角，**不是复读第 1 轮**。
+
+**评审对象**：submodule `harnessloop/`，commit `60198f5`（v0.22.0）。规格：`docs/external-citation-base-spec-20260727.md`。第 1 轮结论：`.hopper/handoffs/T-068-output.md`（**先读它**，本轮不得重复它已逐条证过的内容，只做下面五项）。
+
+**评审语境（重要）**：被审代码大量涉及"路径逃逸 / 符号链接 / 禁止目录名单 / 别名影子"。这些是**防御性加固**——目的是让机械门**拒绝**读取项目外内容，不是攻击工具。评审即在此防御语境内进行。
+
+**本轮五项**：
+
+1. **v0.22.0 新增的影子 alias 守卫本身是否有洞**（重点）。它在 `load_reference_roots` 末尾按 `root.canonical` 分组，`len>1` 的组内每个 alias 都置 `unavailable_reason="shadow-alias"`。请攻击：
+   - 有没有办法让两个 alias 实际读同一棵树、却**不被**这个守卫抓到？（想想：canonical 不同但树相同的情形——嵌套 root、一个 root 是另一个的子目录、硬链接、大小写不敏感文件系统、跨挂载点的 bind mount / firmlink。规格 §7 明确**不禁止 root 之间嵌套**，那么"嵌套"是不是就是合法的绕过面？如果是，这是规格缺口还是实现缺口？）
+   - 守卫置 unavailable 后，`available/canonical` 的不变量在**所有**下游调用点是否仍成立（有没有哪里在 `available=False` 时仍摸 `canonical`）？
+   - 守卫是否会误伤：什么合法配置会被它错判成影子？
+2. **回打核心命题（换角度，别复读 T-068 的路径）**：alias-only 是否仍不可架空。T-068 已从 suffix hint / citation_bases / locator / 未声明回落 / subpaths / `_resolve_in_root` 六个面攻过。请**换新面**——例如 scope-lock 侧、`--show-root-paths` 侧、coverage 计数侧、多轮次之间的状态复用、`verify_identity=False` 这条旁路，以及"先让 root 不可用再让它可用"的时序面。
+3. **T-068 遗留 NOTE 的独立复核**（它自己的结论可能就是错的，请证伪它）：
+   - 它说 G9 的 teeth 叙事"略偏"（带字面 `..` 的用例先被 Defense 1 打死，Defense 2 的承重场景是无字面 `..` 的 symlink 跳）。这个判断对不对？Defense 2 到底有没有独立承重的用例？
+   - 它说零迁移有"detail 微差"（无声明项目对 `@@foo/` 形 citation 仍追加 hint）。这是无害展示差异，还是规格 §2.4"逐字节不变"承诺的实质违反？
+4. **规格与实现的双向对照**：规格里还有没有**别的**"写了字但没落地"的条款（T-068 抓到 §2.4 影子 alias 就是这一类）？反过来，实现里有没有**规格没授权**的行为？
+5. **teeth 审计**：`scripts/validate.py` 的 G1–G21 里，有哪几条是"断言了实现的当前形状"而不是"断言了规格要的性质"——即改一个等价实现就会红、但换一个真正错误的实现却仍绿？点名具体检查号。
+
+**验收**：逐项给 PASS / FAIL / NOTE + 可复现证据（命令 + 实际输出）。任何 FAIL 必须给出**能复现的最小攻击**，不接受"理论上可能"。产物落 `.hopper/handoffs/T-069-output.md`，含 `## Verdict`（`PASS` / `PASS_WITH_NOTE` / `REWORK`）与 `## Files touched`（应为 none）。
