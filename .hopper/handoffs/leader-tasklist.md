@@ -1432,3 +1432,32 @@ hopper 默认 timeout 处理。
 **验收**：逐项 PASS / FAIL / NOTE + **具体反例构造**，不接受"可能存在风险"。产物落
 `.hopper/handoffs/T-072-output.md`，含 `## Verdict`（`PASS` / `PASS_WITH_NOTE` /
 `REWORK`）、`## Files touched`（应为 none）、独立成节的 `## 值不值得做`。
+
+## T-073（`verify:ignore` 收窄规格 v3 — 对抗审第 3 轮）
+
+**Task-type**: `code-review-adversarial` · **只读评审**
+
+**评审对象**：`docs/ignore-scoping-spec-20260728.md`（**v3**，commit `11e0343`）。
+**先读前两轮**：`.hopper/handoffs/T-071-output.md`（codex，REWORK，否决 v1 精确语法）、
+`.hopper/handoffs/T-072-output.md`（grok，REWORK，确认方向但指出未写完的部分）。
+v1/v2 全文在 git 历史（`d5de1e3` / `ed7b29c`）。
+**当前实现**：`verify_protocol.py` 的 `pathish_citations`，机械门 v0.25.0，实现未开始。
+
+> **收敛守卫背景（务必知悉，但不得据此放水）**：本工作项已连挨 2 轮 REWORK。
+> 若本轮再出 REWORK 批次，主会话将按既定纪律停下来向用户 checkpoint，问「这个机制
+> 是不是放错了层次」，而不是自动写第四版。**该判 REWORK 时照判**——放水的代价比
+> 多一次 checkpoint 大得多。
+
+**本轮范围：§9 的 6 个靶子逐条回答**，另加两项：
+
+7. **v3 是否真的收口了 T-072 的每一条阻断项**。T-072 的阻断项是：摘要/路径口径未
+   写死、legacy 名单可追加、J11 与 §5.1 矛盾、J10 与 §5.2 矛盾、行内子串检测误伤、
+   「引用候选」与双 marker 重叠未定义。请逐条核对 v3 是否真收了，还是只是换了措辞。
+
+8. **§1(c) 该不该独立于本规格先修**。它是当前实现的活 bug（子串匹配导致"讨论标记
+   即启用标记"），与 §3/§4 的设计争论无关。主会话倾向把它拆出来单独修。请判断：
+   这样拆是否会造成两次行为变更（先修 (c)、再改作用域），反而比一次性落地更差？
+
+**验收**：逐项 PASS / FAIL / NOTE + **具体反例构造**。产物落
+`.hopper/handoffs/T-073-output.md`，含 `## Verdict`、`## Files touched`（应为 none）、
+独立成节的 `## 值不值得做` 与 `## §1(c) 拆不拆`。
