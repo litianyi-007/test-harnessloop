@@ -1,0 +1,63 @@
+.harnessloop/meta/evolution-issues/0019-external-system-declaration-not-wired.md
+  s_c587ecf7bbc3e2::t_3bec8a407db200 1-50
+.harnessloop/meta/evolution-issues/0020-eval-contract-no-schema-no-ledger.md
+  s_c587ecf7bbc3e2::t_3bec8a407db200 1-50
+.harnessloop/meta/evolution-issues/0021-eval-not-in-mechanical-gate.md
+  s_c587ecf7bbc3e2::t_3bec8a407db200 1-50
+.harnessloop/meta/evolution-issues/0022-test-resource-write-preauth-no-anchor.md
+  s_c587ecf7bbc3e2::t_3bec8a407db200 1-50
+.harnessloop/meta/evolution-issues/0023-loop-stop-leaves-no-trace.md
+  s_c587ecf7bbc3e2::t_3bec8a407db200 1-50
+.harnessloop/meta/evolution-issues/0024-verification-double-registration-no-due-set.md
+  s_c587ecf7bbc3e2::t_3bec8a407db200 1-49
+.harnessloop/meta/evolution-issues/0025-evidence-write-no-secret-guard.md
+  s_c587ecf7bbc3e2::t_3bec8a407db200 1-50
+.harnessloop/meta/evolution-issues/0017-environment-todo-vs-pass-semantics-unclear.md
+  0000019fa521265f 1-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "199ab255693370b5ec56f4bc4b2394f221f04052",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_3bec8a407db200": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 349,
+      "total_deletions": 0,
+      "accepted_lines": 349,
+      "overriden_lines": 0
+    },
+    "s_1204f51c5f32c9::t_aeec36da290784": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785181840689465000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa521265f": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785181840991"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 111,
+      "total_deletions": 0,
+      "accepted_lines": 111,
+      "overriden_lines": 0
+    }
+  }
+}
