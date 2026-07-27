@@ -75,3 +75,37 @@
 - Backported to local policy: no
 - Backport path: 无
 - Follow-up required: 是——待用户/主会话对 (a)/(b) 两种解读做出裁定后，再决定候选目标（docs 说明 vs 模板收紧）与是否与 TH-0012 合并处理。
+
+---
+
+## 2026-07-28 更新：范围扩大 + 裁定依据出现（main-session ruling under user delegation）
+
+本条原记为"两种解读都说得通、协议未裁定"。runtime-evals 审核第 2 轮独立参照审
+（`.hopper/handoffs/T-075-output.md` M-1）给出了**裁定所需的下游后果**，使 (a)/(b)
+不再对称：
+
+**新证据（已由主会话独立复核）**：
+- `control-contract-profiles.md:17,41-42,57`：standard 档 auto-continue **只看**
+  environment self-check = `pass`；strict 档还要求实际 delegation 验证。
+- `harnessloop-continue/SKILL.md:24,28`：continue **只在 `complete=false` 时**承诺
+  surface TODO warning。本项目实跑 `complete: true` + `field_todo_count: 12` ——
+  该组合**静默穿过** setup 分支，TODO 从不出现在任何门前。
+- `harnessloop-delegation/SKILL.md:29-35,65-71`：observed model/effort 不可验证时
+  必须写 `unknown`、不得标成功；而本项目 `state/environment.md:45` 写的是
+  `Pass/fail: pass（残余风险：subagent 模型无运行时探针验证）`——自由文本"pass 带
+  残余"绕过了该纪律。
+
+**因此后果不再是文档洁癖**：委派执行的 runtime eval 会在「能力、scope、输出路径、
+实际模型均未验证」的情况下拿到"环境 pass"，进而被 auto-continue 放行。这是硬门
+语境下的假绿通道。
+
+**裁定**：采解读 (b) 的实质，但落点不在措辞而在**机器可读字段**——
+- `state/environment.md` 增机器可读 `delegation_health`（含 probe artifact/digest、
+  `verified_at`、会话/环境 fingerprint、适用风险级）；
+- 无新鲜 probe 时，只允许 main-session 执行或 read-only 保守模式，**不得**用自由文本
+  `pass（有残余）`满足硬门；
+- setup/continue 对「complete=true 且 field_todo_count>0」必须显式暴露，不再静默。
+
+**归属**：TH-0021（eval 硬门）的**条件前置**——仅当项目选用委派/可写 runner 时成为
+阻塞项（见审核报告附录 C.1 争议 C 裁定：协议保持 executor-neutral）。
+**原「EV-K 另立新 issue」的计划撤销**：本条已覆盖，重复立项无必要。
