@@ -1492,3 +1492,41 @@ v1/v2 全文在 git 历史（`d5de1e3` / `ed7b29c`）。
 **验收**：逐项 PASS / FAIL / NOTE + 具体证据（引文或反例构造）。产物落
 `.hopper/handoffs/T-074-output.md`，含 `## Verdict`（`PASS` / `PASS_WITH_NOTE` /
 `REWORK`）、`## Files touched`（应为 none）、独立成节的 `## 审核遗漏`。
+
+## T-075（runtime-evals/自主化审核 — codex 独立参照审）
+
+**Task-type**: `code-review-adversarial` · **只读评审，不改任何代码/文档**
+
+**评审对象**：`docs/harnessloop-runtime-evals-autonomy-audit-20260728.md`（**修订版**，
+commit `4ea6813`——已吸收第 1 轮对抗核实）。
+**先读**：`.hopper/handoffs/T-074-output.md`（grok 第 1 轮，判 PASS_WITH_NOTE）。
+**对照源码**：harnessloop submodule `b389eac`（v0.26.0）+ 本项目 `.harnessloop/`（14 轮）。
+
+**你的角色是第二家独立参照**，不是复读 T-074。四项：
+
+1. **仲裁三个争议点**（双方立场并列给你，请按源码证据独立裁定，不预设谁对）：
+   - **争议 A（资产 #3）**：原报告称 reference-roots 两文件模式可"同形扩展"到服务
+     端点域；T-074 降级为"纪律可借、机制不可照搬"（理由：expect_present 是磁盘
+     sentinel、服务端点无同构物、available 语义完全不同）。哪个表述准确？降级是否
+     过度（例如：探活 sentinel 是否其实可以定义为"GET <path> 期望 <status/字段>"
+     的服务域同构物）？
+   - **争议 B（分步安全性）**：原报告建议"B2a 式先入账后硬门"；T-074 判其在硬门
+     裁决下危险并给出 D0/D1/D2 替代（D1 起即带"缺 ran 记录不得 positive"）。
+     D1 的"半个硬门"起步是否现实——一个从未有过 eval 结果文件的项目，第一天就要求
+     缺 ran 即不得 positive，会不会把所有存量 goal 直接判死？迁移语义谁来定义？
+   - **争议 C（O-1 定性）**：T-074 把"eval 执行者未建模"判为与 GAP-2/3 同级的一等
+     卡点。是否成立？还是执行拓扑本可以留给各项目的 cost-context-policy/委派矩阵
+     自定义、协议只需定义结果文件契约（即 O-10 的"账本核对"边界已经足够）？
+2. **核实 O-1..O-10 有没有被夸大**：逐条判 real-blocker / nice-to-have / 已被原报告
+   覆盖只是换了说法。特别审 O-2（round_cost 交互）与 O-4（handoff 门闩）是不是
+   "自主化的真实前置"还是"可以在 EV-F 里顺手处理的细节"。
+3. **三方漏网之鱼**：原报告 + T-074 都没抓到的、会卡「配置化外部系统 + runtime evals
+   硬门 + 单会话多轮自续」的点。提示两个没人碰过的面：环境自检
+   （state/environment.md 的 delegation probe）与多系统 eval 的**并发/顺序**语义
+   （两个系统的探针互相依赖时协议怎么表达）。
+4. **对附录 A.3 的四个开放问题给出你的独立推荐**（一句话理由即可）——供用户裁决时
+   参照，不替用户决。
+
+**验收**：逐项给裁定 + 源码证据。产物落 `.hopper/handoffs/T-075-output.md`，含
+`## Verdict`（对**修订版报告**整体判 PASS / PASS_WITH_NOTE / REWORK）、
+`## Files touched`（应为 none）、独立成节的 `## 三方漏网之鱼` 与 `## A.3 推荐`。

@@ -121,8 +121,9 @@ threshold 这轮跑没跑、结果如何"没有机器可读的载体。
 `none — <理由>`）；机械门核对：字段存在、路径 containment、结果文件 schema 合法、
 **声明为本轮到期的 threshold-id 全部 ran**、pass/fail 与 Feedback 的一致性（fail 却判
 positive → 违规）；thresholds.md 内容摘要进 coverage（防同轮改判据，同
-`external_roots_declared` 防同轮换声明的既有做法）。可按 B2a 先例**分步**：先入账
-（字段+存在性）再硬门（一致性否决）。
+`external_roots_declared` 防同轮换声明的既有做法）。分步路径**不采用**「B2a 式先入账
+后硬门」（已撤回，见附录 A.2；迁移语义按附录 C 裁决：D0 shadow → per-goal 显式激活 →
+激活后 D2 全硬门，不追溯改判旧轮）。
 
 ### GAP-4（R4）自主性的真卡点：协议要求自续，但**停止不落痕**——偏离免费且不可见
 
@@ -219,11 +220,13 @@ runtime gate** by itself"——它是 loop **policy 健壮性自查清单**（13
 1. **`evidence/runtime/` 目录**（loop SKILL.md:343）——**弱资产**：是约定落点，不是能力；
    空目录 + 无 schema ≠ runtime eval 就绪。
 2. **thresholds 三表列名正确**且本项目实例已被真实 runtime eval 声明填满——成立，保留。
-3. **reference-roots 两文件模式**——**纪律可借、机制不可照搬**（T-074 降级）：
-   `expect_present` 是磁盘路径 sentinel，服务端点没有同构物；"available" 从
-   samefile/stat 变成活探针（超时、鉴权、非幂等副作用），失败模式完全不同。可复用的
-   是声明/本机绑定分离、versioned 零绝对路径、fail-closed、coverage 可见、不泄本机
-   路径这些**纪律**，不是代码搬迁。
+3. **reference-roots 两文件模式**——终版表述（T-075 仲裁，附录 C 采信）：
+   **控制面同形，探针执行器异构**。声明/本机绑定分离、每次门重新绑定判 available、
+   fail-closed、coverage 可见、不泄本机路径——这套**机制骨架**可复用（不只是抽象
+   纪律）；服务域可在同一控制面位置定义健康/身份断言（如 `GET /health` 期望状态码/
+   字段/版本），即 sentinel 的架构同构物。但探针执行器必须新建（method/timeout/TLS/
+   鉴权/重试/副作用等级），不得复用 `_exists_as`/`samefile`，一次 liveness 也不等同
+   后续 eval 可用性。
 4. **B2a Review wiring**——**只证明了入账，没证明硬门**（T-074 降级）：B2a 明确不读
    Review 内容、不做一致性否决（loop SKILL.md:466 划界），且 B2b 至今 pilot-gated。
    接线形状（字段+解析+coverage）可借鉴；**硬门一致性否决是未验证的新工作**。
@@ -261,7 +264,7 @@ GAP-6 secret 守门 ──（独立，可并行；但应先于大规模自主 e2
 | EV-A | GAP-7 | evals 术语撞名处置（先行小项） |
 | EV-B | GAP-1 | 外部系统两文件声明 + 探活 + coverage（仿 reference-roots） |
 | EV-C | GAP-2 | threshold 行 ID 化 + 每轮机器可读 eval 结果文件 |
-| EV-D | GAP-3 | decision.md `Evals:` 字段 + 机械门核对（B2a 同形，分步：先入账后硬门） |
+| EV-D | GAP-3 | decision.md `Evals:` 字段 + 机械门核对（接线形状借 B2a；分步按附录 C：D0 shadow → 激活 → D2 全硬门，不走「先入账」） |
 | EV-E | GAP-5 | 测试资源写预授权的结构化落点 + 修 continue :36/:46 矛盾 |
 | EV-F | GAP-4 | 停止落痕 + round 预算词汇 + continue 措辞收窄为重入门 |
 | EV-G | GAP-6 | evidence secret 守门插件化（或最低限度 setup 显式 warning） |
@@ -328,7 +331,7 @@ T-074（grok，判 PASS_WITH_NOTE）对本报告做了证据核实、资产反�
 ## 6. 方法与状态
 
 - 审核方式：主会话源码级审读（v0.26.0 `b389eac`），全部证据 file:line 可复核；
-  实践语料为本项目 20 轮 round 文档与 goal 002 thresholds 实例。
+  实践语料为本项目 14 轮 round 文档与 goal 002 thresholds 实例。
 - 独立复核：本报告将按项目既定纪律派一轮异构对抗审（核实证据真实性、结论是否跟随、
   以及**审核遗漏**——还有哪些会卡 R1-R5 的点没被列出），结果另附。
 - 本报告只是卡点清单；任何 EV 立项、优先级、以及是否走"规格 → 对抗审 → teeth"的
@@ -348,3 +351,56 @@ T-074（grok，判 PASS_WITH_NOTE）对本报告做了证据核实、资产反�
 **不在授权内（继续停人）**：生产系统写；hopper-plugin 侧超出观察记录的改造；
 GitGuardian 控制台操作；任何触及用户全局环境（18789 网关等）的动作；以及裁决中
 发现"两个方向都合理且不可逆"的分叉——此类留 AskUserQuestion 待用户回来。
+
+## 附录 C：终版裁决（main-session ruling under user delegation 2026-07-28）
+
+> 依据附录 B 的执行授权做出。输入：本报告修订版 + T-074（grok）+ T-075（codex）。
+> T-075 对修订版判 REWORK；其抓到的本报告自相矛盾（主文 :124/:264 与 A.2 冲突）、
+> 残留计数错误（:331）与资产 #3 表述，均已在本次修订就地修正。
+> **裁决标注纪律**：以下各条为主会话裁决，非 user-confirmed；用户回来后可推翻任一条。
+
+### C.1 三争议点裁定
+
+| 争议 | 裁定 | 依据 |
+|---|---|---|
+| A（reference-roots 迁移性） | 采 T-075 中间位：**控制面同形，探针执行器异构**。机制骨架（声明/绑定分离、每门重判 available、fail-closed、coverage）可复用；探针执行器全新建 | T-075 给出的 verify_protocol.py:385-425/:1251-1268 源码定位成立；T-074 的"无同构物"降过头（服务域健康断言就是 sentinel 的架构同构物），我的原文"同形扩展"又过于乐观 |
+| B（分步安全性） | 采 T-075 迁移语义：**D0 shadow（schema+stable ID+权威 due-set+eval_gate_version，无门）→ per-goal 显式激活清单（每 threshold 标 due/future/retired/historical + activation_round）→ 激活后 D2 全硬门（ran 完整性 + pass/fail↔Feedback 一致性同次生效）**。新 goal 默认激活，存量 goal 显式 opt-in，不追溯改判旧轮 | T-075 实测本项目 thresholds 混有历史/defer/未来批次行且无 stable ID——"首日全硬"要么判死存量要么逼实现者临场猜 due 集合；T-074 的 D1 方向对但不完整（只 ran 不看 pass 不满足用户硬门裁决①） |
+| C（O-1 执行者定性） | 采 T-075：**核心协议 executor-neutral**；机械门需要的是结果账本里的 **provenance**（executor 类别、command digest、系统绑定指纹、授权引用）→ 归 EV-C schema + EV-E 授权联结。EV-H 降为**条件前置**（仅当项目选用委派/可写 runner），且以 M-1 的 delegation_health 为其前置 | T-075 引 handoff-template:8-29（Tool And Access Contract 已存在）与 cost-context-policy 委派矩阵可自定义成立；"规定谁跑"防不了执行者伪造 ran=true，可信度来自账本字段而非拓扑限定 |
+
+### C.2 O 清单与 M 清单裁定
+
+- **O 复判采 T-075**：O-1/O-2/O-3/O-7 = 已被覆盖（T-074 有夸大）；O-4/O-5/O-6/O-10 =
+  nice-to-have / 边界说明；O-8 = real（仅对 strict 自续承诺，归 EV-F 按档位分层）；
+  **O-9 = real-blocker 且是 EV-D 的硬前置**（无权威 due-set 则"缺 ran 不得 positive"
+  不可计算）——依赖图已按此改。
+- **M-1..M-4 全部入册为一等卡点**（M-1 证据已由主会话独立复核：environment.md:45
+  写 pass、同页 5 个 TODO；check_setup 实跑 complete:True + field_todo:12——
+  "complete=true 且 TODO>0" 在 continue 的 warning 分支之外静默穿过）。处置：
+  M-2（DAG/并发/组合语义）与 M-3（attempt/freshness/config 指纹）进 EV-C schema；
+  M-4（cleanup outcome）进 EV-C schema + EV-E 清理契约；M-1 拆两半——
+  delegation_health 机器化作 EV-H 前置，"setup 门对 TODO 的诚实暴露"另立小项 EV-K。
+
+### C.3 A.3 四问裁决（采 T-075 四条推荐）
+
+1. **EV-D 最小 teeth = D2**（ran 完整性 + pass/fail 一致性同次激活生效）；D1 只是
+   激活前的 shadow 阶段读数，不单独作为"已满足硬门"状态存在。
+2. **外部系统 = 独立 versioned JSON + gitignored 本机绑定**（仿 reference-roots 控制
+   面）；**不做全局 gate_blocking**，改为"active due eval 绑定的系统未声明/不可用 →
+   违规"的条件阻塞；check_setup 只加 advisory 行；data-sources 表保留为人读视图。
+3. **默认执行者 = 主会话（或其直接调用的受控 runner）**；项目要切换到预授权子代理写，
+   必须先有新鲜的机器可读 delegation probe（M-1 修复后）。
+4. **本项目档位 = standard + 结构化测试资源预授权**（既有 push 例外条款的同形扩展），
+   不降 strict；strict 档保持逐 checkpoint 人闸（O-8），自续词汇按档位分层。
+
+### C.4 终版 EV 立项与执行批次
+
+**EV-A（命名）当场裁决**：新机制定名 **runtime acceptance evals（验收 evals）**；
+`.harnessloop/evals/matrix.md`（policy 自查矩阵）保持原位不迁移（迁移成本 > 收益），
+loop SKILL.md 加一行显式区分。撞名处置完毕，不再单独立项。
+
+| 批 | 项 | 内容 | 形态 |
+|---|---|---|---|
+| **批 1（主线）** | EV-B+C+E+I+D（+M-2/3/4 融入 schema，EV-J 融入 B，O-10 融入 D 边界声明，EV-H 作条件路径章节） | **一份综合规格**：外部系统声明 → eval 契约与结果账本 → 授权联结 → 门接线与激活 | 规格 → ≥2 轮异构对抗审 → 分 PR 实现（外部解析基准的成功打法） |
+| **批 2（自主线）** | EV-F（+O-2/O-4/O-8 融入） | 停止落痕 + round 预算词汇 + 按档位分层的自续 + continue 措辞收窄 | 独立小规格 → 对抗审 → 实现 |
+| **批 3（小项）** | EV-K（M-1 的 setup 诚实暴露半边）、EV-G（evidence secret 守门插件化） | 独立小修 | 各自小规格或直接 issue |
+| **defer** | O-6（intake 导入旧 eval） | 单会话主线闭环后再议 | 记录在案 |
