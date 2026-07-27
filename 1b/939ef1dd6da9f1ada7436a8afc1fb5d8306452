@@ -1,0 +1,61 @@
+docs/harnessloop-runtime-evals-autonomy-audit-20260728.md
+  s_c587ecf7bbc3e2::t_5a865497a062bd 124-126,223-229,267-267,334-334
+.hopper/handoffs/leader-tasklist.md
+  0000019fa51dadb3 1-1532
+.hopper/queue.md
+  0000019fa51dadb3 1-100
+.hopper/handoffs/T-075-output-raw.txt
+  0000019fa51dadb3 1-7125
+.hopper/handoffs/T-075-output.log
+  0000019fa51dadb3 1-7125
+.hopper/handoffs/T-075-output.md
+  0000019fa51dadb3 1-394
+.hopper/handoffs/T-075-progress.log
+  0000019fa51dadb3 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "1b939ef1dd6da9f1ada7436a8afc1fb5d8306452",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_5a865497a062bd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 0,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    },
+    "s_e2e0c705bee149::t_9d63395d4fd653": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785181613175261000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa51dadb3": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-fable-5",
+        "id": "ai-thread-claude-claude-fable-5-1785181613491"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 16278,
+      "total_deletions": 0,
+      "accepted_lines": 16278,
+      "overriden_lines": 0
+    }
+  }
+}
