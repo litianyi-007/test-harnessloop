@@ -1461,3 +1461,34 @@ v1/v2 全文在 git 历史（`d5de1e3` / `ed7b29c`）。
 **验收**：逐项 PASS / FAIL / NOTE + **具体反例构造**。产物落
 `.hopper/handoffs/T-073-output.md`，含 `## Verdict`、`## Files touched`（应为 none）、
 独立成节的 `## 值不值得做` 与 `## §1(c) 拆不拆`。
+
+## T-074（runtime-evals/自主化审核报告 — 对抗核实）
+
+**Task-type**: `code-review-adversarial` · **只读评审，不改任何代码/文档**
+
+**评审对象**：`docs/harnessloop-runtime-evals-autonomy-audit-20260728.md`（commit 见 git log）。
+**对照源码**：harnessloop submodule `b389eac`（v0.26.0）；实践语料 `.harnessloop/`（20 轮）。
+
+**评审语境**：这是一份**差距审核**（需求 R1-R5 + 三项已裁决语义 vs 现状），不是代码评审。
+你的任务是核实这份审核本身。
+
+**四项**：
+
+1. **证据核实**：7 个 GAP 的每一条 file:line 证据是否真实、引用是否准确、结论是否
+   跟随证据。特别核对两处「翻转初判」的关键引文：loop SKILL.md:552-567 是否真的
+   构成「协议要求单会话多轮自续」；thresholds-template 的三表列名是否真如报告所述。
+2. **反向核实「资产清单」**：报告列了 8 条「已具备资产」。逐条挑战——它们真的可用
+   吗？（例如 B2a wiring 真的能同形迁移到 eval 结果核对？reference-roots 模式扩到
+   服务端点域有没有报告没提的结构性障碍——服务端点没有 expect_present 这样的文件
+   sentinel，探活语义完全不同。）
+3. **审核遗漏（最重要）**：还有哪些会卡「配置化外部系统 + runtime evals 硬门 +
+   单会话自主 loop」的点没被列出？从这些面找：round_cost.py 与多轮自续的交互、
+   delegation 矩阵对 eval 执行者的约束、handoff 机制在自主多轮下的堆积、
+   check_setup 五文件门与新增声明文件的关系、intake 路径、以及「eval 执行本身
+   由谁跑」（主会话 vs 子代理 vs 外部命令）这个报告完全没展开的维度。
+4. **依赖图与分步判断**：EV-A..G 的依赖关系对不对？「GAP-3 走 B2a 式先入账后硬门」
+   这个分步建议是否成立，还是硬门语义下入账阶段本身就是个危险的中间态？
+
+**验收**：逐项 PASS / FAIL / NOTE + 具体证据（引文或反例构造）。产物落
+`.hopper/handoffs/T-074-output.md`，含 `## Verdict`（`PASS` / `PASS_WITH_NOTE` /
+`REWORK`）、`## Files touched`（应为 none）、独立成节的 `## 审核遗漏`。

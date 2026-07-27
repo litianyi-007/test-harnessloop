@@ -11,7 +11,12 @@
 > ② 自主化 = **单会话多轮自续**为主线（跨会话调度只记附带观察）；
 > ③ 外部写边界 = **已声明系统上的测试资源写 + 清理可被契约预授权**，生产/不可逆写仍停人。
 >
-> **审核对象**：harnessloop **v0.26.0**（`b389eac`）源码 + 本项目 20 轮实践语料
+> **修订 2026-07-28（T-074 对抗核实后）**：正文就地修正 5 处事实错误（轮数 14 非 20、
+> Stop 清单 6 条非 5、verify_protocol 的 eval 命中 2 处非 3、GAP-1 读者范围过窄、
+> GAP-4 行号偏宽）；资产清单按 T-074 反向核实降级表述；O-1..O-10 遗漏与修订后的
+> 分步建议见文末附录 A。原始版本在 git `c40ff73`。
+>
+> **审核对象**：harnessloop **v0.26.0**（`b389eac`）源码 + 本项目 14 轮实践语料
 > （goals 001/002 全部 round 文档、`.harnessloop/state/*`、goal 002 的 thresholds.md 实例）。
 > 审核产出是**卡点清单**，不是修复；每条卡点带 file:line 证据。改进方向仅列候选，
 > 是否立项待用户裁决。
@@ -29,7 +34,7 @@
 | 每轮验证命令 | scope-lock 必须定义 "**Verification commands or checks**"（loop SKILL.md:356） | **否** |
 | runtime 证据落点 | 轮结构自带 `evidence/runtime/` 目录（loop SKILL.md:343） | 仅 Rule A 查容器包含，内容零解析 |
 | 测试资源写的合法性 | write-safety-required blocker 定义是**条件式**："without **declared** dry-run/**test-resource**/rollback/human confirmation"（continue SKILL.md:46）——暗示"声明了就不阻塞" | **无处可做出那个 declared**（见 GAP-5） |
-| 单会话多轮自续 | Loop Continuation step 6 + "**Stop only when**" 五条穷举清单（loop SKILL.md:552-567） | 停止**不落任何痕**（见 GAP-4） |
+| 单会话多轮自续 | Loop Continuation step 6（loop SKILL.md:556）+ "**Stop only when**" 六条穷举清单（:560-567） | 停止**不落任何痕**（见 GAP-4） |
 | goal 级验证选项 | `goal-breakdown-template.md:16` "Runtime validation options" 字段 + subgoal 表 Validation method 列 | **否** |
 
 这个断裂形状与 **B2a 之前的 Review 断裂完全同形**：评审真实存在（.hopper/handoffs 里 70 份），
@@ -54,9 +59,8 @@
 
 **证据**：
 - `data-sources-template.md:16-24`：Runtime Validation Systems / External Tools 两表全部自由文本。
-- 全插件树 grep：读 `data-sources.md` 的只有 `check_setup.py`（填充度检查）与
-  `init_project.py`（初始化落模板）；`verify_protocol.py` 仅在 docstring 里把它当
-  PATHISH 前缀示例（:48、:2787）。**没有任何代码解析表格内容。**
+- 全插件树 grep：**解析**它的代码为零。`check_setup.py` 只查填充度、`init_project.py` 只落模板；`channels`/`connectivity`/`secrets` 三个 skill 在协议层要求 agent 读它（模型侧 inventory/探活约定，见附录 A O-7），但同样**没有任何代码解析表格内容**；`verify_protocol.py` 仅在 docstring 里把它当
+  PATHISH 前缀示例（:48、:2787）。
 - setup SKILL.md 明文：data-sources **刻意排除**在 gate-blocking 三文件之外
   （"deliberately excluded... A fully-skipped data-sources file cannot make any
   continuation gate unevaluable"）。这个设计在"声明只是文档"的世界里是对的；
@@ -98,7 +102,7 @@ threshold 这轮跑没跑、结果如何"没有机器可读的载体。
 **证据**：
 - `decision-template.md` 全字段：Feedback/Verdict/Residuals/Blocker/Review×4/
   Mechanical gate/……**没有任何 eval 或 threshold 结果字段**。
-- `verify_protocol.py`：全文 grep "eval" 仅 3 处无关命中（PATHISH 前缀、注释用词）。
+- `verify_protocol.py`：全文 grep "eval" 仅 **2** 处无关命中（PATHISH 前缀 `evals/` :310、英文 evaluated :1647）。
   机械门对 eval 的存在**零感知**。
 - loop SKILL.md:442 明文分层："a round that exits verify_protocol.py clean still fails
   if adversarial review, **thresholds**, or feedback classification are not satisfied"
@@ -123,12 +127,12 @@ positive → 违规）；thresholds.md 内容摘要进 coverage（防同轮改�
 ### GAP-4（R4）自主性的真卡点：协议要求自续，但**停止不落痕**——偏离免费且不可见
 
 **证据**：
-- loop SKILL.md:552-567：step 6 "If feedback is positive and the goal is not achieved,
-  **continue to the next subgoal or task**"；"**Stop only when**" 五条穷举（goal 达成/
-  缺人输入/缺访问事实/写安全缺失/数据契约或阈值不可评估）。**"等用户敲 continue"
+- loop SKILL.md:556：step 6 "If feedback is positive and the goal is not achieved,
+  **continue to the next subgoal or task**"；:560-567 "**Stop only when**" 六条穷举（goal 达成/
+  缺人输入/缺访问事实/写安全缺失/数据契约不可满足/阈值不可评估）。**"等用户敲 continue"
   不在清单里。**
 - 实践语料：goal 002 全部 10 轮（+goal 001 的 4 轮）每轮收盘即停，`state/current.md`
-  的 "Next proposed action" 一律以"下一 continue 开 SG-X"收尾——20/20 轮由人工推进。
+  的 "Next proposed action" 一律以"下一 continue 开 SG-X"收尾——**14/14 轮**由人工推进（4+10，磁盘 rounds/ 目录实数）。
 - 协议里没有任何机制记录"loop 为什么停"：决策文件无 stop-reason 字段，self-audit 的
   确定性信号清单（loop SKILL.md:330 附近）不含停止事件，coverage 无停止计数。
 - 会话现实（上下文/成本压力——本项目单轮动辄数十万 token）没有对应的协议词汇：
@@ -185,7 +189,9 @@ positive → 违规）；thresholds.md 内容摘要进 coverage（防同轮改�
 **为什么卡**：runtime evals 自主化 = 更多子代理自动写 evidence、更多外部系统真实
 配置流经 evidence——事故面的系统性放大，而防线在插件层为零。
 
-**定性**：插件能力缺失（安全）。
+**定性**：插件能力缺失（安全）。**注**（T-074）：事故档案 §7 建议 1 原文指向 hopper
+vendor 日志**写端**；本 GAP 的主线是 harnessloop 自己的 evidence 写端——两条链相邻但
+不同，hopper 侧仍按 §5 排除在本审核外、在事故档案挂账。
 **改进方向候选**：evidence 写入纪律进协议（brief 级"只写参数名"已有，可加机械抽查：
 evidence 文件对 channel-params 已登记值做 L1 摘要比对——摘要不含明文的做法本项目已
 验证）；或最低限度把"未装 secret 守门"变成 setup 自检的一个显式 warning 项。
@@ -205,32 +211,50 @@ runtime gate** by itself"——它是 loop **policy 健壮性自查清单**（13
 **改进方向候选**：新机制命名避开（如 `runtime-checks` / `acceptance-evals` 择一），
 或将 policy matrix 改名（有迁移成本，init 落点与 PATHISH 前缀都要动）。
 
-## 3. 已具备的资产（诚实记账——这些不是卡点）
+## 3. 已具备的资产（T-074 反向核实后的降级表述——诚实记账）
 
-1. **`evidence/runtime/` 目录**已在轮结构（loop SKILL.md:343）——runtime 证据有指定落点。
-2. **thresholds 三表列名正确**（差的是 schema 与解析，不是概念）。
-3. **reference-roots 两文件模式**（v0.21-v0.25，三轮对抗审收敛）——GAP-1 的域内同形
-   先例：声明/绑定分离、探活 sentinel、fail-closed、coverage 可见、不泄本机路径。
-4. **B2a Review 字段 wiring**（v0.17.0）——GAP-3 的接线先例，且证明了"先入账后硬门"
-   的分步路径可行。
-5. **runtime-recoverable 自动恢复轮**（continue SKILL.md:35、loop SKILL.md:184）——
-   自主性保留路径已存在：可恢复阻塞不停人，自动开只读调查轮。
-6. **control-contract 的 auto-continue 区块** + 本项目 push 例外条款实例——预授权
-   模式的词汇骨架与实践先例都在。
-7. **channel-params + secrets skill**：凭证按参数名引用的纪律已存在且经受过事故检验。
-8. **委派矩阵 "Round acceptance never delegate"**（loop SKILL.md:419）——与硬门 evals
-   兼容：机械门提供事实，裁决权仍在主会话，无授权冲突。
+> 初版此节偏乐观；T-074 逐条反向核实后，多条从"可复用机制"降为"可借纪律/先例"。
+> **降级不改变总判**（接线为主仍成立），但改变各 EV 的工作量估计。
+
+1. **`evidence/runtime/` 目录**（loop SKILL.md:343）——**弱资产**：是约定落点，不是能力；
+   空目录 + 无 schema ≠ runtime eval 就绪。
+2. **thresholds 三表列名正确**且本项目实例已被真实 runtime eval 声明填满——成立，保留。
+3. **reference-roots 两文件模式**——**纪律可借、机制不可照搬**（T-074 降级）：
+   `expect_present` 是磁盘路径 sentinel，服务端点没有同构物；"available" 从
+   samefile/stat 变成活探针（超时、鉴权、非幂等副作用），失败模式完全不同。可复用的
+   是声明/本机绑定分离、versioned 零绝对路径、fail-closed、coverage 可见、不泄本机
+   路径这些**纪律**，不是代码搬迁。
+4. **B2a Review wiring**——**只证明了入账，没证明硬门**（T-074 降级）：B2a 明确不读
+   Review 内容、不做一致性否决（loop SKILL.md:466 划界），且 B2b 至今 pilot-gated。
+   接线形状（字段+解析+coverage）可借鉴；**硬门一致性否决是未验证的新工作**。
+   分步风险见附录 A 的 D0/D1/D2。
+5. **runtime-recoverable 自动恢复轮**——存在但**只读**（只允许调查/证据刷新/清理计划
+   起草），runtime eval 常需测试写，对 e2e 自主化帮助窄。是恢复路径资产，不是 eval
+   执行路径。
+6. **control-contract auto-continue 区块 + push 例外条款**——词汇骨架与手写先例在；
+   机器不解析 auto-continue 条件、不执行预授权分支。**是先例，不是可复用实现**。
+7. **channel-params + secrets skill**——**半资产**：参数名引用纪律在，写端机械守门
+   不在；事故正是在该纪律存在之后发生的。
+8. **"Round acceptance never delegate"**（loop SKILL.md:419）——矩阵行成立、与硬门
+   兼容；但同表 Acceptance testing = Should delegate、Evidence collection 可委派——
+   裁决权清晰**不等于**"谁跑 eval"已清晰（见附录 A O-1）。
 
 ## 4. 依赖关系与候选 evolution issues（待用户裁决，未立项）
 
 ```
 GAP-7 命名   ──（先行，零依赖，动手前处置）
 GAP-1 系统声明层 ──┐
-GAP-2 eval schema ─┼──→ GAP-3 机械门接线（核心；依赖 1/2 的载体）
-GAP-5 预授权词汇 ──┘      （5 与 1 联动：只有已声明系统可被预授权）
-GAP-4 停止落痕   ──（独立，可并行）
+GAP-2 eval schema ─┼──→ O-1 eval 执行者契约 ──→ GAP-3 机械门接线（核心）
+GAP-5 预授权词汇 ──┘      （5 与 1 联动；O-1 与 O-3 耦合：委派执行须携带预授权范围）
+GAP-4 停止落痕   ──（独立；与 O-2 round_cost/预算、O-4 handoff 门闩、O-8 strict 档耦合）
 GAP-6 secret 守门 ──（独立，可并行；但应先于大规模自主 e2e）
 ```
+
+> **T-074 补边**（原图漏掉的依赖）：①GAP-3 依赖 **O-1（eval 执行者契约）**——硬门只能
+> 核对产物，产物由谁在什么权限边界产生若未定义，EV-D 只是把临场结果多写一个 JSON；
+> ②GAP-1 的新声明文件必须回答与 check_setup 五文件门的关系（O-5）；③GAP-4 的预算
+> 词汇必须接 round_cost 的既有结算链（O-2），且须处理 strict 档明文禁止连续无人轮
+> 的冲突（O-8）。
 
 | 候选 | 对应 | 一句话 |
 |---|---|---|
@@ -241,6 +265,56 @@ GAP-6 secret 守门 ──（独立，可并行；但应先于大规模自主 e2
 | EV-E | GAP-5 | 测试资源写预授权的结构化落点 + 修 continue :36/:46 矛盾 |
 | EV-F | GAP-4 | 停止落痕 + round 预算词汇 + continue 措辞收窄为重入门 |
 | EV-G | GAP-6 | evidence secret 守门插件化（或最低限度 setup 显式 warning） |
+| **EV-H** | **O-1/O-3** | **eval 执行者契约**：threshold 的 Command 由谁（主会话/只读子代理/预授权子代理）在什么 cwd/凭证边界执行、stdout 落哪、失败如何变成 ran=fail；委派时 handoff 须携带预授权范围（T-074 判其与 GAP-2/3 同级） |
+| EV-I | O-9 | scope-lock "Verification commands" 与 thresholds 的双登记合一：单一"本轮到期集合"来源 |
+| EV-J | O-5 | 新声明文件与 setup 门的关系显式化（gate_blocking 与否、wizard 是否加步、缺失语义） |
+
+## 附录 A（2026-07-28）：T-074 对抗核实的吸收记录
+
+T-074（grok，判 PASS_WITH_NOTE）对本报告做了证据核实、资产反向核实、遗漏挖掘与
+依赖图复核。verdict：7 GAP 与总判成立、两处翻转初判实质正确；不给 PASS 的原因是
+本报告的事实错误（已就地修正，见页首修订说明）、资产偏乐观（§3 已降级重写）、
+分步建议在硬门裁决下不安全（见 A.2）、以及完备性缺口（A.1）。
+
+### A.1 十条审核遗漏（O-1..O-10）及处置
+
+| # | 遗漏 | 处置 |
+|---|---|---|
+| **O-1** | **eval 执行者未建模**（最严重）：协议只有委派矩阵的粗粒度行，没有"threshold X 的 Command 由谁在什么权限边界执行、失败如何变成 ran=fail"。硬门只能读产物；执行拓扑缺失时 EV-D 会空转——假绿从"没字段"变成"字段写 none / 伪造 pass" | **升为一等卡点**，立 EV-H，插进依赖图（GAP-3 的前置） |
+| O-2 | round_cost 与多轮自续的交互：每轮强制结算但无"预算触顶→合法 checkpoint 停"机械链；跨子代理执行时 cost 常 unavailable，账本失真反而削弱"用预算约束自续"的前提 | 并入 EV-F 规格范围 |
+| O-3 | 委派矩阵无 "runtime-eval 执行"专用行；委派执行时 handoff 无预授权字段的机械要求 | 并入 EV-H/EV-E |
+| O-4 | auto-continue 的散文条件含 "Open handoffs 无阻塞"，自主多轮下 handoff 未关会导致合法停或静默违例，皆无痕 | 并入 EV-F（stop-record 的枚举须含此项） |
+| O-5 | check_setup 五文件门与新增声明文件的关系未回答（reference-roots 已是"游离于 setup 完备性"的先例，运维上"setup complete 但系统未声明"体验割裂） | 立 EV-J |
+| O-6 | intake 路径（第二条进 loop 的口子）对"带着已跑 e2e 证据接管"无 eval 导入/新鲜度定义，假绿可从 intake 绕入 | **defer**：单会话主线闭环后再处理，记录在案 |
+| O-7 | channels/connectivity 已有模型侧 inventory/探活约定——桥不是"无"而是"有约定无 schema 无接线"；EV-B 须决定强化这两 skill 还是另起 JSON，避免三套登记 | 并入 EV-B 设计输入 |
+| O-8 | **strict 档明文禁止连续无人轮**（profiles:9、:60）——恰是外部系统/敏感数据场景该选的档位，与"单会话多轮自续"正面冲突 | 并入 EV-F：自续词汇必须按档位分层（lite/standard 可自续、strict 保持人闸），不得越过 profile 体系 |
+| O-9 | scope-lock "Verification commands" 与 thresholds 双登记、无 ID 对齐、无哪份为准 | 立 EV-I（EV-C 的姊妹项） |
+| O-10 | 硬门 = **核对 eval 结果账本**，不是 verify_protocol 内嵌 test runner（它从不执行业务命令，这是设计边界不是缺陷） | 写进 EV-D 规格的显式边界声明 |
+
+### A.2 分步建议修订：撤回"纯 B2a 式先入账"
+
+原文 GAP-3 建议"可按 B2a 先例分步：先入账（字段+存在性）再硬门"。T-074 指出该类比
+在硬门裁决下不安全：**B2a 能先入账，是因为评审实践已大量存在，入账消灭的是"有评审
+无账"；而 runtime eval 的实践是"thresholds 有行、常不跑"——入账若允许 `none — <理由>`
+自由逃逸，等于给"声明了没跑"开一个协议背书的正规出口，比现状更糟。**
+
+修订为三段（采 T-074 的对抗建议，细节留给 EV-D 规格）：
+
+- **D0**：命名（EV-A）+ 结果文件 schema（EV-C 子集），无 gate。
+- **D1（最小 teeth——从第一天就带硬门的一半）**：`Evals:` 必填；若 goal thresholds
+  存在到期行，`none` 只允许 `none — deferred:<threshold-id 列表>` 且列表机器可解析；
+  结果文件 containment + schema 校验；**缺 ran 记录 → 不得 positive**。
+- **D2**：pass/fail 与 Feedback 一致性否决；thresholds 内容摘要进 coverage（防同轮改判据）。
+
+### A.3 T-074 留给用户的开放问题（原样转记，立项时须裁决）
+
+1. EV-D 的最小可接受 teeth 是"到期 threshold 必须 ran"（D1）还是必须到 D2 一致性
+   才算满足硬门裁决？
+2. 外部系统声明落 data-sources 的结构化扩展，还是独立 JSON（仿 reference-roots）？
+   是否进 gate_blocking？
+3. runtime eval 的默认执行者：主会话 / 只读子代理+主会话写 / 预授权子代理写？
+4. 本项目 control-contract 实质档位与自续主线的匹配：若实际接近 strict，自续是否应
+   降格为"checkpoint 密、人确认密"？
 
 ## 5. 边界外（按裁决不入主线，记录在案）
 
