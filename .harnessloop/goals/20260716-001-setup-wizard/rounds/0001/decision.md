@@ -4,6 +4,10 @@
 - Blocker type: none
 - Recovery eligible: yes
 - Accepted: no
+- Review: .harnessloop/goals/20260716-001-setup-wizard/rounds/0001/reviews/adversarial-review.md
+- Reviewer: independent adversarial design-review subagent via main session (handoff 0001-02)
+- Review verdict: rework
+- Review digest: 7c177d889f663370d59ab6fb71b6e785671ab466eb3990655fe5268d39d1b386
 - Active goal: 20260716-001-setup-wizard
 - Active round: 0001
 - Decision maker: main session（claude-fable-5）

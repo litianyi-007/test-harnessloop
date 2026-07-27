@@ -4,6 +4,10 @@
 - Blocker type: none（收盘时无 active blocker；T-046 codex 安全过滤器中止属评审执行层面的可恢复情况，已按既定改派路径当场解除）
 - Recovery eligible: 不适用（无收盘时 blocker）
 - Accepted: yes
+- Review: .hopper/handoffs/T-047-output.md
+- Reviewer: grok via hopper T-047
+- Review verdict: pass-with-note
+- Review digest: 969f1c4696e8ce85f8eef6267b59d67907478cc085f4dfbdd80a31fe1a8c08ee
 - Active goal: 20260718-002-agent-app
 - Active round: 0005（SG-5 kernel-client 完整化，闭合客户端交互环）
 - Decision maker: main session（claude-sonnet-5）

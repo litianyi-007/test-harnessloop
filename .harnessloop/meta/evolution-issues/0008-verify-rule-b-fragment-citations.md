@@ -98,8 +98,8 @@ round 0003 实现级对抗评审文件（rounds/0003/reviews/adversarial-review.
 ### 降级后的实际状态
 
 - **假阴性面（判定路径）归零**：后缀回退不再能把任何不可解析的引用判为 pass。T-062→T-064 追了三轮的那一整族伪唯一/逃逸场景，grok T-065 逐个复跑，**现在一律 dangling**。T-064 MUST-FIX A 与 T-063 MUST-FIX 1 从"判定问题"降级为"提示精度问题"。
-- **提示价值保留**：唯一命中时 violation detail 附 `— a unique suffix match exists at <路径>; if that is the intended file, cite it by a resolvable path or mark the line <!-- verify:ignore -->`，可读可诊断。
-- **误报率 28.7% → 37.8%**（+96 条，其中 87 条带提示 ≈91%）。**归因修正（grok T-065 指出）**：其中约 4 条实为 MUST-FIX C 的 containment 收紧带来的**少假绿收益**，不应全算作降级代价；v0.16.0 commit message 把 +96 全记为降级代价「略粗」，此处更正。
+- **提示价值保留（覆盖面见上方口径更正）**：唯一命中时 violation detail 附 `— a unique suffix match exists at <路径>; if that is the intended file, cite it by a resolvable path or mark the line <!-- verify:ignore -->`，可读可诊断。
+- **误报率 28.7% → 37.8%**（+96 条，其中 87 条带提示（**注意口径**：91% 只描述『降级新增的那 96 条』；**全语料 401 条 dangling 中带提示的仅 88 条 = 21.9%**——本处原写法混用分母，据 codex T-066 §1 更正））。**归因修正（grok T-065 指出）**：其中约 4 条实为 MUST-FIX C 的 containment 收紧带来的**少假绿收益**，不应全算作降级代价；v0.16.0 commit message 把 +96 全记为降级代价「略粗」，此处更正。
 - **零迁移**：本项目 14 轮 12 条引用 `citations_suffix_hinted=0`，从未依赖后缀回退；未加任何 `verify:ignore`、未改任何评审文档（v0.12.0 E1 纪律）。
 - `validate.py` 由 129 → **175 检查**，历史反例全部转为"必须 dangling"断言，三次 mutation 全部按预期翻红。
 

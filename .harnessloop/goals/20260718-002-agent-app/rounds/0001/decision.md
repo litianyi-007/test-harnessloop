@@ -4,6 +4,10 @@
 - Blocker type: none
 - Recovery eligible: 不适用（无 blocker）
 - Accepted: yes（追认已交付工作、归位状态）
+- Review: .hopper/handoffs/T-042-output.md
+- Reviewer: grok via hopper T-042
+- Review verdict: rework
+- Review digest: 235dd45c9fe9733aa8ffd9145d141cc4b80d18772fe37d03b5fcaebc3f83b4c8
 - Active goal: 20260718-002-agent-app
 - Active round: 0001（实现阶段首轮 · 补记 + 状态归位）
 - Decision maker: main session（claude-fable-5）

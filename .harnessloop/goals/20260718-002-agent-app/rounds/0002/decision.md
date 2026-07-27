@@ -4,6 +4,9 @@
 - Blocker type: none
 - Recovery eligible: 不适用（无 blocker）
 - Accepted: yes
+- Review: none — 本轮为实现类编码（SG-4 kernel-client + Mac 最小壳），按项目规则 code-impl 一律不派第三方 vendor；验收由主会话独立复验（重编 Swift 壳 + 重跑 live 闭环）完成
+- Reviewer: main session (self-verified)
+- Review verdict: not-applicable
 - Active goal: 20260718-002-agent-app
 - Active round: 0002（SG-4 打通真实运行内核，探索性 de-risk 轮）
 - Decision maker: main session（claude-sonnet-5）

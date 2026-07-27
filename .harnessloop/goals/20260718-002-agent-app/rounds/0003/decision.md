@@ -4,6 +4,9 @@
 - Blocker type: access-missing（仅限 L2/后续 SG-8.5 路径；本轮 L1 范围本身无 blocker）
 - Recovery eligible: yes（待用户提供 `NEWAPI_UPSTREAM_LLM_KEY` 即可解除）
 - Accepted: yes
+- Review: none — 本轮为基础设施部署（SG-9：树莓派装 Docker + 起 new-api 容器 + 管理面初始化），非评审类任务，未派 hopper；验收由主会话跨机验证（/api/status 200、root setup/login 成功）完成
+- Reviewer: main session (self-verified)
+- Review verdict: not-applicable
 - Active goal: 20260718-002-agent-app
 - Active round: 0003（SG-9 newapi 自托管部署到树莓派）
 - Decision maker: main session（claude-sonnet-5）

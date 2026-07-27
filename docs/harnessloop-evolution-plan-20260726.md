@@ -281,3 +281,24 @@ passed — rounds=14 rule_a_files=8 rule_b_files=3 citations=N zero_inspected=9
 - E4 的 `verdict-residual-contradiction` → 缺字段不判违规，14 个既有 round 零新红。
 
 **这是"不拿误报换漏报"的前置证据**——TH-0006 的 6/6 误报教训是：误报比漏报更快摧毁对门的信任，而一旦信任崩塌，下一步就是学会编辑被检文件让它闭嘴。
+
+---
+
+## B2 口径重述与四步解锁（2026-07-27，codex T-066 评估确认 + user-confirmed）
+
+**原前置失效**：B2 原写「B1(TH-0008) 关闭 **且** 误报率降到个位数百分比」。TH-0008 已按 `fixed-by-demotion` 结案（v0.16.0），但降级的正确代价是误报率**升到 37.8%**——原数值判据与事实冲突。它本是「防止 reviews/ 被填满后每轮吃一堵误报墙、逼出『改被检文档转绿』病理」的**代理指标**，降级后该代理与风险的相关性已断。
+
+**主会话原提案被 codex T-066 修正两处**（如实记录）：
+1. 提案称「91% 可诊断」——**混用分母**。91% 只描述「降级新增的 96 条里 87 条带提示」；全语料 401 条 dangling 中带提示的仅 **88 条 = 21.9%**（声明外部基准后 33.8%）。该判据据此**否决**。
+2. 提案的「中位数 ≤1 **且** 多数为 0」**冗余**（后者蕴含前者），且**未约束长尾与 `verify:ignore` 滥用**。应按分层指标记录：zero-rate / p50 / p75 / p90 / max / 非零文档均值。
+
+**修正后的四步解锁顺序**（codex T-066 Next recommendation）：
+
+| 步 | 内容 | 状态 |
+|---|---|---|
+| **B2a** | **只入账、不入树**：`decision.md` 必须声明 `Review: <项目内路径>` 或 `Review: none — <非空理由>` + `Reviewer` + `Review verdict`（+ 可选 `Review digest` sha256）。机械门**只**验字段存在、canonical containment、存在性、普通文件非 symlink、digest 匹配；**不扫其文本、不计入 Rule A/B**。`none` 的理由只机械检查非空，**不声称机器判断了理由是否充分** | **done（v0.17.0，2026-07-27）**；14 个历史 round 已回填（10 条指向真实评审产物、4 条 `none —` 附准确理由），门 `review_missing_fields=0` |
+| **外部解析基准协议面** | 项目声明额外 citation 解析基准。**硬约束**：alias-only + 独立 canonical domain；**不允许**全局 unresolved fallback；**不允许**声明落在 scope-lock；须计入 coverage 可见 | pending |
+| **真实评审 pilot** | 少量真实评审复制进 `rounds/*/reviews/`，按分层指标记录负担；**路径检查器自评单独成层**（不拿它的 fixture 长尾否决普通评审，也不拿普通评审的中位数掩盖它） | pending |
+| **B2b** | 入树并首次真正激活 Rule A/B。仅当 pilot 的分层负担、p90、人工处置时间、ignore 使用**均在预先记录的预算内**才升为全 round 硬要求 | pending |
+
+**代理语料的公平性**（codex T-066 §2）：`.hopper/handoffs` 混层——剔除 `leader-tasklist.md` 与"评审路径检查器自身"的元文档（T-058/062/063/064/065）后，公平代理集 59 份 / 603 引用 / dangling 189；声明外部基准后降至 120，zero-rate 18→34，p50 2→0。**但仍有 25/59 非零、非零均值 4.8、p90=7**——只支持「中央负担显著下降」，**不支持**「负担已全面可承受」，故 B2b 必须经 pilot 才能解锁。

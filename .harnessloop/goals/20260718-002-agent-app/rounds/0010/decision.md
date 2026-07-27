@@ -4,6 +4,10 @@
 - Blocker type: none（收盘时无 active blocker）
 - Recovery eligible: 不适用（无收盘时 blocker）
 - Accepted: yes
+- Review: .hopper/handoffs/T-060-output.md
+- Reviewer: codex via hopper T-060
+- Review verdict: rework
+- Review digest: 19f4acadedaa71a1c5cd1bebcd08647812a742b2737d9f3db821d117a380e757
 - Active goal: 20260718-002-agent-app
 - Active round: 0010（SG-11 conformance 修正批，第二批首轮，轻量文档修订，已达成）
 - Decision maker: main session（claude-sonnet-5）

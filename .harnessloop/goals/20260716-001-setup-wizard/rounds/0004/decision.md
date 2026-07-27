@@ -4,6 +4,9 @@
 - Blocker type: none
 - Recovery eligible: 不适用（无 blocker）
 - Accepted: yes
+- Review: none — 本轮为 S4 live acceptance 验收轮（用户亲自走通 wizard 五步 + 主会话直接核验 check_setup.py 与 verify_protocol.py），未委派子代理、未开 handoff，reviews/ 与 handoffs/ 均为空，确无独立评审产物
+- Reviewer: main session self-verified, with user live acceptance 2026-07-16 — no independent reviewer
+- Review verdict: not-applicable
 - Active goal: 20260716-001-setup-wizard
 - Active round: 0004
 - Decision maker: main session（claude-fable-5）

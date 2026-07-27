@@ -4,6 +4,9 @@
 - Blocker type: none（收盘时无 active blocker；过程中的 2 处 contract-insufficient 情形已当场经用户授权解除）
 - Recovery eligible: 不适用（无收盘时 blocker）
 - Accepted: yes
+- Review: none — 本轮无 hopper 派发（运行时集成 e2e + 2 处 openclaw 补丁属 code-impl 类，按既定规则不派第三方 vendor），收盘以主会话独立复验的运行时证据为验收依据；2 处新增补丁未经对抗审已如实记入 Open Risks（轮外后续硬化：收盘后另派 grok T-043 对该 2 补丁做对抗审判 PASS_WITH_NOTE，登记于 evidence-index E15，非本轮验收依据）
+- Reviewer: main session (self-verified)
+- Review verdict: not-applicable
 - Active goal: 20260718-002-agent-app
 - Active round: 0004（SG-8.5 计费链 e2e 完整闭合）
 - Decision maker: main session（claude-sonnet-5）
