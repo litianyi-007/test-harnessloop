@@ -61,6 +61,7 @@ Anchor: `.hopper/queue.md::root`
 | T-045 | code-review-acceptance | done | | high | SG-5 Stage A 收残(db489f0e)确认性再审(单 codex):F1-F8 真闭合 + 近重写无新缺陷 → CONFIRMABLE 则进 Stage B | codex |
 | T-046 | code-review-adversarial | failed | | high | SG-5 ★审查闸2 C# parity(3ae6fa81)对抗审(单codex):并发移植race-free/parity测试真实性/M1-M6忠实镜像/C#特有缺陷/D2 JSON等价 → PASS 则 SG-5 收官 | codex |
 | T-047 | code-review-adversarial | done | | high | SG-5 ★审查闸2 重派(grok):C# parity 并发race-free/测试真实性/M1-M6镜像/C#特有缺陷/D2等价 → PASS 则 SG-5 收官 | grok |
+| T-072 | code-review-adversarial | done | | high | `verify:ignore` 收窄**规格 v2** 对抗审第 2 轮。含攻不变量/攻 legacy 摘要豁免/J11 与 §5.1 是否矛盾;第 6 项仍允许否决 §3+§4 全部 | grok |
 | T-071 | code-review-adversarial | done | | high | `verify:ignore` 收窄**规格**对抗审(实现前审规格)。六项,其中第 6 项**值不值得做**允许否决整个新语法提案 | codex |
 | T-070 | code-review-adversarial | done | | high | 外部解析基准对抗审**第 3 轮**:审 v0.24.0 `f742ac3`(v0.23.0 六条修复 + v0.24.0 嵌套裁决)。五项,其中第 4 项**收敛判断**最重要(继续补洞/降级换层次/收窄能力面/已可收口) | grok |
 | T-069 | code-review-adversarial | done | | high | 外部解析基准对抗审**第 2 轮**(规格要求≥2 轮):审 v0.22.0 `60198f5`,五项=影子守卫自身有无洞/换新面回打 alias-only/复核 T-068 三条 NOTE/规格双向对照/G1-G21 teeth 审计 | codex |

@@ -1388,3 +1388,47 @@ hopper 默认 timeout 处理。
 （例如"这样写的 span 会绕过"），不接受"可能存在风险"。产物落
 `.hopper/handoffs/T-071-output.md`，含 `## Verdict`（`PASS` / `PASS_WITH_NOTE` /
 `REWORK`）、`## Files touched`（应为 none）、以及独立成节的 `## 第 6 项：值不值得做`。
+
+## T-072（`verify:ignore` 收窄规格 v2 — 对抗审第 2 轮）
+
+**Task-type**: `code-review-adversarial` · **只读评审，不改任何代码/规格**
+
+**评审对象**：`docs/ignore-scoping-spec-20260728.md`（**v2**，commit `ed7b29c`）。
+**先读第 1 轮**：`.hopper/handoffs/T-071-output.md`（codex，判 REWORK，否决了 v1 的
+`verify:ignore=<span>` 精确语法）。v1 全文在 git 历史 `d5de1e3`。
+**起因**：`docs/rule-ab-pilot-report-20260728.md` §5.1。
+**当前实现**：`verify_protocol.py` 的 `pathish_citations`（`IGNORE_MARKER` 在 :689 附近），
+机械门 v0.25.0，实现尚未开始。
+
+**评审语境**：这是**防御性机制的收窄**，目的是让豁免出口不能被无意间大面积滥用。
+
+**本轮要求**：
+
+1. **§9 的 6 个靶子逐条回答**（规格作者自己列的，不得跳过）。其中：
+   - 第 6 个最重要，**允许否决 §3 与 §4 全部**：只做 §5（两个计数修正 + schema 版本）、
+     完全不碰作用域，是否才是与风险规模相称的做法？（提醒：实测 collateral 绝对量
+     是 **1 条**，79% 的含引用行只有 1 条引用。）
+   - 第 2 个是规格自己承认没写死的（摘要按什么口径算）——请直接给出该写成什么。
+   - 第 3 个是作者**没有照抄第 1 轮反提案**的地方（保留行内 marker 形式），理由是
+     markdown 表格会被独立注释行打断。请独立核实这个理由是否成立，以及这个放宽
+     是否重新打开了什么。
+
+2. **攻 §3 的不变量本身**：「一个 marker 至多豁免一条引用」是否真的成立？找反例——
+   行内 marker 与独占行 marker 相邻时作用域会不会重叠、一行同时含两个 marker、
+   marker 出现在代码块内、marker 出现在被引用的文本里、多行 HTML 注释、
+   `<!-- verify:ignore -->` 出现在表格单元格里被转义等等。
+
+3. **攻 §4 的 legacy 摘要豁免**：能否构造一个绕过面，让新写的评审蹭到旧语义？
+   摘要算法、路径口径（相对谁）、大小写不敏感卷、symlink——这些在别处已经咬过本
+   项目多次（见 harnessloop v0.22.0→v0.25.0 的记录）。
+
+4. **判定 §6 的 11 条 teeth 是否名副其实**：哪几条是"断言实现的当前形状"而非"断言
+   规格要的性质"？特别看 J11（零迁移）——它声称"coverage 除新增字段外逐字段不变"，
+   但 §5.1 的口径修正**必然**改变 `citations_ignored_explicit` 的值。J11 与 §5.1
+   是不是直接矛盾？
+
+5. **§7 的三条已知摩擦是否遗漏了别的**。
+
+**验收**：逐项 PASS / FAIL / NOTE + **具体反例构造**，不接受"可能存在风险"。产物落
+`.hopper/handoffs/T-072-output.md`，含 `## Verdict`（`PASS` / `PASS_WITH_NOTE` /
+`REWORK`）、`## Files touched`（应为 none）、独立成节的 `## 值不值得做`。
