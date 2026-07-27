@@ -1,23 +1,21 @@
 .hopper/DISPATCH.md
-  s_c587ecf7bbc3e2::t_5ac1c4b36cfd32 10-10,14-17,27-27,36-36
+  s_c587ecf7bbc3e2::t_5ac1c4b36cfd32 10,14-17,27,36
+hopper-plugin
+  s_c587ecf7bbc3e2::t_6d41fa06f5f691 1
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.16",
   "base_commit_sha": "26a25b37677523de7841bb7ea4cb9e7eb98f6b5a",
-  "prompts": {
-    "s_c587ecf7bbc3e2::t_5ac1c4b36cfd32": {
+  "prompts": {},
+  "sessions": {
+    "s_c587ecf7bbc3e2": {
       "agent_id": {
         "tool": "claude",
         "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
         "model": "claude-opus-5"
       },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 7,
-      "total_deletions": 0,
-      "accepted_lines": 7,
-      "overriden_lines": 0
+      "human_author": "litianyi <litianyi@corp.netease.com>"
     }
   }
 }
