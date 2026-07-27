@@ -1311,3 +1311,36 @@ hopper 默认 timeout 处理。
 5. **teeth 审计**：`scripts/validate.py` 的 G1–G21 里，有哪几条是"断言了实现的当前形状"而不是"断言了规格要的性质"——即改一个等价实现就会红、但换一个真正错误的实现却仍绿？点名具体检查号。
 
 **验收**：逐项给 PASS / FAIL / NOTE + 可复现证据（命令 + 实际输出）。任何 FAIL 必须给出**能复现的最小攻击**，不接受"理论上可能"。产物落 `.hopper/handoffs/T-069-output.md`，含 `## Verdict`（`PASS` / `PASS_WITH_NOTE` / `REWORK`）与 `## Files touched`（应为 none）。
+
+## T-070（外部解析基准对抗审**第 3 轮**）
+
+**Task-type**: `code-review-adversarial` · **只读评审，不改任何代码**
+
+**评审对象**：submodule `harnessloop/`，commit `f742ac3`（v0.24.0）。规格：`docs/external-citation-base-spec-20260727.md`（§2.4/§7 已按裁决修订）。
+
+**先读前两轮**：`.hopper/handoffs/T-068-output.md`（第 1 轮，grok，PASS_WITH_NOTE）与 `.hopper/handoffs/T-069-output.md`（第 2 轮，codex，REWORK）。**本轮不复读它们已逐条证过的内容。**
+
+**评审语境**：被审代码是**防御性加固**——目的是让机械门**拒绝**读取项目外内容，不是攻击工具。
+
+**这两轮之间发生了什么**（本轮主要审查面）：
+- v0.23.0 收 T-069 六条：①同一性判定从 `Path` 相等改为 `os.path.samefile`（大小写不敏感卷洞）；②两份声明文件均拒绝 symlink；③无 `goals/` 目录时不再谎报 `external_roots_*=0`；④`subpaths: []` 判非法；⑤`bound_at` 类型校验；⑥无声明项目不再追加 alias hint（恢复逐字节零迁移）。
+- v0.24.0 按**用户裁决**实现"嵌套必须显式声明"：新增可选 `nested_under`，运行时要求任何坐落在另一 available root 内的 root 声明其**最近**祖先；新 kind `reference-root-undeclared-nesting` / `reference-root-nesting-mismatch`；只 fail-closed 后代；祖先判定用 `_same_dir`（samefile）而非字符串前缀。
+
+**本轮五项**：
+
+1. **新代码有没有引入新洞**（重点）。`_same_dir` / `_is_strict_descendant` / 嵌套判定 / 声明 symlink 拒绝 / 早退路径的 coverage 加载——逐个攻。特别关注：
+   - `_same_dir` 的 `OSError` 回退到字符串相等，这个回退能不能被**主动触发**（让 samefile 抛错）从而绕过守卫？
+   - "最近祖先"的选取用了一个 `max(key=...)` 计数，多祖先且互不嵌套时它选谁？能不能构造一组 root 让它选错、从而让某个真实重叠被判合法？
+   - 只 fail-closed 后代：有没有办法让**祖先**成为那个不该可用的一方？
+   - 早退路径（无 `goals/`）新加载了 roots——它会不会在某些情形下与正常路径的 roots 加载不一致（同一项目两条路径给出不同 declared/available）？
+2. **核心命题第三次回打**：alias-only 是否仍不可架空。前两轮已从九个面攻过（见各自产物），请找**第十个面**。
+3. **T-069 六条修复的独立复核**：每条都真的修好了吗？有没有"修了症状没修病因"的？特别是 ⑥（零迁移）——现在真的逐字节了吗，还是只对 `@@` 形 citation 逐字节？
+4. **收敛判断（本轮最重要的一问，请认真答）**：三轮下来缺陷形状是——
+   - 第 1 轮：规格写了实现没做（治理面）；
+   - 第 2 轮：实现用字符串相等冒充文件系统身份（6 条，跨 schema/coverage/文档多个层次）；
+   - 第 3 轮：？
+   
+   **从这个形状序列看，这个方案是在收敛，还是它的形状本身有问题？** 本项目有一条既定判据：同一工作项连续第 3 个 MUST-FIX 批次触发收敛守卫，届时应停下来问「这个机制是不是放错了层次」而不是继续补洞（先例：TH-0008 后缀唯一回退最终以 `fixed-by-demotion` 结案——从判定层降到提示层）。请给出你的判断：**继续补洞 / 降级换层次 / 收窄能力面 / 已可收口**，并说明理由。这一问的答案比前三项加起来更重要。
+5. **teeth 审计**：`scripts/validate.py` 新增的 G22a-g、G23a-g（370 检查）里，哪几条是"断言当前实现形状"而非"断言规格要的性质"？G22a 用了自验前提（先断言本卷两种拼法 canonical 串不等且 samefile 为真，否则诚实 skip）——这个模式对不对？在 case-sensitive CI 上它会 skip，那么那条洞在 CI 上就没有守卫，这算不算假绿？
+
+**验收**：逐项 PASS / FAIL / NOTE + 可复现证据（命令 + 实际输出）。任何 FAIL 必须给出**能复现的最小攻击**，不接受"理论上可能"。产物落 `.hopper/handoffs/T-070-output.md`，含 `## Verdict`（`PASS` / `PASS_WITH_NOTE` / `REWORK`）、`## Files touched`（应为 none）、以及**独立成节的 `## 收敛判断`**。
