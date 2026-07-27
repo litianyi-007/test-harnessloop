@@ -297,8 +297,8 @@ passed — rounds=14 rule_a_files=8 rule_b_files=3 citations=N zero_inspected=9
 | 步 | 内容 | 状态 |
 |---|---|---|
 | **B2a** | **只入账、不入树**：`decision.md` 必须声明 `Review: <项目内路径>` 或 `Review: none — <非空理由>` + `Reviewer` + `Review verdict`（+ 可选 `Review digest` sha256）。机械门**只**验字段存在、canonical containment、存在性、普通文件非 symlink、digest 匹配；**不扫其文本、不计入 Rule A/B**。`none` 的理由只机械检查非空，**不声称机器判断了理由是否充分** | **done（v0.17.0，2026-07-27）**；14 个历史 round 已回填（10 条指向真实评审产物、4 条 `none —` 附准确理由），门 `review_missing_fields=0` |
-| **外部解析基准协议面** | 项目声明额外 citation 解析基准。**硬约束**：alias-only + 独立 canonical domain；**不允许**全局 unresolved fallback；**不允许**声明落在 scope-lock；须计入 coverage 可见 | pending |
-| **真实评审 pilot** | 少量真实评审复制进 `rounds/*/reviews/`，按分层指标记录负担；**路径检查器自评单独成层**（不拿它的 fixture 长尾否决普通评审，也不拿普通评审的中位数掩盖它） | pending |
+| **外部解析基准协议面** | 项目声明额外 citation 解析基准。**硬约束**：alias-only + 独立 canonical domain；**不允许**全局 unresolved fallback；**不允许**声明落在 scope-lock；须计入 coverage 可见 | **done（v0.21.0→v0.25.0，2026-07-27）**；`@@<alias>/<relpath>` 两域不相交，三轮对抗审 T-068/069/070 收敛（第 2 轮 REWORK），核心命题「alias-only 能否被架空」三轮未破；规格 §9 有实施与验收记录 |
+| **真实评审 pilot** | 少量真实评审复制进 `rounds/*/reviews/`，按分层指标记录负担；**路径检查器自评单独成层**（不拿它的 fixture 长尾否决普通评审，也不拿普通评审的中位数掩盖它） | **进行中（2026-07-28）**；预算已**先于测量**预登记并冻结：`docs/rule-ab-pilot-budget-20260728.md` |
 | **B2b** | 入树并首次真正激活 Rule A/B。仅当 pilot 的分层负担、p90、人工处置时间、ignore 使用**均在预先记录的预算内**才升为全 round 硬要求 | pending |
 
 **代理语料的公平性**（codex T-066 §2）：`.hopper/handoffs` 混层——剔除 `leader-tasklist.md` 与"评审路径检查器自身"的元文档（T-058/062/063/064/065）后，公平代理集 59 份 / 603 引用 / dangling 189；声明外部基准后降至 120，zero-rate 18→34，p50 2→0。**但仍有 25/59 非零、非零均值 4.8、p90=7**——只支持「中央负担显著下降」，**不支持**「负担已全面可承受」，故 B2b 必须经 pilot 才能解锁。
