@@ -1,0 +1,51 @@
+docs/rule-ab-pilot-budget-20260728.md
+  s_c587ecf7bbc3e2::t_90a9a3de61a0ad 1-81
+docs/harnessloop-evolution-plan-20260726.md
+  0000019fa4a50c68 1-304
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "648266bd1770551ee4c34851df65714faeb157d1",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_90a9a3de61a0ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 81,
+      "total_deletions": 0,
+      "accepted_lines": 81,
+      "overriden_lines": 0
+    },
+    "s_da860df0bddf6a::t_6740f85a7e2cd8": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785173707569837000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa4a50c68": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785173707880"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 304,
+      "total_deletions": 0,
+      "accepted_lines": 304,
+      "overriden_lines": 0
+    }
+  }
+}
