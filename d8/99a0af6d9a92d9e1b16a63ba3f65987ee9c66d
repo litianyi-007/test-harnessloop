@@ -1,0 +1,68 @@
+.hopper/handoffs/leader-tasklist.md
+  s_c587ecf7bbc3e2::t_c2b1b1f629c043 1495-1532
+.hopper/handoffs/T-075-output.log
+  s_c587ecf7bbc3e2::t_c2b1b1f629c043 1-1
+.hopper/handoffs/T-075-output.md
+  human 1-1,5-5,14-14,20-20,22-22,32-32,34-34,50-50,52-52,54-54,58-58,66-66,73-74
+.hopper/handoffs/T-075-progress.log
+  s_c587ecf7bbc3e2::t_c2b1b1f629c043 1-1
+.hopper/queue.md
+  s_c587ecf7bbc3e2::t_c2b1b1f629c043 64-65
+docs/harnessloop-runtime-evals-autonomy-audit-20260728.md
+  0000019fa5198fdd 1-350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d899a0af6d9a92d9e1b16a63ba3f65987ee9c66d",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_c2b1b1f629c043": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 42,
+      "total_deletions": 0,
+      "accepted_lines": 42,
+      "overriden_lines": 0
+    },
+    "s_92f52050986cf4::t_5ca7c252f53ff4": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785181343414036000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa5198fdd": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-fable-5",
+        "id": "ai-thread-claude-claude-fable-5-1785181343709"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 350,
+      "total_deletions": 0,
+      "accepted_lines": 350,
+      "overriden_lines": 0
+    },
+    "human": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 0,
+      "accepted_lines": 14,
+      "overriden_lines": 0
+    }
+  }
+}
