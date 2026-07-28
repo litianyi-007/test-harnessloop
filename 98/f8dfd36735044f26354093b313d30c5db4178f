@@ -1,0 +1,36 @@
+.harnessloop/meta/evolution-issues/0028-round-directory-name-unvalidated.md
+  0000019fa954d972 1-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "98f8dfd36735044f26354093b313d30c5db4178f",
+  "prompts": {
+    "s_c5f7d7e8bc708d::t_e8c3f006560d3a": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785252337651538000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa954d972": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785252338034"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 71,
+      "total_deletions": 0,
+      "accepted_lines": 71,
+      "overriden_lines": 0
+    }
+  }
+}
