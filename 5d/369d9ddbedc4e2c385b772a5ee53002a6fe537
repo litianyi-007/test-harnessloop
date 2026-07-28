@@ -1,0 +1,36 @@
+docs/runtime-evals-interface-contract-20260728.md
+  0000019fa7c6fa7a 1-558
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "5d369d9ddbedc4e2c385b772a5ee53002a6fe537",
+  "prompts": {
+    "s_8d283532206d7e::t_bd8357772f1051": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785226262824346000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa7c6fa7a": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785226263162"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 558,
+      "total_deletions": 0,
+      "accepted_lines": 558,
+      "overriden_lines": 0
+    }
+  }
+}
