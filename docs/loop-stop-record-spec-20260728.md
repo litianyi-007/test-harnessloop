@@ -1,5 +1,9 @@
-# loop 停止落痕 — 规格 v3（2026-07-28）
+# loop 停止落痕 — 规格 v3.1（2026-07-28）
 
+> **v3.1 = v3 + T-078 的五条最小接线补丁 + 横切约束 X1/X6 两条。**
+> 收敛守卫已于 v3 触发并由用户裁决放行（附录 E.1：采 (A) 补丁后实现）。
+> 本版**不重开哲学**，只做接线；v3 的正文与裁决全部保留，改动集中在 §4/§5/§6 与新增 §10。
+>
 > **v3 是一次主动收窄，不是第三次补洞。** v1/v2 连挨两轮 REWORK（T-076/T-077），
 > 两次的根因是同一个：**我让机械门去裁断"停止理由是否正当"，而那是它结构上做不到的**——
 > agent 写记录，也控制记录被核对的每一个输入（可以真的留一个 open handoff、真的让
@@ -309,3 +313,146 @@ T-078 对两个可否决问的判定都是正面的：
 - 规格停在 v3（commit `58e360b`），**不进入实现**。
 - 三轮评审产物：`.hopper/handoffs/T-076-output.md` / `T-077-output.md` / `T-078-output.md`。
 - TH-0023 保持 open，Status Notes 已指向本附录。
+
+---
+
+## 附录 B：v3.1 的五条接线补丁 + 两条横切约束（2026-07-28）
+
+> 依据：用户裁决「自裁并推进」→ 审核报告附录 E.1 采 **(A)**；T-078 的最小可 ship 清单；
+> 横切约束 `docs/mechanical-gate-cross-cutting-constraints-20260728.md`。
+> **本附录的内容优先于 v3 正文中被它修改的部分。**
+
+### B.1 补丁 1 — `Profile:` 三字段是启用 gate 的**硬前置**（X1 收口，改 §5）
+
+v3 §5 写「无 `Profile:` 字段时 §4 anomaly 不报（不猜档位）」。**按 X1 这是一个被守门者
+持有的开关**：不写字段 = anomaly 永不触发 = 零违规关门。
+
+**v3.1 改为**：
+
+| 项目状态 | 契约缺 `Profile:` 三字段 |
+|---|---|
+| **未启用**本机制（无 `loop-continuation-legacy.json`，且无任何 round 带 `Loop continuation:`） | 无影响（零行为，符合 X1 第 3 条：缺席让被检方**能力更小**） |
+| **已启用**（迁移已跑，或任一 round 带该字段） | **违规** `loop-contract-profile-missing`；不再有「skip + 计数」这一档 |
+
+`loop_anomaly_skipped_no_profile` 这个 coverage 键**删除**——它记录的是一个从此不该存在
+的状态。
+
+**为什么这不违反 X1 的例外条款**：本机制启用后，「缺 Profile」让被检方获得的是**更多
+自由**（anomaly 永不报），故必须阻断。这与 reference-roots「缺席≡不读外部树≡能力更小」
+是相反方向，判据见 X1 第 3 条。
+
+### B.2 补丁 2 — anomaly 触发按 profile 分支（改 §4.1）
+
+v3 §4.1 的四条件对 lite 与 standard 一视同仁，与 §0 的订正裁定（**T2 自动进入是档位
+差异**）不一致。
+
+**v3.1 触发条件**：
+
+| profile | 触发 anomaly 的条件 |
+|---|---|
+| `lite` | `Feedback` ∈ {positive, negative, neutral} 且 `Next Action.Action type` ∈ {next-subgoal, investigation, minimal-fix, rollback} 且其余自续条件满足 且非 `continued:` |
+| `standard` | `Feedback: positive` 且其余自续条件满足 且非 `continued:` |
+| `strict` | **不报**（逐 subgoal 人闸是其设计，不是偏离） |
+| `custom` | 按契约的 `Auto-continue on positive` / `Auto-continue on negative/neutral remediation` 两个 boolean 求值 |
+
+**各档一律排除 `goal-achieved`**：goal 已达成时不续是终止，不是偏离。
+
+**另计一类（不进 anomaly，进独立 coverage）**：`Feedback: blocked` +
+`Blocker type: runtime-recoverable` 而未进入恢复轮——协议明文允许自动开恢复轮
+（`loop/SKILL.md:184`、`harnessloop-continue/SKILL.md:35`），故它也是一种「本可以续
+却没续」，但性质不同（恢复而非推进），记 `loop_recoverable_not_recovered`。
+
+### B.3 补丁 3 — anomaly 消费的机械化（改 §4.2，本版最关键的一条）
+
+v3 §4.2 把消费闭环写成 SKILL 散文（「必须在输出顶部显著显示」），**散文没有机械强制力**
+——T-078 判定 §4 的执行力「单点等于零」正是指这个。
+
+**v3.1 机械化为三件事**：
+
+1. **canonical ack 块**：`state/self-audit.md` 新增固定格式段落
+   ```
+   ## Loop Continuation Anomalies
+   | Round | Anomaly kind | Acknowledged at | Note |
+   |---|---|---|---|
+   ```
+   一行 = 一次显式确认。格式机器可解析。
+2. **coverage 键**：`loop_anomalies_total` / `loop_anomalies_acknowledged` /
+   `loop_anomalies_unacked`（= 前两者之差，**每轮累积，不自动消失**）。
+3. **`$harnessloop-continue` 的门**：`loop_anomalies_unacked > 0` 时，continuation
+   decision **返回 `needs-human`**，并在输出里列出未确认的轮次与 kind。
+
+第 3 条是 v3.1 的**唯一真执行力**：它不改 `verify_protocol.py` 的退出码（X5 的克制
+仍然成立、B2b 的教训仍然有效），但它让「本可以续却没续」在**下一次 continue 时挡住
+自动推进**，直到有人写下一行确认。SKILL 散文降为对该机械规则的说明。
+
+**诚实边界**：写一行 ack 的成本很低，一个执意要停的 agent 可以每轮自己 ack。
+**本机制不声称阻止它**——它买到的是「每一次都必须留下一条具名、可 diff、可被对抗评审
+质问的确认记录」。执行力仍在人和评审那里（v3 §1.2 的诚实声明不变）。
+
+### B.4 补丁 4 — 同文件一致性作为 coverage 信号（改 §3，收回 v3 靶 8 的误伤）
+
+v3 §3.2 取消强制支撑时，把一批**廉价可证的同文件一致性**一并砍掉了。v3.1 补回，
+但**只作 coverage 信号、不判红**（X5 第 3 条：不强制可被廉价满足的形式）：
+
+`loop_stop_reason_inconsistent` 计数以下情形——
+
+| 情形 | 说明 |
+|---|---|
+| `stopped: missing-human-input` 而同文件 `Human confirmation required: no` | 自相矛盾 |
+| `stopped: write-safety-unconfirmed` 而 `Safe without user input: yes` | 自相矛盾 |
+| `stopped: <任意>` 而 `Blocker type: none` 且 `Next Action.Action type: next-subgoal` | 声称停止却声称下一步是推进 |
+| `continued:` 而 `Blocker type` ∈ {access-missing, human-decision-required, write-safety-required} | 声称续了却声称被这类阻塞挡住 |
+
+**这些字段的取值必须按 X6 规范化后再比较**（见 B.6）。
+
+### B.5 补丁 5 — successor 最小完整性收紧 + manifest 加 `baseline_commit`（改 §2.2、§6）
+
+- §2.2 第 4 条改为：successor 必须**同时**有 `scope-lock.md` **与** `decision.md`
+  （原「二者之一」允许一个只有 scope-lock + round-summary 的空壳）；且其 `decision.md`
+  的 `Objective`/`Round` 字段非空。
+- §6 迁移 manifest 增 `baseline_commit`（迁移执行时的 `git rev-parse HEAD`），
+  使 preimage 摘要可被第三方独立复算——回应 T-078「迁移工具自产 baseline 算不算
+  自己证明自己」的质疑：**加了 commit 锚点后，任何人可 checkout 该 commit 重算**。
+
+### B.6 横切约束补丁 — X6 枚举规范化（新增，v3 完全没有）
+
+**病灶**：本项目 14 轮 `decision.md` 的枚举字段**几乎全部**写成「值 +（中文说明）」——
+`Human confirmation required` **14/14**、`Scope-lock required` **14/14**、
+`Safe without user input` 11/14、`Recovery eligible` 11/14。任何精确枚举匹配在 14/14 轮
+上都会命中未知值分支。
+
+**规则**：
+
+1. **规范化**：取值截断到首个 `（`、`(`、`——`、`—` 之前，再 `strip()`、转小写。
+2. 规范化后仍不在枚举内 → **违规** `<field>-unrecognized-value`。
+   **绝不允许**「不认识 → 跳过依赖它的检查」（X6 的核心）。
+3. 规范化**只用于比较**，原文逐字保留在文件里（不改被检产物，E1）。
+
+**适用字段**：`Feedback` / `Blocker type` / `Recovery eligible` / `Accepted` /
+`Human confirmation required` / `Safe without user input` / `Scope-lock required` /
+`Loop continuation`。
+
+### B.7 v3.1 的 teeth 增补
+
+| # | 断言 | 破坏性反证 |
+|---|---|---|
+| **L13** | 已启用状态下契约缺 `Profile:` → `loop-contract-profile-missing`；未启用状态下无影响 | 退回「skip + 计数」→ 零违规关门旁路复活 → 红 |
+| **L14** | strict 档不报 anomaly；lite 档在 negative + minimal-fix 时**报**；standard 档同情形**不报** | 三档一视同仁 → 红（这条焊死 §0 的订正裁定） |
+| **L15** | `loop_anomalies_unacked > 0` → continue 返回 `needs-human`；写一行 ack 后转 `allowed` | continue 不读该计数 → §4 执行力归零 → 红 |
+| **L16** | `Human confirmation required: no（说明）` 规范化后匹配 `no`；`no（说明）` 写成 `nope（说明）` → `unrecognized-value` | 不做规范化 → 14/14 轮全部 unrecognized；做了规范化但对未知值 fail-open → 下游检查静默失效 → 两个方向各一条反证 |
+| **L17** | successor 只有 `scope-lock.md` + `round-summary.md`（无 decision）→ `successor-incomplete` | 沿用「二者之一」→ 空壳过关 → 红 |
+| **L18** | 迁移 manifest 含 `baseline_commit`，且在该 commit 上复算 preimage 摘要一致 | 无 commit 锚点 → 第三方无法复算 → 红 |
+
+### B.8 与 X1-X9 的对照（更新综合文档末尾那张表的「批2 v3.1」列）
+
+| 约束 | v3.1 |
+|---|---|
+| X1 锚点不可删 | ✓ B.1 |
+| X2 路径身份 | 不涉及（本面无新路径比较；`legacy_rounds` 条目按既有 `_is_contained` 校验） |
+| X3 解析纪律 | ✓ `loop-continuation-legacy.json` 按 X3 加重复键/类型/递归未知键校验 |
+| X4 teeth 断言性质 | ✓ v3 的 L9 已是正例；B.7 六条均配破坏性反证 |
+| X5 极性 + 反向限制 | ✓ B.3/B.4 均止步于「记录并暴露」，不强制可被廉价满足的形式 |
+| X6 未知枚举 | ✓ B.6 |
+| X7 输入侧泄漏 | ✓ `legacy_rounds` 为项目内相对路径，加载期拒绝 `://`、`~/`、绝对路径 |
+| X8 门不发网络 | 不涉及 |
+| X9 追溯 vs E1 | ✓ v3 §6 + B.5 的 `baseline_commit` |
