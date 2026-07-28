@@ -1,4 +1,4 @@
-# runtime acceptance evals — 统一接口契约 v2（2026-07-28）
+# runtime acceptance evals — 统一接口契约 v3（2026-07-28）
 
 > **这份文件是五面能否组合的那块缺失拼图。**
 >
@@ -41,6 +41,7 @@
 | **墙钟的极性** | **S5**（门永不读墙钟） | S2 删除 `expires_at` 与项目级墙钟扫描，保留义务改轮次计数 |
 | **严格 JSON 加载器** | **S2**（三份里最严：`object_pairs_hook` 拒重复键、`type(v) is int` 拒 bool、`parse_constant` 拒 NaN/Infinity、递归拒未知键） | S3/S4 一律消费、不得再写第二份。既有的 `_load_versioned_roots`/`_load_local_bindings` 同 PR 迁到它上面——**不把既有缺陷抄进新判定链的核心** |
 | **`decision.md` 字段解析器** | **S4**（decision.md 是它的接线面） | 单一 `parse_decision_fields(text, labels)`，所有面的 label 在此注册；`None` vs `""` 可区分、含冒号匹配、遮蔽反例进 docstring。**decision.md 只新增一个必填行**（S4 的 `Acceptance evals:`），S3 的 `Runtime evals due:` 撤回 |
+| **registry 节点字段 `kind` / `min_evidence` / `clock_domains`** | **载体归 S3；取值域归各自的消费面** | `kind` 的取值域归 **S1**（它据此识别探针条目）、`min_evidence` 归 **S2**（证据义务）、`clock_domains` 归 **S2**（时间戳规范化）。S3 只把它们放进 registry 的闭合键集并做类型校验，**不自编取值域**——那正是 §7.1-#1 的成因形状。⚠️ v2 把三者钉成必备节点字段却没发布任何一个的取值域（S3 指出：写进 ALLOWED 就得自己编，不写进就整份作废，无解） |
 | **`max_round(g)`** | **共享 goal 上下文**（每 goal 计算一次，与 `verify_round` 今天接收同一 `roots` 字典同形） | 计算规则钉死：目录名匹配 `^[0-9]{4}$` 的轮取 max。非法轮名报 `rae-round-name-unparseable`（S3）。**这一条不补则 `mkdir rounds/9999` 同时抬高 I1 上界并把 today-due 义务移走** |
 
 **注意最后两行**：S4 与 S5 各只赢了一条，但赢的都是**极性**（方向），不是载体。
@@ -96,7 +97,7 @@ S2 的闭合键集**必须**逐字并入以下字段，否则 S1 的条件阻塞
 | `outcome` | S2 | 恒必填，**闭集；取值域与基数由 S2 的 schema 定义**（v1 写死「四值」与 owner 面的七值冲突，已订正）。其余面一律**全域二分**：`== "pass"` 为通过，其余一切取值（含 S2 日后新增）为不通过——使 S2 扩枚举不会让别面静默失效 |
 | `evidence` | S2 | **键**恒必填（缺键即整份作废）；**非空**为条件必填：`outcome ∈ {pass, fail}` 时 `role: primary` 条数 ≥ 节点 `min_evidence`（≥1）。`outcome` 为未产出类取值时允许空数组——要求「探针崩了什么都没产出」的执行者凭空造一个文件只惩罚诚实（X5.3），且会让「不写这一行」比「如实写」更省事 |
 | `provenance` | S2 容器 | `system != null` 时必填，闭键集 `{executor_kind, handoff, command_digest}`。S5 消费 `executor_kind`（委派预授权写不可采纳的唯一输入，附录 C.3-3） |
-| `liveness` | S1 语义 / S2 落点 | `object \| null`，闭合子键集 10 项。**当且仅当**该 Result 的 registry 节点 `kind == "probe"` 时必填，其余 kind 必须为 `null`。子键集与枚举取值域由 S1 发布、S2 在 4b 执行 |
+| `liveness` | S1 语义 / S2 落点 | `object \| null`。**闭合子键集与枚举取值域由 S1 发布，基数不在契约里钉**；S2 按 S1 发布的键集执行递归未知键拒绝与类型严格。必填条件见 §4 4c′（**不在无条件运行的 4b**）。⚠️ **v2 在此格写「10 项」，是 §7.1-#1 刚订正过的同一个错在新增行里复发**——S1 实数为 14 项（删三个纯诊断字段也只降到 11）。契约保留的是**归属与执行位置，不是数字** |
 
 ### 2.4 `enforcing` 的唯一定义
 
@@ -113,10 +114,22 @@ round N of goal g 处于 enforcing  ⟺  A(g) 有定义 且 N ≥ A(g)
 active 记录的那一次运行当前轮即 enforcing，「差一轮」这个状态在结构上不存在。
 **代价**：不能预声明「下一轮起激活」——激活必须写在它生效的那一轮（已进诚实边界）。
 
-**`activation_round` 是派生量，不是存储字段**（S3 指出与追加式载体互斥）：
-`activation_round(e) := min{ r.state_from_round : r.eval_id == e, r.disposition == "active" }`。
-于是 `A(g) = min_e activation_round(e)` 与「N ≥ A(g) 即 enforcing」逐字保持成立，
-同时「永不就地编辑既有记录」的追加式性质不被破坏。
+**v3 撤回「追加式 registry」**（v2 的 7.3-#11）。`activation_round` 回到**存储字段**，
+`registry(g).evals[eval_id]` 恢复为良定义的查找。
+
+**理由（这不是让步，是发现它多余）**：追加式被采纳的目的是满足 X9——「registry 的合法
+编辑不得追溯判红已收盘轮」。但真正解决 X9 的是 S2 同时采纳的**逐节点 pin**
+`(eval_id, revision, node_digest)`：**已收盘轮只按自己账本冻结的 `node_digest` 判定，
+今天怎么改 registry 都影响不到它们**（这正是 §2.5 极性 2 的字面内容）。追加式这个
+**存储形态**与逐节点 pin 是可分离的，而它单独引入了 v2 确认阶段 8 条不可执行里的 **4 条**：
+
+- `registry(g).evals[eval_id].system` 不是良定义字段访问（同一 eval 可有多条不同 `system`
+  的记录，「取最后一条 / 取 active 的 / 取 `state_from_round ≤ N` 中最大的」是三个答案）——S1/S4
+- `due(N)` 需要「e 在轮 N 这一刻是否 active」，而派生式只给「e 何时**首次**被激活」——S3
+- 需要一条 `state_from_round` 非递减不变量才安全，而 v2 没写进契约——S4
+
+**撤回后**：X9 由「逐节点 pin + 极性 2」承担（两者 v2 已有）；registry 是普通数组，
+就地编辑合法且不影响已收盘轮；I1′ 继续作用于存储的 `activation_round`。
 
 **与附录 E.2 的关系**：E.2 裁定「激活是派生的，不是开关」。本定义是它的机械替身——
 `activation_round` 不是一个 `enabled` 布尔，而是一个**必须落在真实轮次序列附近**的
@@ -169,7 +182,13 @@ active 记录的那一次运行当前轮即 enforcing，「差一轮」这个状
    静默关门路径：把全部 `activation_round` 设为 `max_round+1` 则判定域为空，已落盘的账本
    一次都不被读。配一条 goal 级违规 `acceptance-eval-ledger-outside-enforcement`。
    4a. S2 加载该轮账本（all-or-nothing）
-   4b. S2 校验条目 schema（含 S1/S5 的并入字段）
+   4b. S2 校验条目 schema（含 S1/S5 的并入字段）——**纯自洽**：只用条目自身的键集与类型，
+       **不读今天的 registry**
+   4c′. **today-derived** 的条目级判定（需 `N == max_round(g)`）：`liveness` 的
+       「当且仅当节点 `kind == "probe"` 时必填」属此类。⚠️ **v2 把它放在无条件的 4b 是错的**
+       （S1 指出）：它的一个操作数是今天的 registry、另一个是已收盘轮的账本——今天给某
+       `eval_id` 追加一条 `kind: "probe"`，所有历史轮该 eval 的条目立刻缺 `liveness` 而
+       schema 失败，叠加 all-or-nothing 则**整份历史账本作废**，正是极性 2 与 X9.1 禁止的
    4c. S3 求该轮 due-set；S4 判「due 但账本无」「跑了没过却判 positive」
    4d. **S1** 判 `entry.system != registry(g).evals[eval_id].system` → `external-system-binding-mismatch`
        （含 null 与非 null 的任一方向；缺这条 join 则任一账本条目写 `system: null` 即可
@@ -276,3 +295,53 @@ coverage 键 **100**、teeth **61**。
 
 综合规格在 v2 之上写。**写之前须确认**：五面对 v2 的 7.1–7.3 各条无新的不可执行主张
 （v2 改动了 15 处语义，其中 §2.4 I1′、§4 域过滤、§4 4d 新 join 三处会改变各面的判定逻辑）。
+
+---
+
+## 9. v3 修订日志：v2 确认阶段的 8 条不可执行
+
+五面确认 v2 的 15 处语义改动，结果：**S1/S3/S4 判 `new-infeasibility`，S2/S5 判
+`minor-corrections-needed`**；破坏项 3–13/15 不等，新不可执行 8 条，须修正 88 处。
+
+### 9.1 我同一个错犯了第二次（1 条，最该记）
+
+**v2 的 §7.1-#1 订正的是「契约里留一个与 owner 面不同的数字」——而 v2 新增的 `liveness`
+行里，我又写了一个数字「10 项」，同一格又把键集判给 S1。** S1 实数为 14（删三个纯诊断
+字段也只降到 11）。
+
+S1 的原话：「**这正是 §7.1-#1（`outcome` 四值 vs 七值）刚刚订正过的同一个错，在 v2
+新增的行里复发了一次**」。
+
+已按对 `outcome` 的同一处方改写：**契约保留归属与执行位置，不保留数字**。
+
+### 9.2 撤回追加式 registry（一次撤回，解掉 4/8）
+
+v2 的 7.3-#11 采纳「registry 改追加式 + `activation_round` 改派生量」。确认阶段暴露
+它单独引入了 4 条不可执行（见 §2.4 的撤回理由）。
+
+**关键判断：追加式对 X9 是多余的。** 它被采纳的目的（registry 的合法编辑不得追溯判红
+已收盘轮）**已经由 S2 同时采纳的逐节点 pin `(eval_id, revision, node_digest)` + 极性 2
+完全承担**——已收盘轮只按自己账本冻结的 `node_digest` 判定。追加式这个**存储形态**是
+可分离的、且是纯自伤。
+
+**撤回是简化，不是第四次打补丁**：v1→v2 是加耦合，v2→v3 是**减一个不必要的载体决定**。
+
+### 9.3 其余 3 条不可执行的处置
+
+| 条 | 谁提 | 处置 |
+|---|---|---|
+| `liveness` 的「iff `kind == probe` 必填」放在无条件 4b → 今天追加一条 `kind: probe` 即追溯判红全部历史账本 | S1 | 挪到新的 **4c′（today-derived，只对 `max_round` 求值）** |
+| `kind` / `min_evidence` / `clock_domains` 被钉成 registry 必备字段，但契约没发布任何一个的取值域 | S3 | **载体归 S3，取值域归各自消费面**（S1/S2/S2）。S3 不自编取值域——那正是 §7.1-#1 的成因形状 |
+| 迁移路径两端被堵：零 active ⇒ S3 判 `rae-registry-no-activated-eval`；激活任一条 ⇒ 历史轮进 enforcing | S4 | 追加式撤回后，迁移可用「登记全部条目 + `activation_round` 一律置为 `max_round(g)`」——当前轮即 enforcing、历史轮全部在域外，与 I1′ 相容且不追溯 |
+
+### 9.4 收敛趋势（如实记录）
+
+| 轮 | 检查方式 | 结果 |
+|---|---|---|
+| v1 前 | 三镜头跨面一致性 | **26 blocker** does-not-compose |
+| v1 | 五面对齐 | **20 冲突**（全部采纳） |
+| v2 | 五面确认 | **8 不可执行**（4 条同源，一次撤回解掉） |
+
+**在收敛，但每一版都由我引入新的耦合。** v3 的动作是**减法**，这与前两版的方向相反——
+若 v3 确认后仍有同量级的新不可执行，那说明「主会话独自钉接口契约」这个做法本身有问题，
+届时应当停下来向用户 checkpoint，而不是写 v4。**这一条预先写在这里，作为下一轮的判据。**
