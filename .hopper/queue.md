@@ -61,6 +61,7 @@ Anchor: `.hopper/queue.md::root`
 | T-045 | code-review-acceptance | done | | high | SG-5 Stage A 收残(db489f0e)确认性再审(单 codex):F1-F8 真闭合 + 近重写无新缺陷 → CONFIRMABLE 则进 Stage B | codex |
 | T-046 | code-review-adversarial | failed | | high | SG-5 ★审查闸2 C# parity(3ae6fa81)对抗审(单codex):并发移植race-free/parity测试真实性/M1-M6忠实镜像/C#特有缺陷/D2 JSON等价 → PASS 则 SG-5 收官 | codex |
 | T-047 | code-review-adversarial | done | | high | SG-5 ★审查闸2 重派(grok):C# parity 并发race-free/测试真实性/M1-M6镜像/C#特有缺陷/D2等价 → PASS 则 SG-5 收官 | grok |
+| T-076 | code-review-adversarial | done | | high | 批 2 规格「loop 停止落痕」对抗审第 1 轮:§7 六靶 + 协议内部不一致核实 + 能/不能清单诚实性 + 与 TH-0017 联动是否使某枚举值形同虚设 | codex |
 | T-075 | code-review-adversarial | done | | high | runtime-evals 审核**修订版**的 codex 独立参照审:仲裁 3 争议点(资产迁移性/D1 半硬门起步/O-1 定性)+核实 O 清单有无夸大+三方漏网+A.3 独立推荐 | codex |
 | T-074 | code-review-adversarial | done | | high | runtime-evals/自主化**审核报告**对抗核实:证据真实性/资产清单反向核实/**审核遗漏**/依赖图与 B2a 分步判断 | grok |
 | T-073 | code-review-adversarial | done | | high | `verify:ignore` 收窄**规格 v3** 对抗审第 3 轮(**收敛守卫已在待命位:再出 REWORK 即停下 checkpoint**)。含逐条核对 T-072 阻断项是否真收口、§1(c) 活 bug 该不该拆出来先修 | codex |

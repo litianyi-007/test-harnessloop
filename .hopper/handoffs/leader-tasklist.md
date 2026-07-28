@@ -1530,3 +1530,32 @@ commit `4ea6813`——已吸收第 1 轮对抗核实）。
 **验收**：逐项给裁定 + 源码证据。产物落 `.hopper/handoffs/T-075-output.md`，含
 `## Verdict`（对**修订版报告**整体判 PASS / PASS_WITH_NOTE / REWORK）、
 `## Files touched`（应为 none）、独立成节的 `## 三方漏网之鱼` 与 `## A.3 推荐`。
+
+## T-076（批 2 规格「loop 停止落痕」— 对抗审第 1 轮）
+
+**Task-type**: `code-review-adversarial` · **只读评审，不改任何代码/文档**
+
+**评审对象**：`docs/loop-stop-record-spec-20260728.md`（v1）。
+**背景**：`docs/harnessloop-runtime-evals-autonomy-audit-20260728.md` GAP-4 与附录 C；
+`.harnessloop/meta/evolution-issues/0023-loop-stop-leaves-no-trace.md`；
+两轮审核核实产物 `.hopper/handoffs/T-074-output.md` / `T-075-output.md`。
+**源码**：harnessloop submodule `b389eac`（v0.26.0）。
+
+**评审语境**：这是**自主性机制**的规格，目标是让「loop 没有继续」这件事留下痕迹。
+它刻意不强制自续（协议管不了 agent 行为，只能管记录）。
+
+**逐条回答 §7 的 6 个靶子**，其中第 6 个允许判定本规格无效。另加三项：
+
+7. **§1.1 那条协议内部不一致**（Stop 条件 vs Auto-Continue 条件两套不同构）是否属实？
+   请独立核对 `loop/SKILL.md:560-567` 与 `control-contract-profiles.md:15-19`，
+   并判断 §2.2 的 13 值枚举是否真的覆盖了两套的**并集**——构造一个落在缝里的真实停止。
+8. **§3 的能/不能清单是否诚实**：有没有它声称"能核对"、实际核对不了的？
+   有没有它声称"不能"、其实可以廉价做到的（那属于自我设限）？
+9. **与 TH-0017（环境自检 pass 语义）的联动**：枚举里的
+   `environment-selfcheck-failed` 依赖 environment self-check 的判定，而 TH-0017
+   已证明该判定当前可假绿（`Pass/fail: pass` 与 5 个 TODO 并存、check_setup
+   complete=true+todo=12 静默穿门）。这会不会让这个枚举值形同虚设？
+
+**验收**：逐项 PASS / FAIL / NOTE + 具体反例构造，不接受"可能存在风险"。产物落
+`.hopper/handoffs/T-076-output.md`，含 `## Verdict`、`## Files touched`（应为 none）、
+独立成节的 `## 落痕是否足以改变实践`。
