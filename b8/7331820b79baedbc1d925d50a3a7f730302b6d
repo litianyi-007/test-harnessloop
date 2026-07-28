@@ -1,0 +1,36 @@
+docs/loop-stop-record-spec-20260728.md
+  0000019fa8f548a3 1-528
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "b87331820b79baedbc1d925d50a3a7f730302b6d",
+  "prompts": {
+    "s_12e209e9abcdc5::t_f3f6364a320f50": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785246074715460000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa8f548a3": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785246075043"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 528,
+      "total_deletions": 0,
+      "accepted_lines": 528,
+      "overriden_lines": 0
+    }
+  }
+}
