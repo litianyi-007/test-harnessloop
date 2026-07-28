@@ -1,168 +1,34 @@
 .harnessloop/meta/evolution-issues/0027-gate-existing-today-round-coupling-unregistered.md
-  s_c587ecf7bbc3e2::t_9778ff1f61e771 13-14,28-29,31-32,35-37,39-43,45-54,71-74,78-81,95-109,124-124,126-130,135-136
-  s_c587ecf7bbc3e2::t_57a496ab5b3474 15-17
-  s_c587ecf7bbc3e2::t_d03704f6c62473 30-30,33-34
-  s_c587ecf7bbc3e2::t_277a146fea79d4 38-38
-  s_c587ecf7bbc3e2::t_040b69dad3e42b 44-44
+  s_c587ecf7bbc3e2::t_d03704f6c62473 30,33-34
   s_c587ecf7bbc3e2::t_e29e6ac185db34 55-70
+  s_c587ecf7bbc3e2::t_277a146fea79d4 38
   s_c587ecf7bbc3e2::t_4f2ea83ce0cc4f 75-77,82-91
   s_c587ecf7bbc3e2::t_68085fbe4af768 115-119
-  s_c587ecf7bbc3e2::t_03de539ac86960 123-123,125-125
-  s_c587ecf7bbc3e2::t_b9ee67aa4affd8 134-134,137-149
+  s_c587ecf7bbc3e2::t_03de539ac86960 123,125
+  s_c587ecf7bbc3e2::t_b9ee67aa4affd8 134,137-149
+  s_c587ecf7bbc3e2::t_9778ff1f61e771 13-14,28-29,31-32,35-37,39-43,45-54,71-74,78-81,95-109,124,126-130,135-136
+  s_c587ecf7bbc3e2::t_57a496ab5b3474 15-17
+  s_c587ecf7bbc3e2::t_040b69dad3e42b 44
 docs/runtime-evals-interface-contract-v5-20260728.md
-  s_c587ecf7bbc3e2::t_77b9686f4d6aa7 53-53,58-59,61-65,69-69,72-73,77-78
-  s_c587ecf7bbc3e2::t_a7c6635ab04df2 54-56
-  s_c587ecf7bbc3e2::t_230b9c88462537 60-60
-  s_c587ecf7bbc3e2::t_69b86a1e7e3e8c 66-66
+  s_c587ecf7bbc3e2::t_230b9c88462537 60
   s_c587ecf7bbc3e2::t_d9b3f0647c59ad 70-71,74-76
+  s_c587ecf7bbc3e2::t_a7c6635ab04df2 54-56
+  s_c587ecf7bbc3e2::t_77b9686f4d6aa7 53,58-59,61-65,69,72-73,77-78
+  s_c587ecf7bbc3e2::t_69b86a1e7e3e8c 66
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.16",
   "base_commit_sha": "70ff25732815c661a6e0919432fa4d1d2c9b119e",
-  "prompts": {
-    "s_c587ecf7bbc3e2::t_9778ff1f61e771": {
+  "prompts": {},
+  "sessions": {
+    "s_c587ecf7bbc3e2": {
       "agent_id": {
         "tool": "claude",
         "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-opus-5"
+        "model": "claude-fable-5"
       },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 55,
-      "total_deletions": 0,
-      "accepted_lines": 55,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_77b9686f4d6aa7": {
-      "agent_id": {
-        "tool": "claude",
-        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
-        "model": "claude-opus-5"
-      },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 13,
-      "total_deletions": 0,
-      "accepted_lines": 13,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_57a496ab5b3474": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 3,
-      "total_deletions": 0,
-      "accepted_lines": 3,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_d03704f6c62473": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 3,
-      "total_deletions": 0,
-      "accepted_lines": 3,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_277a146fea79d4": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_040b69dad3e42b": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_e29e6ac185db34": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 16,
-      "total_deletions": 0,
-      "accepted_lines": 16,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_4f2ea83ce0cc4f": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 13,
-      "total_deletions": 0,
-      "accepted_lines": 13,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_68085fbe4af768": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 5,
-      "total_deletions": 0,
-      "accepted_lines": 5,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_03de539ac86960": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 2,
-      "total_deletions": 0,
-      "accepted_lines": 2,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_b9ee67aa4affd8": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 14,
-      "total_deletions": 0,
-      "accepted_lines": 14,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_a7c6635ab04df2": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 3,
-      "total_deletions": 0,
-      "accepted_lines": 3,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_230b9c88462537": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_69b86a1e7e3e8c": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 1,
-      "total_deletions": 0,
-      "accepted_lines": 1,
-      "overriden_lines": 0
-    },
-    "s_c587ecf7bbc3e2::t_d9b3f0647c59ad": {
-      "agent_id": null,
-      "human_author": null,
-      "messages": [],
-      "total_additions": 5,
-      "total_deletions": 0,
-      "accepted_lines": 5,
-      "overriden_lines": 0
+      "human_author": "litianyi <litianyi@corp.netease.com>"
     }
   }
 }
