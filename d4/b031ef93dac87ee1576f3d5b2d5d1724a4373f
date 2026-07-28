@@ -1,0 +1,36 @@
+docs/runtime-evals-pivot-to-slice-20260728.md
+  0000019fa7ddcf89 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d4b031ef93dac87ee1576f3d5b2d5d1724a4373f",
+  "prompts": {
+    "s_9e8775455b72b0::t_c61e548f773931": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785227759146614000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa7ddcf89": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785227759497"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 63,
+      "total_deletions": 0,
+      "accepted_lines": 63,
+      "overriden_lines": 0
+    }
+  }
+}
