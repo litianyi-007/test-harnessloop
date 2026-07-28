@@ -1559,3 +1559,29 @@ commit `4ea6813`——已吸收第 1 轮对抗核实）。
 **验收**：逐项 PASS / FAIL / NOTE + 具体反例构造，不接受"可能存在风险"。产物落
 `.hopper/handoffs/T-076-output.md`，含 `## Verdict`、`## Files touched`（应为 none）、
 独立成节的 `## 落痕是否足以改变实践`。
+
+## T-077（批 2 规格 v2 — 对抗审第 2 轮）
+
+**Task-type**: `code-review-adversarial` · **只读评审**
+
+**评审对象**：`docs/loop-stop-record-spec-20260728.md`（**v2**）。
+**先读第 1 轮**：`.hopper/handoffs/T-076-output.md`（codex，判 v1 REWORK）。
+v1 全文在 git `e9ed73c`。**源码**：harnessloop `b389eac`（v0.26.0）。
+
+> 收敛计数：本工作项已 1 轮 REWORK。第 3 轮若再 REWORK 触发收敛守卫。
+> **该判 REWORK 时照判**——放水的代价比多一次 checkpoint 大得多。
+
+**逐条回答 §9 的 7 个靶子**，其中第 7 个允许判定 v2 仍无效。另加两项：
+
+8. **逐条核对 T-076 的每个发现是否真被 v2 收口**：①每个停止值都绿 ②L5 保证绕过
+   ③unbounded 架空 ④profile-requires-confirmation 的自然语言解析 ⑤continued 时序
+   ⑥E1 论证错误 ⑦continue 无恢复分支 ⑧枚举漏 Feedback class 与 Stop Conditions 表
+   ⑨层 A 可做却被放弃的检查。是真收了还是换了措辞？
+9. **§0 的裁定是本规格的地基**：若它错了，§2.2 枚举与 L8 全部要改。请独立核对
+   `loop/SKILL.md:517,557`、`harnessloop-continue/SKILL.md:33`、
+   `control-contract-profiles.md:15` 四处原文，判定 T1/T2 的划分是否站得住，
+   以及"不追溯回判历史轮"这个附带裁决是否留下了漏洞。
+
+**验收**：逐项 PASS / FAIL / NOTE + 具体反例构造。产物落
+`.hopper/handoffs/T-077-output.md`，含 `## Verdict`、`## Files touched`（应为 none）、
+独立成节的 `## 够不够改变实践` 与 `## T-076 收口核对`。

@@ -1,289 +1,240 @@
-# loop 停止落痕 + 轮次预算 + 档位分层 — 规格 v2（2026-07-28）
+# loop 停止落痕 — 规格 v3（2026-07-28）
 
-> **v2 起因 T-076 对抗审判 REWORK。** v1（commit `e9ed73c`）的致命缺陷已确认：
-> **它的每一个停止值都是绿的**，且 v1 自己的 L5 明文要求裸 `continued` 直接通过——
-> 于是 agent 可以实际停止、写 `continued`、保持 0 违规。v1 解决的是"字段有没有"，
-> 不是"停止有没有真实落痕"。
+> **v3 是一次主动收窄，不是第三次补洞。** v1/v2 连挨两轮 REWORK（T-076/T-077），
+> 两次的根因是同一个：**我让机械门去裁断"停止理由是否正当"，而那是它结构上做不到的**——
+> agent 写记录，也控制记录被核对的每一个输入（可以真的留一个 open handoff、真的让
+> environment self-check 不是 pass，从而"制造"一个合法停止理由）。
 >
-> v2 的中心变化：**红灯不落在标签上，落在"没有可支撑的理由"上。**
+> T-077 的原话是"仍是可由同一 agent 自签、自证、**自造 blocker** 的观测底座"。
+> 这个批评成立，且**加更多同层检查解决不了**。
 >
-> 授权：main-session ruling under user delegation 2026-07-28（审核报告附录 B）。
-> 状态：规格草案，待第 2 轮异构对抗审。机械门在 v0.26.0。
-> 收敛计数：本工作项已 1 轮 REWORK。
+> v3 因此把机械门的职责收窄到它真能验证的部分，其余明确降为**可审计的声明**，
+> 并把执行力放到它真正所在的地方（异常消费 + 对抗评审）。
+>
+> 收敛计数：**已 2 轮 REWORK。第 3 轮若再 REWORK，触发收敛守卫——届时停下向用户
+> checkpoint，不写 v4。**
+> 授权：main-session ruling under user delegation 2026-07-28。机械门在 v0.26.0。
 
-## 0. 先裁一条协议矛盾（v1 把它糊过去了）
+## 0. 先撤回 v2 的地基裁定（我错了）
 
-T-076 用真实反例逼出这条：`.harnessloop/goals/20260716-001-setup-wizard/rounds/0001/decision.md`
-是 `Feedback: negative` + `Blocker type: none` + `Human confirmation required: no` +
-`Safe without user input: yes` + `Action type: minimal-fix`——契约的 Auto-Continue
-`Feedback class` 只允许 positive（standard 档），但 `loop/SKILL.md:557` step 7 要求
-negative/neutral 且无需人决策时"propose **or enter**"下一个修复轮。**该停还是该续，
-协议自己没说清。**
+v2 §0 裁定"Auto-Continue 只管 T1、不管 T2（修复/调查/回滚轮），故各档均可自动进 T2"。
+**T-077 推翻了它，理由我无法反驳**：
 
-### 裁定：Auto-Continue 管的是 T1，不是 T2
+| 我引的依据 | 它的判定 |
+|---|---|
+| `loop/SKILL.md:517` positive → next subgoal/task | 只证明 positive 通常对应 T1，**不证明**档位表仅管 T1 |
+| `loop/SKILL.md:557` "propose **or** enter" | 那个 **or** 保留了 propose-only 分支，推不出"自动 enter" |
+| `harnessloop-continue/SKILL.md:33` | 是 continue **被调用之后**的动作上界，不是无条件 auto 权限；`:31` 仍要求匹配控制契约 |
+| `control-contract-profiles.md:15` | **直接反证**：该表的存在目的就是区分档位。lite 明文列出 T2、standard 只写 positive——若 T2 各档通用，lite 那一句就是废话 |
 
-区分两种转移：
+**订正裁定**：**T2 的自动进入是档位差异，不是通用权限。** lite 允许；standard/strict
+按其字面只允许 positive 自动推进。
 
-| | 含义 | 治理者 |
+**后果（必须承担，不绕过）**：
+- 枚举需要 `feedback-not-auto-continuable`——standard 档下 negative/neutral 且无需人
+  决策时停下，是**合规行为**，不是偏离。
+- standard 档项目若想要 T2 自主，正确做法是**在自己的 control-contract 里把 lite 的那
+  一句写进 Feedback class**（契约本就是项目可改的），而不是靠规格重新解释档位表。
+- 本项目 goal 001 的 round 0001（negative + 无需人决策 + safe）因此是**合规停止**，
+  不是偏离——v2 把它算作偏离是错的。
+
+## 1. v3 的收窄：机械门只做它能证明的
+
+### 1.1 为什么收窄，而不是继续加检查
+
+v2 设计了三层可验证性（A 可派生 / B 需引用 / C 做不到），并要求每个停止理由"有支撑"。
+T-077 逐层击穿：层 A 的原因 agent 可以**真的制造**；层 B 的引用可以指向 decision.md
+自身；`user-interrupt` 只有宿主 event ID 才可能为真，而宿主事件不在仓库里。
+
+**关键认识**：这不是设计不够好，是**层次错位**。机械门读的是 agent 自己写的树，
+它能验证**结构关系**（某文件是否存在、某 id 是否前向、某链是否成环），
+**不能验证动机**（为什么停）。再加十条检查，agent 仍然控制所有输入。
+
+**先例支持这个收窄**：B2a 的 `Review:` 字段自述得很清楚——它"accounts for the
+review's existence and identity only; it never scans the file's prose"
+（`loop/SKILL.md:466`）。它没有假装能判断评审质量，**而它被接受为有价值**。
+停止记录应当照此办理。
+
+### 1.2 收窄后的三分
+
+| 层 | 内容 | 机械门 |
 |---|---|---|
-| **T1** | 推进到**下一个子目标/任务**（新 scope，本轮工作已被接受） | 契约 Auto-Continue 表 |
-| **T2** | 进入**修复/调查/回滚轮**（当前工作尚未被接受，在其上继续处置） | `loop/SKILL.md:557` step 7 + `harnessloop-continue/SKILL.md:33` step 6 |
+| **强制** | 字段存在、值合法、`continued` 的**结构关系** | **判红** |
+| **记录** | 停止的**理由**（枚举值 + 可选说明） | 只记，不裁断 |
+| **异常** | "契约允许自续、条件满足、却没续" | 报 anomaly + **必须被消费**（§4） |
 
-依据：
-- `loop/SKILL.md:517` 对 positive 的定义逐字是 "archive and **continue to the next
-  subgoal or task**"——这正是 T1，与 Auto-Continue 表同一措辞。
-- `harnessloop-continue/SKILL.md:33` 允许 T2 时**不带任何 profile 限定词**。
-- `control-contract-profiles.md:15` 的 **lite** 档 Feedback class 明文写着
-  "positive; **or negative/neutral when the next step is read-only investigation,
-  a minimal fix, or a rollback within this round's scope-lock**"——lite 只是把所有档
-  本就允许的 T2 **说出来了**。
+**诚实声明（必须写进 SKILL.md，不只写在规格里）**：一个执意要停的 agent 可以写一个
+合规的停止理由并拿到绿灯。本机制**不声称**能阻止它。它买到的是：
+每一次停止都留下**具名、可 diff、可被对抗评审质问**的记录，且"本可以续却没续"
+这一情形在每次运行时都以数字形式摆出来。**执行力在人和评审那里，不在退出码里。**
 
-**因此 standard 的裸 "positive" 治理 T1，不禁止 T2。** 这个读法**消除**矛盾；
-另一读法（standard 也禁 T2）会让 standard 禁止 step 7 强制要求的修复回路，是把矛盾
-制度化。
+## 2. 强制层（判红）
 
-**不追溯**：本裁定**不用于回判历史轮**。round 0001 在本规格生效前收口，其值一律是
-`historical-unrecorded`（见 §5），不因本裁定被判为偏离。
-
-## 1. 问题（不变）
-
-协议明文要求单会话多轮自续（`loop/SKILL.md:556` + `:560-567` 六条穷举 Stop 清单，
-不含"等用户敲 continue"），本项目 `state/control-contract.md` 的 Auto-Continue 段
-逐字写着"不需要——满足以上条件时自动进入下一子目标"，而实践 **14/14 轮**全部停在
-等人，**不留痕迹、不被标红**。偏离零成本 → 实践必然漂移。
-
-## 2. 设计
-
-### 2.1 `decision.md` 新增 `Loop continuation:` 字段
+### 2.1 字段
 
 ```
 - Loop continuation: continued: <successor-round-id>
-                   | stopped: <reason>[ — <backing-ref>]
+                   | stopped: <reason>[ — <说明>]
                    | historical-unrecorded
 ```
 
-**`continued` 必须带 successor**（T-076 findings 3/8）。v1 允许裸 `continued` 是它
-最大的洞。
+### 2.2 `continued` 的结构约束（T-077 finding 2 的三个反例全部堵上）
 
-`continued: 0011` 是一条**关于世界的断言**，机械门在**此后每一次运行**核对它：
-successor round 目录必须存在、属同一 goal、且其 `scope-lock.md` 存在。
-这绕开了 v1 的写入时序难题（收口时写的是承诺、不是事实）——**不要求写入那一刻为真，
-要求它最终为真且持续为真**。最高轮写 `continued` 却无 successor → 红。
+`continued: 0011` 判红当且仅当以下任一不成立：
 
-### 2.2 停止原因枚举
+1. `0011` 目录存在于**同一 goal** 的 `rounds/` 下；
+2. **严格前向**：`0011` 的轮次序号 **>** 当前轮（堵 `continued: <上一轮>` 与 self-loop）；
+3. **无环**：沿 `continued:` 链前向遍历不得回到任一已访问轮（堵双节点环）；
+4. successor **最小完整性**：`scope-lock.md` **与** `round-summary.md` 或 `decision.md`
+   至少其一存在（堵"只有 scope-lock 的空壳 successor"）；
+5. successor 的 `decision.md`（若存在）声明 `Predecessor: <当前轮>`——**双向绑定**。
 
-**协议 Stop 六条**（`loop/SKILL.md:560-567`）：
-`goal-achieved` / `missing-human-input` / `missing-access-facts` /
-`write-safety-unconfirmed` / `data-contract-unsatisfiable` / `threshold-unevaluable`
+**诚实边界**：这些证明"下一轮真的存在且是真轮次"，**不证明**它在同一会话开启。
+故字段语义定为 **`successor-observed`**（T-077 建议的措辞），SKILL.md 不得写成
+"实际自续"。
 
-**契约 Auto-Continue 未满足**（`control-contract-profiles.md:15-19`，T1 面）：
-`evidence-health-failed` / `open-handoff-blocking` / `environment-selfcheck-failed` /
-`profile-requires-confirmation`
+### 2.3 `historical-unrecorded` 的激活边界（v2 无 cutoff，新轮可伪装）
 
-**契约 Stop Conditions 表**（`:34-43`——v1 只比了 Auto-Continue，**漏了这整张表**，
-T-076 finding 7）：
-`model-effort-mismatch` / `external-system-unsafe` / `contract-unevaluable` /
-`evidence-missing-for-acceptance`
+`.harnessloop/setup/loop-continuation-legacy.json`：
 
-**合法但此前无词汇**：
-`budget-checkpoint` / `user-interrupt`
-
-**偏离**（新增，**判红**）：
-`unjustified-stop` —— 停止且没有可支撑的理由。
-
-**迁移专用**：`historical-unrecorded` —— 仅迁移工具可写（§5）。
-
-### 2.3 红灯落在"没有可支撑的理由"上，不落在标签上
-
-这是 v2 与 v1 的分水岭。
-
-- 每个 `stopped: <reason>` 必须**有支撑**（§3 定义每个 reason 的支撑判据）。
-- **支撑不成立 → `loop-stop-reason-unbacked`（红）**，无论写的是哪个标签。
-- `unjustified-stop` 是这同一红灯的**诚实标签**：它让"我确实无正当理由地停了"
-  可以被如实说出，而不是逼人从别的标签里挑一个撒谎。
-
-**设计后果（有意）**：agent 靠换标签得不到任何好处——不写字段是红
-（`loop-continuation-missing`），写没支撑的理由是红，诚实写 `unjustified-stop` 也是红。
-**能拿到绿灯的唯一途径是：要么真的继续了，要么停止理由真的成立。**
-
-### 2.4 `control-contract.md` 的 `Round Budget` 块（v1 可被 `unbounded` 架空）
-
-```
-## Round Budget
-
-- Max consecutive auto-continued rounds: <正整数>   # unbounded 时不得用作停止理由
-- Budget checkpoint action: stop-and-report | ask-user
-- Cost budget: <说明> | not-used
+```json
+{"version": 1, "legacy_rounds": ["<goal-id>/rounds/0001", "..."]}
 ```
 
-v1 的洞（T-076 finding 2）：`Max: unbounded` + `Cost: not-used` 满足 v1 的"块存在且
-Max 非空"，于是永远到不了的预算成了合法停止理由。
+- 该值**仅**允许出现在清单内的 round；其他 round 使用 → `loop-continuation-illegal-legacy-value`。
+- 清单由迁移工具一次写入。**诚实标注**：机械门无法防止有人事后往清单里追加
+  （单次运行看不到历史）；但追加会出现在 git diff 里，且清单条目数进 coverage。
+  **不声称机械门守住了追加。**
 
-v2：`budget-checkpoint` 要求 **Max 为有限正整数**，**且**机械门从前序轮的
-`continued:` 链**推导出实际连续自续轮数 ≥ Max**。推导可做——`continued: <id>` 形成
-一条可追的链。
+### 2.4 违规 kind
 
-**成本维度仍不作主判据**：`round_cost.py` 依赖本机 transcript，本项目 14 轮中多数
-轮次至少一个 cost 字段 `unavailable`。轮数可靠、成本提示性（T-074 O-2）。
+`loop-continuation-missing` / `loop-continuation-invalid-value` /
+`loop-continuation-successor-missing` / `loop-continuation-successor-not-forward` /
+`loop-continuation-successor-cycle` / `loop-continuation-successor-incomplete` /
+`loop-continuation-predecessor-mismatch` / `loop-continuation-illegal-legacy-value`
 
-### 2.5 档位分层（不变）
+## 3. 记录层（只记不裁断）
 
-lite/standard 满足条件即应自续（T1）；T2 各档均可（§0 裁定）。strict 的逐 subgoal
-人闸不动，`profile-requires-confirmation` 是它的正常停止值（T-075 O-8）。
+### 3.1 枚举
 
-### 2.6 `harnessloop-continue` 三个兼容分支（v1 只写了收窄、没写恢复）
+**协议 Stop 六条**（`loop/SKILL.md:560-567`）：`goal-achieved` / `missing-human-input` /
+`missing-access-facts` / `write-safety-unconfirmed` / `data-contract-unsatisfiable` /
+`threshold-unevaluable`
 
-T-076 finding 5：按 v1 字面实施会同时切断 legacy 与异常恢复——最新轮 0010 迁移后是
-`historical-unrecorded`，既非 `stopped:` 也非 `continued`，v1 无分支可走；宿主在收口
-后、字段写入前崩溃时更是恰恰需要 continue 救援，却被"没有记录在案的停止"挡在门外。
+**契约 Auto-Continue 未满足**（`control-contract-profiles.md:15-19`）：
+**`feedback-not-auto-continuable`**（§0 订正后新增） / `evidence-health-failed` /
+`open-handoff-blocking` / `environment-selfcheck-failed` / `profile-requires-confirmation`
 
-| 最近一轮的值 | continue 行为 |
-|---|---|
-| `stopped: <backed reason>` | 正常重入 |
-| `historical-unrecorded` 或字段缺失 | **允许恢复**，同时报 legacy/unrecorded anomaly |
-| `continued: <id>` 且该 round 存在 | 转到该 successor 继续，而非任意推进 |
-| `continued: <id>` 但该 round 不存在 | 报矛盾 + 按恢复分支处理（这也是 §2.1 的红） |
+**契约 Stop Conditions 表**（`:34-43`）：`model-effort-mismatch` /
+`external-system-unsafe` / `contract-unevaluable` / `evidence-missing-for-acceptance`
 
-"例行推进不推荐人工调用"是**文档语义**，不是"无恢复分支的前置条件"。
+**此前无词汇**：`budget-checkpoint` / `user-interrupt`
 
-## 3. 三层可验证性（v1 的能/不能清单不诚实，T-076 finding 8）
+**诚实标签**：`unjustified-stop`——停了且自知无正当理由。**不判红**（v2 判红是过度声称：
+机械门分不清它与一个伪装成合规理由的停止，判红只惩罚诚实的人）。它进独立 coverage 计数，
+**非零即评审信号**。
 
-v1 把弱存在性包装成"支撑"，又把多项廉价可做的检查写成"不能"。v2 分三层：
+### 3.2 为什么不再要求"支撑"
 
-### 层 A — 机械门可从仓库派生（必须做）
+v2 要求每个理由 backed。T-077 证明支撑判据要么可被制造（层 A），要么可被自引用满足
+（层 B）。**一个能被廉价满足的强制，只是把成本加给诚实的人，不加给不诚实的人。**
+故 v3 取消强制支撑；`— <说明>` 保留为**可选自由文本**，供评审阅读。
 
-| reason | 支撑判据 |
-|---|---|
-| `continued:<id>` | successor round 目录存在、同 goal、有 scope-lock |
-| `budget-checkpoint` | Max 为有限正整数 **且** 由 `continued:` 链推导的连续自续轮数 ≥ Max |
-| `goal-achieved` | 该 goal 的 `goal.md` 声明了完成/归档状态 |
-| `open-handoff-blocking` | 本 round `handoffs/` 内存在非 archived 且状态非 closed 的 handoff |
-| `evidence-health-failed` / `evidence-missing-for-acceptance` | `state/evidence-index.md` 存在 artifact health 非 valid 的条目 |
-| `environment-selfcheck-failed` | `state/environment.md` 的 `Pass/fail` 声明值不是 `pass` |
-| `profile-requires-confirmation` | 契约 Auto-Continue 的 `Human confirmation` 字段声明需要确认 |
-| `contract-unevaluable` | 契约或 evidence-index 存在必填字段缺失 |
+## 4. 异常层：执行力真正所在（T-077 的核心处方）
 
-### 层 B — 需要引用（reference）才算 backed
+### 4.1 触发
 
-`user-interrupt` / `missing-human-input` / `missing-access-facts` /
-`write-safety-unconfirmed` / `data-contract-unsatisfiable` / `threshold-unevaluable` /
-`model-effort-mismatch` / `external-system-unsafe`
+对**最新一轮**，当以下全部成立时报 `loop-autocontinue-anomaly`：
 
-这些无法从仓库单独派生，必须写成 `stopped: <reason> — <backing-ref>`，其中
-`backing-ref` 是一条**项目内可解析的引用**（证据路径、handoff 路径、issue ID、
-或 decision.md 内某字段）。
+- 契约 `Profile:` 为 `lite` 或 `standard`（strict 排除）；
+- `Feedback: positive`（**订正后不再包含 negative/neutral**——那在 standard 下本就合规停止）；
+- evidence health / open handoff / environment self-check 均满足契约 Auto-Continue；
+- 该轮 `Loop continuation:` 不是 `continued:`。
 
-**诚实边界**：机械门只能核对该引用**存在且可解析**，**不能**核对它是否真的支持这个
-理由。这一层买到的是"必须指出一个可被追问的对象"，不是自动判真。
-无引用 → `loop-stop-reason-unbacked`（红）。
+### 4.2 消费闭环（v2 缺这一环，"coverage +1、exit 0、无人读取"不叫不再绿）
 
-### 层 C — 只能人工复核（明写机械门做不到）
+- anomaly **不改变退出码**（它是观测信号，升级为硬门须经预登记与 pilot——B2b 的教训）；
+- 但 `$harnessloop-status` 与 `$harnessloop-continue` **必须在输出顶部显著显示**未确认的
+  anomaly，并要求一次显式 acknowledgement（记入 `state/self-audit.md`）；
+- 未确认 anomaly 数进 coverage，**每轮累积**——它不会自己消失。
 
-- 用户是否真的打断过（宿主会话事件不在仓库内）。
-- `continued` 的 successor 是否在**同一会话**开启（机械门只能证明它存在）。
-- 停止理由是否为**真实动机**（写 `missing-human-input` 而实际是嫌麻烦，看不出来）。
-- 引用是否**真的支持**该理由（层 B 只验存在性）。
+**这是本规格唯一真正的执行力来源**：不是让机械门抓住撒谎的 agent，而是让"本可以续
+却没续"这件事**每次都摆在人眼前且必须被回应**。
 
-**不得声称守住了这一层。** 本项目的病灶就是"声称守住了实际没守住"。
+## 5. 契约需要的机器字段（T-077 finding 4）
 
-## 4. 异常报告：让"不续"不能保持绿灯（T-076 的核心处方）
+v2 依赖对 `control-contract.md` 自由文本的解析（中文"不需要"会击穿 substring 匹配）。
+v3 要求契约增加 canonical 字段：
 
-除违规外，机械门在满足以下全部条件时对**最新一轮**报 anomaly（进 coverage，
-不阻断退出码——它是观测信号不是安全门）：
+```
+- Profile: lite | standard | strict | custom
+- Auto-continue on positive: yes | no
+- Auto-continue on negative/neutral remediation: yes | no    # 即 T2，§0 订正后必须显式
+```
 
-- 档位为 lite 或 standard（strict 排除）；
-- `Feedback: positive`；
-- evidence health、open handoff、environment self-check 均满足契约 Auto-Continue；
-- 且该轮的 `Loop continuation:` 不是 `continued:`。
+自由文本降为说明。无 `Profile:` 字段时 §4 anomaly **不报**（不猜档位）——
+并在 coverage 记 `loop_anomaly_skipped_no_profile`，使"因为没声明档位所以没报"
+本身可见。
 
-即：**契约允许自续、条件全满足、却没有续**。这不强制宿主继续（协议管不了 agent
-行为），但让这一情形从**不可见**变成**每次运行都摆在 coverage 里的数字**。
+## 6. 迁移
 
-本项目当下若启用，该 anomaly 会立刻非零——这正是它该有的样子。
-
-## 5. 迁移（v1 的 E1 论证是错的）
-
-**先纠正 v1 的事实错误**：v1 称 `decision.md` "不是被检产物"。**错**——
-`verify_protocol.py:2006` 起解析其 B2a 字段、E4 读同文件枚举对比
-（`verify_protocol.py` 内 `decision = round_dir / "decision.md"`）。它确实是机械门读取
-的文件，"改它转绿"的形状成立，必须正面处理而不是绕过。
-
-**处置：明定为 schema migration，顺序写死**：
-
-1. 迁移工具对**激活点之前**的全部 round 添加**唯一固定值** `historical-unrecorded`；
-2. 核对：除该行外，每份 `decision.md` **逐字节不变**（可机械验证）；
+1. 迁移工具对清单内 round 添加**唯一固定行** `Loop continuation: historical-unrecorded`；
+2. 机械核对：每份 `decision.md` 除该行外**逐字节不变**——**用迁移工具自己在写入前
+   计算的 sha256 作为 baseline**（T-077 finding 6 指出 v2 没说 baseline 从哪来；
+   答案是迁移工具产出一份 `migration-manifest.json` 记录 preimage 摘要）；
 3. **然后**才启用 gate。
 
-**为什么这不是"改被检产物转绿"**（与 v1 的错误论证不同）：`historical-unrecorded`
-不改动任何 feedback、verdict、finding 或引用对象，它**如实陈述"当时的 schema 没有
-这个字段"**——这是 schema 演进的记录，不是对历史判断的修改。与 B2a 回填 14 轮
-`Review:` 字段（v0.17.0 已验证）同形。
-
-**`historical-unrecorded` 仅迁移工具可写**：激活点之后的任何 round 使用该值 →
-`loop-continuation-illegal-legacy-value`（红）。v1 只在散文里禁止，等于没禁。
-
-## 6. 违规 kind 与 coverage
-
-**违规 kind**：
-`loop-continuation-missing` / `loop-continuation-invalid-value` /
-`loop-stop-reason-unbacked` / `loop-continuation-successor-missing` /
-`loop-continuation-illegal-legacy-value`
-
-**coverage**：
-`loop_stops_by_reason`（原因→计数）/ `loop_continued_with_successor` /
-`loop_continued_without_successor` / `loop_stops_backed` / `loop_stops_unbacked` /
-`loop_stops_unjustified` / `loop_rounds_historical_unrecorded` /
-`loop_autocontinue_anomalies`（§4）
+`decision.md` 确实是机械门读取的文件（`verify_protocol.py` 解析其 B2a 字段），
+v1 的"它不是被检产物"论证是错的——本次以 **schema migration + preimage 摘要**
+正面处理，不绕过。
 
 ## 7. 验收（teeth）
 
 | # | 断言 | 破坏性反证 |
 |---|---|---|
-| L1 | 缺字段 → `loop-continuation-missing` | 去掉检查 → 红 |
-| L2 | 枚举外的值 → `loop-continuation-invalid-value` | 放宽为任意字符串 → 红 |
-| **L3** | **`continued: 0011` 而 0011 不存在 → `loop-continuation-successor-missing`**；存在则通过 | 允许裸 `continued`（v1 的 L5）→ 红。**这条直接焊死 v1 的头号绕过** |
-| **L4** | **`stopped: budget-checkpoint` + `Max: unbounded` → unbacked**；`Max: 3` 但 `continued:` 链只连 1 轮 → 同样 unbacked；链达 3 轮才通过 | 只查"块存在且 Max 非空"（v1 的 L3）→ 红 |
-| **L5** | **`stopped: user-interrupt` 无 `— <backing-ref>` → unbacked**；有可解析引用则通过 | 层 B 不要求引用 → 14/14 停止 + 全绿的构造复活 → 红 |
-| L6 | 层 A 每个 reason 各一条：支撑不成立即 unbacked（如 `open-handoff-blocking` 但 `handoffs/` 全 closed） | 任一 reason 退化为"标签即通过" → 红 |
-| **L7** | **`unjustified-stop` 判红**（与 unbacked 同级），且**不**因为它"诚实"而豁免 | 把它判绿 → 偏离重新变成零成本 → 红 |
-| L8 | 枚举覆盖三套来源的并集：用 round 0001 的形状（negative + blocker none + no human + safe）构造——按 §0 裁定它属 T2 可续，若仍停则唯一合法值是 `unjustified-stop`（红） | 枚举只抄协议 Stop 六条 → 无值可填 → 红 |
-| L9 | §4 anomaly：构造一个 positive + 全条件满足 + `stopped: user-interrupt`（backed）的最新轮 → `loop_autocontinue_anomalies == 1` 且**退出码不变** | anomaly 恒 0 → 红；anomaly 改变退出码 → 红（防越权成硬门） |
-| L10 | 激活后的 round 写 `historical-unrecorded` → `loop-continuation-illegal-legacy-value` | 只在散文禁止 → 红 |
-| L11 | 迁移：14 轮回填后全项目**仍 0 违规**；每份 `decision.md` 除新增行外**逐字节不变**（机械验证） | 任何行为外溢 → 红 |
-| L12 | continue 三分支：`historical-unrecorded` 与字段缺失时**允许恢复**并报 anomaly（不是拒绝） | 按 v1 字面收窄 → 异常恢复被挡 → 红 |
+| L1 | 缺字段 → missing | 去掉检查 → 红 |
+| L2 | 枚举外的值 → invalid | 放宽 → 红 |
+| L3 | `continued: <不存在的轮>` → successor-missing | 允许裸 continued → 红 |
+| **L4** | **`continued: <上一轮>` 或指向自身 → successor-not-forward** | 只查存在性 → 红 |
+| **L5** | **A→B、B→A 双节点环 → successor-cycle** | 不做链遍历 → 红 |
+| **L6** | **successor 只有 scope-lock → successor-incomplete** | 只查目录存在 → 空壳过关 → 红 |
+| **L7** | **successor 的 decision 未声明 `Predecessor:` → predecessor-mismatch** | 单向绑定 → 红 |
+| L8 | 清单外的 round 用 `historical-unrecorded` → illegal-legacy-value | 只在散文禁止 → 红 |
+| **L9** | **任何合法 `stopped: <reason>` 均不判红**（含 `unjustified-stop`） | 把停止理由判红 → 红（**这条防止规格重蹈 v2 的过度声称**） |
+| **L10** | **§4 anomaly：positive + 条件满足 + 非 continued → anomaly 计数 +1 且退出码不变**；strict 档不报；无 `Profile:` 字段时不报且计入 skipped | anomaly 恒 0 → 红；anomaly 改退出码 → 红 |
+| L11 | 迁移：14 轮回填后全项目仍 0 违规；preimage 摘要比对通过 | 行为外溢 → 红 |
+| L12 | continue 四分支（backed stopped / historical / continued+successor 存在 / continued+successor 缺失）均有定义且**不拒绝恢复** | 按 v1 字面收窄 → 崩溃恢复被挡 → 红 |
 
-## 8. 显式不做（含 v1 已否决项）
+## 8. 显式不做
 
 | 提案 | 理由 |
 |---|---|
-| 强制自续（不续即违规） | 协议管不了 agent 行为。§4 的 anomaly 是"让不续不能保持绿灯"，不是强制 |
-| 让 anomaly 改变退出码 | 它是观测信号；升级为硬门须经预登记与 pilot（B2b 的教训） |
-| 用成本做硬预算 | 观测系统性失真，拿失真信号做硬约束是新的假绿 |
-| 核对 `continued` 是否**同一会话** | 层 C，做不到。只验 successor 存在 |
-| 核对 backing-ref 是否**真的支持**该理由 | 层 C，只验可解析 |
-| 修改 strict 档语义 | strict 的人闸是它存在的理由 |
-| 记录轮内中止 | 单位是"已收口的轮次"；轮内中止无 decision.md 可写，且 §2.6 的恢复分支已覆盖其后果 |
-| 与 `Review:` 共用解析器 | 语义无关；过度耦合是本项目惩罚过的"两份拷贝漂移"的反面 |
+| 要求停止理由"有支撑"（v2 的层 A/B） | §3.2：可被制造或自引用满足，只惩罚诚实的人 |
+| `unjustified-stop` 判红（v2） | 机械门分不清它与伪装成合规的停止；判红只惩罚诚实标注 |
+| 强制自续 / anomaly 改退出码 | 协议管不了 agent 行为；升级为硬门须预登记 + pilot |
+| 核对 `continued` 同一会话 | 做不到，故字段语义是 `successor-observed` 而非"实际自续" |
+| 用成本做硬预算 | 观测系统性失真（多数轮 cost unavailable） |
+| 把 T2 权限统一到各档 | §0：那是我 v2 犯的错，档位差异是有意设计 |
+| 记录轮内中止 | 无 decision.md 可写；§4 的 continue 恢复分支覆盖其后果 |
 
-## 9. 给第 2 轮对抗审的靶子
+## 9. 给第 3 轮对抗审的靶子
 
-> 背景：v1 判 REWORK（每个停止值都绿、L5 保证绕过、`unbounded` 架空、
-> E1 论证错误、continue 无恢复分支）。**v2 的中心主张是"红灯落在没有可支撑的理由上"。**
-> 请照常判——收敛计数已 1 轮。
+> **收敛守卫已在待命位：本工作项已 2 轮 REWORK，第 3 轮再 REWORK 即停下向用户
+> checkpoint。请照常判——该 REWORK 时照判，不要因为这个提醒放水。**
 
-1. **§2.3 的中心主张能否被架空**：构造一个 agent，它每轮实际停止却能拿到绿灯。
-   （提示攻击面：层 A 的每条派生判据能否被廉价伪造？比如故意留一个 open handoff 来
-   合法化 `open-handoff-blocking`？故意让 environment self-check 不是 pass？
-   **"制造一个真实的停止理由"算不算绕过？**）
-2. **§2.1 的 successor 链**：`continued: <id>` 指向一个**空壳** round 目录
-   （只有 scope-lock、没有任何工作）能否骗过？链能否成环？
-3. **§0 的 T1/T2 裁定**是否站得住？另一读法（standard 也禁 T2）有没有源码支持是我漏掉的？
-   若裁错，§2.2 枚举与 L8 全部要改。
-4. **§3 三层划分**是否仍有"声称能、实际不能"或"声称不能、其实廉价可做"的？
-5. **§4 anomaly 的条件**能否被规避（例如把 feedback 写成 neutral 就不触发）？
-   这个规避算不算问题？
-6. **§5 迁移顺序**：步骤 2 的"逐字节不变"如何机械验证（需要迁移前快照，那快照从哪来）？
-   这是不是又一个"声称可验证实际做不到"？
-7. **本规格是否仍不足以改变实践**。T-076 说 v1 是"观测底座不是完成态"，v2 加了
-   successor 物证、backing 要求、unjustified 判红与 anomaly。**够了吗？**
-   若仍不够，请说明**什么才够**——这一问允许判定 v2 仍无效。
+1. **§1 的收窄是否退得太多**：取消支撑要求后，T-076 最初的批评（"每个停止值都绿"）
+   是否原样复活？§4 的 anomaly + acknowledgement 真的补上了吗，还是只是把绿灯换了个
+   地方？**这一问允许判定 v3 是倒退。**
+2. **§2.2 的五条结构约束能否被绕过**：构造一个满足全部五条、但实际并未自续的
+   `continued` 声明（提示：agent 可以真的建一个 successor round 再停在那里——
+   这算不算绕过？如果算，它可被机械门区分吗？）。
+3. **§0 的订正裁定是否正确**：standard 真的禁止 T2 自动进入吗？还是我这次又矫枉过正
+   （从"各档通用"跳到"档位差异"）？请给源码判定。若又错，§3.1 枚举与 §4 触发条件全要改。
+4. **§4 的 acknowledgement 闭环**是否可执行：SKILL 层的"必须显示并要求确认"没有机械
+   强制力，会不会又是一句无人遵守的散文？有没有可机械化的部分？
+5. **§5 的 canonical 字段**是否引入新的迁移负担（既有项目契约都没有 `Profile:` 字段，
+   于是 anomaly 全被 skip）——这会不会让整个 §4 在落地首日就是死的？
+6. **§6 的 preimage 摘要**是否真的可行：迁移工具自产 baseline 算不算"自己证明自己"？
+7. **本规格是否仍不足以改变实践**。v1 观测底座、v2 过度声称、v3 收窄 + 异常消费。
+   **若 v3 仍不够，请明确说：这个问题是不是根本不该由 harnessloop 协议解决**
+   （例如它属于宿主/调度层）。这一问允许判定整个方向应当放弃。
