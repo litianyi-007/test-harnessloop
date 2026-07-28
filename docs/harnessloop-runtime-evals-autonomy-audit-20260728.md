@@ -385,11 +385,16 @@ GitGuardian 控制台操作；任何触及用户全局环境（18789 网关等�
 1. **EV-D 最小 teeth = D2**（ran 完整性 + pass/fail 一致性同次激活生效）；D1 只是
    激活前的 shadow 阶段读数，不单独作为"已满足硬门"状态存在。
 2. **外部系统 = 独立 versioned JSON + gitignored 本机绑定**（仿 reference-roots 控制
-   面）；**不做全局 gate_blocking**，改为"active due eval 绑定的系统未声明/不可用 →
-   违规"的条件阻塞；check_setup 只加 advisory 行；data-sources 表保留为人读视图。
+   面）；~~不做全局 gate_blocking，改为条件阻塞~~ → **⚠️ 已于 2026-07-28 改判，见附录 D**：
+   条件阻塞的锚点文件可被删除形成零违规总开关（S4/S5 两面独立证明），故
+   **已进入 enforcing 的 goal，其激活锚点必须具备「缺席即阻断」语义**（采既有
+   `check_setup.py` 的 `gate_blocking` 形状），范围限定 enforcing goal、不扩到全项目；
+   check_setup 只加 advisory 行；data-sources 表保留为人读视图。
 3. **默认执行者 = 主会话（或其直接调用的受控 runner）**；项目要切换到预授权子代理写，
    必须先有新鲜的机器可读 delegation probe（M-1 修复后）。
-4. **本项目档位 = standard + 结构化测试资源预授权**（既有 push 例外条款的同形扩展），
+4. **本项目档位 = standard + 结构化测试资源预授权**（~~既有 push 例外条款的同形扩展~~ →
+   **措辞已改判，见附录 D**：与 push 例外**并列的第二类**预授权，风险形状不同——push 是
+   仓库级不可逆的一次性授权，测试资源写是可逆、可清理、按资源域的持续授权，须各自定义），
    不降 strict；strict 档保持逐 checkpoint 人闸（O-8），自续词汇按档位分层。
 
 ### C.4 终版 EV 立项与执行批次
