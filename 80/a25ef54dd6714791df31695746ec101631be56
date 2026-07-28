@@ -1,0 +1,36 @@
+docs/runtime-evals-progress-20260728.md
+  0000019fa730acf2 1-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "80a25ef54dd6714791df31695746ec101631be56",
+  "prompts": {
+    "s_081dbdc372662a::t_5dd1f2dd7c92ae": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785216412509311000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa730acf2": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785216412914"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 71,
+      "total_deletions": 0,
+      "accepted_lines": 71,
+      "overriden_lines": 0
+    }
+  }
+}
