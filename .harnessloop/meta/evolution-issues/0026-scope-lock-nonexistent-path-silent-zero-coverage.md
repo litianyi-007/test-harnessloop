@@ -5,7 +5,7 @@
 - Issue ID: TH-0026
 - Priority: P1
 - Issue class: mechanical-gate
-- Status: open
+- Status: resolved (hint layer, v0.31.0)
 - Source project: test-harnessloop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop)
 - Created by: 主会话（main-session ruling under user delegation 2026-07-28）
 - Created at: 2026-07-28
@@ -92,3 +92,36 @@ rounds=14  rule_a_files=8  zero_inspected=9
 - 依赖：无（与 runtime-evals 竖切线互不相干，可并行）
 - 先决：实现前先确认「形如轮目录的 span」正则不会误伤合法写法
   （如同时授权本轮目录与另一轮目录的证据——**这种写法是否合法本身需要先裁**）
+
+
+---
+
+## 处置结果（2026-07-28，harnessloop v0.31.0，CI 三平台全绿）
+
+**已按「提示层，不做违规」实现并 push。** 判据严格走层内：拿 span 与 scope-lock 自己的位置
+比（两操作数同在轮 N），**按路径段**而非 `str.endswith` 判后缀，**不读磁盘存在性**。
+
+**自查命中 6 轮，是本 issue 立案时手查到的 3 倍，且暴露出一种立案时没想到的形状**：
+
+| 轮 | 写的是 | 病因 |
+|---|---|---|
+| 0003 / 0005 / 0006 | `.harnessloop/goals/.../rounds/000N/` | **字面 `...` 占位符从没被填** |
+| 0007 / 0008 / 0009 | `.harnessloop/rounds/000N/` | 漏了 `goals/<slug>/` 一段 |
+
+**轮 0009 值得单记**：它同时写了正确与错误两条 span，因此**不在 `zero_inspected` 里却仍被
+抓到**。这说明判据抓的是「span 本身写错」，不是「该轮碰巧没查到文件」这个下游症状——
+如果当初照直觉去查 `zero_inspected`，0009 就会漏掉。
+
+**与 TH-0027 的层次区别（本次想清楚的一点）**：TH-0027 记录的那七类今天↔轮耦合，是
+**今天的编辑**改变了已收盘轮的结论——可逆、可解释、可通过撤销今天的编辑复原。本条若判违规，
+则是**无条件永久红**：0003–0009 会一直红下去，今天做任何事都清不掉，唯一出路是改历史产物
+（撞 E1）。**后者比前者严重**，所以即便门本身已经 routinely 判红已收盘轮，提示层仍是对的选择。
+
+**三条上界已进 SKILL.md OUT 列**，其中第三条尤其要记住：`zero_inspected` 这个计数**一直如实
+在报**（本条立案时它就报着 9），它不是盲区，它是**没人消费的诚实计数**。本条的价值在于让其中
+**一类**当场可见，**不在把 9 变成 0**——另外那些轮压根没写 span、或写的是 `$harnessloop-setup`
+这类 skill 名与 `~/.llm-wiki/...` 项目外路径，本条不覆盖，是否要管另议。
+
+**存量未清**：6 条错误 span 都在**已收盘轮**里，按 E1 纪律**不改**。它们会持续产出提示——
+这是刻意的：提示的作用对象是**下一个写 scope-lock 的人**，不是历史。待存量自然退场
+（或另开一轮专门处置并留痕）后，再评估是否升为违规；**升级须另开 issue，不在本条内顺手做**。
