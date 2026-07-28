@@ -80,9 +80,24 @@ rounds=14  rule_a_files=8  zero_inspected=9
 
 - 本条只抓「**轮号对得上但路径不对**」这一种形状。scope-lock 里其它写错的路径（打错的
   目录名、已改名的模块）**抓不到**——抓它们需要磁盘存在性，即上面那条被禁的 join。
-- 另外 7 个 `zero_inspected` 轮**不是**这个原因（`Allowed Changes` 段本就没有 span，
-  或 span 是 `$harnessloop-setup` 这类 skill 名、`~/.llm-wiki/...` 这类项目外路径）。
-  **本条不覆盖它们**，是否要管另议。
+- ~~另外 7 个 `zero_inspected` 轮不是这个原因（`Allowed Changes` 段本就没有 span，
+  或 span 是 `$harnessloop-setup` 这类 skill 名、`~/.llm-wiki/...` 这类项目外路径）。~~
+  **⚠️ 2026-07-29 更正：上面这句话是错的，我当时没核就写了。** 逐轮实测：
+
+  | 轮 | evidence 文件数 | reviews 文件数 |
+  |---|---|---|
+  | goal-001/0004 | 0 | 0 |
+  | goal-002/0001–0008 | 0 | 0 |
+
+  **9 个零查轮全部是 `evidence=0 reviews=0`**，与 `Allowed Changes` 写了什么无关——
+  其中 8 个的 scope-lock 有大量合法的项目相对路径 span（`app/kernel-client/`、
+  `.github/workflows/` 等）。真实原因是 **Rule A 只看 `evidence/` 与 `reviews/` 两个目录，
+  而这些轮把产出写在 `app/`、`docs/` 等别处**。
+
+  **这不是缺陷，是 SKILL.md 已明写的边界**：「A round with nothing under `evidence/` or
+  `reviews/` still exits 0 and is counted in `rounds_zero_inspected`, which means
+  *nothing to check*, not *checked and clean*」。**本条不覆盖它们是对的，但理由不是我原先
+  写的那个。**
 - `zero_inspected=9` 这个数**本身就是既有的诚实上界**——它一直如实在报，只是没人消费。
   本条的价值主要在于**让其中一类变得当场可见**，不在于把 9 变成 0。
 
