@@ -1,0 +1,66 @@
+docs/runtime-evals-interface-contract-v5-20260728.md
+  s_c587ecf7bbc3e2::t_0462ef6e7a6c9b 50-69
+.harnessloop/meta/evolution-issues/0027-gate-existing-today-round-coupling-unregistered.md
+  s_c587ecf7bbc3e2::t_e60b21e3665569 1-77
+docs/runtime-evals-progress-20260728.md
+  0000019fa84c318c 1-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "080ef1a75f6544df4cd160ace4da9abfbd3b08ff",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_0462ef6e7a6c9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e60b21e3665569": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 77,
+      "total_deletions": 0,
+      "accepted_lines": 77,
+      "overriden_lines": 0
+    },
+    "s_61ff1ad1be4754::t_0a787a3b3c26bd": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785234993205778000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa84c318c": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785234993548"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 183,
+      "total_deletions": 0,
+      "accepted_lines": 183,
+      "overriden_lines": 0
+    }
+  }
+}
