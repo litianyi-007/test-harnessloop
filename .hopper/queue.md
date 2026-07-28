@@ -61,6 +61,7 @@ Anchor: `.hopper/queue.md::root`
 | T-045 | code-review-acceptance | done | | high | SG-5 Stage A 收残(db489f0e)确认性再审(单 codex):F1-F8 真闭合 + 近重写无新缺陷 → CONFIRMABLE 则进 Stage B | codex |
 | T-046 | code-review-adversarial | failed | | high | SG-5 ★审查闸2 C# parity(3ae6fa81)对抗审(单codex):并发移植race-free/parity测试真实性/M1-M6忠实镜像/C#特有缺陷/D2 JSON等价 → PASS 则 SG-5 收官 | codex |
 | T-047 | code-review-adversarial | done | | high | SG-5 ★审查闸2 重派(grok):C# parity 并发race-free/测试真实性/M1-M6镜像/C#特有缺陷/D2等价 → PASS 则 SG-5 收官 | grok |
+| T-078 | code-review-adversarial | done | | high | 批 2 规格 **v3**(主动收窄)对抗审第 3 轮。**收敛守卫待命**。§9 七靶含"v3 是否倒退"与"是否该由 harnessloop 解决"两个可否决问 + 收窄边界是否划对 | grok |
 | T-077 | code-review-adversarial | done | | high | 批 2 规格 **v2** 对抗审第 2 轮:§9 七靶 + 逐条核对 T-076 九个发现是否真收口 + §0 T1/T2 裁定的地基核实 | codex |
 | T-076 | code-review-adversarial | done | | high | 批 2 规格「loop 停止落痕」对抗审第 1 轮:§7 六靶 + 协议内部不一致核实 + 能/不能清单诚实性 + 与 TH-0017 联动是否使某枚举值形同虚设 | codex |
 | T-075 | code-review-adversarial | done | | high | runtime-evals 审核**修订版**的 codex 独立参照审:仲裁 3 争议点(资产迁移性/D1 半硬门起步/O-1 定性)+核实 O 清单有无夸大+三方漏网+A.3 独立推荐 | codex |
