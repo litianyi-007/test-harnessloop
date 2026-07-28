@@ -1,0 +1,71 @@
+docs/runtime-evals-interface-contract-v5-20260728.md
+  s_c587ecf7bbc3e2::t_54a45e15027d14 17-35
+  s_c587ecf7bbc3e2::t_61dbcc69f4b87f 53-53,55-67,200-207,209-209,211-215,217-218
+  s_c587ecf7bbc3e2::t_ccea8659881c58 155-158,226-226,239-243
+.harnessloop/meta/self-audit.md
+  0000019fa80410dc 1-1179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "709a6728c90353957bf585cbdac3ee9246451fb7",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_54a45e15027d14": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 19,
+      "total_deletions": 0,
+      "accepted_lines": 19,
+      "overriden_lines": 0
+    },
+    "s_409350adb6bd76::t_aa132a5b016654": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785230266232930000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa80410dc": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785230266588"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 1179,
+      "total_deletions": 0,
+      "accepted_lines": 1179,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_61dbcc69f4b87f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 0,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ccea8659881c58": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 0,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    }
+  }
+}
