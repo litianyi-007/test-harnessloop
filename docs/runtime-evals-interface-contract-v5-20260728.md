@@ -50,17 +50,32 @@
 > ### ⚠️ 2026-07-28 二次订正：上表描述的**不是**机械门今天的状态
 >
 > 上表读起来像是在陈述 `verify_protocol.py` 的既有性质。**它不是。**
-> 对抗评审实测：门今天**至少有三处 (今天层, 轮 N) 耦合**，且都产出挂在轮上的违规——
+> 对抗评审实测报「门今天至少有三处 (今天层, 轮 N) 耦合」；**主会话随后亲自重扫
+> `verify_round` 及其直接调用面，把这个数修订为至少六类；子代理在执行同一份
+> 文档改写任务时顺带扫出第七类，经用户亲自动手实证成立，再次修订为至少七类**
+> （TH-0027 已同步）——都产出挂在轮上的违规：
 >
-> | 代码位置 | 今天层操作数 | 后果 |
-> |---|---|---|
-> | `:3719 load_reference_roots(project, verify_identity=True)` → `:3753 verify_round(...)` | `.harnessloop/setup/reference-roots.json` + **未版本化**的 `.harnessloop/local/reference-roots.local.json` | 删掉那个 local 绑定文件，一个已收盘轮的违规集从 `[]` 变成 `['external-citation-unverifiable']`（`"round": str(round_dir)`） |
-> | `:3725 build_suffix_index(project)` | 每次运行**重扫今天的树** | Rule B 的逐轮判定随今天的文件增删而变 |
-> | `submodule_roots(project)` | 今天的 `.gitmodules` | 同上 |
+> | 序号 | 代码位置 | 今天层操作数 | 后果 |
+> |---|---|---|---|
+> | ① **Rule B 引用解析（门的中心机制）** | `_resolve_in_project`，`verify_round` 内对该轮 `reviews/*.md` 每条引用调用，走 `.exists()`/`.is_dir()` | 今天项目磁盘上被引用路径是否存在 | 轮内一字未动，今天删除/新增被引用文件即可让该轮的 `dangling-citation` 出现或消失——这不是七类里的普通一条，是门的日常工作方式本身 |
+> | ② Rule A 的扫描面 | `container.is_dir()`（`evidence/`、`reviews/`）、`scope_lock.exists()`、`_scan_round_artifacts` | 今天磁盘上这两个目录实际还有哪些文件 | 已收盘轮的 Rule A 检查了哪些文件取决于今天磁盘状态；删 artifact 让既有违规静默消失，新增让检查面扩大 |
+> | ③ 后缀索引 | `:3725 build_suffix_index(project)`，每次运行重扫今天的树 | 今天项目树的完整文件索引 | T-064 后不再翻转 pass/fail，但 hint 文本与 `citations_suffix_hinted` 计数仍随今天文件增删/改名漂移 |
+> | ④ submodule 根 | `submodule_roots(project)`，`verify_round` 内每轮调用 | 今天的 `.gitmodules` | 与③不同，这条**会**翻转 pass/fail：今天增删 submodule 声明可使已收盘轮的引用在 resolved/dangling 间切换 |
+> | ⑤ reference roots | `:3719 load_reference_roots(project, verify_identity=True)` → `:3753 verify_round(...)` | `.harnessloop/setup/reference-roots.json` + **未版本化**的 `.harnessloop/local/reference-roots.local.json` | 删掉那个 local 绑定文件，一个已收盘轮的违规集从 `[]` 变成 `['external-citation-unverifiable']`（`"round": str(round_dir)`） |
+> | ⑥ 轮自身文件的存在性 | `scope_lock.exists()`、`decision.exists()` | `round_dir` 下这两个文件今天是否还存在 | 删 `scope-lock.md` 今天即触发该轮 `missing-scope-lock`；删 `decision.md` 让 E4/B2a/两条 RAE declaration 检查对该轮整体失声 |
+> | ⑦ B2a 摘要自洽核对（内容级，非存在性级） | `check_review_declaration` 的 digest 比对：`decision.md` 声明的 `Review digest:` ⇄ `Review:` 所指文件**此刻**字节 | 该轮 `reviews/review.md`（或任何被 `Review:` 引用的文件）今天的实际内容 | 轮目录内不删不移不改配置，只编辑一下被引用审查文件的正文，已收盘轮就从 `[]` 变 `['review-digest-mismatch']`——清红须回头改 `decision.md` 里的 digest，正撞 E1；触发它所需的动作是七类里最弱的一个 |
 >
 > **「今天的编辑追溯判红已收盘轮」在 v0.28.0 就已经在发生。**
-> SKILL.md 的 OUT 列此前只登记了其中一条的一个侧面（外部树变动会让引用从 resolved 变
-> not-found），没有登记这是一整类。
+> SKILL.md 的 OUT 列此前只登记了⑤的一个侧面（外部树变动会让引用从 resolved 变
+> not-found），没有登记这是一整类，也没提①②③④⑥⑦。已在 SKILL.md 的 Mechanical
+> Gate Boundary OUT 列补齐（一条统领性条目 + 七个具体来源）。
+>
+> **结论（如实表述，不软化）：机械门本质上是一个「今天层扫描器，把发现归属到轮
+> 上」。** 今天层↔轮层耦合不是三处例外，也不是七处例外，而是它的常态——上面七类
+> 只是这次复扫加上后续一次子代理文档任务顺带扫出并经用户实证的第七类，合起来
+> 实测到的，不是穷举。**v0.27.0 / v0.28.0 那两条纯轮层规则
+> （`acceptance-eval-positive-without-pass`、第二条 acceptance-eval declaration
+> 校验——全部操作数来自同一轮的两个文件）在这个门里是罕见的例外，不是代表。**
 >
 > **正确表述（采评审给的）**：本规则约束的是**不得新增**会追溯判红的跨层 join，
 > **不是**声称门当前层纯净。把它写成后者，会让下一份设计把「今天改不动已收盘轮」
