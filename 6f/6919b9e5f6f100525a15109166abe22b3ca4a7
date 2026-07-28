@@ -1,0 +1,36 @@
+.harnessloop/meta/evolution-issues/0023-loop-stop-leaves-no-trace.md
+  0000019fa90c60d0 1-115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6f6919b9e5f6f100525a15109166abe22b3ca4a7",
+  "prompts": {
+    "s_4c1096decd3559::t_173d4418f01c5a": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785247588272754000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fa90c60d0": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785247588560"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 115,
+      "total_deletions": 0,
+      "accepted_lines": 115,
+      "overriden_lines": 0
+    }
+  }
+}
