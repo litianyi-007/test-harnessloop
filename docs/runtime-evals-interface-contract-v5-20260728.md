@@ -47,6 +47,26 @@
 **这一条替代了 v4 的 4c′ 类、极性 2、`node_digest` 两种读法、4d 两形态、
 `max_round(g)` 作为判定域边界——它们全部删除。**
 
+> ### ⚠️ 2026-07-28 二次订正：上表描述的**不是**机械门今天的状态
+>
+> 上表读起来像是在陈述 `verify_protocol.py` 的既有性质。**它不是。**
+> 对抗评审实测：门今天**至少有三处 (今天层, 轮 N) 耦合**，且都产出挂在轮上的违规——
+>
+> | 代码位置 | 今天层操作数 | 后果 |
+> |---|---|---|
+> | `:3719 load_reference_roots(project, verify_identity=True)` → `:3753 verify_round(...)` | `.harnessloop/setup/reference-roots.json` + **未版本化**的 `.harnessloop/local/reference-roots.local.json` | 删掉那个 local 绑定文件，一个已收盘轮的违规集从 `[]` 变成 `['external-citation-unverifiable']`（`"round": str(round_dir)`） |
+> | `:3725 build_suffix_index(project)` | 每次运行**重扫今天的树** | Rule B 的逐轮判定随今天的文件增删而变 |
+> | `submodule_roots(project)` | 今天的 `.gitmodules` | 同上 |
+>
+> **「今天的编辑追溯判红已收盘轮」在 v0.28.0 就已经在发生。**
+> SKILL.md 的 OUT 列此前只登记了其中一条的一个侧面（外部树变动会让引用从 resolved 变
+> not-found），没有登记这是一整类。
+>
+> **正确表述（采评审给的）**：本规则约束的是**不得新增**会追溯判红的跨层 join，
+> **不是**声称门当前层纯净。把它写成后者，会让下一份设计把「今天改不动已收盘轮」
+> 当成现成护栏来引用——评审实测已有一份设计这么做了。**这本身就是第四次同形错误
+> 的雏形：宣布一条性质，而承载它的机制不存在。**
+
 **X9 由构造满足**：不存在 `(今天, 轮 N)` 判定，故今天的任何编辑都不可能改变已收盘轮的
 违规集合。不再需要 X9 的专门规则、不需要 cutoff、不需要迁移的 preimage 摘要。
 
