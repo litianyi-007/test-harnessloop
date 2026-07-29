@@ -1,0 +1,38 @@
+.harnessloop/meta/evolution-issues/0025-evidence-write-no-secret-guard.md
+  s_c587ecf7bbc3e2::t_8580ac2bb424df 107-133
+.harnessloop/meta/evolution-issues/0030-review-batch-residual-lows.md
+  s_c587ecf7bbc3e2::t_c7a8dcb6bfba65 1-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f1daa6bd0d9372714a34b8310080178c3dfed50d",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_8580ac2bb424df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 27,
+      "total_deletions": 0,
+      "accepted_lines": 27,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c7a8dcb6bfba65": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 71,
+      "total_deletions": 0,
+      "accepted_lines": 71,
+      "overriden_lines": 0
+    }
+  }
+}
