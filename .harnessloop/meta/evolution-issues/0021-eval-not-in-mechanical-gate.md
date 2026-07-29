@@ -5,7 +5,7 @@
 - Issue ID: TH-0021
 - Priority: P1
 - Issue class: false-green
-- Status: open
+- Status: resolved (需求链闭合，v0.27.0–v0.35.0)
 - Source project: test-harnessloop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop)
 - Created by: 主会话（main-session ruling under user delegation 2026-07-28（附录 B 授权；非 user-confirmed，用户可推翻））
 - Created at: 2026-07-28
@@ -48,3 +48,25 @@ decision.md 增 `Evals:` 字段 + 机械门核对（字段存在、路径 contai
 
 - 归属执行批次见审核报告附录 C.4。
 - 本条由主会话受托裁决入册；实现前须按既定回路走规格 → 异构对抗审 → teeth → 破坏性反证。
+
+
+---
+
+## 需求链闭合（2026-07-29，harnessloop v0.35.0，CI 三平台全绿）
+
+用户需求一句话：**配置链接外部系统 → 补充 runtime/多系统测试作为 evals → loop 尽可能自主 →
+安全达成 goal**。按此逐环对照实际代码，六环现已全部落地：
+
+| 环 | 版本 | 机制 |
+|---|---|---|
+| ① 声明外部系统 | v0.34.0 | `setup/external-systems.json`（schema 里**没有任何 URL/主机/路径形状字段**） |
+| ② eval 绑定系统 | v0.34.0 | `evals.json` 的 `system` + 今天层引用完整性 |
+| ③ eval 引用运行产物 | **v0.35.0** | 账本 `evidence` 恒必填；`pass` 时不得为 null；须在本轮 `evidence/` 下且叶子是普通文件 |
+| ④ 结果入账 | v0.27.0 | `acceptance-evals.json` |
+| ⑤ 到期未过 ⇒ 不得 positive | v0.27.0 | `acceptance-eval-positive-without-pass`（三操作数同轮） |
+| ⑥ 声明跑了却没账本 ⇒ 红 | v0.28.0 | `Acceptance evals: ran` + 八行判定表 |
+
+**闭合的是「可审计链条」，不是「执行力」。** 门在结构上证明不了 eval 真跑过——③ 只证明
+账本点名了一份存在于本轮 `evidence/` 下的普通文件，**伪造文件同样通过**（已钉成可执行断言
+G38j）。它买到的是：每一次 eval 声称都留下**具名、可 diff、可被对抗评审质问**的记录。
+**执行力在人和评审那里，不在退出码里**——与批 2 §1.2 的诚实声明同源。
