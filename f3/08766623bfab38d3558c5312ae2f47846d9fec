@@ -5,19 +5,15 @@ docs/review-value-experiment-preregistration-20260729-amend-1.md
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.16",
   "base_commit_sha": "f308766623bfab38d3558c5312ae2f47846d9fec",
-  "prompts": {
-    "s_c587ecf7bbc3e2::t_9beb01010f0a66": {
+  "prompts": {},
+  "sessions": {
+    "s_c587ecf7bbc3e2": {
       "agent_id": {
         "tool": "claude",
         "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
         "model": "claude-opus-5"
       },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 69,
-      "total_deletions": 0,
-      "accepted_lines": 69,
-      "overriden_lines": 0
+      "human_author": "litianyi <litianyi@corp.netease.com>"
     }
   }
 }
