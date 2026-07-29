@@ -1,23 +1,21 @@
 docs/review-value-experiment-preregistration-20260729.md
   s_c587ecf7bbc3e2::t_f94f3b235ff1a7 1-100
+hopper-plugin
+  s_c587ecf7bbc3e2::t_612ac4a1ec3a31 1
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.16",
   "base_commit_sha": "e10a4573d83b0ae114f7500268f9dc136a8e7d4c",
-  "prompts": {
-    "s_c587ecf7bbc3e2::t_f94f3b235ff1a7": {
+  "prompts": {},
+  "sessions": {
+    "s_c587ecf7bbc3e2": {
       "agent_id": {
         "tool": "claude",
         "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
         "model": "claude-opus-5"
       },
-      "human_author": "litianyi <litianyi@corp.netease.com>",
-      "messages": [],
-      "total_additions": 100,
-      "total_deletions": 0,
-      "accepted_lines": 100,
-      "overriden_lines": 0
+      "human_author": "litianyi <litianyi@corp.netease.com>"
     }
   }
 }
