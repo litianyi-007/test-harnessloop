@@ -1,0 +1,38 @@
+.harnessloop/meta/evolution-issues/0020-eval-contract-no-schema-no-ledger.md
+  0000019fac9ce19c 1-72
+.harnessloop/meta/evolution-issues/0021-eval-not-in-mechanical-gate.md
+  0000019fac9ce19c 1-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e062b704c7837a15128d2474386dba862a56b692",
+  "prompts": {
+    "s_c064b44bae82e4::t_45206909564cb8": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785307390058445000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fac9ce19c": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785307390364"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 144,
+      "total_deletions": 0,
+      "accepted_lines": 144,
+      "overriden_lines": 0
+    }
+  }
+}
