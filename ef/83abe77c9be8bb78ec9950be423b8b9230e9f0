@@ -1,0 +1,36 @@
+.harnessloop/meta/evolution-issues/0025-evidence-write-no-secret-guard.md
+  0000019facec207c 1-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ef83abe77c9be8bb78ec9950be423b8b9230e9f0",
+  "prompts": {
+    "s_7f95022651ba31::t_63e6111dae1dba": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785312583418929000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019facec207c": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785312583804"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 106,
+      "total_deletions": 0,
+      "accepted_lines": 106,
+      "overriden_lines": 0
+    }
+  }
+}
