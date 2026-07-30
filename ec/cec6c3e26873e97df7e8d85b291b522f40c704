@@ -1,0 +1,68 @@
+.harnessloop/state/environment.md
+  s_c587ecf7bbc3e2::t_52b95ffd5cac98 45-45
+.harnessloop/state/current.md
+  s_c587ecf7bbc3e2::t_c219121f23c3c8 9-9
+.harnessloop/meta/evolution-issues/0017-environment-todo-vs-pass-semantics-unclear.md
+  0000019fb1cf14c3 1-141
+.harnessloop/meta/evolution-issues/0018-current-md-accepted-round-annotation-contradiction.md
+  0000019fb1cf14c3 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "eccec6c3e26873e97df7e8d85b291b522f40c704",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_52b95ffd5cac98": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c219121f23c3c8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_1316e845e2829b::t_fbb163a07b154a": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785394566031748000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fb1cf14c3": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785394566339"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 243,
+      "total_deletions": 0,
+      "accepted_lines": 243,
+      "overriden_lines": 0
+    }
+  }
+}
