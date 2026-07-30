@@ -5,7 +5,7 @@
 - Issue ID: TH-0018
 - Priority: P3（非官方模板字段，见 TH-0011「分类说明」的统一解释；计划原文标注为"state-hygiene"，该值不在 Record 阶段 Issue class 枚举中，故 Issue class 字段另择 `contradiction`，见下方分类说明）
 - Issue class: contradiction
-- Status: open
+- Status: resolved（裁作用域=当前 active goal + 建门，v0.40.0）
 - Source project: test-harnessloop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop)
 - Created by: claude-sonnet-5 subagent（write 任务，orchestrated by 主会话），落地 `docs/harnessloop-evolution-plan-20260726.md` §5 item 9 的定案条目
 - Created at: 2026-07-26
@@ -69,3 +69,34 @@
 - Backported to local policy: no（项目侧编辑本身不算"上游改动的本地回填"，是独立的项目侧清账动作，尚未执行）
 - Backport path: 无
 - Follow-up required: 是——(1) 项目侧后续 round 或 self-audit 中编辑 `current.md:9` 清账；(2) 框架侧评估是否要给 `Last accepted round` 字段补口径注释。
+
+
+---
+
+## 裁决与处置（2026-07-30，v0.40.0）—— **本裁决推翻了本 issue 自己的建议**
+
+**⚠️ 先记这一条**：本 issue 原文的 Suggested Upstream Improvement **建议「不建门」**
+（认为这是项目侧编辑 + 模板注释即可）。**本次裁决推翻了它，建了门。**
+
+**推翻的理由**：原建议的顾虑是「跨文件检查会引入不该有的耦合」。但实际设计出来的检查
+**违规挂在 `current.md` 上**——那是**今天层的活状态文件，本就该被维护**。
+编辑一个历史轮的 `Accepted:` 会让 `current.md` 变红，**而不是让那个轮变红**。
+**方向与 TH-0027 登记的七类耦合相反**，原顾虑不适用。
+
+**裁决**：`Last accepted round` 的**作用域 = 当前 `Active goal`**。三条理由：
+① `current.md` 整体语义就是「此刻的状态」，`Active goal` 就在第 3 行；
+② 「全项目最后接受的轮」**没有任何消费者**（无 skill 或检查读它）；
+③ 换 goal 时它应跟着切，否则新 goal 永远显示上一个 goal 的轮号，**误导性大于信息量**。
+
+**处置**：模板补作用域说明；新增两条检查——
+`current-last-accepted-round-out-of-goal`（轮不在 active goal 之下）/
+`current-last-accepted-round-not-accepted`（该轮 `decision.md` 不是 `Accepted: yes`）。
+缺字段 / `Active goal` 缺失 → 静默（不猜）。
+
+本仓 `current.md:9` 已由
+`20260716-001-setup-wizard/0004（沿用既有历史；本 goal 尚无已接受轮次）`
+改为指向 goal 002 的实际最后 accepted 轮，**并删掉那句与事实相反的注解**
+（实测 goal 002 十轮全部 `Accepted: yes`，而那句注解是 goal 002 刚开始时写下、此后十轮未更新）。
+
+**OUT 列已登记的层次区别**：该检查读了轮的 `decision.md`，但**判的是 `current.md`**
+——与 TH-0027 那七类**方向相反**，不折进那份清单，以免误述是哪一侧在被追溯判定。

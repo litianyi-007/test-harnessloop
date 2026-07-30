@@ -5,7 +5,7 @@
 - Issue ID: TH-0017
 - Priority: P2 · 待定（非官方模板字段，见 TH-0011「分类说明」的统一解释；「待定」为计划原文标注，表示分类本身待裁定后可能改变）
 - Issue class: documentation-gap
-- Status: open
+- Status: resolved（裁 (a) + 补表达力，v0.40.0）
 - Source project: test-harnessloop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop)
 - Created by: claude-sonnet-5 subagent（write 任务，orchestrated by 主会话），落地 `docs/harnessloop-evolution-plan-20260726.md` §5 item 8 的定案条目
 - Created at: 2026-07-26
@@ -109,3 +109,33 @@
 **归属**：TH-0021（eval 硬门）的**条件前置**——仅当项目选用委派/可写 runner 时成为
 阻塞项（见审核报告附录 C.1 争议 C 裁定：协议保持 executor-neutral）。
 **原「EV-K 另立新 issue」的计划撤销**：本条已覆盖，重复立项无必要。
+
+
+---
+
+## 裁决与处置（2026-07-30，v0.40.0，用户授权主会话按其倾向裁）
+
+**裁作 (a)**：`TODO (owner: user)` 是 **setup wizard 主动写入的合法占位符**（用户跳过某项时的
+正规留痕），**不代表未完成、不阻塞 `Pass/fail`**。
+
+理由：把它算作未完成，等于宣布「**用户合法跳过 = 环境自检失败**」——那会让 skip 这条
+**既有设计路径变成死路**。`check_setup.py` 的模块 docstring 本就写明 `field_todo_count`
+是展示性计数器、不参与 `complete`，(a) 与该设计一致。
+
+**但纯 (a) 不够。** 本仓原文是
+`Pass/fail: pass（残余风险：subagent 模型无运行时探针验证）`——**那句自由文本恰好承认了
+5 个 TODO 里至少 2 个是真的没验证**，不是「owner 待办」。**真实状态被塞进备注，而不是字段本身。**
+这与 TH-0012（`Feedback` 四值 × `Accepted` 二值装不下「多轮 REWORK 才收盘」）是**同一形状**。
+
+**处置**：`Pass/fail` 取值域扩为 **`pass | pass-with-open-items | fail`**；
+新增检查 `environment-pass-with-open-todos`——**存在任意 TODO 时不得用裸 `pass`**。
+
+**这不是「TODO 让你 fail」**：`pass-with-open-items` 是完全合法的通过。
+**它只强制「有未决项就在字段里说出来」**，不许只写在自由文本里。操作数全在同一文件内。
+
+本仓已改为 `pass-with-open-items（5 处 TODO (owner: user) 未决；残余风险：…）`——
+**保留了原有的残余风险说明**，它是有价值的信息，只是不该独自承载状态。
+
+**未处置、如实登记**：`check_setup.py` 的 `complete`/`gate_blocking` 仍**完全不看**
+`Pass/fail` 的措辞——一个项目可以同时 `complete: true` 而在本检查下判红。
+**两个信号仍未打通**，本次不做（那是另一个决策）。

@@ -42,7 +42,7 @@ Residual risk: subagent 模型无运行时探针验证
 
 ## Result
 
-Pass/fail: pass（残余风险：subagent 模型无运行时探针验证）
+Pass/fail: pass-with-open-items（5 处 TODO (owner: user) 未决；残余风险：subagent 模型无运行时探针验证）
 
 Allowed next actions: TODO (owner: user)
 
