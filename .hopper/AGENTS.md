@@ -30,6 +30,35 @@ never route a task to the same CLI that is dispatching it.
 
 ---
 
+## Approved Vendors
+
+<!-- 本项目允许派发的 vendor。未列或 Approved=no 的一律拒绝，--vendor 覆盖也不例外。 -->
+
+hopper-plugin v0.40.0 起，本节是实际执行点（`cli/src/dispatch.js` 在两个 vendor
+解析调用点之后都会核对本表；`--vendor` 覆盖不能绕过）。上面「Active Agent
+Instances」的「入选/未入选」标注此前是纯散文、无代码读取；本表把同一套决策落成
+机器可解析、真正生效的白名单，两节并存（决策口径保持一致，不重复定义）。
+
+`claude`：插件层面 2026-07-31 决策保留支持（见 hopper-plugin
+`commands/vendors.md`），但本项目此前未将其纳入实际派发池——按同一「未入选即
+不路由」口径，本项目暂列 `no`；若要启用，需显式改此表并留痕。
+
+`kimi`：插件层面同样保留支持地位，但本项目 2026-07-17 已判「未入选」——按既有
+决策延续填 `no`，与插件层支持范围（是否装了这条 vendor 适配器）是两件事。
+
+| Vendor | Approved | Approved by | Date | Scope / Notes |
+|---|---|---|---|---|
+| `codex` | yes | litianyi-007 | 2026-07-17 | 对抗/验收评审随机池成员 + 研究备选 |
+| `grok` | yes | litianyi-007 | 2026-07-17 | 对抗/验收评审随机池成员 + 研究主力 |
+| `claude` | yes | litianyi-007 | 2026-07-31 | 插件层保留支持；本项目暂未路由任何 task-type 给它，留作后续显式启用 |
+| `kimi` | no | litianyi-007 | 2026-07-17 | 用户判「未入选」，保留适配器供参考，暂不路由 |
+| `opencode` | no | litianyi-007 | 2026-07-17 | 未入选，保留供参考，暂不路由 |
+| `copilot` | no | litianyi-007 | 2026-07-17 | 未入选，保留供参考，暂不路由 |
+| `mimo` | no | litianyi-007 | 2026-07-31 | 未入选；本项目 Active Agent Instances 表中未列该 vendor，此行仅为与 hopper-plugin 收缩决策（codex/grok/claude/kimi 四家保留支持）对齐留痕 |
+| `agy` | no | litianyi-007 | 2026-07-17 | 未入选；且插件层另有技术性 DISABLED（headless 输出不可用），双重拒绝 |
+
+---
+
 ## Task-type → vendor default preference
 
 **实现类（`code-impl`）绝不派第三方 vendor**——写代码任务一律由主会话的

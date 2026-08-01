@@ -4,9 +4,9 @@
 
 ## 目录结构
 
-- `harnessloop/` — git submodule，指向 `surebeli/harnessloop`。这是插件源码，发现框架问题时**直接在这里改**。
-- `hopper-plugin/` — git submodule，指向 `surebeli/hopper-plugin`（marketplace 名 `agent-hopper`，插件 id `hopper@agent-hopper`）。第二个被测插件，任务分发到第三方 agents，同样直接迭代。
-- `kata/` — git submodule，指向 `surebeli/kata`（marketplace 名 `kata`，插件 id `kata@kata`）。第三个被测插件，维护 LLM wiki 文档，同样直接迭代。
+- `harnessloop/` — git submodule，指向 `litianyi-007/harnessloop`。这是插件源码，发现框架问题时**直接在这里改**。
+- `hopper-plugin/` — git submodule，指向 `litianyi-007/hopper-plugin`（marketplace 名 `agent-hopper`，插件 id `hopper@agent-hopper`）。第二个被测插件，任务分发到第三方 agents，同样直接迭代。
+- `kata/` — git submodule，指向 `litianyi-007/kata`（marketplace 名 `kata`，插件 id `kata@kata`）。第三个被测插件，维护 LLM wiki 文档，同样直接迭代。
 - `app/` — 被开发的验证 app（需求见 `docs/app-requirements.md`）。
 - `docs/validation-log.md` — 每一轮「发现问题 → 改插件 → 重装 → 复验」的记录，是本项目的核心产出。
 - `scripts/` — 插件迭代回路脚本（覆盖 harnessloop、hopper、kata 三个被测插件）。
@@ -20,7 +20,7 @@
 2. 运行 `scripts/plugin-reinstall.sh harnessloop`、`scripts/plugin-reinstall.sh hopper`、`scripts/plugin-reinstall.sh kata` 或不带参数一次重装三者（校验 manifest → 卸载 → 重装）。
 3. **重启 Claude Code 会话**后新版本才会加载。
 4. 复验之前失败的场景，结果记入 `docs/validation-log.md`。
-5. 验证通过的插件改动在对应 submodule（`harnessloop/`、`hopper-plugin/` 或 `kata/`）内 commit；push 到各自 GitHub 仓库已是既定授权流程（`surebeli/harnessloop`、`surebeli/test-harnessloop`、`surebeli/hopper-plugin`、`surebeli/kata` 四仓同权，批次验收通过后无需逐次确认，见 `.harnessloop/state/control-contract.md`）——但三个插件（harnessloop / hopper-plugin / kata）push 前均须先 bump 版本信息，保持各自版本文件一致后才能 push；各插件的版本文件清单如下（2026-07-28 实测枚举；此前这里写的是「……等」，那个「等」藏了 hopper 的 4 处，实际漏改了一半，是仓库自己的一致性测试把人拦下来的）：
+5. 验证通过的插件改动在对应 submodule（`harnessloop/`、`hopper-plugin/` 或 `kata/`）内 commit；push 到各自 GitHub 仓库已是既定授权流程（`litianyi-007/harnessloop`、`litianyi-007/test-harnessloop`、`litianyi-007/hopper-plugin`、`litianyi-007/kata` 四仓同权，批次验收通过后无需逐次确认，见 `.harnessloop/state/control-contract.md`）——但三个插件（harnessloop / hopper-plugin / kata）push 前均须先 bump 版本信息，保持各自版本文件一致后才能 push；各插件的版本文件清单如下（2026-07-28 实测枚举；此前这里写的是「……等」，那个「等」藏了 hopper 的 4 处，实际漏改了一半，是仓库自己的一致性测试把人拦下来的）：
 
    - **harnessloop（4 处）**：`package.json`、`.claude-plugin/marketplace.json`、`plugins/harnessloop/.claude-plugin/plugin.json`、**`plugins/harnessloop/.codex-plugin/plugin.json`**。（无 CHANGELOG；发布记录写在 commit message 与 `docs/` 规格文档的实施记录节。）**别只靠这份清单**——`scripts/validate.py` 的 **G28** 会**递归发现**（不是枚举）仓内所有 `package.json`/`plugin.json`/`marketplace.json` 里的语义化版本并断言全一致，以它为准；新增 manifest 会被自动纳入。
      > 2026-07-28 实测：这里此前写的是「3 处」，漏掉的 `.codex-plugin/plugin.json` **已停在 0.11.0 长达 18 个 minor 版本**无人察觉——与 hopper 那次「清单里写『等』、实际漏一半」完全同形。根因是当时 harnessloop **没有任何版本一致性守卫**（hopper 有两条）。G28 就是补这个的：**清单会过时，发现式守卫不会。**

@@ -56,7 +56,7 @@ kata 是一个**由 LLM 编译并持续维护的项目知识 wiki 插件**：扩
 
 ### Area A — 整体架构与全生命周期能力
 
-> 原始定位：kata 插件（surebeli/kata，仓库副本 v2.15.2，位于 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kata/`）—— 实现并扩展 Karpathy LLM-Wiki 理念的 Claude Code 插件：由 LLM 编译并持续维护的项目知识 wiki（"compiled once, kept current"，非 RAG）。Phase 1 定位是 AI-paired engineering：把项目业务语义（阈值、生命周期不变量、领域约定）编译进 wiki，让 agent 写代码前先读约定。核心闭环：ingest → cross-link → query → filed-query 回填复利
+> 原始定位：kata 插件（litianyi-007/kata，仓库副本 v2.15.2，位于 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kata/`）—— 实现并扩展 Karpathy LLM-Wiki 理念的 Claude Code 插件：由 LLM 编译并持续维护的项目知识 wiki（"compiled once, kept current"，非 RAG）。Phase 1 定位是 AI-paired engineering：把项目业务语义（阈值、生命周期不变量、领域约定）编译进 wiki，让 agent 写代码前先读约定。核心闭环：ingest → cross-link → query → filed-query 回填复利
 
 **capabilities**
 
@@ -124,7 +124,7 @@ kata 是一个**由 LLM 编译并持续维护的项目知识 wiki 插件**：扩
 
 ### Area B — 读写权限边界分类 + 与本机已装 ak-wiki v1.8.0 的关系厘清
 
-> 原始定位：kata 插件（surebeli/kata v2.15.2，位于 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kata/`）——LLM wiki 维护系统；及其与本机已装 ak-wiki v1.8.0（`/Users/litianyi/Documents/Code/_ai-goods/AK-llm-wiki`）的关系厘清
+> 原始定位：kata 插件（litianyi-007/kata v2.15.2，位于 `/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kata/`）——LLM wiki 维护系统；及其与本机已装 ak-wiki v1.8.0（`/Users/litianyi/Documents/Code/_ai-goods/AK-llm-wiki`）的关系厘清
 
 **capabilities**
 
@@ -138,7 +138,7 @@ kata 是一个**由 LLM 编译并持续维护的项目知识 wiki 插件**：扩
 
 **usage_entrypoints**
 
-- 本环境现状：只有 /ak-wiki:wiki-*（v1.8）已装可用；/kata:wiki-* 尚未安装。装 kata 走 Claude Code：/plugin marketplace add <kata路径或 surebeli/kata> 再 /plugin install kata（入口 .claude-plugin/marketplace.json → source: ./plugin → plugin/.claude-plugin/plugin.json）
+- 本环境现状：只有 /ak-wiki:wiki-*（v1.8）已装可用；/kata:wiki-* 尚未安装。装 kata 走 Claude Code：/plugin marketplace add <kata路径或 litianyi-007/kata> 再 /plugin install kata（入口 .claude-plugin/marketplace.json → source: ./plugin → plugin/.claude-plugin/plugin.json）
 - slash 形式（装好后）：/kata:wiki-init、/kata:wiki-ingest <url|file|text>、/kata:wiki-search <query> [--tier=active|all]、/kata:wiki-query <question> [--file] [--format=table|slides|chart]、/kata:wiki-lint [--fix|--report-only]、/kata:wiki-tier --show、/kata:wiki-dream [--apply --pages 1,2,3]、/kata:wiki-sync [--auto|--dry-run]、/kata:wiki-spec preflight --new-spec <path> [--enforce]、/kata:wiki-federate search <q> --peers=a,b、/kata:wiki-session-ingest、/kata:wiki-skill-create --pattern issue-fix、/kata:wiki-watch --start/--status/--drain、/kata:wiki-config --show
 - 不装插件的直跑脚本（macOS 用 python3，文档示例的 py -3 是 Windows）：python3 plugin/scripts/wiki_init.py --non-interactive --template market_research --path <wiki>；search_naive.py（搜索）；lint_naive.py（结构 lint，JSON 输出）；digest.py（活动/库存统计）；tier_compute.py；graph_query.py；spec_preflight.py / spec_propagate.py；wiki_dream.py；wiki_sync.py；wiki_watch.py；session_ingest.py；skill_scaffold.py（discover/render，--supplement-action source-search|web-search|doc-lookup|custom）；schema_validate.py <wiki>/SCHEMA.md 与 --validate-plugins-yaml；external_plugin_run.py --plugin X --query Q [--auto]
 - MCP server 形式：python3 plugin/scripts/mcp_server.py --wiki ~/.llm-wiki/<name>，注册进 .claude/settings.json 的 mcpServers；暴露 wiki-search/wiki-graph(只读子集)/wiki-spec-preflight(仅 advisory)，wiki-query 明确不暴露
@@ -171,7 +171,7 @@ kata 是一个**由 LLM 编译并持续维护的项目知识 wiki 插件**：扩
 
 ### Area C — scripts/ 与 tests/ 结构、回归验证命令、CHANGELOG 修复史提炼
 
-> 原始定位：kata 插件（surebeli/kata v2.15.2，LLM wiki 维护）—— scripts/ 与 tests/ 结构、回归验证命令、CHANGELOG 修复史提炼（仓库根：`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kata`）
+> 原始定位：kata 插件（litianyi-007/kata v2.15.2，LLM wiki 维护）—— scripts/ 与 tests/ 结构、回归验证命令、CHANGELOG 修复史提炼（仓库根：`/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kata`）
 
 **capabilities**
 

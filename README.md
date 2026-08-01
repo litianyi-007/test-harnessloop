@@ -1,14 +1,14 @@
 # test-harnessloop
 
-用一个真实 app 的开发过程，端到端验证 [harnessloop](https://github.com/surebeli/harnessloop) 插件（evidence-backed long-task takeover and execution）的框架能力，并在验证中直接迭代插件本身。
+用一个真实 app 的开发过程，端到端验证 [harnessloop](https://github.com/litianyi-007/harnessloop) 插件（evidence-backed long-task takeover and execution）的框架能力，并在验证中直接迭代插件本身。
 
 ## 结构
 
 ```
 test-harnessloop/
-├── harnessloop/            # submodule → surebeli/harnessloop（插件源码，直接迭代）
-├── hopper-plugin/          # submodule → surebeli/hopper-plugin（第二个被测插件，直接迭代）
-├── kata/                   # submodule → surebeli/kata（第三个被测插件，维护 LLM wiki 文档，直接迭代）
+├── harnessloop/            # submodule → litianyi-007/harnessloop（插件源码，直接迭代）
+├── hopper-plugin/          # submodule → litianyi-007/hopper-plugin（第二个被测插件，直接迭代）
+├── kata/                   # submodule → litianyi-007/kata（第三个被测插件，维护 LLM wiki 文档，直接迭代）
 ├── app/                    # 验证用 app（用 harnessloop 框架开发）
 ├── docs/
 │   ├── app-requirements.md # app 需求
@@ -23,7 +23,7 @@ test-harnessloop/
 前提：已安装 Claude Code CLI（`claude`，需支持 `claude plugin` 子命令）与 `python3`。
 
 ```bash
-git clone --recurse-submodules https://github.com/surebeli/test-harnessloop
+git clone --recurse-submodules https://github.com/litianyi-007/test-harnessloop
 cd test-harnessloop
 scripts/plugin-reinstall.sh   # 不带参数 = all，把两个插件的全局 marketplace 都指向本地 submodule 并安装
 ```

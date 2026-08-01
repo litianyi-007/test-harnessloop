@@ -19,7 +19,7 @@ Required for:
 - Control contract revision: 需用户
 - Failed review acceptance: 仅用户
 - Rollback: main session 可执行已分类错误的回滚；跨仓库回滚需用户
-- Irreversible or external-system write: 需用户（例外：git push 到 surebeli/harnessloop、surebeli/test-harnessloop、surebeli/hopper-plugin 与 surebeli/kata 四仓在批次验收通过后为既定授权流程，无需逐次确认；三个插件（harnessloop / hopper-plugin / kata）push 前均须同步 bump 版本信息，保持各自版本文件一致后才能 push——harnessloop 的版本 bump 已是既有发布惯例；hopper-plugin 版本文件以仓库实际布局为准：.claude-plugin/marketplace.json、package.json 及 CLI 版本串等全部一致；kata 版本文件为 plugin/.claude-plugin/plugin.json、.claude-plugin/marketplace.json、CHANGELOG.md，同样须全部一致；未 bump 版本不得 push（用户条件 2026-07-17）） (user-confirmed 2026-07-17：定位与既有两插件相同)
+- Irreversible or external-system write: 需用户（例外：git push 到 litianyi-007/harnessloop、litianyi-007/test-harnessloop、litianyi-007/hopper-plugin 与 litianyi-007/kata 四仓在批次验收通过后为既定授权流程，无需逐次确认；三个插件（harnessloop / hopper-plugin / kata）push 前均须同步 bump 版本信息，保持各自版本文件一致后才能 push——harnessloop 的版本 bump 已是既有发布惯例；hopper-plugin 版本文件以仓库实际布局为准：.claude-plugin/marketplace.json、package.json 及 CLI 版本串等全部一致；kata 版本文件为 plugin/.claude-plugin/plugin.json、.claude-plugin/marketplace.json、CHANGELOG.md，同样须全部一致；未 bump 版本不得 push（用户条件 2026-07-17）） (user-confirmed 2026-07-17：定位与既有两插件相同)
 
 ## Stop Conditions
 

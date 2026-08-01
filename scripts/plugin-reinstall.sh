@@ -41,9 +41,9 @@ plugin_id() {
 }
 plugin_github_fallback() {
   case "$1" in
-    harnessloop) echo "surebeli/harnessloop" ;;
-    hopper) echo "surebeli/hopper-plugin" ;;
-    kata) echo "surebeli/kata" ;;
+    harnessloop) echo "litianyi-007/harnessloop" ;;
+    hopper) echo "litianyi-007/hopper-plugin" ;;
+    kata) echo "litianyi-007/kata" ;;
   esac
 }
 PLUGIN_ORDER="harnessloop hopper kata"
