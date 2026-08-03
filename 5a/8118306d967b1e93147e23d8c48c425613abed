@@ -1,0 +1,38 @@
+.harnessloop/setup/external-systems.json
+  s_c587ecf7bbc3e2::t_47f881ad526444 1-57
+.harnessloop/state/control-contract.md
+  s_c587ecf7bbc3e2::t_4790366c929ea3 23-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "5a8118306d967b1e93147e23d8c48c425613abed",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_47f881ad526444": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 57,
+      "total_deletions": 0,
+      "accepted_lines": 57,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4790366c929ea3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 32,
+      "total_deletions": 0,
+      "accepted_lines": 32,
+      "overriden_lines": 0
+    }
+  }
+}
