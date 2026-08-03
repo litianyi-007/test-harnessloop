@@ -19,23 +19,39 @@ Required for:
 - Control contract revision: 需用户
 - Failed review acceptance: 仅用户
 - Rollback: main session 可执行已分类错误的回滚；跨仓库回滚需用户
-- Test-resource write: **不需要逐次确认**（user-confirmed 2026-08-03）——对**测试资源**的写入
-  （建库/建表/建 token/写测试数据/起隔离实例/建临时目录与 fixture）视为已预授权，
-  main session 可直接执行，不必每次停下来问。
-
-  **边界（超出即回落到上面的 `Irreversible or external-system write`，仍需用户）：**
-  - 仅限**本轮 scope-lock 声明过的**外部系统与资源；未声明的系统不在此列。
-  - 仅限**可识别为测试用途**的资源：隔离实例、专用测试 token、带测试前缀/后缀的库表与
-    数据、临时目录。**共享或生产资源不在此列，即使写的是"测试数据"。**
-  - **删除与覆盖不在预授权内**——预授权覆盖的是"新建"，清理既有资源仍需用户确认
-    （对应 Blocker Classification 的 `write-safety-required`）。
-  - 触发第三方计费的写入（真实 LLM 调用等）不在此列，按既有成本纪律另议。
-
-  **理由**：runtime 验收 eval 必须真的把外部系统跑起来才有意义，而建测试资源是其前置。
-  逐次确认会让"自主推进到 goal 完成"这条主线在每个 eval 前中断一次——这正是本项目
-  「补充 runtime/多系统测试作为 evals」那条需求要解决的问题。**预授权换来的是自主度，
-  代价是"测试资源"这个判断由 main session 自己做**，所以边界写死在上面，越界即回落。
 - Irreversible or external-system write: 需用户（例外：git push 到 litianyi-007/harnessloop、litianyi-007/test-harnessloop、litianyi-007/hopper-plugin 与 litianyi-007/kata 四仓在批次验收通过后为既定授权流程，无需逐次确认；三个插件（harnessloop / hopper-plugin / kata）push 前均须同步 bump 版本信息，保持各自版本文件一致后才能 push——harnessloop 的版本 bump 已是既有发布惯例；hopper-plugin 版本文件以仓库实际布局为准：.claude-plugin/marketplace.json、package.json 及 CLI 版本串等全部一致；kata 版本文件为 plugin/.claude-plugin/plugin.json、.claude-plugin/marketplace.json、CHANGELOG.md，同样须全部一致；未 bump 版本不得 push（用户条件 2026-07-17）） (user-confirmed 2026-07-17：定位与既有两插件相同)
+
+## Pre-Authorized Test-Resource Writes
+
+TH-0022 用户裁决 ③ 的唯一合法落点。此表**只能收窄**，不能放宽上面
+`Human Confirmation Required` 的 `Irreversible or external-system write` 那一行：
+生产系统与不可逆操作在任何情况下都不具备预授权资格，无论此表写了什么。
+
+**2026-08-03 更正**：本条最初被写成 `Human Confirmation Required` 下的一个 bullet
+（「不需要逐次确认」写在「Required for:」清单里，语义正好是反的），且当时
+`setup/external-systems.json` 尚不存在、无 System id 可引。机械门对此全绿
+（verify_protocol exit 0 / 0 violations）——契约在语义上是坏的但机械上合规，
+是插件自身文档承认的那类边界。用户裁决的**实质未变**，此处只是改成合法形状。
+
+| System id | Operation class | Resource scope | Cleanup contract | Authorized by |
+| --- | --- | --- | --- | --- |
+| `newapi` | `test-resource-create` | 仅名称带 `test`/`sg`/`eval` 前缀的 token 与 channel；**不含**管理员账号、系统设置、既有生产 token | 本轮结束时列出该前缀下的资源并记入 evidence；**删除不在预授权内**（见下） | user-confirmed 2026-08-03 |
+| `openclaw-isolated` | `test-resource-create` | 仅 `OPENCLAW_STATE_DIR` 指向的隔离目录与 `OPENCLAW_GATEWAY_PORT` 指定端口上的实例；**不得**触碰用户环境中既有的 openclaw 状态目录或 gateway | 轮次结束时停进程、并以 `git status --ignored` 证明 submodule 工作区为空 | user-confirmed 2026-08-03 |
+| `hermes-isolated` | `test-resource-create` | 仅 `HERMES_HOME` 指向的隔离目录与 `API_SERVER_PORT` 指定端口上的实例 | 同上 | user-confirmed 2026-08-03 |
+| `d3proxy` | `test-resource-create` | 仅本机 `D3PROXY_LOCAL_PORT` 上的实例与其 gitignored `.env` | 轮次结束时停进程 | user-confirmed 2026-08-03 |
+
+**边界（超出即回落 `write-safety-required`，仍需用户）：**
+
+- **删除与覆盖不在预授权内。** 上表 `Operation class` 一律是 `test-resource-create`；
+  没有任何一行是 `test-resource-delete` 或 `cleanup`。清理既有资源仍需用户确认。
+- `raspberry-pi-deploy` **不在表内**——它承载 newapi 生产实例，属宿主机写入，不具备预授权资格。
+- 触发第三方计费的写入（真实 LLM 调用）不在此列，按既有成本纪律另议。
+- 表中未列的 System id 一律无预授权，即使它已在 `external-systems.json` 里声明。
+
+**为什么要这条**：runtime 验收 eval 必须真把外部系统跑起来才有意义，而建测试资源是其前置。
+逐次确认会让「自主推进到 goal 完成」在每个 eval 前中断一次——正是本项目「补充 runtime/
+多系统测试作为 evals」那条需求要解决的问题。预授权换来自主度，代价是「是否测试资源」
+这个判断由主会话自己做，所以 `Resource scope` 逐行写死，越界即回落。
 
 ## Stop Conditions
 

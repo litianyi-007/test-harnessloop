@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "systems": [
+    {
+      "id": "newapi",
+      "kind": "http",
+      "description": "Self-hosted new-api (github.com/QuantumNous/new-api) gateway, deployed on the raspberry-pi-deploy host. Runtime evals bind to it for per-session token minting, billing attribution and usage-log assertions (SG-8.5, SG-9). Values live only in .harnessloop/local/channel-params.json.",
+      "params": [
+        "NEWAPI_BASE_URL",
+        "NEWAPI_ADMIN_TOKEN",
+        "NEWAPI_UPSTREAM_LLM_KEY",
+        "NEWAPI_UPSTREAM_BASE_URL",
+        "NEWAPI_UPSTREAM_TYPE",
+        "NEWAPI_D3PROXY_TOKEN"
+      ]
+    },
+    {
+      "id": "raspberry-pi-deploy",
+      "kind": "ssh",
+      "description": "Self-owned Raspberry Pi (hostname olegpi, Ubuntu 24.04.4 LTS, aarch64) hosting the new-api instance. Reached over SSH for deployment and for reading container/service state during runtime evals.",
+      "params": ["PI_HOST", "PI_USER", "PI_SSH_KEY"]
+    },
+    {
+      "id": "d3proxy",
+      "kind": "http",
+      "description": "D3-proxy (app/server) instance run locally during evals. Its own config lives in app/server/.env (gitignored); the values are mirrored in channel-params.json.",
+      "params": [
+        "SESSION_PROXY_STATIC_AUTH_KEY",
+        "D3PROXY_LOCAL_PORT",
+        "D3_SEED_SESSION_ID"
+      ]
+    },
+    {
+      "id": "openclaw-isolated",
+      "kind": "process",
+      "description": "An openclaw kernel started in isolation per app/kernel-client/OPENCLAW-ISOLATED-RUN-RECIPE.md — its own state dir, its own gateway port, channels skipped — so an eval never touches the user's ambient openclaw. SG-10's UI shell drives a real round-trip against this instance.",
+      "params": [
+        "OPENCLAW_GATEWAY_PORT",
+        "OPENCLAW_GATEWAY_TOKEN",
+        "OPENCLAW_STATE_DIR",
+        "OPENCLAW_SKIP_CHANNELS"
+      ]
+    },
+    {
+      "id": "hermes-isolated",
+      "kind": "process",
+      "description": "A hermes ACP/api_server instance started in isolation per app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md (own HERMES_HOME, own port). Used by kernel-conformance evals; note the upstream provider-relabel defect recorded at NousResearch/hermes-agent#63681 requires provider:custom rather than auto in this deployment.",
+      "params": [
+        "HERMES_HOME",
+        "API_SERVER_HOST",
+        "API_SERVER_PORT",
+        "API_SERVER_KEY",
+        "API_SERVER_ENABLED"
+      ]
+    }
+  ]
+}
