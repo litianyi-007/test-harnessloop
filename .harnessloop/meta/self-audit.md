@@ -1177,3 +1177,82 @@ fail-closed 跨面一致 / 判定顺序与端到端可达性），**每个 agent
 **另记**：§8 原文写「五面确认 + 异构对抗审，两者都过才进综合规格」。**两者都跑了、
 都没过。** 我已把实施结果写回该节——这套确认机制**本身是有效的，它成功拦下了 v5**。
 不能因为结论是「别写了」就不记它奏效。
+
+---
+
+# Self Audit
+
+## Audit Metadata
+
+- Audit ID: AUDIT-20260804-PRECONTINUE-SG10
+- Trigger: pre-continue（SG-10 开轮前的继续门；上一条审计为 2026-07-28，其后的活动均属插件侧工作，不构成 goal 002 的轮次收盘）
+- Active goal: 20260718-002-agent-app
+- Active round: rounds/0010（已收盘 done）；rounds/0011 尚未开启
+- Auditor: main session（claude-opus-5[1m]）
+- Timestamp: 2026-08-04
+
+> **本条开头先记一个主会话自身的错误**：本次继续门中，主会话两度报告
+> 「self-audit 陈旧、停在 `AUDIT-20260716-SETUP`、Active goal 指向已归档的
+> `20260716-001-setup-wizard`」。**这是错的**——本文件是追加式，共 21 条条目，
+> 最后一条为 `AUDIT-20260728-RULING-NOT-IN-NORMATIVE-TEXT`（2026-07-28），
+> goal 002 的 rounds 0002-0010 逐轮均有对应条目。错因是只读了文件开头 12 行
+> （即最早那条）就下结论。与本项目反复批评的「只看一处就断言」是同一个动作，
+> 且这次是主会话自己犯的。真实缺口只是「没有对应当前 pre-continue 时点的条目」。
+
+## Loop Health
+
+| Check | Status | Evidence path | Notes |
+| --- | --- | --- | --- |
+| Dead loop risk | pass | rounds/0001..0010/decision.md | 10 轮各对应不同子目标，无重复的 next action |
+| Self-contradiction | **fail** | `state/current.md` | hermes 上游处置三处互斥记载并存：A「已决:暂不报(user-confirmed 2026-07-26)」／B「决策本身仍未做出」「尚未决定」／C（2026-08-03）「已在 NousResearch/hermes-agent#63681 补评论」。C 有 URL 可查，A/B 均被 C 取代但未删除 |
+| Goal drift | pass | `goal-breakdown.md`「第二批开发子目标」 | 第二批 SG-10..14 经 AskUserQuestion user-confirmed（2026-07-26） |
+| Evidence drift | pass | `state/evidence-index.md` | 22 条；全文唯一的 `stale` 出现在第 30 行的术语图例定义行，**无条目被标 stale** |
+| Validation drift | **warn** | `setup/data-sources.md`；`goals/…/evals.json` | 本次首登 RAE-0001（绑 `openclaw-isolated`），但 `## Runtime Validation Systems` 表**是空的**——eval 的通过条件当前没有已声明的落点 |
+| Handoff stagnation | pass | `.hopper/queue.md` | 0 个 open handoff；T-048..T-060 全部闭合 |
+| Cost/context runaway | unknown | — | 本次未度量；rounds/0001-0010 各自的 Cost 节在各轮 round-summary 内，本条未汇总 |
+| Recoverable blocker stalled | pass | `state/current.md` | 无 active blocker |
+
+Status values: `pass`, `warn`, `fail`, `unknown`.
+
+## Deterministic Signals
+
+| Signal | Current value | Previous value | Threshold | Status |
+| --- | --- | --- | --- | --- |
+| Recent feedback sequence | positive ×10（rounds 0001-0010 逐轮实读 decision.md） | positive（round 0010） | no repeated neutral/negative without new evidence | pass |
+| Repeated next action count | 1（开 SG-10 L1，首次提出） | 1（rounds/0010 提议 SG-10） | max 2 identical actions | pass |
+| Scope-lock version | unknown —— `rounds/0010/scope-lock.md` 无 `Version` 字段（本项目 scope-lock 未采用该字段；历轮审计记的 v1/v2 是叙述性说法，非文件内字段） | 同左 | must change after failed action unless rollback | unknown |
+| Goal contract version/hash | unknown —— `goal.md` 无 version 字段 | 同左 | no silent change | unknown |
+| Threshold version/hash | unknown —— `thresholds.md` 无 version 字段 | 同左 | no silent change | unknown |
+| Data contract version/hash | unknown —— `data-contract.md` 无 version 字段 | 同左 | no silent change | unknown |
+| Verification command set | `verify_protocol.py --project .`（exit 0 / 0 violations）+ `check_setup.py`（5/5，gate_blocking=false）；本次新增 `external-systems.json` 与 `evals.json` 两份声明进入机械门覆盖 | 前值不含 RAE 两份声明 | no silent change | pass |
+| Stale evidence count | 0 | 0 | 0 for acceptance | pass |
+| Open handoff age | 不适用（0 个 open） | 0 | project-defined | pass |
+| Main-session raw context risk | unknown —— 本次未度量主会话上下文中原始日志占比 | 低（历轮自述） | raw logs stay in evidence files | unknown |
+| Delegation model/effort verified | **不符**：`environment.md` 的 `Expected model: main=claude-fable-5/xhigh`，本会话实际为 Opus 5 (1M context)（`claude-opus-5[1m]`，用户 2026-08-03 切换）；`Expected effort/reasoning` 的 subagent 项仍是 `TODO (owner: user)`；`Verification method` 自述「无独立运行时探针验证 subagent 实际使用的模型/effort」 | pass（历轮，主会话为 fable-5/sonnet-5 时与期望值相符） | required for high-risk delegation | **fail** |
+| Recoverable blocker next action | 不适用（无 blocker） | 同 | read-only investigation before user pause | pass |
+
+## Local Repair Decision
+
+- Required repair:
+  1. **`state/current.md` 三处互斥记载**——A/B 已被 C 取代（issue 与评论均有 URL），但未删除。事实层错误。
+  2. **`environment.md` 的 `Expected model` 与实际不符**。注意 `control-contract.md` 的
+     Stop Conditions 里 `Environment mismatch: TODO (owner: user)`——**契约没写不符时该怎么办**，
+     无法按契约自动处置。
+  3. **`data-sources.md` 的 `## Runtime Validation Systems` 为空**，而 RAE-0001 已登记。
+- Smallest safe next action: 修 (1)——删除已被取代的 A/B 表述，保留 C 及其 URL。纯文本更正，
+  不触碰契约语义，不涉及外部写入。
+- Blocker type: none —— 三项均不阻断，但 (2)(3) 需用户决定，不由主会话代决。
+- Recovery eligible: no（无 active blocker）
+- Human confirmation required: 是——(2) 是环境策略（改期望值／改回 fable-5／定义 mismatch 处置），
+  (3) 是验收条件（RAE-0001 的通过条件本身；`goal-breakdown.md` SG-10 行已注明「UI 自动化验收
+  方法待定、首轮 scope-lock 时定」）。
+- Block execution until repaired: 否
+
+## Evolution Issue Decision
+
+- Create upstream evolution issue: no
+- Reason: 本次未发现新的 harnessloop 框架缺陷。两处值得记的都不是框架问题——①主会话自己
+  「只读文件开头就断言」的错误（已在本条开头如实登记）；②`control-contract.md` 的
+  `Environment mismatch: TODO (owner: user)` 是本项目自己没填的字段，不是框架缺陷。
+- Issue path: 无新增
+- Redaction notes: 无涉密内容（仅引用 upstream issue 编号、模型 id、文件路径与字段名）

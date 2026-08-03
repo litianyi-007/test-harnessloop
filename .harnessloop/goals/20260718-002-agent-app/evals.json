@@ -1,0 +1,9 @@
+{
+  "evals": [
+    {
+      "eval_id": "RAE-0001",
+      "activation_round": 11,
+      "system": "openclaw-isolated"
+    }
+  ]
+}
