@@ -1,0 +1,19 @@
+harnessloop
+  s_82fb18dc362685::t_aa23b61508c9b6 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "c1363fc379e3c84e7c9891ecf7193b91692929bc",
+  "prompts": {},
+  "sessions": {
+    "s_82fb18dc362685": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a64ec5265b1e1ce5f",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>"
+    }
+  }
+}
