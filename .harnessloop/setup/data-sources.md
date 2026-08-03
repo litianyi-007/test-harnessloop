@@ -26,8 +26,11 @@
 | npm run validate（cwd=harnessloop/，8 阶段） | 本地命令 | 全部阶段全绿（当前 8 阶段） | pass=exit 0 全绿 | 定位失败阶段修复后重跑 | 无 | 无 (user-confirmed 2026-07-16, threshold revision per control contract) |
 | python3 <plugin-cache>/skills/harnessloop-loop/scripts/verify_protocol.py --project 本项目 | 本地命令 | 机械协议门 | pass=exit 0 | TODO (owner: user) | 无 | 无 |
 | scripts/plugin-reinstall.sh（重装回路） | 本地命令 | 内容比对 | pass=内容比对一致 | TODO (owner: user) | 无 | 无 |
+| `openclaw-isolated`（RAE-0001 绑定的外部系统；见 `setup/external-systems.json`） | 按 `app/kernel-client/OPENCLAW-ISOLATED-RUN-RECIPE.md` 起隔离实例：独立 `OPENCLAW_STATE_DIR` + 独立 `OPENCLAW_GATEWAY_PORT` + `OPENCLAW_SKIP_CHANNELS`，**不触碰用户环境中既有的 openclaw 状态目录与 gateway** | SG-10 L1 的 UI 壳对该实例发起一次真实会话往返（新建会话 → 发送 → 收到消息流），取 app 侧 e2e 日志 + 实例侧日志两路对照 | **TBD —— 首轮 scope-lock 时定**（`goal-breakdown.md` SG-10 行原文：「风险：UI 自动化验收方法待定，首轮 scope-lock 时定」；本栏刻意不预填，避免把未定的验收标准写成已定） | 失败时不重试、不换实例；停下来把失败态（进程状态/端口/实例日志尾部）记进本轮 evidence，按 blocker 分类处理 | 无（隔离实例不需要凭证；`OPENCLAW_GATEWAY_TOKEN` 是本地自生成的进程内令牌，不是外部账号凭证） | `OPENCLAW_GATEWAY_PORT` / `OPENCLAW_GATEWAY_TOKEN` / `OPENCLAW_STATE_DIR` / `OPENCLAW_SKIP_CHANNELS`（参数**名**见 `setup/external-systems.json`；值不入库） |
 
 注：本机 python3 = 3.9.4（pyenv），为本 goal 所有新增 python 代码的兼容性下限约束。
+
+注（2026-08-04）：上表前三行是 **harnessloop 自身工具链**的校验命令，与 `setup/external-systems.json` 里声明的 5 个外部系统是两回事。本次补入 `openclaw-isolated` 一行，因为 RAE-0001 已绑定它；其余四个系统（`newapi` / `raspberry-pi-deploy` / `d3proxy` / `hermes-isolated`）**尚无对应 eval，故本表暂不为它们预写验证方法**——等各自的 eval 真被登记时再补，避免写下没有 eval 消费的条目。
 
 ## External Tools And Platforms
 

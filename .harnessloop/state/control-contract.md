@@ -60,7 +60,13 @@ Stop when:
 - Blocking condition: human-decision-required / access-missing / write-safety-required 且下一安全动作需用户输入时
 - Blocker type: 见下方 Blocker Classification（协议 7 类）
 - Missing evidence: TODO (owner: user)
-- Environment mismatch: TODO (owner: user)
+- Environment mismatch: **停下来报告，不自动继续**（user-confirmed 2026-08-04）——当
+  `state/environment.md` 的 `Expected model` / `Expected effort/reasoning` 与本会话实际
+  不符时，主会话须在继续门输出里显式点出「声称 X / 实际 Y」，并停止，等用户裁决
+  （改期望值 / 换回原模型 / 明确接受本次不符）。**不得自行把期望值改成实际值当作"已解决"**
+  ——那是把不符消除在记录里而不是解决它。此前本字段为 TODO，2026-08-04 的
+  AUDIT-20260804-PRECONTINUE-SG10 首次实际撞上不符（声称 claude-fable-5、实际
+  claude-opus-5[1m]）时无规则可依，故补此条
 - Model/effort mismatch: TODO (owner: user)
 - Contract cannot be evaluated: TODO (owner: user)
 

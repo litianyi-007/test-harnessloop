@@ -1207,7 +1207,7 @@ fail-closed 跨面一致 / 判定顺序与端到端可达性），**每个 agent
 | Self-contradiction | **fail** | `state/current.md` | hermes 上游处置三处互斥记载并存：A「已决:暂不报(user-confirmed 2026-07-26)」／B「决策本身仍未做出」「尚未决定」／C（2026-08-03）「已在 NousResearch/hermes-agent#63681 补评论」。C 有 URL 可查，A/B 均被 C 取代但未删除 |
 | Goal drift | pass | `goal-breakdown.md`「第二批开发子目标」 | 第二批 SG-10..14 经 AskUserQuestion user-confirmed（2026-07-26） |
 | Evidence drift | pass | `state/evidence-index.md` | 22 条；全文唯一的 `stale` 出现在第 30 行的术语图例定义行，**无条目被标 stale** |
-| Validation drift | **warn** | `setup/data-sources.md`；`goals/…/evals.json` | 本次首登 RAE-0001（绑 `openclaw-isolated`），但 `## Runtime Validation Systems` 表**是空的**——eval 的通过条件当前没有已声明的落点 |
+| Validation drift | **warn** | `setup/data-sources.md`；`goals/…/evals.json` | 本次首登 RAE-0001（绑 `openclaw-isolated`），而 `## Runtime Validation Systems` 表里**没有任何一行对应 `external-systems.json` 声明的外部系统**——已有 3 行全是 harnessloop 自身工具链（`npm run validate` / `verify_protocol.py` / `plugin-reinstall.sh`）。**更正**：本条初稿写的是「该表是空的」，那是错的——错因是 `awk '/Runtime Validation Systems/,/^## /'` 的起止模式同时匹配标题行、range 立即闭合，只吐出标题。这是本次继续门里主会话第二个因提取方法糙而产生的假发现（第一个是误判 self-audit「陈旧」）。缺口本身成立，描述已更正 |
 | Handoff stagnation | pass | `.hopper/queue.md` | 0 个 open handoff；T-048..T-060 全部闭合 |
 | Cost/context runaway | unknown | — | 本次未度量；rounds/0001-0010 各自的 Cost 节在各轮 round-summary 内，本条未汇总 |
 | Recoverable blocker stalled | pass | `state/current.md` | 无 active blocker |

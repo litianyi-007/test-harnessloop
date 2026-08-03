@@ -26,13 +26,13 @@ Can verify evidence citations: 返回带路径引用（P0 批次已实证）
 
 ## Model And Effort
 
-Expected model: main=claude-fable-5/xhigh；write-subagent=claude-sonnet-5（Agent 工具 model:"sonnet" 参数指定）
+Expected model: main=claude-opus-5[1m]（Opus 5, 1M context；用户 2026-08-03 经 /model 切换，该次操作自述“saved as your default for new sessions”，故为持久默认）；write-subagent=claude-sonnet-5（Agent 工具 model:"sonnet" 参数指定，未变） (user-confirmed 2026-08-04)
 
-Observed model: main=claude-fable-5（系统提示自证）；subagent=通过 Agent 工具参数指定 + 任务元数据，无独立运行时探针
+Observed model: main=claude-opus-5[1m]（系统提示自证，2026-08-04 本会话）；subagent=通过 Agent 工具参数指定 + 任务元数据，无独立运行时探针
 
-Expected effort/reasoning: main=ultracode/xhigh；subagent=TODO (owner: user)
+Expected effort/reasoning: main=max（用户 2026-08-03 经 /effort 设定，该次操作自述“this session only”——**仅本会话生效，不是持久默认**，新会话会回落到未指定状态，届时此字段需重新核对）；subagent=TODO (owner: user)
 
-Observed effort/reasoning: TODO (owner: user)
+Observed effort/reasoning: main=max（本会话，来源同上：用户 /effort 操作的自述，非独立运行时探针）；subagent=TODO (owner: user)
 
 Verification method: Agent 工具参数指定 + 任务元数据（无独立运行时探针验证 subagent 实际使用的模型/effort）
 
@@ -48,4 +48,4 @@ Allowed next actions: TODO (owner: user)
 
 Required human action: TODO (owner: user)
 
-Last checked: 2026-07-16
+Last checked: 2026-08-04（AUDIT-20260804-PRECONTINUE-SG10 期间核对：此前 Expected model 仍写 claude-fable-5，与本会话实际不符，已按用户裁决更新）
