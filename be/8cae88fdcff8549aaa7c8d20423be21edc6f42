@@ -1,0 +1,42 @@
+.harnessloop/state/control-contract.md
+  s_c587ecf7bbc3e2::t_62cc9a2e442c5d 63-69
+.harnessloop/state/environment.md
+  s_c587ecf7bbc3e2::t_62cc9a2e442c5d 29-29,31-31,33-33,35-35,51-51
+.harnessloop/meta/self-audit.md
+  s_c587ecf7bbc3e2::t_97e8a01e77a336 1210-1210
+.harnessloop/setup/data-sources.md
+  s_c587ecf7bbc3e2::t_97e8a01e77a336 29-29,32-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "be8cae88fdcff8549aaa7c8d20423be21edc6f42",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_62cc9a2e442c5d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 0,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_97e8a01e77a336": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
