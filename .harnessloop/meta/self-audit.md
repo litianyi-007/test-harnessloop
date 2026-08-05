@@ -1256,3 +1256,15 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
   `Environment mismatch: TODO (owner: user)` 是本项目自己没填的字段，不是框架缺陷。
 - Issue path: 无新增
 - Redaction notes: 无涉密内容（仅引用 upstream issue 编号、模型 id、文件路径与字段名）
+
+> **后记（2026-08-05，$harnessloop-delegation 执行后）**：本条 Deterministic Signals 里
+> `Delegation model/effort verified = fail` 的两个成因，现已分别处置——
+> ①`Expected model` 与实际不符：已按用户裁决更新为 `claude-opus-5[1m]`（2026-08-04）；
+> ②subagent 侧无运行时证据：**已实跑身份自报探针**，模型侧验证通过（自报
+> `claude-sonnet-5`，与所传 `model:"sonnet"` 一致），effort 侧确认**原理上不可由被调方观测**
+> （子代理上下文中不含任何 effort 信息），写入类子代理 effort 期望值经用户裁决定为 `xhigh`
+> （2026-08-05），并明确该值只能由调用方单方面保证。
+>
+> 该信号由 `fail` 转为 **`warn`**：模型侧已可验证，effort 侧是不可消除的机制局限而非未做的功课。
+> 遗留：`state/control-contract.md` 的 `Model/effort mismatch` 仍是 `TODO (owner: user)`——
+> 与本次已填的 `Environment mismatch` 是同族字段，撞上时同样无规则可依，**待用户裁决**。
