@@ -1,0 +1,59 @@
+.hopper/.migrations/AGENTS.md.unstamped.bak
+  s_c587ecf7bbc3e2::t_d66d89fac1f4e4 1-169
+.hopper/.migrations/DISPATCH.md.unstamped.bak
+  s_c587ecf7bbc3e2::t_d66d89fac1f4e4 1-42
+.hopper/.migrations/log.md
+  s_c587ecf7bbc3e2::t_d66d89fac1f4e4 1-8
+.hopper/AGENTS.md
+  s_c587ecf7bbc3e2::t_d66d89fac1f4e4 3-4
+.hopper/DISPATCH.md
+  s_c587ecf7bbc3e2::t_d66d89fac1f4e4 10-10,16-16,25-25
+.gitignore
+  0000019fd07b44c0 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "89b6aef1edc12918185ff4585ba00706974ffcba",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_d66d89fac1f4e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 224,
+      "total_deletions": 0,
+      "accepted_lines": 224,
+      "overriden_lines": 0
+    },
+    "s_612abf3652a466::t_579425baaf2115": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1785909166981879000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019fd07b44c0": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1785909167296"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    }
+  }
+}
