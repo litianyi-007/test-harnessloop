@@ -1,3 +1,7 @@
 .DS_Store
 .llm-wiki.yaml
 scratchpad/
+
+# hopper --migrate-config 的迁移前备份：内容与 git 历史完全重复（已实测比对），
+# 且每次迁移都会新增一份。审计线索保留在同目录的 log.md（已入库）。
+.hopper/.migrations/*.bak
