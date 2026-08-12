@@ -1,0 +1,589 @@
+.harnessloop/goals/20260812-003-plugin-iteration/rounds/0001/scope-lock.md
+  s_c587ecf7bbc3e2::t_b4000d1c0b7863 1-83
+.harnessloop/state/current.md
+  s_c587ecf7bbc3e2::t_3032bee2946202 3-4
+  s_c587ecf7bbc3e2::t_c7c55a25075763 5-5
+.harnessloop/goals/20260718-002-agent-app/goal-breakdown.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 164-164
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/decision.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-100
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/runtime/isolation-after.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/runtime/isolation-baseline-before.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/runtime/live-roundtrip-attempt.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-219
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/step-a-swiftpm-packaging.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-86
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/step-b-swiftui-shell.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-80
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/round-summary.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-84
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/scope-lock.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-104
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/decision.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-78
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/instrumented-run-findings.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-186
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item1-mechanism-localization.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-95
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item2-subscribe-race.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-285
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item3-messageseq.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-106
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item3b-delivery-seq-upstream.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-80
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/isolation-after.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-5
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/isolation-before.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-5
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/live-closure.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-99
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/agentshell-inject.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1410
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/agentshell-stdout.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1449
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/d3proxy.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-64
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/openclaw-inject-stdout.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-48
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/openclaw-isolated-inject.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-48
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/wire-trace-inject.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-20
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-46
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/repro-openclaw.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-25
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/repro-wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-44
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/nopause-1.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1298
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/nopause-2.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/nopause-3.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/nopause-4.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/paused-1.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/paused-2.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/paused-3.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/probe-single.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/raw/agentshell-stdout.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1877
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/raw/d3proxy.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-64
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/raw/openclaw-gateway.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-50
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/raw/wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-34
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/runtime/isolation-after.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-5
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/runtime/isolation-baseline-before.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-13
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/round-summary.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-63
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/scope-lock.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-171
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/decision.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-110
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/hopper-defect-queue-brief-dropped.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-74
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-rae0001-live.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-219
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-reconciliation-premise.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-97
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemD-probe-design.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-68
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemD-probe-results.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-128
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/b1-openclaw.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-22
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-run.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-2526
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-81
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/d2-run.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-3553
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/d2-wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-64
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/d3-restart-transcript.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-32
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/diag-badport.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-4
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/diag-badtoken.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-35
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/history-snapshot.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-58
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-drop.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-40
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-hardened-droponme.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-66
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-hardened-pass.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-47
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-limit2.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-38
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-live.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-34
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-diag-badport.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-7
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-stdout.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-5443
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-234
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/round-summary.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-64
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/scope-lock.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-133
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/decision.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-69
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/counterproof-pagination-main-session.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-22
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-app1.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1394
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-app2.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1699
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-app3.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1276
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-run1.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-40
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-run2.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-18
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-cli.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-2372
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-drop.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-66
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-hist.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-rec.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-47
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-wire.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-78
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/README-persistence-shape.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-51
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/sessions-json-CORRUPTED.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/start-rae14.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-3
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/start14.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-3
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/round-summary.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-74
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/scope-lock.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-162
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/decision.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-74
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/blocker-headless-approval-route.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-98
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/channel-decision-prereg.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-84
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/checkpoint-convergence-guard.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-54
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/itemD-live-approval-roundtrip.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-56
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/approval-frames-extract.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-100
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/counterproof1-main-session.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-26
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/isolated-config-tools.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-7
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15-app.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1868
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15-wire.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-154
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15b-app.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1848
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15b-wire.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-122
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15c-app.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-3461
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15c-approval-chain.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-294
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15c-approval-resolve-sends.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-21
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15c-wire.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-187
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15d-postrework-app.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1880
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15d-postrework-wire.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-37
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-cli.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-2239
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-drop.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-66
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-hist.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-rec.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-47
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-wire.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-63
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/review-T095-disposition.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-53
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/round-summary.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-70
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/scope-lock.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-168
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/decision.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-65
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/ci-parity-runner.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-596
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/codegen-four-checks.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-55
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/counterproof-red-checks.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-149
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/d1-seven-methods-untouched.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-37
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/frame-replay-full.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1739
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/frame-replay-stderr.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/r16-wire-partial.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-39
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/r16b-app.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-3169
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/r16b-resolve-sends.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-21
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/r16b-wire.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-374
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-cli.log
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-2250
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-drop.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-66
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-hist.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-rec.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-47
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-wire.jsonl
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-74
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live-mainpath-no-regression.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-58
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/rounds0016-counterproofs-green.txt
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-21
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/round-summary.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-70
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/scope-lock.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-118
+.harnessloop/meta/evolution-issues/0031-open-round-silently-suppresses-anomaly-metric.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-93
+.harnessloop/meta/self-audit.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1271-1355
+.harnessloop/setup/data-sources.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 29-29,44-103
+.harnessloop/state/decision-triage-prereg.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-39
+.harnessloop/state/evidence-index.md
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 26-27,59-63
+app/.gitignore
+  s_c587ecf7bbc3e2::t_1a8bfcb414193a 1-3
+.harnessloop/goals/20260812-003-plugin-iteration/rounds/0001/evidence/prereg-goal-design-review.md
+  s_c587ecf7bbc3e2::t_552008d7754f27 1-39
+.hopper/queue.md
+  s_c587ecf7bbc3e2::t_fde401ee511c7b 113-114
+.hopper/handoffs/T-104-codex-output.log
+  s_c587ecf7bbc3e2::t_fc42c62710beb5 1-1
+.hopper/handoffs/T-104-codex-output.md
+  s_c587ecf7bbc3e2::t_fc42c62710beb5 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-104-codex-progress.log
+  s_c587ecf7bbc3e2::t_fc42c62710beb5 1-1
+.hopper/handoffs/T-104-grok-output.log
+  s_c587ecf7bbc3e2::t_fc42c62710beb5 1-1
+.hopper/handoffs/T-104-grok-output.md
+  s_c587ecf7bbc3e2::t_fc42c62710beb5 1-11,34-34,36-36,45-45
+  human 12-20,23-23,26-27,31-31,33-33,37-38,79-79,109-109,216-216,235-235
+.hopper/handoffs/T-104-grok-progress.log
+  s_c587ecf7bbc3e2::t_fc42c62710beb5 1-1
+.harnessloop/goals/20260812-003-plugin-iteration/goal.md
+  s_c587ecf7bbc3e2::t_2e3c65e4ade325 5-5,7-7,9-10,12-12,14-14,16-18,20-20,22-28,30-32,36-40,44-44,46-46,48-50,54-54,58-63,65-65,67-68,70-71,73-73,75-78,80-82,84-87,89-89,92-92,96-100
+.harnessloop/goals/20260812-003-plugin-iteration/goal-breakdown.md
+  s_c587ecf7bbc3e2::t_f71b45afad95d4 5-5,9-9,11-11,23-27,30-30,36-60,62-63,65-65,67-72,74-74,78-83
+.harnessloop/goals/20260812-003-plugin-iteration/thresholds.md
+  s_c587ecf7bbc3e2::t_1294e12c243076 35-37,39-40
+.harnessloop/goals/20260812-003-plugin-iteration/feedback-policy.md
+  s_c587ecf7bbc3e2::t_cf3eff0b63e4da 35-37
+.harnessloop/goals/20260812-003-plugin-iteration/rounds/0001/round-summary.md
+  s_c587ecf7bbc3e2::t_a1388e43a6f8f8 1-74
+.harnessloop/goals/20260812-003-plugin-iteration/rounds/0001/decision.md
+  s_c587ecf7bbc3e2::t_4fa77413f8ac20 1-6,14-66
+  s_c587ecf7bbc3e2::t_ff8f7336c5adfb 7-9,12-13
+  s_c587ecf7bbc3e2::t_8614ff3d2bae00 10-11
+docs/validation-log.md
+  s_c587ecf7bbc3e2::t_ac29d437436085 20-32
+app/kernel-client/swift/cli/main.swift
+  0000019ff68d44a7 1-25
+app/kernel-client/swift/frame-replay-tests/FrameReplayTestMain.swift
+  0000019ff68d44a7 1-22
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+  0000019ff68d44a7 1-2060
+.hopper/handoffs/T-104-codex-output-raw.txt
+  0000019ff68d44a7 1-806
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "5f2c0ab238dd25bf374c4d5d2359a8ff6504f6dc",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_b4000d1c0b7863": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 83,
+      "total_deletions": 0,
+      "accepted_lines": 83,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fea0e299675b80": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1a8bfcb414193a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 57258,
+      "total_deletions": 0,
+      "accepted_lines": 57258,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_552008d7754f27": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 0,
+      "accepted_lines": 39,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fde401ee511c7b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fc42c62710beb5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 46,
+      "total_deletions": 0,
+      "accepted_lines": 46,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2e3c65e4ade325": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 61,
+      "total_deletions": 0,
+      "accepted_lines": 61,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f71b45afad95d4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 50,
+      "total_deletions": 0,
+      "accepted_lines": 50,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1294e12c243076": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_cf3eff0b63e4da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a1388e43a6f8f8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 74,
+      "total_deletions": 0,
+      "accepted_lines": 74,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4fa77413f8ac20": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 59,
+      "total_deletions": 0,
+      "accepted_lines": 59,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3032bee2946202": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ac29d437436085": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "s_47cd626c38f770::t_3416a8580e5042": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1786547880916775000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019ff68d44a7": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1786547881127"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 2913,
+      "total_deletions": 0,
+      "accepted_lines": 2913,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c7c55a25075763": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "human": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 0,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ff8f7336c5adfb": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8614ff3d2bae00": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}
