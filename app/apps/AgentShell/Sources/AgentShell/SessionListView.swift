@@ -28,6 +28,9 @@ struct SessionListView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            // rounds/0017 Change 2：这里此前没有任何自定义不透明背景（`.listStyle(.sidebar)` 已经
+            // 是系统侧栏材质），符合任务书 concrete 项 1/2"chrome 让系统材质透出、标准
+            // NavigationSplitView 侧栏"——不需要改动。
             List(store.sessions, selection: $store.selectedSessionID) { session in
                 SessionRow(session: session)
             }
@@ -48,23 +51,28 @@ struct SessionListView: View {
                     .buttonStyle(.plain)
                 }
                 .padding(8)
-                .background(Color.red.opacity(0.12))
+                // rounds/0017 Change 2 concrete 项 8：此前是不透明度固定的 `Color.red.opacity(0.12)`
+                // ——换成标准 material（跟随 Dark Mode/Increase Contrast/Reduce Transparency 自动
+                // 适配），颜色只留在文字/图标上（上面的 `.foregroundStyle(.red)` 本来就是语义色，
+                // 不用改）。
+                .background(.regularMaterial)
             }
-
-            Divider()
-            Button {
-                Task { await store.createNewSession() }
-            } label: {
-                Label(store.isCreatingSession ? "新建中…" : "新建会话", systemImage: "plus.bubble")
-                    .frame(maxWidth: .infinity)
-            }
-            .disabled(store.isCreatingSession)
-            .padding(8)
         }
         .frame(minWidth: 240)
         .navigationTitle("会话")
+        // "新建会话"本轮搬到窗口工具栏（ContentView.swift `newSessionButton`，rounds/0017 Change 2
+        // concrete 项 3）——侧栏底部不再需要这个通栏按钮；行为（同一个 store.createNewSession()
+        // 调用、同一个 isCreatingSession 禁用态）完全保留，只是不再是侧栏内容区的一部分，呼应
+        // "让内容区/侧栏回归标准布局，操作归工具栏"的现代 macOS 设计语言。
     }
 
+    /// **rounds/0017 返工（code-review-adversarial 判 REWORK，P2 的第二处）**：修前 failed 态的
+    /// 背景是 `Color.red.opacity(0.10)`——同一类固定 alpha 不随 Increase Contrast 提升对比度的
+    /// 问题（见 MessageBubble 头注释，判据相同）。这里状态信号本来就有两条不依赖背景色的通道：
+    /// `connectionColor` 圆点（小号前景字形，同 MessageBubble 图标的道理）+ `connectionText` 直接
+    /// 用文字写出"连接失败：…"（内容本身就说明了状态，不依赖颜色）。failed 态额外给一层标准
+    /// material 只是让这一行在侧栏里稍微"抬"一点视觉权重，不是唯一的状态信号，因此可以老实换成
+    /// material 而不必纠结"颜色该编码在哪"。
     private var connectionBanner: some View {
         HStack(spacing: 6) {
             Circle().fill(connectionColor).frame(width: 8, height: 8)
@@ -76,7 +84,11 @@ struct SessionListView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(connectionBackground)
+        .background {
+            if case .failed = store.connectionStatus {
+                Rectangle().fill(.regularMaterial)
+            }
+        }
     }
 
     private var connectionColor: Color {
@@ -95,11 +107,6 @@ struct SessionListView: View {
         case .connected(let scopes): return "已连接（scopes: \(scopes.joined(separator: ", "))）"
         case .failed(let message): return "连接失败：\(message)"
         }
-    }
-
-    private var connectionBackground: Color {
-        if case .failed = store.connectionStatus { return Color.red.opacity(0.10) }
-        return Color.clear
     }
 }
 

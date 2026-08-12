@@ -30,14 +30,24 @@ public struct ChatMessage: Identifiable {
     public var text: String
     public let createdAt = Date()
 
+    /// rounds/0017 Change 1：`ChatSessionViewModel.timeline` 把这个数组与新增的 `toolCalls`/
+    /// `thinkingItems` 两个独立数组合并成一条统一呈现顺序时使用的排序键——不用 `createdAt`
+    /// （wall-clock），理由见 `ChatSessionViewModel.allocateLiveTimelineSeq()` 的文档注释。
+    /// 不对外公开（同 `inProgressDeltaMessageID` 的先例）：`AgentShell` 视图层只消费
+    /// `ChatSessionViewModel.timeline` 这个已经排好序的结果，不需要、也不应该自己再读这个键。
+    let timelineSeq: Int
+
     /// 显式 public init——struct 是 public 不代表编译器会合成一个 public 的逐成员初始化器
     /// （Swift 对 public 类型的自动合成初始化器上限是 internal），沿用调用方一直在用的
     /// `ChatMessage(role:text:)` 两参数形状（`id`/`createdAt` 各自有默认值表达式，本就不进
     /// 逐成员初始化器的参数列表——这是原本 Swift 自动合成时的既有形状，这里显式声明只是把它从
-    /// "自动合成、上限 internal" 换成"手写、public"，参数形状本身没变）。
-    public init(role: ChatRole, text: String) {
+    /// "自动合成、上限 internal" 换成"手写、public"，参数形状本身没变）。`timelineSeq` 给默认值
+    /// 0——只有 `SessionStore`（同模块）需要传真实取号结果；测试/未来调用点若不关心跨数组排序，
+    /// 两参数形式仍然可用，不因为这个新维度被强制牵连。
+    public init(role: ChatRole, text: String, timelineSeq: Int = 0) {
         self.role = role
         self.text = text
+        self.timelineSeq = timelineSeq
     }
 }
 

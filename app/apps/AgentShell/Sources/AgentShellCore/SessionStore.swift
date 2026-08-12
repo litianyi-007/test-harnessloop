@@ -257,8 +257,15 @@ public final class SessionStore {
     private func backfillHistory(for session: ChatSessionViewModel, kernelKey: String) async {
         do {
             let records = try await client.fetchFullHistory(kernelKey: kernelKey, pageLimit: Self.historyPageLimit)
-            let restored = records.map(Self.historyChatMessage(from:))
-            guard !restored.isEmpty else { return }
+            guard !records.isEmpty else { return }
+            // rounds/0017 Change 1：批量取一段恒排在这个会话所有实时项之前的 timelineSeq 区间——
+            // 理由见 ChatSessionViewModel.allocateHistoryTimelineSeqs(count:) 的文档注释。下标 0
+            // （records 里最早的记录）配 seqs[0]（区间里最小的键），保持批内相对顺序与 seqs 严格
+            // 递增一致。
+            let seqs = session.allocateHistoryTimelineSeqs(count: records.count)
+            let restored = zip(records, seqs).map { record, seq in
+                Self.historyChatMessage(from: record, timelineSeq: seq)
+            }
             session.messages.insert(contentsOf: restored, at: 0)
         } catch {
             session.streamError = "历史回填失败：\(describeError(error))"
@@ -270,11 +277,11 @@ public final class SessionStore {
     /// `HistoryRecord` 解析层在 role 缺失时填的 "unknown"）一律归入 `.system`，且把原始 role 字面
     /// 值前缀进文本——不是把未知内容悄悄吞掉，也不是错误地冒充成 user/assistant 说的话，呼应本壳
     /// "失败/异常可诊断"的既有原则（`ChatModels.swift` 对 `.system` 角色的定位）。
-    private static func historyChatMessage(from record: HistoryRecord) -> ChatMessage {
+    private static func historyChatMessage(from record: HistoryRecord, timelineSeq: Int) -> ChatMessage {
         switch record.role {
-        case "user": return ChatMessage(role: .user, text: record.text)
-        case "assistant": return ChatMessage(role: .assistant, text: record.text)
-        default: return ChatMessage(role: .system, text: "[\(record.role)] \(record.text)")
+        case "user": return ChatMessage(role: .user, text: record.text, timelineSeq: timelineSeq)
+        case "assistant": return ChatMessage(role: .assistant, text: record.text, timelineSeq: timelineSeq)
+        default: return ChatMessage(role: .system, text: "[\(record.role)] \(record.text)", timelineSeq: timelineSeq)
         }
     }
 
@@ -285,13 +292,15 @@ public final class SessionStore {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let session = session(for: sessionID) else { return }
 
-        session.messages.append(ChatMessage(role: .user, text: trimmed))
+        session.messages.append(ChatMessage(role: .user, text: trimmed, timelineSeq: session.allocateLiveTimelineSeq()))
         session.isWaitingForReply = true
         do {
             _ = try await client.send(session: session.handle, input: Input(kind: .text, text: trimmed, parts: nil))
         } catch {
             session.isWaitingForReply = false
-            session.messages.append(ChatMessage(role: .system, text: "[发送失败] \(describeError(error))"))
+            session.messages.append(ChatMessage(
+                role: .system, text: "[发送失败] \(describeError(error))", timelineSeq: session.allocateLiveTimelineSeq()
+            ))
         }
     }
 
@@ -308,19 +317,24 @@ public final class SessionStore {
         }
     }
 
-    /// EventMessageUnion 十一个变体（app/generated/swift/DiscriminatedUnions.swift:104-116）里，
-    /// L1 只据此驱动两类 UI 效果：
+    /// EventMessageUnion 十一个变体（app/generated/swift/DiscriminatedUnions.swift:104-116）的
+    /// 分工（**rounds/0017 Change 1 更新**——上一版这里写"L1 只据此驱动两类 UI 效果……其余 7 个
+    /// 变体……L1 故意不渲染"，那是 L1 任务书字面范围下的 scope 决定；本轮任务书明确要求把
+    /// thinking/toolCall/toolResult 也渲染出来，理由是"用户看不到 agent 实际做了什么，只看得到
+    /// 一问一答"，如实更新这条分工说明，不留一份和代码不符的旧描述）：
     ///   - evt.message.delta（.messageDelta）：assistant 文本的唯一来源，见
     ///     appendAssistantDelta 的文档注释。
-    ///   - evt.turn_complete / evt.error / evt.session_end：不渲染成消息气泡本身（除了 error/
-    ///     sessionEnd 额外插入一条系统行用于"失败可见"），但驱动"是否在等回复"这个状态位——
-    ///     UI 最低要求里"有没有在等回复"这一条需要它们。
-    /// 其余 7 个变体（thinking/toolCall/toolResult/approvalRequest/capabilityChanged/
-    /// operationCompleted/approvalBufferResolved）按 D5.1（~/.llm-wiki/agent-app-design/product/
-    /// d5-1-message-flow.md §1 分工表）本就分属其它子面（如 approvalRequest 的完整呈现是 D5.3
-    /// 审批五态 UI，L1 任务书明确排除），也不在任务书列出的"UI 最低要求"范围内（该范围字面写的是
-    /// "用户发出的消息 + 从 subscribe 事件流里解析出的 assistant 文本"）——L1 故意不渲染，这是
-    /// scope 决定，不是漏做。
+    ///   - evt.tool_call / evt.tool_result / evt.thinking：分别见 `handleToolCall`/
+    ///     `handleToolResult`/`handleThinking`——写入 `session.toolCalls`/`session.thinkingItems`，
+    ///     由 `ChatSessionViewModel.timeline` 与 `session.messages` 合并成统一的呈现顺序。
+    ///   - evt.turn_complete / evt.error / evt.session_end / evt.operation_completed：不渲染成
+    ///     消息气泡本身（除了 error/sessionEnd/operationCompleted 额外插入一条系统行用于"失败/
+    ///     操作可见"），turn_complete/error 还驱动"是否在等回复"这个状态位——UI 最低要求里"有没有
+    ///     在等回复"这一条需要它们。
+    ///   - evt.approval_request / evt.approval_buffer_resolved：分属 D5.3 审批五态 UI 子面
+    ///     （rounds/0015/0016 已实现，见下方对应 case），不是本轮改动范围。
+    ///   - evt.capability_changed：仍然故意不渲染——不是 scope 裁剪，是这个变体本轮在 kernel-client
+    ///     适配器层结构性地没有任何真实触发路径（该 case 分支上方有单独的文档注释，不在此重复）。
     ///
     /// **可见性变更（rounds/0013 B2，最小化放宽）**：原为 `private`，本轮改为 internal（去掉
     /// `private`，不是加 `public`/`open`）——唯一理由是让 `frame-replay-tests` target 能通过
@@ -367,7 +381,8 @@ public final class SessionStore {
                 session.messages.append(ChatMessage(
                     role: .system,
                     text: "[审批] 上一条审批已在内核侧终态化，卡片已清除（reqId=\(staleReqIDs.joined(separator: ", "))）；"
-                        + "下面呈现的是队列中提升上来的下一条"
+                        + "下面呈现的是队列中提升上来的下一条",
+                    timelineSeq: session.allocateLiveTimelineSeq()
                 ))
             }
             // 同一个 reqId 重复到达（例如断线重连后 subscribe 响应里的 approvalReplay 重放了一条
@@ -383,7 +398,9 @@ public final class SessionStore {
             // composer 因为一次不会再有后续 turnComplete 的错误而永久卡在"等待中"。这是一处已知
             // 简化，未按 recoverable 三态精细区分恢复行为（那属于 L2 审批/恢复 UI 的范畴）。
             session.isWaitingForReply = false
-            session.messages.append(ChatMessage(role: .system, text: "[错误] \(e.payload.message)"))
+            session.messages.append(ChatMessage(
+                role: .system, text: "[错误] \(e.payload.message)", timelineSeq: session.allocateLiveTimelineSeq()
+            ))
             // rounds/0016（T-096 第 4 项）：`approval_timeout` 是 D2 `KernelErrorCode` 里**字面
             // 对应**"审批被内核判超时"的那个取值（common/errors.schema.json:10-18），适配器在
             // active pending 被内核终态化时产出它（`handleApprovalTerminalSignal`）。它就是"先
@@ -401,12 +418,16 @@ public final class SessionStore {
                 session.pendingApprovals.removeAll()
                 session.messages.append(ChatMessage(
                     role: .system,
-                    text: "[审批] 该请求已被内核判定超时（fail-closed 拒绝），卡片已清除（reqId=\(cleared.joined(separator: ", "))）"
+                    text: "[审批] 该请求已被内核判定超时（fail-closed 拒绝），卡片已清除（reqId=\(cleared.joined(separator: ", "))）",
+                    timelineSeq: session.allocateLiveTimelineSeq()
                 ))
             }
         case .sessionEnd(let e):
             session.isWaitingForReply = false
-            session.messages.append(ChatMessage(role: .system, text: "[会话结束] reason=\(e.payload.reason.rawValue)"))
+            session.messages.append(ChatMessage(
+                role: .system, text: "[会话结束] reason=\(e.payload.reason.rawValue)",
+                timelineSeq: session.allocateLiveTimelineSeq()
+            ))
         case .approvalBufferResolved(let e):
             // rounds/0015 返工①（D1 §6.2「缓冲生命周期的独立可见性」）：一条**从未被呈现给用户**的
             // 审批请求，因为排在 FIFO 缓冲队列里超时、或因为队列溢出被适配器 fail-closed 拒绝，而
@@ -424,14 +445,134 @@ public final class SessionStore {
             }
             session.messages.append(ChatMessage(
                 role: .system,
-                text: "[审批] 一条未及呈现的请求已被自动拒绝：\(bufferReason)（reqId=\(e.payload.reqID)）"
+                text: "[审批] 一条未及呈现的请求已被自动拒绝：\(bufferReason)（reqId=\(e.payload.reqID)）",
+                timelineSeq: session.allocateLiveTimelineSeq()
             ))
             // 防御性：这条 reqId 结构性地不该出现在卡片列表里（缓冲期的请求从未产出过
             // approval_request），万一因为将来的改动出现了，也要跟着清掉，不留点不动的僵尸卡片。
             session.pendingApprovals.removeAll { $0.reqID == e.payload.reqID }
-        case .thinking, .toolCall, .toolResult, .capabilityChanged, .operationCompleted:
+
+        // ---- rounds/0017 Change 1："让 agent 看起来像 agent" ----
+        //
+        // 以下三个变体此前一律 `break`——UI 只看得到"用户说一句、assistant 答一句"，agent 实际做了
+        // 什么（调了哪个工具、传了什么参数、跑出什么结果、有没有在推理）全部不可见，除非恰好触发一
+        // 张审批卡片。三个 handle* 私有方法把它们变成 `session.toolCalls`/`session.thinkingItems`
+        // 里的呈现条目，`ChatSessionViewModel.timeline` 负责把它们和 `session.messages` 按到达顺序
+        // 合并渲染（SessionDetailView 消费 `timeline`，不再只消费 `messages`）。
+        case .toolCall(let e):
+            handleToolCall(e, for: session)
+        case .toolResult(let e):
+            handleToolResult(e, for: session)
+        case .thinking(let e):
+            handleThinking(e, for: session)
+
+        // evt.operation_completed：只由 stop()/interrupt() 触发的终态镜像事件产生
+        // （OpenclawGatewayKernelClient.emitOperationCompletedMirror 的调用点全部在 stop() 的执行
+        // 路径上；mapOpenclawAgentLifecycleToAbortTerminalEvents 同样只在 stop() 发起的
+        // sessions.abort 收到 aborted 回执后触发）。本文件头注释已经记录 L1 明确不调用 stop()/
+        // interrupt()（respondApproval 例外，rounds/0015 已实现），本壳自身的操作序列结构性地不会
+        // 产生这个事件——但事件流是这个 session 的完整流，不是"只包含本壳发起的操作"的过滤流：
+        // 如果这个 session 被同一内核连接上的其它路径影响（诊断/未来的 L2 stop 按钮…），用户也不该
+        // 在事件流上看到这个操作发生过、却在 UI 上一声不吭。渲染成一行系统消息，代价只有这几行代码，
+        // 呼应本轮改动"agent 做的每件事都应该可见"的出发点——不算过度设计。
+        case .operationCompleted(let e):
+            handleOperationCompleted(e, for: session)
+
+        // evt.capability_changed：诚实标注 unsupported，不是遗漏。EventMapping.swift 头注释③原文：
+        // "evt.capability_changed 本轮仍未接入任何真实触发路径"——不是"L1 选择不调用触发它的方法"
+        // （像 operationCompleted 那样，理论上仍可能被外部路径触发），而是 kernel-client 适配器本身
+        // 这一轮就没有任何代码路径会产出这个 D2 变体（D1 INV-4：能力变更的感知路径是"内核 RPC
+        // 报错"+"我方 Server 能力开关 override"，从来不是内核主动 push 的事件）。渲染一个结构性上
+        // 从未会被喂入真实数据的分支，只会是死代码,不会增加任何用户能看到的价值。
+        case .capabilityChanged:
             break
         }
+    }
+
+    /// evt.tool_call -> 消息流里一张"进行中"的工具调用卡片。toolCallId 天然唯一（同一次调用只会
+    /// 有一个 evt.tool_call），直接当 `ToolCallItem.id`；参数摘要用 `JSONPreview.summarize(_:)` 从
+    /// payload.input（JSONAny）提炼出单行文本，供折叠态展示，展开态由视图层自己按需调
+    /// `JSONPreview.describe(_:)`——这里不预先计算未压缩的全文，避免为一个可能永远不会被展开的
+    /// 参数多存一份字符串。
+    ///
+    /// **rounds/0017 返工（code-review-adversarial 判 REWORK，P1，最要紧的一条）**：修前这里无条件
+    /// `append`。但 `evt.tool_result` 可能先于它自己的 `evt.tool_call` 到达
+    /// （`handleToolResult` 的"孤儿"分支会先用同一个 `toolCallID` 建一张占位 `ToolCallItem`）——
+    /// 这种时序下，这条 `evt.tool_call` 姗姗来迟时如果还无条件 `append`，会产出**第二条 `id` 与
+    /// 占位项完全相同的 `ToolCallItem`**：`ConversationItem.id`（`toolCall-\(t.id)`，
+    /// ConversationItems.swift）因此在 `session.timeline` 里重复，违反 SwiftUI `ForEach` 要求
+    /// 数据源 id 唯一的契约（真实 bug，不只是"两张卡片而已"——`ForEach` 在 id 冲突时的 diff/更新
+    /// 行为是未定义的）；而且语义上更糟：结果永远留在先到的占位项上，这条后到的新行拿到的
+    /// `result` 却是 `nil`，用户看到的是"一张有结果没名字的卡片 + 一张有名字永远转圈的卡片"，
+    /// 两者其实是同一次调用。
+    ///
+    /// 修法：先按 `toolCallID` 查表。命中（不论命中的是孤儿占位项，还是——协议层理论上不该出现、
+    /// 但仍防御性覆盖的——重复 `evt.tool_call`）就**原地补全** `name`/`argumentSummary`，不新增行、
+    /// 不改 `timelineSeq`——`timelineSeq` 保留"这个 toolCallId 第一次被观测到"的那一刻（不论是从
+    /// call 观测到的还是从 result 观测到的），呼应 `handleToolResult` 命中已有条目时"原地补
+    /// `result`、不挪位置"的既有对称设计：同一个 toolCallId 在 `timeline` 里永远只贡献一条
+    /// `ConversationItem`，它的位置由这个 id 最早出现的那一刻决定，谁后到谁只负责把内容填完整。
+    private func handleToolCall(_ event: ToolCallEventMessage, for session: ChatSessionViewModel) {
+        if let idx = session.toolCalls.firstIndex(where: { $0.id == event.payload.toolCallID }) {
+            session.toolCalls[idx].name = event.payload.name
+            session.toolCalls[idx].argumentSummary = JSONPreview.summarize(event.payload.input.value)
+        } else {
+            session.toolCalls.append(ToolCallItem(
+                id: event.payload.toolCallID,
+                name: event.payload.name,
+                argumentSummary: JSONPreview.summarize(event.payload.input.value),
+                timelineSeq: session.allocateLiveTimelineSeq()
+            ))
+        }
+    }
+
+    /// evt.tool_result -> 按 toolCallId 找到 `handleToolCall` 落下的那张卡片，原地补上结果（不新开
+    /// 一行——同一次工具调用只有一张卡片，从"进行中"变成"有结果"）。
+    ///
+    /// 若找不到匹配的 toolCallId——理论上不该发生：EventMapping.swift ①②②b 的三条映射路径
+    /// （session.message 的 toolCall content block、agent(stream:"command_output")、
+    /// agent(stream:"item",kind:"tool")）都要求先有 toolCall 落地这次调用才可能产出对应的
+    /// toolResult；但协议层未来变化、或本壳没有覆盖到的竞态导致 toolCall 事件丢失时，也不该让这条
+    /// 结果静默消失——退化成一张独立的"孤儿"结果卡片，工具名如实标注取不到，而不是丢弃这条事件
+    /// （呼应本壳"失败/异常可诊断"的既有原则，同 `historyChatMessage` 对未知 role 的处理方式）。
+    private func handleToolResult(_ event: ToolResultEventMessage, for session: ChatSessionViewModel) {
+        let summary = ToolResultSummary(
+            isError: event.payload.isError,
+            durationMS: event.payload.durationMS,
+            preview: JSONPreview.summarize(event.payload.output.value),
+            full: JSONPreview.describe(event.payload.output.value)
+        )
+        if let idx = session.toolCalls.firstIndex(where: { $0.id == event.payload.toolCallID }) {
+            session.toolCalls[idx].result = summary
+        } else {
+            session.toolCalls.append(ToolCallItem(
+                id: event.payload.toolCallID,
+                name: "(未知工具 — 没有观察到匹配的 tool_call 事件)",
+                argumentSummary: "",
+                timelineSeq: session.allocateLiveTimelineSeq(),
+                result: summary
+            ))
+        }
+    }
+
+    /// evt.thinking -> 追加一条新的折叠态 thinking 行。不合并、不追加到已有行——理由见 `ThinkingItem`
+    /// 类型定义处的文档注释。
+    private func handleThinking(_ event: ThinkingEventMessage, for session: ChatSessionViewModel) {
+        session.thinkingItems.append(ThinkingItem(
+            text: event.payload.delta,
+            visibility: event.payload.visibility,
+            timelineSeq: session.allocateLiveTimelineSeq()
+        ))
+    }
+
+    /// evt.operation_completed -> 一条系统行。见 `handle(_:for:)` 里这个 case 分支上方的文档注释
+    /// （为什么渲染、为什么当前实际不会命中但仍然保留）。
+    private func handleOperationCompleted(_ event: OperationCompletedEventMessage, for session: ChatSessionViewModel) {
+        var text = "[操作] \(event.payload.operationKind.rawValue) 已完成：outcome=\(event.payload.outcome.rawValue)"
+        if let detail = event.payload.detail, !detail.isEmpty {
+            text += "，\(detail)"
+        }
+        session.messages.append(ChatMessage(role: .system, text: text, timelineSeq: session.allocateLiveTimelineSeq()))
     }
 
     /// rounds/0015 C：把用户在审批卡片上点的决策回传给内核（D1 §2.6 `respondApproval`）。
@@ -467,7 +608,8 @@ public final class SessionStore {
             // 在会话记录里留痕，而不是随卡片一起消失（卡片本身是瞬态的，本轮不做审批历史）。
             session.messages.append(ChatMessage(
                 role: .system,
-                text: "[审批] \(approvalDecisionButtonLabel(outcome))：\(resolved?.bodyText ?? reqID)"
+                text: "[审批] \(approvalDecisionButtonLabel(outcome))：\(resolved?.bodyText ?? reqID)",
+                timelineSeq: session.allocateLiveTimelineSeq()
             ))
         } catch {
             guard let stillThere = session.pendingApprovals.firstIndex(where: { $0.reqID == reqID }) else { return }
@@ -519,7 +661,9 @@ public final class SessionStore {
            let idx = session.messages.firstIndex(where: { $0.id == existingID }) {
             session.messages[idx].text = event.payload.delta
         } else {
-            let message = ChatMessage(role: .assistant, text: event.payload.delta)
+            let message = ChatMessage(
+                role: .assistant, text: event.payload.delta, timelineSeq: session.allocateLiveTimelineSeq()
+            )
             session.messages.append(message)
             if let messageID = event.payload.messageID {
                 session.inProgressDeltaMessageID[messageID] = message.id

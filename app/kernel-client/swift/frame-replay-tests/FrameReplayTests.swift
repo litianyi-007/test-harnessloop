@@ -2450,6 +2450,25 @@ public func runFrameReplayTests() async -> Bool {
     // SessionStore.handle() 真实分发路径，直接断言 session.messages 的分组结果。
     results.append(await testSessionStoreHandleGroupsDistinctMessageIDsAsSeparateMessages())
 
+    // rounds/0017 Change 1（SessionStoreToolRenderingTests.swift）："让 agent 看起来像 agent"——
+    // evt.tool_call/evt.tool_result/evt.thinking/evt.operation_completed 此前在 SessionStore.handle()
+    // 里一律 `break`，本轮渲染出来；这些测试同样驱动 handle() 真实分发路径（同上面 B2 的做法），
+    // 断言 session.toolCalls/session.thinkingItems/session.timeline/session.messages 的产出。
+    results.append(await testSessionStoreHandleToolCallProducesToolCallItem())
+    results.append(await testSessionStoreHandleToolResultPairsWithMatchingToolCall())
+    results.append(await testSessionStoreHandleToolResultSurfacesFailureAndPreview())
+    results.append(await testSessionStoreHandleOrphanToolResultDoesNotSilentlyDrop())
+    // rounds/0017 返工（code-review-adversarial 判 REWORK，P1）：evt.tool_result 先于它自己的
+    // evt.tool_call 到达时，姗姗来迟的 tool_call 必须原地补全孤儿占位项，不能追加出第二条同 id 的
+    // ToolCallItem（破坏 SwiftUI ForEach 的唯一 identity 契约）——上一条
+    // testSessionStoreHandleOrphanToolResultDoesNotSilentlyDrop 只验了"孤儿本身不丢"，验不到
+    // "后续 call 到达时是否正确合并"，这条新测试补上这个顺序。
+    results.append(await testSessionStoreHandleToolCallAfterOrphanResultFillsInPlaceNotADuplicateRow())
+    results.append(await testSessionStoreHandleThinkingEventsDoNotMerge())
+    results.append(await testSessionStoreHandleThinkingPreservesSummaryVisibility())
+    results.append(await testSessionStoreTimelineInterleavesEventsInArrivalOrder())
+    results.append(await testSessionStoreHandleOperationCompletedRendersSystemMessage())
+
     // rounds/0014（会话持久化）：SessionRestoreHistoryTests.swift —— B(适配器状态重建)/
     // D(重新订阅)/C(历史回填分页) 三块在 KernelClient 层的真 actor 级验证。
     results.append(await testRestoreSessionSeedsKernelKeyAndReestablishesEventFlow())
