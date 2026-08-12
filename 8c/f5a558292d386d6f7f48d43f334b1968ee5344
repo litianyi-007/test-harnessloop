@@ -1,0 +1,69 @@
+CLAUDE.md
+  s_c587ecf7bbc3e2::t_0ab56b8813404f 108-109
+  s_c587ecf7bbc3e2::t_3a00da5ff6f59a 128-165
+app/kernel-client/swift/cli/main.swift
+  0000019ff620cff7 1-25
+app/kernel-client/swift/frame-replay-tests/FrameReplayTestMain.swift
+  0000019ff620cff7 1-22
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+  0000019ff620cff7 1-2060
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "8cf5a558292d386d6f7f48d43f334b1968ee5344",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_3a00da5ff6f59a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 38,
+      "total_deletions": 0,
+      "accepted_lines": 38,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0ab56b8813404f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c9dca5e50cd1dc::t_9c6840489471d3": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1786540773162436000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019ff620cff7": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1786540773367"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 2107,
+      "total_deletions": 0,
+      "accepted_lines": 2107,
+      "overriden_lines": 0
+    }
+  }
+}
