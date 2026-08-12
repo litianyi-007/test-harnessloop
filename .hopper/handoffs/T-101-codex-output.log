@@ -1,0 +1,80 @@
+Reading additional input from stdin...
+OpenAI Codex v0.146.0
+--------
+workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019ff504-5f07-7e93-80a1-aa28b7532452
+--------
+user
+# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+
+You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+on your role — it overrides anything you may read locally.
+
+1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+   specialist." Nothing is listening downstream — if you delegate, the task fails.
+3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+   complete, closed loop.
+5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+   output, and proceed. The loop is closed — begin now and finish.
+
+---
+
+# Task-type: code-review-adversarial
+
+Anchor: `.hopper/tasks/code-review-adversarial.md::root`
+
+## Purpose
+
+Independently review a change, hunting for defects the author would miss. Review only — no edits.
+
+## Input shape
+
+- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+- Positive scope (files allowed) and negative scope (files that must not change)
+- Budget: time and vendor-cost ceiling
+
+## Output shape (output.md)
+
+The output should contain, in this order:
+
+- **Summary**: what was delivered, in two to four sentences
+- **Files touched**: paths with a one-line rationale each (or "none")
+- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+- **Decisions / deviations**: judgment calls or scope changes (or "none")
+- **Open questions**: list, or "none"
+- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+- **Next recommendation**: what should happen next
+
+## Notes
+
+This frame describes the SHAPE of the work and the expected output, not an
+identity to adopt. The vendor CLI brings its own behavior; the frame only states
+what the protocol expects back.
+
+---
+
+## Task spec
+
+端到端探针（**只读，禁止创建/修改/删除任何文件**）。本任务在 handoffs/leader-tasklist.md 里**没有任何条目**，这条 queue brief 是你唯一的任务来源。只做一件事：把本行里的指纹串原样回一遍，作为你的完整回答，不要做别的。指纹=HOPPER-E2E-Q101-BRIEFREACHED-7F3A2C。如果你在任务书里看不到任何指纹串，请如实回答「brief 未送达」，不要猜测、不要去仓库里找。
+
+codex
+HOPPER-E2E-Q101-BRIEFREACHED-7F3A2C
+tokens used
+5,113
+HOPPER-E2E-Q101-BRIEFREACHED-7F3A2C

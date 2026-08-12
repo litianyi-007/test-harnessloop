@@ -1,0 +1,29 @@
+hopper-runner: idle watchdog disabled (bufferedOutput vendor) — ceiling-only timeout applies (1800000ms)
+{
+  "text": "HOPPER-E2E-Q101-BRIEFREACHED-7F3A2C",
+  "stopReason": "end_turn",
+  "sessionId": "019ff504-615c-7c03-81fa-0bfecb5c5983",
+  "requestId": "a8215614-9ae6-409d-a80e-3aa3f911e6be",
+  "thought": "The user wants me to execute a simple task. Looking at the task spec carefully:\n",
+  "usage": {
+    "input_tokens": 21085,
+    "cache_read_input_tokens": 5376,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 207,
+    "reasoning_tokens": 182,
+    "total_tokens": 26668
+  },
+  "num_turns": 1,
+  "total_cost_usd": 0.0450248,
+  "total_cost_usd_ticks": 450248000,
+  "modelUsage": {
+    "grok-4.5-build": {
+      "inputTokens": 21085,
+      "outputTokens": 207,
+      "cacheReadInputTokens": 5376,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 1,
+      "costUSD": 0.0450248
+    }
+  }
+}

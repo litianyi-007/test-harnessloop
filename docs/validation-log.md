@@ -17,6 +17,113 @@
 
 ---
 
+## 2026-08-12 hopper 0.55.0：brief-drop 闭环——修好之后，双路评审又在「修好了」里各自挖出一层
+
+- **场景**：2026-08-11 已登记的 hopper 缺陷（见下方同名条目）单独开一轮修。用户裁定「插件优先」，并要求**改动经异构模型审核**，且明确要**先审设计、再审代码**两道
+- **现象（修复前）**：queue.md 有行、`handoffs/leader-tasklist.md` 无该 task 条目时，`loadTaskSpec()` 的两条未命中分支**返回自述文案冒充 spec**（`(no detailed spec found …; using queue.md brief only)`、`(no leader-tasklist.md found …)`）。**那句「using queue.md brief only」是假话**——brief 根本没进 prompt。vendor 收到一份没有任务的任务书，照样 `exit 0` / `status: done`
+- **根因的机械形状**：`loadTaskSpec(hopperDir, taskId)` **入参里没有 `task`**，函数内根本拿不到 brief；而调用点作用域里 `task` 早就在。**`--adhoc` 路径从无此问题**（`const taskSpec = brief`），坏的只有 queue 那条。**测试为什么没抓到**：`dispatch-governance.test.js` 的 fixture **总是写 leader-tasklist.md**，两条撒谎分支从未被走到
+- **两道异构评审各自抓到不同的东西**：设计评审（T-099）裁了「有详细 spec 时 brief 要不要也并入」的甲/乙之争——**判乙（合并）**，决定性证据是 `tasks.js:154-155` 已明写「brief 和 Task spec 是完整闭环」；代码评审（T-100）**双路分裂，codex 是对的那一路**：codex 判 REWORK 并**实跑抽取函数**给出反例 `{"loaded": "## T-1"}`——修复后的 fail-closed 判据是「section 非空」，而 `## T-1` 这个**光标题没正文**的小节非空，于是照样被当 spec 派出去；grok 判 PASS_WITH_NOTE，**这条一句未提**
+- **第三轮评审（T-102，用户要求"过一道评审再推"）又判 REWORK，双路再次分裂、codex 再次是对的那一路**：codex 给出可执行反例——leader-tasklist 里 `## T-1` 紧跟 `## T-2` 时，**T-1 拿到的 spec 装的是 T-2 的正文**。**这比原缺陷更糟：原缺陷是"没有任务"，这是"别人的任务"**。grok 判 PASS_WITH_NOTE，虽提到「pre-existing short-window section bleed」却**降级成了残留 note**
+- **主会话复现后发现范围比 codex 报的更宽，是两个独立根因**：**(a)** `rest.slice(50)` 魔数跳过前 50 字符，短小节里的下一个标题看不见；**(b)** **边界正则只认 `^##\s+`，而 marker 正则认三种形态**——用粗体或表格行写的 leader-tasklist **一直在跨任务串内容，与小节长度无关**。(b) 两家评审都没点出
+- **第一版边界修复被主会话打回**：实现方把边界改成「已知 id 的 marker」，但写成 **if/else 替代**而非并集，结果两条路径各坏在对方好的地方——真实路径（`resolveDispatch` 总是传 `otherTaskIds`）**丢掉了通用标题边界**，未在 queue.md 里的任务（本仓 T-091…T-100 全走 `--adhoc`、无 queue 行）不再能终止上一节；fallback 则把正则放宽成 `^##+\s+`，**把 spec 自己的 `###` 子标题当成了边界**。**真实路径一度比修复前更差**。改为并集后两半各配反证：拆掉 H2 那半 → `## T-91` 泄漏回来；放宽成 `##+` → `###` 被截断
+- **同一个失败形状，本轮一共暴露出四个实例**：①无条目时返回自述文案冒充 spec（已修）②裸 marker 光标题没正文、非空即冒充 spec（已修）③跨任务边界失效、拿到别人的正文（已修）④**主会话自己发现的第四处，在 `queue.js`**：brief 里未转义的 `|` 会静默截断 brief 并顶掉 Vendor 列，竖线后若恰好是已批准的 vendor 名就**完全无声地派出半份任务书**（已登记，未修）。**共同形状：「看起来有内容」被当成了「真的承载了任务」**
+- **codex 还额外指出**：`fileExists` 把 `access()` 的**所有**错误吞成 `false`，EACCES 会被误报成「文件不存在」——正是本项目反复踩的「找不到 ≠ 不存在」那一族。已收窄为仅 ENOENT 映射 false
+- **插件改动**：hopper-plugin 0.54.0 → **0.55.0**（先 `pull --ff-only` 同步上游，CLAUDE.md 记着 2026-07-28「落后 65 提交、整版改动作废」的教训）。`loadTaskSpec` 导出并返回 `string | null`、新增 `composeTaskContent()` 合并 spec + `### Queue brief` 并声明优先级、两端皆空则抛错。**`cli/src/tasks.js` 一字未改**（其 `composePrompt` 形状被 4 条逐字节断言锁死）
+- **顺手补了一条发现式守卫**：三个 README 的版本徽章**停在 0.50.0、落后 4 个版本且两条既有守卫都不覆盖**。新增 `readme-version-badge.test.js`。**这又是一次「清单会过时，发现式守卫不会」**
+- **提交前又撞到同一课的第五个实例**：`package-lock.json` 的 `version` **停在 0.50.0、落后 5 个版本**。它**明明就写在 CLAUDE.md 的 7 处清单里**，照样漂了——**说明清单被写下来也没人真按它走**，而全仓唯一引用 `package-lock.json` 的测试是 `license-integrity.test.js`（且只为 license 字段特判），**版本字段无任何守卫**。本轮已随发版改正为 0.55.0，但**守卫没补**——为保持插件树与被三轮评审审过的版本逐字节一致，未在推送前扩范围。**留作下一轮：把 `readme-version-badge.test.js` 那种发现式守卫扩到 `package-lock.json`**
+- **复验结果**：✅ 通过。主会话独立复跑 `npm test` **1345 pass / 0 fail / 2 skipped**（1347 总，基线 1331 + 16 条新增）、`sync-vendored-plugin.mjs --check` exit 0、`git diff cli/src/tasks.js` 为空、**主会话自建 15 例探针 15/15**（fail-closed 六形态 + 跨任务泄漏三例 + 未知 id 回归两例 + 不得过度截断四例）。**破坏性反证共四轮，每轮都先看到红**：判据改回 `section.length > 0` → 3 条红；拆掉「H2 永远算边界」→ `## T-91` 泄漏；放宽成 `^##+\s+` → `###` 子标题被截断；实现方侧另两轮 2/14、4/14 红。**端到端**用 queue 行（非 `--adhoc`）真派 codex + grok 双家，两家都原样回出指纹 `HOPPER-E2E-Q101-BRIEFREACHED-7F3A2C`——对照当初 T-090 的 vendor 输出是「What is the T-090 queue brief?」
+- **一条关于"偶发失败"的纪律**：实现方两次报告「1 个无关测试偶发失败、重试未复现」。**第二次退回要求给证据而非归因**，它如实撤回了「已知 flakiness」的说法：连跑 8 次全绿、当时未存原始输出、`# fail 1` 但全文无任何 `not ok` 行、**无法指向任何具体失败项**。主会话另跑 4 次（原始输出全部落盘）均 exit 0。**结论是"查不出"而不是"没问题"，如实留痕**
+- **一个附带消失的假象**：`--resolve` 过去自报的 composed 长度**恰好等于「不含 brief」的长度**（959 字 brief、自报 2868），这正是「看起来一切正常」的来源。现在自报 3005 与实际 prompt 长度**一致**
+- **遗留**：①**尚未 `plugin-reinstall.sh` 重装**——本轮全部验证跑的是 submodule 内的 `cli/bin/hopper-dispatch`，**全局安装的仍是旧版**，重装需重启会话，留给用户决定时机；②尚未 push，用户要求「再决定是否提交」；③queue.md 第 107 行有一条残缺的 `| ` 行（既存，非本轮引入）；④**本轮新开三个 issue 均登记未修**——`queue-brief-truncated-by-unescaped-pipe`（第四实例，`queue.js` 列解析按下标静默取值，建议加「行 cell 数须等于表头列数」的 fail-closed 守卫）、`task-spec-structural-only-body-accepted`（正文只有 `---` 等结构性标记时仍被当有效 spec，grok 发现）、`composeprompt-no-fail-closed-on-empty-spec`（`tasks.js:169` 无纵深防御，唯一防线在上游；该文件被 4 条逐字节断言锁死，属本轮 scope 约束而非技术阻碍）。ISSUES.md Open 计数 6 → **10**
+
+## 2026-08-12 rounds/0016 收盘：审批 FSM 四条边界失败态达成，`Accepted: yes`
+
+- **场景**：0015 的审批主判据已达成但审查闸判 REWORK，用户裁定收 0015 开 0016 专做那四条边界失败态
+- **harnessloop**：**「同一把尺子」这次给出了相反的结果**——0015 审查闸 REWORK + MUST-FIX 到 6（守卫阈值 3）→ `Accepted: no`；0016 PASS_WITH_NOTE 且四条 note 中三条是「别再动」→ `Accepted: yes`。**判定差异来自审查结论本身，不是标准松紧**。这是纪律第 4 条连续三轮（0014 yes / 0015 no / 0016 yes）给出可复现结果
+- **hopper**：本轮换 grok（0015 连派 codex 两轮）。**双路轮换的第二个价值显现**：grok 不仅验了四项实现，还逐条裁定了实现方对 codex 的**四条纠正**，**全部判 Holds**——即前一位评审方在四处说错或说得不够，由后一位独立确认。**单派一家拿不到这层交叉校验**
+- **实现方在自己第一版实现里抓到会回归主链的 bug**：codex 写「权威 **timeout** terminal」，实现方先按「任何权威 terminal」写，随后读内核发现 `applyApprovalDecision`（广播 terminal）**先于** `respond(true,…)`，同一条 WS——**用户点「允许」后 terminal 先于 RPC 响应到达**，宽读法会把用户自己在途的决议判死（命令实际执行了 UI 却报错）。收窄到 `status=="expired"` + 正反两向测试。**该顺序经主会话核源码偏移与 grok 追 durable path 两个独立来源确认**
+- **一个 live 现场比任何构造测试都有说服力**：验拒绝路径时，agent **主动伸手去读用户真实的 `~/.openclaw`**（`ls ~/.openclaw`、`grep -ri "deny" ~/.openclaw/openclaw.json`），**审批关卡把它拦下来了**。rounds/0013 的现场是无关卡直接执行——同一条命令在那时会直接读到用户真实配置且无人被问过。同时印证 rounds/0013 的判断：**隔离的是 openclaw 自己的 state，不是被执行命令的可及范围**
+- **安全纪律的一次真实执行**：live 复验中途用户回到机器前，前台被切走。主会话**主动中止 UI 自动化**（继续按坐标点击会点进用户正在用的窗口）、清理实例、等用户说方便再补完。这是用户「谨慎不要误操作」的直接落实
+- **如实记的一处偏差**：拒绝路径的测试载体与设计不同——我发的是 `echo R16_DENY_SHOULD_NOT_RUN`，agent 看到命令名就自己决定不跑、转而查策略，我拒绝的是那次查询。**机制验证成立，但「验到了机制」与「验到了我打算验的那条」是两件事**，未重跑到"合意"为止
+- **复验结果**：74/74（本轮 +6）、CI 平价 12/0/1、**D1 七法 git diff 为空**、三端 codegen 四项 exit 0、RAE-0001 pass、live 主链不回归、四条反证 **7 个拆除点**逐字冻结（两条的红是「测试进程挂死 35 秒」）
+- **遗留**：非 `expired` 终态的 UI 清卡与 `ApprovalBufferResolvedEvent.reason` 词表均**需动 D2 契约**，★审查闸建议 **park 为显式设计轮议题、不是静默产品债**——采纳
+
+## 2026-08-12 rounds/0015 收盘：exec 审批关卡立起来了，但审查闸两轮 REWORK、收敛守卫越线两倍
+
+- **场景**：用户裁定 rounds/0013 Human Decision 第 2 项后开轮，做 exec 策略 = `ask` + 审批 UI
+- **达成**：审批端到端 live 跑通——卡片渲染 → 点「允许一次」→ **命令真执行**；点「拒绝」→ **命令未执行**、会话不挂死。帧回放 50/50 → **68/68**，CI 平价 12/0/1，**D1 七法 git diff 为空**，RAE-0001 不回归 pass
+- **harnessloop**：**收敛守卫第一次真正生效**。scope-lock 写「第 3 个 MUST-FIX → checkpoint」，本轮实际到 6，主会话按纪律停下向用户 checkpoint 而非自行迭代。**这条守卫此前从未被触发过，本轮证明它不是装饰**——若没有它，我会继续在同一轮里追边界失败态，把一个已达成主判据的轮次拖成无限返工
+- **hopper**：**双路异构派发第一次成为决定性因素**。同一 brief 同时给 codex 与 grok 分析「审批为何送不到客户端」：主会话预登记的答案（channel = `webchat`）**错了**，三条候选全在错误的那道门上；**grok 找到正解**（`canDeliverApprovals` 的客户端 caps 通路，内核注释明写该通路是给「newer non-UI bridges」的），**codex 那一路全程未提**。单派一家这轮会继续在 channel 上打转
+- **方法论：预登记**。主会话在看到任一方产物**之前**把自己的答案写进 `channel-decision-prereg.md`，含一句「Q3 这一条我没查——正是最容易只搜一处就下结论的地方」。事后证明答案正在那里。**不先登记就无法确证「不是被带过去的」**——这次复盘的可信度完全建立在这个动作上
+- **runtime 审查 > 纯读源码**（用户 2026-08-12 提出）：本轮三个坑纯读源码都抓不到——代码与注释**自洽**，只是与现实不符。(1) 审批关联采集在 `case "approval"` 里找 `phase:"requested"`，实际帧是 `stream:"lifecycle"` + `phase:"waiting-approval"`，**代码从未执行到那一行**；(2) `approval_not_pending` **不是错误码**，openclaw 回 `ok:true + applied:false + 终态快照`，按错误码 catch 一条都抓不到；(3) 旧代码在「用户点拒绝、审批刚被 stop 强制 deny」时**静默显示成功**。全靠 wire trace 里的真实帧照出来
+- **发现的项目级落差**：主会话让子代理「在 `app/contracts/` 下核实 D1 §6.2 原文」——**那是不可能完成的指令**。`app/contracts/d1/README.md` 只有 10 行占位，D1 正文从未转录进仓库，权威原文在 `~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-6.md`。**「契约正文不在契约目录」**已登记
+- **一处评审方的诚实值得记**：codex 在只读沙箱跑测试得 60/64，**自己标注**四条失败全是持久化测试因禁止写临时文件所致、「不能替代冻结验收日志」。主会话正常环境是 68/68。**它没把环境差异当发现来报**，否则会浪费一轮去追不存在的回归
+- **复验结果**：主判据达成但 ★审查闸 REWORK → `Accepted: no`（scope-lock 通过线是 PASS/PASS_WITH_NOTE，纪律第 4 条不许在验收时放宽）
+- **遗留**：T-096 的四条 FSM 边界失败态转 rounds/0016；`capabilities()` 桩的漂移风险、超时态无 D2 对应、`ApprovalBufferResolvedEvent.reason` 词表表达力不足均已登记
+
+## 2026-08-11 rounds/0014 收盘：会话持久化解除「基本使用」唯一阻断，首次 `Accepted: yes`（自 0010 以来）
+
+- **场景**：用户裁决 rounds/0013 Human Decision 第 1 项后开轮，只做会话持久化一件事
+- **harnessloop**：协议闸再次先于人发现问题——`Review:` 字段写两个路径导致 `review-path-not-found`（0013 也踩过同一处）。收盘 0 violations。**值得记的是判定对比**：0013 审查闸 REWORK → `Accepted: no`；0014 PASS_WITH_NOTE → `Accepted: yes`。**同一把尺子（纪律第 4 条「按字面标准验」），两个结果**——这正是标准有效的证据，而不是标准松紧不一
+- **hopper**：本轮换 grok 派审查闸，**必须走 `--adhoc` 通道**绕开 0013 实证的 queue-brief 静默丢弃缺陷（该缺陷已按 user-confirmed 授权在 `hopper-plugin/` 内建 issue，未改代码未 bump 未 push）。**另发现一处 vendor 输出模式差异**：hopper 对 grok 标 `bufferedOutput vendor`，raw log **只收尾部 JSON、不含中间工具调用**（29 行），而 codex 是全量转录（12006/6006/2712 行）。我据此差点判定「grok 根本没读代码」——**错了**，其 JSON 里 `num_turns: 11`/`input_tokens: 127339`/`cache_read: 893952` 表明做了实质工作，产物里也有横跨全部目标文件的 file:line 引用。**拿不同输出模式的 vendor 比 log 行数是错误的比法**
+- **kata**：本轮产生三条跨轮可复用事实（两套 history 分页实现、`ready` ≠ `sessions.create` 可用、bufferedOutput vendor 的 log 语义），按沉淀钩子记入工程 wiki
+- **发现的框架/工具缺陷**：(1) `repro/start-isolated-kernel.sh` 的就绪判据是日志里的 `[gateway] ready`，**不足以保证 `sessions.create` 可用**——实测该 RPC 仍返回 `UNAVAILABLE: sessions.create unavailable during gateway startup`，我一度把它误判成 0014 引入的回归。本轮以加延迟绕过，**未修**；(2) `fetchFullHistory` 对非布尔 `hasMore` 是静默停止而非报错（审查闸 note）
+- **复验结果**：✅ 重启后两个会话都回到列表、会话 1 完整对话恢复、恢复的会话发新消息 `messageSeq` 从 2 接到 4（**同一内核会话**）。两条破坏性反证均由主会话亲手做到先看到红（坏文件→不崩溃；强制只取第一页→50/50 掉到 48/50）。50/50、CI 平价 12/0/1、**D1 七法签名逐字未变**、三端 codegen 全绿、RAE-0001 重跑 pass
+- **遗留**：审查闸三条 note（非布尔 hasMore 静默停止 / placeholder handle 把 kernelSessionID 设成 kernelKey / live 未覆盖多页历史与会话2非空历史）均**刻意不当轮改**，以保持「被评审的状态 == 最终状态」——这是 0013 的直接教训
+
+## 2026-08-11 rounds/0013 收盘：三插件同轮受验，★审查闸两轮都抓到真问题
+
+- **场景**：SG-10 L1 的两个里程碑轮（学习点 + mac app 基本使用），B→C→D 三块
+- **harnessloop**：协议闸全程可用，`verify_protocol.py` 抓到两次真实违规——(1) 我在 scope-lock 的 Allowed Changes 里把路径写成缩写 `.../rounds/0013/`，守卫按字面解析判 scope-lock-violation（**守卫是对的，缩写是我的错**）；(2) `Review:` 字段里塞了两个路径导致 `review-path-not-found`。**两次都是守卫先于人发现问题**。收盘时 0 violations
+- **kata**：工程侧沉淀钩子（2026-08-11 加入 CLAUDE.md）**首次实跑**。teach-back 经 `wiki-ingest` 归档进 `~/.llm-wiki/test-harnessloop`，新建 4 页 + 更新 7 页，18 → 22 页。kata 在 rounds/0011–0012 期间调用 0 次，本轮恢复。产出一条待批 schema 提案（tag taxonomy 加 `deepseek`，未自行应用）
+- **hopper**：**发现两个缺陷**（各已单独记条），其中 queue brief 静默丢弃那条是本项目「codex 评审三项强制核对」第一次真的救场——`exit 0` + `status: done` + `Task completed successfully.` 三个绿灯全亮，而任务内容根本没送到。改走 `--adhoc` 通道后评审正常，两轮共读 18000 行、给出三项实质发现
+- **审查闸的实际价值（本轮最值得记的）**：两轮都判 REWORK，**且都对**。T-090b 指出「RAE-0001 的 pass 靠叙述不靠冻结证据」——属实，我把结果写进了 md，原件却全在 scratchpad；还实证了对账脚本五条假绿路径（附内存合成复现）。T-091 复审又指出五条里还剩两条（wire 侧 role 缺失被静默过滤、bool 与 int 因 `True == 1` 混淆）。**没有这两轮，本轮会拿着一份「看起来很完备」的假证据收盘**
+- **复验结果**：RAE-0001 四条件逐条有冻结原件（25 文件 / 2.99MB），对账跑在 `hasMore:false` 的可证完整 history 上，判 **pass**；★审查闸 **REWORK**，故本轮 `Accepted: no`（scope-lock 写的通过线是 PASS/PASS_WITH_NOTE，纪律第 4 条不许在验收时放宽解释）
+- **遗留**：会话不持久（「基本使用」唯一阻断，不在原 L2 清单内）、exec 策略产品裁决、是否需第三轮评审——均交用户。详见 `rounds/0013/decision.md` 的 Human Decision Required
+
+## 2026-08-11 hopper：queue.md 的 brief 在无 leader-tasklist 条目时被静默丢弃（exit 0 且自称成功）
+
+- **场景**：rounds/0013 收盘前派 ★审查闸（T-090，`code-review-adversarial`，vendor=codex）
+- **现象**：44 秒返回 `status: done` / `exit_code: 0` / `Task completed successfully.`，但 codex 的输出是 `## Open questions — What is the T-090 queue brief?` 与 `Verdict: FAIL`。实际收到的 prompt 里 `## Task spec` 段只有一行占位符 `(no detailed spec found for T-090 in leader-tasklist.md; using queue.md brief only)` —— **那句「using queue.md brief only」是假的，brief 并没有被拼进去**
+- **机械证据**：queue.md 里 brief 长 959 chars；codex 实收 prompt 段 2874 chars；`--resolve T-090` 自报 composed length **2868 chars**（≈ 不含 brief 的长度）；若含 brief 应约 3833 chars。`'RAE-0001' in prompt` = False，`'no detailed spec found' in prompt` = True。**合成阶段就丢了，不是传输截断**；而 `--resolve` 的显示界面照常回显完整 Brief，制造「一切正常」的假象
+- **触发条件**：仅当任务在 `.hopper/handoffs/leader-tasklist.md` 中没有详细 spec 时。对照组：T-088/T-089 各有 2 处条目 → brief 正常到达（prompt 中特征词命中 26 次）；T-090 有 0 处 → 丢失。**这就是前 89 个任务都没暴露它的原因**
+- **反证**：同一 brief 改用 `--adhoc --brief` 重派，`Prompt: inline argv` 从 3193B → **4753B**，brief 确实进入。同 vendor / 同模型 / 同 sandbox，唯一变量是 queue 行 vs adhoc
+- **预期**：要么真的把 queue brief 拼进去；要么占位符如实说「brief 未包含」。**静默的假陈述比缺失本身更危险**
+- **插件改动**：**本轮未修** —— `hopper-plugin/` 是三插件 submodule，rounds/0013 scope-lock 明文禁止改动。待办：在 hopper-plugin 内开 `ISSUE-queue-brief-dropped-without-leader-tasklist.md`
+- **复验结果**：n/a（未修）。审查闸改走 adhoc 通道重派后正常工作
+- **遗留**：这条是 CLAUDE.md「codex 评审三项强制核对」（(a) 审查对象 (b) 产物落点 (c) 不得仅凭 exit 0 采信）**第一次真的救场**——三个绿灯全亮而任务内容根本没送到。完整取证见 `.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/hopper-defect-queue-brief-dropped.md`
+
+## 2026-08-11 本机环境：`~/.local/bin/hopper-dispatch` shim 指向已不存在的旧安装路径
+
+- **场景**：同上，首次调用 `hopper-dispatch` 派发
+- **现象**：`Error: Cannot find module '/Users/litianyi/.claude/plugins/marketplaces/agent-hopper/cli/bin/hopper-dispatch'`。该 shim 写于 2026-06-18，硬编码 marketplace 目录路径
+- **根因**：`scripts/plugin-reinstall.sh` 已把全局 marketplace 重指为 `directory <本项目>/hopper-plugin`，安装缓存落在 `~/.claude/plugins/cache/agent-hopper/hopper/0.53.0`；旧的 `marketplaces/agent-hopper/` 目录不复存在。**shim 不在任何重指流程的覆盖范围内**
+- **插件改动**：无 —— shim 在仓外、不在本轮 Allowed Changes 内，**不动**；改为直接调 `node hopper-plugin/cli/bin/hopper-dispatch`
+- **遗留**：**本项目插件迭代回路的缺口**——`plugin-reinstall.sh` 重指 marketplace，但没有任何东西重指用户 PATH 上的 shim。同类问题第二次出现（前一次见另一项目的 `ISSUE-stale-dispatch-binary.md`），说明这不是偶发
+
+## 2026-08-11 补记 rounds/0011–0012（本条是钩子缺失的直接证据）
+
+> **补记说明**：本文件停在 2026-07-16，其后跑了 12 轮、三插件全审、统一 MIT、提上游 PR、开 TH-0031，**一条未记**。
+> 根因不是纪律而是机制——史官有五个触发节点所以一直活着，本文件**一个钩子都没有**。
+> 2026-08-11 已在 `CLAUDE.md` 加「工程侧学习/沉淀钩子」一节。**本条即为补欠。**
+
+- **场景**：goal 002 SG-10（Mac UI 壳 L1）rounds/0011（首轮）与 rounds/0012（修复轮），全程走 harnessloop 协议 + hopper 异构评审。
+- **现象/发现（按插件分）**：
+  - **harnessloop**：开新轮会让 `loop_anomaly_skipped_unparsable` 从 2 掉到 1，**下降与状况改善无关**——新轮无 `decision.md` 时 `_latest_round_decision_text` 返回 None、整个 goal 被跳过计数。已开 **TH-0031**（P3）。另：`Review:` 与 `Acceptance evals:` 两字段严格解析，加括号注解即红——**守卫正确**，非缺陷。
+  - **hopper**：① `~/.local/bin/hopper-dispatch` shim 指向已不存在的 marketplace 路径（插件更新后未跟上），改用 submodule 内 CLI 派发；② **runner 异常终止后状态文件停在 `in-progress`/`phase: starting`，而产出早已完整落在 raw log**——差点导致第三次重派（每次都是真实 vendor 花费），已开 `ISSUE-stale-status-on-runner-death.md`；③ codex 基线 timeout 300s 对「搜源码+答四问」型 brief 不够，需 `--timeout` 显式加大。
+  - **kata**：**整个 rounds/0011–0012 期间调用 0 次**。CLAUDE.md 既定验证方式是「边用边验证」，**没用就是没验**——这是本次最该记的一条，也是加钩子的直接动因。
+- **预期**：三个插件都应在真实使用中被持续验证（CLAUDE.md「插件迭代回路」与「边用边验证」）。实际只有 harnessloop 与 hopper 被高频使用，kata 完全空转。
+- **插件改动**：
+  - harnessloop：**未改**——TH-0031 为 P3 观测项，不阻断，登记待裁决。
+  - hopper：**未改**——两条 issue 均登记未修（`ISSUE-stale-status-on-runner-death.md` 新增）。
+  - kata：**未改**——未使用，无从发现问题。
+- **复验结果**：机械门（`verify_protocol.py` / `check_setup.py`）全程 exit 0；三轮异构评审（T-081..T-087）逐轮推翻—返工—再验；rounds/0012 收盘 `Accepted: no`（RAE-0001 条件③ 结构上不可满足，非执行失败）。
+- **遗留**：
+  1. **kata 的验证仍是空白**——新钩子把「每 3 轮沉淀一次」绑到 kata，靠它自然产生使用。
+  2. TH-0031 待裁决修复方向（A 分离计数 / B 回退上一收口轮 / C 只改文档）。
+  3. hopper 两条 issue 未修。
+  4. **本项目反复出现同一类错误**：搜索维度选错，把「我没找到」当成「不存在」——`logging.file`、D2 §3.3 subscribe 响应、targeted 帧的 `EventFrame.seq`，**三次都由异构评审纠正**。此条已列入新钩子的「值得沉淀」判据。
+
 ## 2026-07-22 D5 产品规格弧：三条过程教训（Workflow 并行起草/finding 转述编号漂移/改了一半留残留）
 
 - **场景**：D5（仿 codex app 产品规格，9 页）完整弧——T-021 调研 spike → workflow 并行起草（foundation+7 子面+总纲）→ 双轨对抗复核（grok T-022 PASS_WITH_NOTE / codex T-023 REWORK，F-01~F-10）→ v2/v2.1/v2.2 三批修复 → codex T-024/T-025 两轮定向 re-verify → T-025 判 CONFIRMABLE(7/7) 正式定稿
