@@ -1,0 +1,130 @@
+.harnessloop/goals/20260812-003-plugin-iteration/goal.md
+  s_c587ecf7bbc3e2::t_74cf45b2ec376b 1-109
+.harnessloop/goals/20260812-003-plugin-iteration/goal-breakdown.md
+  s_c587ecf7bbc3e2::t_a9a6fcbe798b54 1-65
+.harnessloop/goals/20260812-003-plugin-iteration/thresholds.md
+  s_c587ecf7bbc3e2::t_fd220ddf2f87ba 1-36
+.harnessloop/goals/20260812-003-plugin-iteration/feedback-policy.md
+  s_c587ecf7bbc3e2::t_0c1d8e5a2fb562 1-42
+.harnessloop/goals/20260812-003-plugin-iteration/data-contract.md
+  s_c587ecf7bbc3e2::t_602a5b76dfa3d0 1-57
+.harnessloop/state/current.md
+  s_c587ecf7bbc3e2::t_8309aa6e4e29b5 4-4
+app/kernel-client/swift/cli/main.swift
+  0000019ff6694d5f 1-25
+app/kernel-client/swift/frame-replay-tests/FrameReplayTestMain.swift
+  0000019ff6694d5f 1-22
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+  0000019ff6694d5f 1-2060
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "064f595e0c69240578842b49eeb5fac0c4a69e4b",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_74cf45b2ec376b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 109,
+      "total_deletions": 0,
+      "accepted_lines": 109,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a9a6fcbe798b54": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 65,
+      "total_deletions": 0,
+      "accepted_lines": 65,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fd220ddf2f87ba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 36,
+      "total_deletions": 0,
+      "accepted_lines": 36,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0c1d8e5a2fb562": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 42,
+      "total_deletions": 0,
+      "accepted_lines": 42,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_602a5b76dfa3d0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 57,
+      "total_deletions": 0,
+      "accepted_lines": 57,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8309aa6e4e29b5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_357c74123119dc::t_d9b54dcd68057e": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1786545523832381000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019ff6694d5f": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1786545524063"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 2107,
+      "total_deletions": 0,
+      "accepted_lines": 2107,
+      "overriden_lines": 0
+    }
+  }
+}
