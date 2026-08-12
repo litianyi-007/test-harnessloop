@@ -1,0 +1,29 @@
+hopper-runner: idle watchdog disabled (bufferedOutput vendor) — ceiling-only timeout applies (1800000ms)
+{
+  "text": "ESCPIPE-20260812-A7F3 | 中间夹着一个字面量竖线 | 结尾标记 END-A7F3",
+  "stopReason": "end_turn",
+  "sessionId": "019ff6b0-a19d-7fe0-a8c1-711d470a6f90",
+  "requestId": "322d4f72-2630-4a24-9968-57d527b3e16e",
+  "thought": "The user wants me to act as an execution agent for a hopper task. The task is very clear:\n",
+  "usage": {
+    "input_tokens": 26024,
+    "cache_read_input_tokens": 640,
+    "cache_creation_input_tokens": 0,
+    "output_tokens": 197,
+    "reasoning_tokens": 161,
+    "total_tokens": 26861
+  },
+  "num_turns": 1,
+  "total_cost_usd": 0.053422,
+  "total_cost_usd_ticks": 534220000,
+  "modelUsage": {
+    "grok-4.5-build": {
+      "inputTokens": 26024,
+      "outputTokens": 197,
+      "cacheReadInputTokens": 640,
+      "cacheCreationInputTokens": 0,
+      "modelCalls": 1,
+      "costUSD": 0.053422
+    }
+  }
+}
