@@ -1,0 +1,232 @@
+.hopper/handoffs/T-081-output-raw.txt
+  s_c587ecf7bbc3e2::t_5b1731b4f5fd7b 1-11998
+.hopper/handoffs/T-081-output.log
+  s_c587ecf7bbc3e2::t_5b1731b4f5fd7b 1-11998
+.hopper/handoffs/T-080-output-full.txt
+  s_c587ecf7bbc3e2::t_04aa3ef15c6fe9 1-6489
+.hopper/handoffs/T-080-output-raw.txt
+  s_c587ecf7bbc3e2::t_04aa3ef15c6fe9 1-6466
+.hopper/handoffs/T-080-output.log
+  s_c587ecf7bbc3e2::t_04aa3ef15c6fe9 1-6466
+.hopper/handoffs/T-083-output-raw.txt
+  s_c587ecf7bbc3e2::t_04aa3ef15c6fe9 1-5657
+.hopper/handoffs/T-083-output.log
+  s_c587ecf7bbc3e2::t_04aa3ef15c6fe9 1-5657
+.hopper/handoffs/T-090b-output-raw.txt
+  s_c587ecf7bbc3e2::t_04aa3ef15c6fe9 1-12006
+.hopper/handoffs/T-090b-output.log
+  s_c587ecf7bbc3e2::t_04aa3ef15c6fe9 1-12006
+.hopper/handoffs/T-080-output.md
+  0000019ff6011174 1-235
+.hopper/handoffs/T-080-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-081-output.md
+  0000019ff6011174 1-244
+.hopper/handoffs/T-081-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-082-output.log
+  0000019ff6011174 1-27
+.hopper/handoffs/T-082-output.md
+  0000019ff6011174 1-313
+.hopper/handoffs/T-082-progress.log
+  0000019ff6011174 1-11
+.hopper/handoffs/T-083-output.md
+  0000019ff6011174 1-223
+.hopper/handoffs/T-083-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-084-output.log
+  0000019ff6011174 1-27
+.hopper/handoffs/T-084-output.md
+  0000019ff6011174 1-224
+.hopper/handoffs/T-084-progress.log
+  0000019ff6011174 1-11
+.hopper/handoffs/T-085-output-raw.txt
+  0000019ff6011174 1-7367
+.hopper/handoffs/T-085-output.log
+  0000019ff6011174 1-7367
+.hopper/handoffs/T-085-output.md
+  0000019ff6011174 1-226
+.hopper/handoffs/T-085-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-086-output.log
+  0000019ff6011174 1-27
+.hopper/handoffs/T-086-output.md
+  0000019ff6011174 1-243
+.hopper/handoffs/T-086-progress.log
+  0000019ff6011174 1-12
+.hopper/handoffs/T-087-output.log
+  0000019ff6011174 1-27
+.hopper/handoffs/T-087-output.md
+  0000019ff6011174 1-142
+.hopper/handoffs/T-087-progress.log
+  0000019ff6011174 1-10
+.hopper/handoffs/T-088-output-raw.txt
+  0000019ff6011174 1-18270
+.hopper/handoffs/T-088-output.log
+  0000019ff6011174 1-18270
+.hopper/handoffs/T-088-output.md
+  0000019ff6011174 1-38
+.hopper/handoffs/T-088-progress.log
+  0000019ff6011174 1-3
+.hopper/handoffs/T-089-output.log
+  0000019ff6011174 1-27
+.hopper/handoffs/T-089-output.md
+  0000019ff6011174 1-230
+.hopper/handoffs/T-089-progress.log
+  0000019ff6011174 1-10
+.hopper/handoffs/T-090-output.log
+  0000019ff6011174 1-166
+.hopper/handoffs/T-090-output.md
+  0000019ff6011174 1-232
+.hopper/handoffs/T-090-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-090b-output.md
+  0000019ff6011174 1-219
+.hopper/handoffs/T-090b-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-091-output-raw.txt
+  0000019ff6011174 1-6006
+.hopper/handoffs/T-091-output.log
+  0000019ff6011174 1-6006
+.hopper/handoffs/T-091-output.md
+  0000019ff6011174 1-225
+.hopper/handoffs/T-091-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-092-output-raw.txt
+  0000019ff6011174 1-2712
+.hopper/handoffs/T-092-output.log
+  0000019ff6011174 1-2712
+.hopper/handoffs/T-092-output.md
+  0000019ff6011174 1-218
+.hopper/handoffs/T-092-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-093-output.log
+  0000019ff6011174 1-29
+.hopper/handoffs/T-093-output.md
+  0000019ff6011174 1-230
+.hopper/handoffs/T-093-progress.log
+  0000019ff6011174 1-10
+.hopper/handoffs/T-094-codex-output-raw.txt
+  0000019ff6011174 1-25593
+.hopper/handoffs/T-094-codex-output.log
+  0000019ff6011174 1-25593
+.hopper/handoffs/T-094-codex-output.md
+  0000019ff6011174 1-197
+.hopper/handoffs/T-094-codex-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-094-grok-output-raw.txt
+  0000019ff6011174 1-174
+.hopper/handoffs/T-094-grok-output.log
+  0000019ff6011174 1-29
+.hopper/handoffs/T-094-grok-output.md
+  0000019ff6011174 1-170
+.hopper/handoffs/T-094-grok-progress.log
+  0000019ff6011174 1-15
+.hopper/handoffs/T-095-output-raw.txt
+  0000019ff6011174 1-17265
+.hopper/handoffs/T-095-output.log
+  0000019ff6011174 1-17265
+.hopper/handoffs/T-095-output.md
+  0000019ff6011174 1-221
+.hopper/handoffs/T-095-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-096-output-raw.txt
+  0000019ff6011174 1-9978
+.hopper/handoffs/T-096-output.log
+  0000019ff6011174 1-9978
+.hopper/handoffs/T-096-output.md
+  0000019ff6011174 1-249
+.hopper/handoffs/T-096-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-097-output-raw.txt
+  0000019ff6011174 1-149
+.hopper/handoffs/T-097-output.log
+  0000019ff6011174 1-29
+.hopper/handoffs/T-097-output.md
+  0000019ff6011174 1-180
+.hopper/handoffs/T-097-progress.log
+  0000019ff6011174 1-10
+.hopper/handoffs/T-098-codex-output-raw.txt
+  0000019ff6011174 1-7729
+.hopper/handoffs/T-098-codex-output.log
+  0000019ff6011174 1-7729
+.hopper/handoffs/T-098-codex-output.md
+  0000019ff6011174 1-235
+.hopper/handoffs/T-098-codex-progress.log
+  0000019ff6011174 1-2
+.hopper/handoffs/T-098-grok-output-raw.txt
+  0000019ff6011174 1-166
+.hopper/handoffs/T-098-grok-output.log
+  0000019ff6011174 1-29
+.hopper/handoffs/T-098-grok-output.md
+  0000019ff6011174 1-169
+.hopper/handoffs/T-098-grok-progress.log
+  0000019ff6011174 1-10
+.hopper/handoffs/leader-tasklist.md
+  0000019ff6011174 1-2014
+app/kernel-client/swift/cli/main.swift
+  0000019ff6011174 1-25
+app/kernel-client/swift/frame-replay-tests/FrameReplayTestMain.swift
+  0000019ff6011174 1-22
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+  0000019ff6011174 1-2060
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c4e6ca0c1bb8b984f8eb339b23f17fc67acc2312",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_5b1731b4f5fd7b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 23996,
+      "total_deletions": 0,
+      "accepted_lines": 23996,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_04aa3ef15c6fe9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 54747,
+      "total_deletions": 0,
+      "accepted_lines": 54747,
+      "overriden_lines": 0
+    },
+    "s_bf1d3faf4b1f29::t_1e63f4ff1af4fa": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1786538692698940000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019ff6011174": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1786538692980"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 199656,
+      "total_deletions": 0,
+      "accepted_lines": 199656,
+      "overriden_lines": 0
+    }
+  }
+}
