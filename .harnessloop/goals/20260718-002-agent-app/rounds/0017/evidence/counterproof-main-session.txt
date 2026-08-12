@@ -1,0 +1,28 @@
+rounds/0017 破坏性反证 —— 主会话独立复验（不采信子代理自述）
+
+变异（逐字 diff，cli/src/dispatch.js）：
+  255c255
+  <     if (err.code === 'ENOENT') return null;
+  ---
+  >     if (err.code === 'ENOENT') return `(no leader-tasklist.md found at ${path}; using queue.md brief only)`;
+  264c264
+  <   if (sectionStart === -1) return null;
+  ---
+  >   if (sectionStart === -1) return `(no detailed spec found for ${taskId} in leader-tasklist.md; using queue.md brief only)`;
+
+即把两条 null 改回占位符字符串 —— 精确还原修复前的行为。
+
+红（变异后，tests/unit/dispatch-task-content.test.js）：
+  not ok 2 - task content (b): tasklist exists without a section for the id → the Brief IS the spec (was: dropped)
+  not ok 3 - task content (c): no leader-tasklist.md at all → the Brief IS the spec (was: dropped)
+  not ok 4 - task content (d): empty Brief AND no detailed spec → throws instead of dispatching an empty task
+  not ok 5 - task content (d2): empty Brief + tasklist present but sectionless → also throws (fail closed)
+  not ok 10 - --resolve echoes the task-content provenance as an operator notice
+  not ok 11 - --resolve on a content-free task fails closed with an actionable message
+  # tests 11 / # pass 5
+
+绿（恢复后）：11/11 PASS
+
+**关键观察**：测试 (a)（有 leader-tasklist 条目）在变异下**保持绿**——
+这正是该缺陷能活过 89 个任务而无人察觉的原因：queue 路径的所有既有 fixture
+（tests/unit/dispatch-governance.test.js:12-23）都写 leader-tasklist，全部命中成功分支。
