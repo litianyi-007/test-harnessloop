@@ -6,7 +6,8 @@
 - Accepted: yes
 - Review: .hopper/handoffs/T-110-codex-output.md
 - Reviewer: codex via hopper T-110（单路，按 scope-lock）
-- Review verdict: **REWORK**（三条，主会话全部复核成立后返工；**返工已并行补派确认审 T-111（grok）**）
+- Review verdict: **REWORK**（三条，主会话全部复核成立后返工）
+- Confirmation review: **PASS_WITH_NOTE** — grok via hopper T-111（返工后补派，2026-08-13 回）。Q1 result-before-call 原地补全 **PASS**（两方向都只产生 1 条 `ConversationItem`）；Q2 固定 alpha 残留 **PASS**（**生效代码 0 处 `Color.*.opacity`**，全部背景为 `.regularMaterial` 或 `.fill.tertiary`）；Q3 角色区分的无障碍 **PASS**（对齐 + 文案标签 + 小图标，不单靠颜色）；Q4 「无障碍由构造保证」的诚实性 **NOTE** —— 判定「对本轮缺陷（固定 alpha → material）由构造消除成立；全 UI 像素级实拍仍未验，**记债不返工**」
 - Review digest: 5840dfc1fd400ff41db26fb51a6611898bd351b237aa0470748994938ebf9685
 - Acceptance evals: none — 本轮为 UI/渲染层改动，无 runtime eval 台账
 - Acceptance evals detail: n/a
