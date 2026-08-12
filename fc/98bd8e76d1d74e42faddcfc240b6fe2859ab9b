@@ -1,0 +1,4477 @@
+.harnessloop/goals/20260718-002-agent-app/goal-breakdown.md
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 164-164
+.harnessloop/meta/self-audit.md
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 1271-1355
+.harnessloop/setup/data-sources.md
+  s_c587ecf7bbc3e2::t_4d91cc264442dc 29-29,44-62
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 63-103
+.harnessloop/state/current.md
+  s_c587ecf7bbc3e2::t_3fd925054a967b 4-5,9-10
+  s_c587ecf7bbc3e2::t_2cd86b8c4466e5 6-6
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 7-8
+.harnessloop/state/evidence-index.md
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 26-26
+  s_c587ecf7bbc3e2::t_5542b37b155b4e 27-27
+  s_c587ecf7bbc3e2::t_0c0dc179d83f83 59-59
+  s_c587ecf7bbc3e2::t_16c174d281590f 60-60,63-63
+  s_c587ecf7bbc3e2::t_2cd86b8c4466e5 61-61
+  s_c587ecf7bbc3e2::t_3fd925054a967b 62-62
+.hopper/handoffs/leader-tasklist.md
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 1669-1922
+  s_c587ecf7bbc3e2::t_59d99b257315f5 1923-1948
+  s_c587ecf7bbc3e2::t_7bc1610fe88a1c 1949-2014
+.hopper/queue.md
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 96-102
+  s_c587ecf7bbc3e2::t_59d99b257315f5 103-103
+  s_c587ecf7bbc3e2::t_7bc1610fe88a1c 104-105
+  s_c587ecf7bbc3e2::t_d59a459a4667da 106-106
+  s_c587ecf7bbc3e2::t_401d220440868a 107-108
+  s_c587ecf7bbc3e2::t_aa1904edfdfa24 109-110
+  s_c587ecf7bbc3e2::t_6c03924347f096 111-112
+app/contracts/d2/schema/events/message-delta.schema.json
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 5-5,12-16
+app/generated/csharp/D2.cs
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 514-527
+app/generated/swift/D2.swift
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 1645-1653,1659-1659,1663-1663,1666-1666,1692-1692,1698-1698
+app/generated/ts/d2.d.ts
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 673-676
+app/kernel-client/OPENCLAW-ISOLATED-RUN-RECIPE.md
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 41-41,48-49,56-70,84-88,250-269,276-276,278-281
+app/kernel-client/RUN-EVIDENCE.md
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 11-17,24-30
+app/kernel-client/swift/cli/main.swift
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 1-25
+app/kernel-client/swift/CLIRunner.swift
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 9-22,36-37,39-48,287-288,290-294,299-309,311-316,318-321,331-343,389-429,431-440,443-443,446-447,449-449,514-529
+  s_c587ecf7bbc3e2::t_a650a549911ae3 76-100
+  s_c587ecf7bbc3e2::t_eafc7eeb12848e 145-157,159-176
+  s_c587ecf7bbc3e2::t_604f082da8d50e 193-201,203-231,233-238,240-240,243-248
+app/kernel-client/swift/EventMapping.swift
+  s_c587ecf7bbc3e2::t_db728baec31ce3 40-59
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 85-89,211-218
+  s_c587ecf7bbc3e2::t_9b653d577e31ef 747-769
+  s_c587ecf7bbc3e2::t_0b4105f43c7011 784-853
+  s_c587ecf7bbc3e2::t_db0d0124794d6e 864-908
+  s_c587ecf7bbc3e2::t_d99773787907ff 909-929,931-1011,1034-1052,1063-1101,1106-1110,1112-1120,1126-1126,1128-1248
+  s_c587ecf7bbc3e2::t_d3e99dc383ca8f 930-930
+  s_c587ecf7bbc3e2::t_861e0d2a03bb65 1012-1026,1028-1033
+  s_c587ecf7bbc3e2::t_737abdf3ea8ab3 1027-1027,1057-1058
+  s_c587ecf7bbc3e2::t_39901bd34198ca 1053-1056,1059-1062
+  s_c587ecf7bbc3e2::t_7bce27bc20049b 1102-1105,1111-1111
+  s_c587ecf7bbc3e2::t_ade30a18cbbee4 1121-1125
+  s_c587ecf7bbc3e2::t_66cce5bbf062ca 1127-1127
+app/kernel-client/swift/frame-replay-tests/FrameReplayTestMain.swift
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 1-22
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 1-407,671-1823,1837-1844,1847-1853,1858-2289,2395-2407,2415-2444,2452-2452,2477-2481
+  s_c587ecf7bbc3e2::t_8b8e8e8c538f72 408-497,503-503,505-511,513-524,529-542,546-548,550-559,561-561,563-564
+  s_c587ecf7bbc3e2::t_79bfa4381d2eef 498-502,504-504
+  s_c587ecf7bbc3e2::t_d774e6a477d55c 512-512,525-528
+  s_c587ecf7bbc3e2::t_4ade49129656de 543-545,549-549
+  s_c587ecf7bbc3e2::t_fd381745fe2a42 560-560,562-562
+  s_c587ecf7bbc3e2::t_53da96754dc517 565-670
+  s_c587ecf7bbc3e2::t_47085d11ee1b9a 1824-1836,1845-1846,1854-1857
+  s_c587ecf7bbc3e2::t_453892961c05f6 2290-2300,2334-2394
+  s_c587ecf7bbc3e2::t_afa3b4b12a78a6 2301-2307,2311-2314,2316-2333
+  s_c587ecf7bbc3e2::t_e30ac8b8dfb739 2308-2310
+  s_c587ecf7bbc3e2::t_a7d45a934bae13 2315-2315
+  s_c587ecf7bbc3e2::t_aaa873f0214802 2408-2411
+  s_c587ecf7bbc3e2::t_509dfa51c59057 2412-2414
+  s_c587ecf7bbc3e2::t_ff8491570f52a3 2445-2445
+  s_c587ecf7bbc3e2::t_ac6e6c06dd354f 2446-2446
+  s_c587ecf7bbc3e2::t_69f7abd1eec922 2447-2450
+  s_c587ecf7bbc3e2::t_9ba75309c5619d 2451-2451
+  s_c587ecf7bbc3e2::t_e13c21f0a06c77 2453-2467
+  s_c587ecf7bbc3e2::t_2ad634817a29e5 2468-2471
+  s_c587ecf7bbc3e2::t_f36c68bc9a1da1 2472-2476
+app/kernel-client/swift/KernelClient.swift
+  s_c587ecf7bbc3e2::t_2bfcf020eb6ea8 17-22
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 33-39,42-50
+  s_c587ecf7bbc3e2::t_f9c1232a6470ed 105-193
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+  s_c587ecf7bbc3e2::t_6233d96e4a732b 27-32
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 35-39,127-189,640-677,679-679,749-795,800-800,804-806,809-813,815-815,829-829,869-873,880-880,2084-2094,2207-2320,2354-2354,2356-2356,2358-2358,2364-2364,2388-2401,2437-2437,2477-2477,2491-2491,2499-2499,2507-2507,2566-2569,2586-2589,2610-2610,3018-3018,3021-3023,3029-3035,3153-3160
+  s_c587ecf7bbc3e2::t_5441482ceec1e6 230-231,237-343,350-350,359-362
+  s_c587ecf7bbc3e2::t_84d9057ab64bb9 232-236,425-425
+  s_c587ecf7bbc3e2::t_783a39aa84b96d 344-349,351-358,363-380,388-424
+  s_c587ecf7bbc3e2::t_8540a277a1be8d 381-387
+  s_c587ecf7bbc3e2::t_6ffa321b2f3aab 432-437
+  s_c587ecf7bbc3e2::t_75eff0096caff4 438-446,450-451
+  s_c587ecf7bbc3e2::t_15206b4f53e195 514-545
+  s_c587ecf7bbc3e2::t_0641f6c06e86ad 576-584,589-595,607-608
+  s_c587ecf7bbc3e2::t_b2b171af6f1937 874-878
+  s_c587ecf7bbc3e2::t_556b86632ccf7a 1092-1111,1119-1119,1130-1130,1135-1137,1142-1142,1147-1148,1153-1161,1167-1170,1180-1183,1185-1185,1187-1202,1204-1207,1223-1228
+  s_c587ecf7bbc3e2::t_adfd0186a28014 1120-1120,1138-1141,1149-1152
+  s_c587ecf7bbc3e2::t_d9416934868445 1162-1166,1171-1179
+  s_c587ecf7bbc3e2::t_6cf7bf4bfabd93 1208-1214,1219-1219
+  s_c587ecf7bbc3e2::t_cc6c81c676b674 1234-1246,1251-1279,1450-1454,1458-1458,1465-1466,1494-1494,1497-1497,1503-1506,1569-1569,1577-1616,1627-1627,1629-1630,1662-1685
+  s_c587ecf7bbc3e2::t_354ede5e92acbe 1247-1250
+  s_c587ecf7bbc3e2::t_a479a6ff504e1b 1280-1306,1308-1320,1322-1324,1326-1378,1398-1398,1400-1449
+  s_c587ecf7bbc3e2::t_0301d26e433295 1307-1307
+  s_c587ecf7bbc3e2::t_ccaddb46ab5dfb 1321-1321,1325-1325
+  s_c587ecf7bbc3e2::t_d182a65a33e5ab 1379-1397,1399-1399
+  s_c587ecf7bbc3e2::t_91f503ee756b4c 1455-1457,1459-1464,1467-1493,1495-1495,1535-1535,1554-1568,1570-1576
+  s_c587ecf7bbc3e2::t_b9e6f073962ea4 1496-1496,1498-1502,1512-1515,1518-1534,1536-1553
+  s_c587ecf7bbc3e2::t_06ce91d7e22f29 1507-1511,1516-1517
+  s_c587ecf7bbc3e2::t_9e5a171741dc6d 1617-1620,1622-1626,1628-1628,1631-1648,1650-1661
+  s_c587ecf7bbc3e2::t_59db44fc57ae4a 1621-1621
+  s_c587ecf7bbc3e2::t_acc2e0882a505e 1649-1649
+  s_c587ecf7bbc3e2::t_abfefc4148088b 1782-1809,1811-1815,1860-1867,1885-1885,1887-1887,1898-1898,1918-1918,1935-1935,1937-1938,1956-1957
+  s_c587ecf7bbc3e2::t_48acb873de63dd 1816-1824,1826-1826,1870-1870,1888-1893,1936-1936,1939-1955
+  s_c587ecf7bbc3e2::t_973a69e6ee9e4c 1825-1825,1894-1897
+  s_c587ecf7bbc3e2::t_f2532b4033e665 1827-1838,1844-1859
+  s_c587ecf7bbc3e2::t_ab2d48a02179bc 1839-1843
+  s_c587ecf7bbc3e2::t_eaf3f360b3bfa3 1868-1869,1884-1884
+  s_c587ecf7bbc3e2::t_b33591fe190c13 1871-1883,1886-1886
+  s_c587ecf7bbc3e2::t_a496a1f4cbfb49 1899-1903,1905-1917,1919-1934
+  s_c587ecf7bbc3e2::t_6d2f8c4d8c14a8 1904-1904
+  s_c587ecf7bbc3e2::t_011c6196c48cf3 1966-1981
+  s_c587ecf7bbc3e2::t_5d8c87b712b597 2019-2020
+  s_c587ecf7bbc3e2::t_236efea279f790 2021-2035,2042-2042,2051-2053
+  s_c587ecf7bbc3e2::t_7e73640b4eb455 2036-2041,2043-2050,2054-2060
+  s_c587ecf7bbc3e2::t_11afdbba83207e 2359-2362
+  s_c587ecf7bbc3e2::t_545ec44c15c3d3 2513-2515,2520-2523,2527-2532,2534-2544
+  s_c587ecf7bbc3e2::t_1ef819f058bcb2 2533-2533
+  s_c587ecf7bbc3e2::t_93e0f61337226a 2621-2654,2656-2667
+  s_c587ecf7bbc3e2::t_052e66621188ab 2655-2655,2699-2699,2782-2782
+  s_c587ecf7bbc3e2::t_26feebed8e562a 2671-2671,2676-2677
+  s_c587ecf7bbc3e2::t_3761e796e1d0c3 2687-2691
+  s_c587ecf7bbc3e2::t_73eaf7b18b8005 2696-2698,2700-2703
+  s_c587ecf7bbc3e2::t_a5f0ef97d2b4a7 2714-2714
+  s_c587ecf7bbc3e2::t_79cf20437458b8 2718-2732,2744-2781,2783-2813,2819-2821,2845-2846
+  s_c587ecf7bbc3e2::t_fc1f672a5a14da 2733-2743
+  s_c587ecf7bbc3e2::t_3208f055c874f2 2814-2818,2822-2837,2839-2839,2841-2844,2847-2849,2851-2858,2874-2901,2904-2959,2961-2963,2965-2978
+  s_c587ecf7bbc3e2::t_a0ad29a724580f 2850-2850
+  s_c587ecf7bbc3e2::t_c0094051de9ce0 2859-2873
+  s_c587ecf7bbc3e2::t_af552219363a28 3073-3095
+  s_c587ecf7bbc3e2::t_ec5ecbafeee10f 3096-3108,3113-3114
+  s_c587ecf7bbc3e2::t_c986288b7af2cf 3109-3112
+  s_c587ecf7bbc3e2::t_aace9ab21a3d82 3163-3219,3261-3261,3273-3278
+  s_c587ecf7bbc3e2::t_e5c5f90b961026 3220-3260,3262-3272
+app/kernel-client/swift/OpenclawWire.swift
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 17-21,216-329
+  s_c587ecf7bbc3e2::t_b2a9ab123d5199 155-189
+scripts/check-secrets.sh
+  s_c587ecf7bbc3e2::t_edfc38b8a73177 95-110,114-114
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item3-messageseq.md
+  s_c587ecf7bbc3e2::t_243bf2f5286361 1-106
+.hopper/handoffs/T-087-output.log
+  s_c587ecf7bbc3e2::t_59d99b257315f5 1-1
+.hopper/handoffs/T-087-output.md
+  s_c587ecf7bbc3e2::t_59d99b257315f5 1-4,7-7,10-11,13-13
+  human 5-6,8-9,12-12,14-14,142-142
+.hopper/handoffs/T-087-progress.log
+  s_c587ecf7bbc3e2::t_59d99b257315f5 1-1
+  s_c587ecf7bbc3e2::t_895286f62fec2f 2-2
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_fd3b39d8a8d2b8 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/round-summary.md
+  s_c587ecf7bbc3e2::t_fd3b39d8a8d2b8 1-63
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/decision.md
+  s_c587ecf7bbc3e2::t_3fc32f2c48f775 1-21,23-56
+  s_c587ecf7bbc3e2::t_84d7694eed7a4d 22-22
+  s_c587ecf7bbc3e2::t_01dff0f6929f95 57-78
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/decision.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-100
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/runtime/isolation-after.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/runtime/isolation-baseline-before.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/runtime/live-roundtrip-attempt.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-219
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/step-a-swiftpm-packaging.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-86
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/step-b-swiftui-shell.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-80
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/round-summary.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-84
+.harnessloop/goals/20260718-002-agent-app/rounds/0011/scope-lock.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-104
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/instrumented-run-findings.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-186
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item1-mechanism-localization.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-95
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item2-subscribe-race.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-285
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/isolation-after.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-5
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/isolation-before.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-5
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/live-closure.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-99
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/agentshell-inject.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-1410
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/agentshell-stdout.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-1449
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/d3proxy.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-64
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/openclaw-inject-stdout.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-48
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/openclaw-isolated-inject.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-48
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/wire-trace-inject.jsonl
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-20
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/raw/wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-46
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/repro-openclaw.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-25
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/live/repro-wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-44
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/nopause-1.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-1298
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/nopause-2.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/nopause-3.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/nopause-4.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/paused-1.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/paused-2.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/paused-3.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/race/probe-single.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-850
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/raw/agentshell-stdout.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-1877
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/raw/d3proxy.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-64
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/raw/openclaw-gateway.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-50
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/raw/wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-34
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/runtime/isolation-after.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-5
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/runtime/isolation-baseline-before.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-13
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/scope-lock.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-171
+.harnessloop/meta/evolution-issues/0031-open-round-silently-suppresses-anomaly-metric.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-93
+.hopper/handoffs/T-080-output-full.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-6489
+.hopper/handoffs/T-080-output-raw.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-6466
+.hopper/handoffs/T-080-output.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-6466
+.hopper/handoffs/T-080-output.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-235
+.hopper/handoffs/T-080-progress.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-2
+.hopper/handoffs/T-081-output-raw.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-11998
+.hopper/handoffs/T-081-output.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-11998
+.hopper/handoffs/T-081-output.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-244
+.hopper/handoffs/T-081-progress.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-2
+.hopper/handoffs/T-082-output.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-27
+.hopper/handoffs/T-082-output.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-313
+.hopper/handoffs/T-082-progress.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-11
+.hopper/handoffs/T-083-output-raw.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-5657
+.hopper/handoffs/T-083-output.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-5657
+.hopper/handoffs/T-083-output.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-223
+.hopper/handoffs/T-083-progress.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-2
+.hopper/handoffs/T-084-output.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-27
+.hopper/handoffs/T-084-output.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-224
+.hopper/handoffs/T-084-progress.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-11
+.hopper/handoffs/T-085-output-raw.txt
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-7367
+.hopper/handoffs/T-085-output.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-7367
+.hopper/handoffs/T-085-output.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-226
+.hopper/handoffs/T-085-progress.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-2
+.hopper/handoffs/T-086-output.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-27
+.hopper/handoffs/T-086-output.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-243
+.hopper/handoffs/T-086-progress.log
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-12
+app/.gitignore
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-3
+app/apps/AgentShell/build-app-bundle.sh
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-51
+app/apps/AgentShell/README.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-68,74-86
+  s_c587ecf7bbc3e2::t_2251fc20e70579 69-73
+app/apps/AgentShell/repro/L1-REPRO.md
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-36,38-54,56-68,70-70,75-79,85-123,125-163
+  s_c587ecf7bbc3e2::t_9a643715aba317 37-37
+  s_c587ecf7bbc3e2::t_9aecec1028e417 55-55
+  s_c587ecf7bbc3e2::t_4ed5cfdd24acf7 69-69,71-74,80-84
+  s_c587ecf7bbc3e2::t_a844a271e949a5 124-124
+  s_c587ecf7bbc3e2::t_de70cd0c0a3171 164-174,179-195,198-201,208-209,213-219,234-236,252-252,266-272,282-336
+  s_c587ecf7bbc3e2::t_1c44a0733313f2 175-178
+  s_c587ecf7bbc3e2::t_734940f98471d4 196-197,202-207,210-212,220-220,237-251
+  s_c587ecf7bbc3e2::t_6ac1007b521ab7 221-233
+  s_c587ecf7bbc3e2::t_12019f313e5e16 253-265
+  s_c587ecf7bbc3e2::t_6d573c6bcae2a3 273-280
+  s_c587ecf7bbc3e2::t_b2dc388d5f493c 281-281
+app/apps/AgentShell/repro/start-isolated-kernel.sh
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-16,38-65,68-94,102-102,104-104,106-113,128-173,181-181
+  s_c587ecf7bbc3e2::t_82b16671fa2bbf 17-19
+  s_c587ecf7bbc3e2::t_3049eddf39c8e3 20-37
+  s_c587ecf7bbc3e2::t_307ff8e05d1915 66-67
+  s_c587ecf7bbc3e2::t_2476437fd5c443 95-101,103-103,105-105,114-127
+  s_c587ecf7bbc3e2::t_4fd269adf19e90 174-180
+app/apps/AgentShell/repro/stop-isolated-kernel.sh
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-65
+app/apps/AgentShell/Resources/Info.plist
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-28
+app/apps/AgentShell/Sources/AgentShell/AgentShellApp.swift
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-12,16-42
+  s_c587ecf7bbc3e2::t_27a5de618612d3 13-15
+app/apps/AgentShell/Sources/AgentShell/ChatModels.swift
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-36
+app/apps/AgentShell/Sources/AgentShell/ChatSessionViewModel.swift
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-46
+app/apps/AgentShell/Sources/AgentShell/ContentView.swift
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-3,7-28,32-45
+  s_c587ecf7bbc3e2::t_fdf30dbc1a1cdb 4-6
+  s_c587ecf7bbc3e2::t_1c702e5cf6d0d7 29-31
+app/apps/AgentShell/Sources/AgentShell/KernelShellConfig.swift
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-38
+app/apps/AgentShell/Sources/AgentShell/SessionDetailView.swift
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-3,8-20,25-80,121-141,244-279
+  s_c587ecf7bbc3e2::t_c52cd1f0340d57 4-7
+  s_c587ecf7bbc3e2::t_75ae0e597b9cdb 21-24
+  s_c587ecf7bbc3e2::t_4e179e1e0e2270 81-86,110-110,115-115,118-120
+  s_c587ecf7bbc3e2::t_47431f70eb1cb9 87-93,95-95,111-114,116-117
+  s_c587ecf7bbc3e2::t_8e74f7d84441c9 94-94,96-109
+  s_c587ecf7bbc3e2::t_fc405549f34f53 142-223,230-243
+  s_c587ecf7bbc3e2::t_93e5ecd66115b1 224-229
+app/apps/AgentShell/Sources/AgentShell/SessionListView.swift
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-9,14-127
+  s_c587ecf7bbc3e2::t_4dd8e9bc0dba7f 10-13
+app/apps/AgentShell/Sources/AgentShell/SessionStore.swift
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-275
+app/Package.swift
+  s_c587ecf7bbc3e2::t_dcf33ceeee2c2a 1-26,28-65,94-96,102-103,105-108,121-122,124-127
+  s_c587ecf7bbc3e2::t_1f17b5ac9fdf4f 27-27
+  s_c587ecf7bbc3e2::t_8234d7812f59cb 66-93,97-101,104-104,109-120,123-123
+.hopper/handoffs/T-088-output.log
+  s_c587ecf7bbc3e2::t_7bc1610fe88a1c 1-1
+  s_c587ecf7bbc3e2::t_960ff1f5775e8a 8697-8775
+  s_c587ecf7bbc3e2::t_8d39b30541c158 8894-10097
+  s_c587ecf7bbc3e2::t_6016cdff42e930 13213-16334
+.hopper/handoffs/T-088-output.md
+  s_c587ecf7bbc3e2::t_7bc1610fe88a1c 1-14,21-21,26-28,30-32,34-35,37-38
+  s_c587ecf7bbc3e2::t_960ff1f5775e8a 15-20,22-25,29-29,33-33,36-36
+.hopper/handoffs/T-088-progress.log
+  s_c587ecf7bbc3e2::t_7bc1610fe88a1c 1-1
+  s_c587ecf7bbc3e2::t_960ff1f5775e8a 3-3
+.hopper/handoffs/T-089-output.log
+  s_c587ecf7bbc3e2::t_7bc1610fe88a1c 1-1
+.hopper/handoffs/T-089-output.md
+  s_c587ecf7bbc3e2::t_7bc1610fe88a1c 1-4,7-7,11-12,14-14
+  human 5-6,8-9,13-13,61-61,207-207,222-222
+.hopper/handoffs/T-089-progress.log
+  s_c587ecf7bbc3e2::t_7bc1610fe88a1c 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item3b-delivery-seq-upstream.md
+  s_c587ecf7bbc3e2::t_4d7b419d8003e5 1-80
+CLAUDE.md
+  s_c587ecf7bbc3e2::t_f36c3e488212ad 68-115
+docs/validation-log.md
+  s_c587ecf7bbc3e2::t_a1e36ffcb1fcb0 20-25,30-32,36-36,38-38
+  s_c587ecf7bbc3e2::t_3b9b7851016b44 26-29
+  s_c587ecf7bbc3e2::t_a499ccbe6f9ee6 33-33
+  s_c587ecf7bbc3e2::t_f662b9c15631bd 34-35
+  s_c587ecf7bbc3e2::t_49e88511e17a39 37-37
+  s_c587ecf7bbc3e2::t_39152b759b8bb3 39-50
+  s_c587ecf7bbc3e2::t_2e7bc88bf300b1 51-63
+  s_c587ecf7bbc3e2::t_1a9c3bf6219999 64-73
+  s_c587ecf7bbc3e2::t_36b09063230c96 74-83
+  s_c587ecf7bbc3e2::t_790f0e9f030d88 84-103
+  s_c587ecf7bbc3e2::t_913253ee8b9813 104-126
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/scope-lock.md
+  s_c587ecf7bbc3e2::t_9f43585a3763fc 1-72,74-76,78-133
+  s_c587ecf7bbc3e2::t_e2ef96c17505fc 73-73
+  s_c587ecf7bbc3e2::t_c5968c520a8c42 77-77
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/b1-openclaw.log
+  s_c587ecf7bbc3e2::t_d12db2150a000b 1-22
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-reconciliation-premise.md
+  s_c587ecf7bbc3e2::t_331d2e7d927b57 1-48,90-92,94-97
+  s_c587ecf7bbc3e2::t_2bd6195e0e39ca 49-89,93-93
+app/apps/AgentShell/Sources/AgentShellCore/SessionStore.swift
+  s_c587ecf7bbc3e2::t_b293ad5e82c01c 34-40,43-47,52-52,56-56,79-79,84-84
+  s_c587ecf7bbc3e2::t_3c89674eb7d134 60-73,76-76
+  s_c587ecf7bbc3e2::t_6a71b5a9614951 105-105
+  s_c587ecf7bbc3e2::t_b2f8e9e0860771 164-173,178-277
+  s_c587ecf7bbc3e2::t_d3b3cf80b78f10 284-284
+  s_c587ecf7bbc3e2::t_e1168e3055fa87 324-331,337-337
+  s_c587ecf7bbc3e2::t_f31c60aa111837 332-336
+  s_c587ecf7bbc3e2::t_25e90bdffea75b 341-341,343-352,373-378
+  s_c587ecf7bbc3e2::t_327807bdf651a2 353-363,366-372
+  s_c587ecf7bbc3e2::t_41e1f0473354a7 364-365
+  s_c587ecf7bbc3e2::t_f8eb43c749ca23 387-406
+  s_c587ecf7bbc3e2::t_9fffa9924bdb35 410-432
+  s_c587ecf7bbc3e2::t_e0f9b5665bcc6b 435-463,465-465,468-469,471-482
+  s_c587ecf7bbc3e2::t_faf87339684b11 464-464,466-467,470-470
+  s_c587ecf7bbc3e2::t_427032e36d9c6d 517-518,520-520,524-526
+  s_c587ecf7bbc3e2::t_9ec2a18c8c73a5 543-548
+app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift
+  s_c587ecf7bbc3e2::t_6e27cf7aa25bda 1-114
+app/apps/AgentShell/Sources/AgentShellCore/ChatModels.swift
+  s_c587ecf7bbc3e2::t_cb941701cc46c7 1-10,18-20,22-25,32-32,42-47,49-53
+  s_c587ecf7bbc3e2::t_e4107bf5dac10c 11-17,21-21,26-31,33-41,48-48
+app/apps/AgentShell/Sources/AgentShellCore/ChatSessionViewModel.swift
+  s_c587ecf7bbc3e2::t_cb941701cc46c7 1-8,14-15,17-22,27-32,34-37,39-39,45-50,52-56
+  s_c587ecf7bbc3e2::t_9b29132f87bc19 9-13,16-16,23-26,33-33,38-38,51-51
+  s_c587ecf7bbc3e2::t_63651f8716ffd9 40-44
+app/apps/AgentShell/Sources/AgentShellCore/KernelShellConfig.swift
+  s_c587ecf7bbc3e2::t_cb941701cc46c7 1-8,17-27,29-45
+  s_c587ecf7bbc3e2::t_96915393b91309 9-15,28-28
+  s_c587ecf7bbc3e2::t_bbfd5db5bd30f5 16-16
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemD-probe-design.md
+  s_c587ecf7bbc3e2::t_35a824ed6ee788 1-31,52-68
+  s_c587ecf7bbc3e2::t_e52989049ac688 32-51
+app/apps/AgentShell/repro/reconcile-history.py
+  s_c587ecf7bbc3e2::t_1ca8612645f892 1-12,15-21,52-52,81-81,93-94,96-97,99-103,107-121,123-128,130-132,137-137,139-157,184-248,252-269,273-291,293-293,310-315,321-324,326-329,336-337,342-345,347-348,355-356,361-388,390-401,491-492,496-498,504-506,508-511,516-518,520-520,524-528,537-538,541-542,557-557,672-672,678-678,680-693,696-699,702-702,705-706,710-714,719-726,735-735,738-738,744-753,757-758,760-767,770-778,780-781,783-783,793-799,861-873
+  s_c587ecf7bbc3e2::t_1bd408c74585cf 13-14,22-34,39-39,42-51,82-92,95-95,98-98,105-106,122-122,129-129,133-136,138-138,251-251,270-272,292-292,330-335,338-338,341-341,346-346,349-354,357-360,389-389,402-490,493-495,499-503,507-507,512-515,519-519,521-523,535-536,540-540,543-556,558-611,614-614,616-619,621-628,630-671,673-677,679-679,694-695,700-701,703-704,707-709,715-715,727-727,736-737,739-743,754-756,759-759,768-769,779-779,782-782,784-792,800-860
+  s_c587ecf7bbc3e2::t_93ae46d204c875 35-38
+  s_c587ecf7bbc3e2::t_0778424db127b0 40-41
+  s_c587ecf7bbc3e2::t_ae96e8b7b49588 53-80
+  s_c587ecf7bbc3e2::t_a6939f2a6cb276 104-104
+  s_c587ecf7bbc3e2::t_a36b0fd46b5ca0 158-183
+  s_c587ecf7bbc3e2::t_ae78b04e5b5640 249-250
+  s_c587ecf7bbc3e2::t_ec434a05f7f52f 294-309,316-320,325-325
+  s_c587ecf7bbc3e2::t_be80b234b0c5e7 339-340
+  s_c587ecf7bbc3e2::t_1d3d1ef4c88af4 529-534,539-539
+  s_c587ecf7bbc3e2::t_205b30cfd4646f 612-613,615-615,620-620
+  s_c587ecf7bbc3e2::t_314ef7026058ed 629-629
+  s_c587ecf7bbc3e2::t_055c5190e1391b 716-718
+  s_c587ecf7bbc3e2::t_68dc7996fbcbce 728-734
+app/apps/AgentShell/Sources/AgentShellCore/SessionStore.swift.mainsession.bak
+  s_c587ecf7bbc3e2::t_20962c61a11709 1-295
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-rae0001-live.md
+  s_c587ecf7bbc3e2::t_1c30e794a4cdaa 1-95,189-206
+  s_c587ecf7bbc3e2::t_2bdc4d481d0c73 96-115
+  s_c587ecf7bbc3e2::t_32b3beb2f07176 116-126,129-132,134-158,182-188
+  s_c587ecf7bbc3e2::t_55d7730460da20 127-127,207-219
+  s_c587ecf7bbc3e2::t_009c71faf0f3b1 128-128
+  s_c587ecf7bbc3e2::t_2eac4cfa4c58f9 133-133
+  s_c587ecf7bbc3e2::t_31b66ce48362a5 159-181
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemD-probe-results.md
+  s_c587ecf7bbc3e2::t_b7e87cd0a2993c 1-40,71-98,103-128
+  s_c587ecf7bbc3e2::t_059ca2a4587a90 41-70
+  s_c587ecf7bbc3e2::t_59cd58334d4711 99-102
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_f8a69a048f0dca 1-12
+.hopper/handoffs/T-090-output.log
+  s_c587ecf7bbc3e2::t_12ebfb2902d523 1-1
+  s_c587ecf7bbc3e2::t_b9aaefbda58eb2 82-166
+.hopper/handoffs/T-090-output.md
+  s_c587ecf7bbc3e2::t_12ebfb2902d523 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  s_c587ecf7bbc3e2::t_b9aaefbda58eb2 15-15,18-20,22-25,29-29,34-46,49-49,52-232
+.hopper/handoffs/T-090-progress.log
+  s_c587ecf7bbc3e2::t_12ebfb2902d523 1-1
+  s_c587ecf7bbc3e2::t_b9aaefbda58eb2 2-2
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/round-summary.md
+  s_c587ecf7bbc3e2::t_cc1e050f2edd34 1-64
+.hopper/handoffs/T-090b-output.log
+  s_c587ecf7bbc3e2::t_15d52d73b5e904 1-75
+  s_c587ecf7bbc3e2::t_146f9bb13c83fd 2640-3004
+  s_c587ecf7bbc3e2::t_790f0e9f030d88 5041-5194
+  s_c587ecf7bbc3e2::t_caee0c4c6ca64f 8217-11711
+  s_c587ecf7bbc3e2::t_cc653a11a930e5 11712-12006
+.hopper/handoffs/T-090b-output.md
+  s_c587ecf7bbc3e2::t_15d52d73b5e904 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  s_c587ecf7bbc3e2::t_cc653a11a930e5 15-15,18-20,22-25,29-29,34-46,49-49,52-219
+.hopper/handoffs/T-090b-progress.log
+  s_c587ecf7bbc3e2::t_15d52d73b5e904 1-1
+  s_c587ecf7bbc3e2::t_cc653a11a930e5 2-2
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/hopper-defect-queue-brief-dropped.md
+  s_c587ecf7bbc3e2::t_d92620cbd40bf7 1-74
+.hopper/handoffs/T-090b-output-raw.txt
+  s_c587ecf7bbc3e2::t_cc653a11a930e5 1-12006
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-run.log
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-2526
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-81
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/d2-run.log
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-3553
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/d2-wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-64
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/diag-badport.log
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-4
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/diag-badtoken.log
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-35
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/history-snapshot.json
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-drop.txt
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-40
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-limit2.txt
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-38
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-live.txt
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-34
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-stdout.log
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-5443
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-wire-trace.jsonl
+  s_c587ecf7bbc3e2::t_fe4438155faa1f 1-234
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt
+  s_c587ecf7bbc3e2::t_f89dd181f80bea 1-50
+  s_c587ecf7bbc3e2::t_8f47320da0bde8 51-58
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-hardened-droponme.txt
+  s_c587ecf7bbc3e2::t_f81b2f5c6b4243 1-15,17-17,19-21,23-28,30-66
+  s_c587ecf7bbc3e2::t_4548130c5c1fa3 16-16,18-18,22-22,29-29
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-hardened-pass.txt
+  s_c587ecf7bbc3e2::t_f81b2f5c6b4243 1-15,17-17,19-21,23-28,30-47
+  s_c587ecf7bbc3e2::t_4548130c5c1fa3 16-16,18-18,22-22,29-29
+.hopper/handoffs/T-091-output.log
+  s_c587ecf7bbc3e2::t_e59c8e0e6c71fd 1-1
+  s_c587ecf7bbc3e2::t_6455395fcd2b2a 377-2421
+  s_c587ecf7bbc3e2::t_9e6853d4420cc0 3238-5421
+  s_c587ecf7bbc3e2::t_9974c8b5e900d8 5434-6006
+.hopper/handoffs/T-091-output.md
+  s_c587ecf7bbc3e2::t_e59c8e0e6c71fd 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  s_c587ecf7bbc3e2::t_9974c8b5e900d8 15-15,18-20,22-25,29-29,34-46,49-49,52-225
+.hopper/handoffs/T-091-progress.log
+  s_c587ecf7bbc3e2::t_e59c8e0e6c71fd 1-1
+  s_c587ecf7bbc3e2::t_9974c8b5e900d8 2-2
+.hopper/handoffs/T-091-output-raw.txt
+  s_c587ecf7bbc3e2::t_9974c8b5e900d8 1-6006
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-diag-badport.log
+  s_c587ecf7bbc3e2::t_a98e186c8c232d 1-2
+  s_c587ecf7bbc3e2::t_8f47320da0bde8 3-7
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/decision.md
+  s_c587ecf7bbc3e2::t_7b146d10b9600c 1-6,8-19,23-84
+  s_c587ecf7bbc3e2::t_3183ffe2313b7d 7-7
+  s_c587ecf7bbc3e2::t_491afe01b936f1 20-22
+  s_c587ecf7bbc3e2::t_351eba33b1bd67 85-110
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/scope-lock.md
+  s_c587ecf7bbc3e2::t_22d886a7fd3399 1-49,70-76,78-110,112-162
+  s_c587ecf7bbc3e2::t_72ac916c5034e2 50-69
+  s_c587ecf7bbc3e2::t_351eba33b1bd67 77-77,111-111
+app/apps/AgentShell/Sources/AgentShellCore/SessionPersistence.swift
+  s_c587ecf7bbc3e2::t_c1267cb264f6ff 1-94,104-119,121-121,123-149
+  s_c587ecf7bbc3e2::t_8e063d8c21174e 95-103
+  s_c587ecf7bbc3e2::t_01ea353b99d14c 120-120,122-122
+app/kernel-client/swift/frame-replay-tests/SessionRestoreHistoryTests.swift
+  s_c587ecf7bbc3e2::t_9cbeb028d8026b 1-42,56-62,69-73,75-241
+  s_c587ecf7bbc3e2::t_b55b659ee0d534 43-55
+  s_c587ecf7bbc3e2::t_db2dc1942aa337 63-68,74-74
+app/kernel-client/swift/frame-replay-tests/SessionPersistenceTests.swift
+  s_c587ecf7bbc3e2::t_c31b5566e978aa 1-131
+.hopper/handoffs/T-092-output.log
+  s_c587ecf7bbc3e2::t_937f918b509cf0 1-1
+  s_c587ecf7bbc3e2::t_fcdf226823f9d9 91-1646
+  s_c587ecf7bbc3e2::t_e31c820f179d8a 2078-2496
+  s_c587ecf7bbc3e2::t_0b1f3fb3874c6e 2542-2626
+.hopper/handoffs/T-092-output.md
+  s_c587ecf7bbc3e2::t_937f918b509cf0 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-092-progress.log
+  s_c587ecf7bbc3e2::t_937f918b509cf0 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-app1.log
+  s_c587ecf7bbc3e2::t_a11703a8d88ad4 1-1394
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-app2.log
+  s_c587ecf7bbc3e2::t_a11703a8d88ad4 1-1699
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-app3.log
+  s_c587ecf7bbc3e2::t_a11703a8d88ad4 1-1276
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-run1.jsonl
+  s_c587ecf7bbc3e2::t_a11703a8d88ad4 1-40
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/r14-run2.jsonl
+  s_c587ecf7bbc3e2::t_a11703a8d88ad4 1-18
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/README-persistence-shape.txt
+  s_c587ecf7bbc3e2::t_d1ca5e99281112 1-8,12-35,38-51
+  s_c587ecf7bbc3e2::t_a11703a8d88ad4 9-11,36-37
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/sessions-json-CORRUPTED.txt
+  s_c587ecf7bbc3e2::t_a11703a8d88ad4 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/start14.log
+  s_c587ecf7bbc3e2::t_a11703a8d88ad4 1-3
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift.mainbak
+  s_c587ecf7bbc3e2::t_6a34b75c7e883f 1-1929
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/counterproof-pagination-main-session.txt
+  s_c587ecf7bbc3e2::t_850f9acb46d546 1-22
+.hopper/handoffs/T-093-output.log
+  s_c587ecf7bbc3e2::t_e156990f15d4ce 1-1
+.hopper/handoffs/T-093-output.md
+  human 35-35,37-37,39-40,193-193,199-199
+  s_c587ecf7bbc3e2::t_e156990f15d4ce 42-42,192-192,194-194
+.hopper/handoffs/T-093-progress.log
+  s_c587ecf7bbc3e2::t_e156990f15d4ce 1-1
+  s_c587ecf7bbc3e2::t_3e871637f1c40e 2-2
+  s_c587ecf7bbc3e2::t_51c0742aa2dcf3 4-6
+  s_c587ecf7bbc3e2::t_e128a6dff7c90e 8-8
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-cli.log
+  s_c587ecf7bbc3e2::t_e128a6dff7c90e 1-2372
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-drop.txt
+  s_c587ecf7bbc3e2::t_e128a6dff7c90e 1-66
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-hist.json
+  s_c587ecf7bbc3e2::t_e128a6dff7c90e 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-rec.txt
+  s_c587ecf7bbc3e2::t_e128a6dff7c90e 1-47
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/rae14-wire.jsonl
+  s_c587ecf7bbc3e2::t_e128a6dff7c90e 1-78
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/live/raw/start-rae14.log
+  s_c587ecf7bbc3e2::t_e128a6dff7c90e 1-3
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_e128a6dff7c90e 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/round-summary.md
+  s_c587ecf7bbc3e2::t_55297980c2299b 1-74
+.harnessloop/goals/20260718-002-agent-app/rounds/0014/decision.md
+  s_c587ecf7bbc3e2::t_c5aff5fcd65804 1-69
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/scope-lock.md
+  s_c587ecf7bbc3e2::t_12bb5ff42de62e 1-168
+app/apps/AgentShell/Sources/AgentShellCore/ApprovalModels.swift
+  s_c587ecf7bbc3e2::t_ebc64d56314590 1-155
+app/kernel-client/swift/frame-replay-tests/ApprovalDecisionTests.swift
+  s_c587ecf7bbc3e2::t_f70f6ed71c6715 1-238,240-242,244-257,259-484,487-487,490-520,522-524,530-652,659-660
+  s_c587ecf7bbc3e2::t_5e8bb19487f512 239-239,243-243
+  s_c587ecf7bbc3e2::t_eda8f7ac768a73 258-258
+  s_c587ecf7bbc3e2::t_7ddef04ccb23c0 485-486,488-489
+  s_c587ecf7bbc3e2::t_0cc646e3dca91b 521-521,525-529
+  s_c587ecf7bbc3e2::t_53fbdb9d20a99e 653-658
+  s_c587ecf7bbc3e2::t_0c9d525e48c077 661-678,709-753,756-811,813-842,845-871,874-1158
+  s_c587ecf7bbc3e2::t_e8497759f7ea5d 679-708
+  s_c587ecf7bbc3e2::t_7b4e33095d6ff1 754-755
+  s_c587ecf7bbc3e2::t_e2630461b514eb 812-812
+  s_c587ecf7bbc3e2::t_806f4947d19719 843-844
+  s_c587ecf7bbc3e2::t_97437b3bf38e86 872-873
+  s_c587ecf7bbc3e2::t_7fe37876eb39da 1159-1163,1165-1193
+  s_c587ecf7bbc3e2::t_f01281847c916d 1164-1164
+app/kernel-client/swift/EventMapping.swift.mainbak
+  s_c587ecf7bbc3e2::t_1fab34bfa589bf 1-1124
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/counterproof1-main-session.txt
+  s_c587ecf7bbc3e2::t_ade30a18cbbee4 1-26
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/isolated-config-tools.json
+  s_c587ecf7bbc3e2::t_5f39bd8c6ced12 1-7
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15-app.log
+  s_c587ecf7bbc3e2::t_5f39bd8c6ced12 1-1868
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15-wire.jsonl
+  s_c587ecf7bbc3e2::t_5f39bd8c6ced12 1-154
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/blocker-headless-approval-route.md
+  s_c587ecf7bbc3e2::t_cdacd6d34aa413 1-38,71-79,81-81,90-90
+  s_c587ecf7bbc3e2::t_8dd08385a69d65 39-70
+  s_c587ecf7bbc3e2::t_879203b99186b4 80-80,82-89,91-98
+.hopper/handoffs/T-094-codex-output.log
+  s_c587ecf7bbc3e2::t_1b247cbbb67a4e 1-1
+  s_c587ecf7bbc3e2::t_fa14b8b78a912c 2914-25593
+.hopper/handoffs/T-094-codex-output.md
+  s_c587ecf7bbc3e2::t_1b247cbbb67a4e 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  s_c587ecf7bbc3e2::t_fa14b8b78a912c 15-15,18-20,22-25,29-29,34-46,49-49,52-197
+.hopper/handoffs/T-094-codex-progress.log
+  s_c587ecf7bbc3e2::t_1b247cbbb67a4e 1-1
+  s_c587ecf7bbc3e2::t_fa14b8b78a912c 2-2
+.hopper/handoffs/T-094-grok-output.log
+  s_c587ecf7bbc3e2::t_1b247cbbb67a4e 1-1
+  s_c587ecf7bbc3e2::t_fa14b8b78a912c 2-29
+.hopper/handoffs/T-094-grok-output.md
+  s_c587ecf7bbc3e2::t_1b247cbbb67a4e 1-14,16-17,21-21,26-28,30-33,49-50,52-53
+  s_c587ecf7bbc3e2::t_fa14b8b78a912c 15-15,18-20,22-25,29-29,34-48,51-51,54-170
+.hopper/handoffs/T-094-grok-progress.log
+  s_c587ecf7bbc3e2::t_1b247cbbb67a4e 1-1
+  s_c587ecf7bbc3e2::t_fa14b8b78a912c 2-15
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/channel-decision-prereg.md
+  s_c587ecf7bbc3e2::t_2114f4837197e5 1-34,36-36
+  s_c587ecf7bbc3e2::t_155008e75bf94e 35-35,37-84
+.hopper/handoffs/T-094-codex-output-raw.txt
+  s_c587ecf7bbc3e2::t_fa14b8b78a912c 1-25593
+.hopper/handoffs/T-094-grok-output-raw.txt
+  s_c587ecf7bbc3e2::t_fa14b8b78a912c 1-174
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/approval-frames-extract.json
+  s_c587ecf7bbc3e2::t_2ba612d80d3749 1-100
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15b-app.log
+  s_c587ecf7bbc3e2::t_2ba612d80d3749 1-1848
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15b-wire.jsonl
+  s_c587ecf7bbc3e2::t_2ba612d80d3749 1-122
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15c-app.log
+  s_c587ecf7bbc3e2::t_a096223f8943b2 1-3461
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15c-approval-chain.json
+  s_c587ecf7bbc3e2::t_a096223f8943b2 1-294
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15c-approval-resolve-sends.txt
+  s_c587ecf7bbc3e2::t_a096223f8943b2 1-21
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15c-wire.jsonl
+  s_c587ecf7bbc3e2::t_a096223f8943b2 1-187
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/itemD-live-approval-roundtrip.md
+  s_c587ecf7bbc3e2::t_2e5adcc10c75d1 1-56
+.hopper/handoffs/T-095-output.log
+  s_c587ecf7bbc3e2::t_734e2b3b30debd 1-1
+.hopper/handoffs/T-095-output.md
+  s_c587ecf7bbc3e2::t_734e2b3b30debd 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-095-progress.log
+  s_c587ecf7bbc3e2::t_734e2b3b30debd 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/review-T095-disposition.md
+  s_c587ecf7bbc3e2::t_a0b61e737699bc 1-53
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15d-postrework-app.log
+  s_c587ecf7bbc3e2::t_b6bbaa4abfe961 1-1880
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/r15d-postrework-wire.jsonl
+  s_c587ecf7bbc3e2::t_b6bbaa4abfe961 1-37
+.hopper/handoffs/T-096-output.log
+  s_c587ecf7bbc3e2::t_b6bbaa4abfe961 1-1
+.hopper/handoffs/T-096-output.md
+  s_c587ecf7bbc3e2::t_b6bbaa4abfe961 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-096-progress.log
+  s_c587ecf7bbc3e2::t_b6bbaa4abfe961 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/checkpoint-convergence-guard.md
+  s_c587ecf7bbc3e2::t_9293194f6686d4 1-54
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-cli.log
+  s_c587ecf7bbc3e2::t_cc9d2106a72109 1-2239
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-drop.txt
+  s_c587ecf7bbc3e2::t_cc9d2106a72109 1-66
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-hist.json
+  s_c587ecf7bbc3e2::t_cc9d2106a72109 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-rec.txt
+  s_c587ecf7bbc3e2::t_cc9d2106a72109 1-47
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/rae15-wire.jsonl
+  s_c587ecf7bbc3e2::t_cc9d2106a72109 1-63
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_24debd023dbe20 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/round-summary.md
+  s_c587ecf7bbc3e2::t_89a4ff6bfbe134 1-70
+.harnessloop/goals/20260718-002-agent-app/rounds/0015/decision.md
+  s_c587ecf7bbc3e2::t_9008da02221297 1-74
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/scope-lock.md
+  s_c587ecf7bbc3e2::t_76fa62012985c7 1-118
+app/kernel-client/swift/frame-replay-tests/ApprovalFailurePathTests.swift
+  s_c587ecf7bbc3e2::t_fe822c9db41a8f 1-38,46-46,48-476,553-564,566-621,623-663,665-687,689-713,715-718
+  s_c587ecf7bbc3e2::t_29dc1720aded72 39-45,47-47
+  s_c587ecf7bbc3e2::t_65aa0c9d431499 477-552
+  s_c587ecf7bbc3e2::t_452c75a73bbb1c 565-565,622-622,664-664,688-688
+  s_c587ecf7bbc3e2::t_3cf878aeeda0ad 714-714
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/frame-replay-full.log
+  s_c587ecf7bbc3e2::t_8f7971287d9a70 1-260,262-289,291-323,325-703,710-728,735-891,893-905,907-914,916-1052,1054-1056,1058-1088,1090-1110,1112-1132,1134-1588,1590-1633,1675-1738
+  s_c587ecf7bbc3e2::t_32fb0fb360fead 261-261,290-290,324-324,704-709,892-892,906-906,915-915,1053-1053,1057-1057,1111-1111,1589-1589,1634-1674,1739-1739
+  s_c587ecf7bbc3e2::t_c718a255c7ed0c 729-734,1089-1089,1133-1133
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/frame-replay-stderr.log
+  s_c587ecf7bbc3e2::t_32fb0fb360fead 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/rounds0016-counterproofs-green.txt
+  s_c587ecf7bbc3e2::t_8f7971287d9a70 1-9,11-12,15-20
+  s_c587ecf7bbc3e2::t_98c18521ee8361 10-10,13-14,21-21
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/counterproof-red-checks.md
+  s_c587ecf7bbc3e2::t_93aeb0f2046aaf 1-98,116-149
+  s_c587ecf7bbc3e2::t_6dbee4ac197570 99-115
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/ci-parity-runner.log
+  s_c587ecf7bbc3e2::t_c71cc58eeae19b 1-5,7-37,39-88,90-156,158-224,226-256,258-311,313-352,354-393,395-444,446-468,470-492,495-503,505-513,515-596
+  s_c587ecf7bbc3e2::t_32fb0fb360fead 6-6,38-38,89-89,157-157,225-225,257-257,312-312,353-353,394-394,445-445,469-469,493-494,504-504,514-514
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/codegen-four-checks.log
+  s_c587ecf7bbc3e2::t_8c89b54e66d724 1-55
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/d1-seven-methods-untouched.txt
+  s_c587ecf7bbc3e2::t_6438f52a7ad2f4 1-37
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/r16-wire-partial.jsonl
+  s_c587ecf7bbc3e2::t_b4219ec1f4833d 1-39
+.hopper/handoffs/T-097-output.log
+  s_c587ecf7bbc3e2::t_035b1e632b2cd5 1-1
+.hopper/handoffs/T-097-output.md
+  s_c587ecf7bbc3e2::t_035b1e632b2cd5 1-14,16-17,21-21,26-28,30-33,49-50,52-53
+  human 15-15,18-20,22-25,29-29,51-51
+.hopper/handoffs/T-097-progress.log
+  s_c587ecf7bbc3e2::t_035b1e632b2cd5 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/r16b-app.log
+  s_c587ecf7bbc3e2::t_57963d3571b85f 1-3169
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/r16b-resolve-sends.txt
+  s_c587ecf7bbc3e2::t_57963d3571b85f 1-21
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/r16b-wire.jsonl
+  s_c587ecf7bbc3e2::t_57963d3571b85f 1-374
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live-mainpath-no-regression.md
+  s_c587ecf7bbc3e2::t_46851c8b049202 1-58
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-cli.log
+  s_c587ecf7bbc3e2::t_534d643afb19a7 1-2250
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-drop.txt
+  s_c587ecf7bbc3e2::t_534d643afb19a7 1-66
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-hist.json
+  s_c587ecf7bbc3e2::t_534d643afb19a7 1-1
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-rec.txt
+  s_c587ecf7bbc3e2::t_534d643afb19a7 1-47
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/live/raw/rae16-wire.jsonl
+  s_c587ecf7bbc3e2::t_534d643afb19a7 1-74
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/evidence/runtime/acceptance-evals.json
+  s_c587ecf7bbc3e2::t_1c7618716e0469 1-12
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/round-summary.md
+  s_c587ecf7bbc3e2::t_6efcb803a02553 1-70
+.harnessloop/goals/20260718-002-agent-app/rounds/0016/decision.md
+  s_c587ecf7bbc3e2::t_edb8a9e2147380 1-65
+.hopper/handoffs/T-098-codex-output.log
+  s_c587ecf7bbc3e2::t_e6e3216b8d8c43 1-1
+  s_c587ecf7bbc3e2::t_73b274eb637ae0 6507-7729
+.hopper/handoffs/T-098-codex-output.md
+  s_c587ecf7bbc3e2::t_e6e3216b8d8c43 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  s_c587ecf7bbc3e2::t_73b274eb637ae0 15-15,18-20,22-25,29-29,34-46,49-49,52-235
+.hopper/handoffs/T-098-codex-progress.log
+  s_c587ecf7bbc3e2::t_e6e3216b8d8c43 1-1
+  s_c587ecf7bbc3e2::t_73b274eb637ae0 2-2
+.hopper/handoffs/T-098-grok-output.log
+  s_c587ecf7bbc3e2::t_e6e3216b8d8c43 1-1
+  s_c587ecf7bbc3e2::t_73b274eb637ae0 2-29
+.hopper/handoffs/T-098-grok-output.md
+  s_c587ecf7bbc3e2::t_e6e3216b8d8c43 1-14,16-17,21-21,26-28,30-33,49-50,52-53
+  s_c587ecf7bbc3e2::t_73b274eb637ae0 15-15,18-20,22-25,29-29,35-48,51-51,54-169
+.hopper/handoffs/T-098-grok-progress.log
+  s_c587ecf7bbc3e2::t_e6e3216b8d8c43 1-1
+  s_c587ecf7bbc3e2::t_73b274eb637ae0 7-10
+.harnessloop/state/decision-triage-prereg.md
+  s_c587ecf7bbc3e2::t_d5dce512c3cdcc 1-39
+.hopper/handoffs/T-098-codex-output-raw.txt
+  s_c587ecf7bbc3e2::t_73b274eb637ae0 1-7729
+.hopper/handoffs/T-098-grok-output-raw.txt
+  s_c587ecf7bbc3e2::t_73b274eb637ae0 1-166
+.hopper/handoffs/T-099-codex-output.log
+  s_c587ecf7bbc3e2::t_912f211bfa2227 1-1
+  s_c587ecf7bbc3e2::t_08dd853ad722e1 3762-3788
+.hopper/handoffs/T-099-codex-output.md
+  s_c587ecf7bbc3e2::t_912f211bfa2227 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-099-codex-progress.log
+  s_c587ecf7bbc3e2::t_912f211bfa2227 1-1
+.hopper/handoffs/T-099-grok-output.log
+  s_c587ecf7bbc3e2::t_912f211bfa2227 1-1
+  s_c587ecf7bbc3e2::t_50374b95323a13 2-29
+.hopper/handoffs/T-099-grok-output.md
+  s_c587ecf7bbc3e2::t_912f211bfa2227 1-14,16-17,21-21,26-28,30-33,49-50,52-53
+  s_c587ecf7bbc3e2::t_50374b95323a13 15-15,18-20,22-25,29-29,36-48,51-51,54-183
+  human 35-35
+.hopper/handoffs/T-099-grok-progress.log
+  s_c587ecf7bbc3e2::t_912f211bfa2227 1-1
+  s_c587ecf7bbc3e2::t_4ff521694d7ee6 5-5
+  s_c587ecf7bbc3e2::t_50374b95323a13 8-8
+.hopper/handoffs/T-099-grok-output-raw.txt
+  s_c587ecf7bbc3e2::t_50374b95323a13 1-151
+.harnessloop/goals/20260718-002-agent-app/rounds/0017/evidence/design-review-T099-decision.md
+  s_c587ecf7bbc3e2::t_17a781bea8ea04 1-48
+.harnessloop/goals/20260718-002-agent-app/rounds/0017/evidence/counterproof-main-session.txt
+  s_c587ecf7bbc3e2::t_49d692672f0728 1-28
+.hopper/handoffs/T-100-codex-output.log
+  s_c587ecf7bbc3e2::t_49d692672f0728 1-1
+.hopper/handoffs/T-100-codex-output.md
+  s_c587ecf7bbc3e2::t_49d692672f0728 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-100-codex-progress.log
+  s_c587ecf7bbc3e2::t_49d692672f0728 1-1
+.hopper/handoffs/T-100-grok-output.log
+  s_c587ecf7bbc3e2::t_49d692672f0728 1-1
+.hopper/handoffs/T-100-grok-output.md
+  s_c587ecf7bbc3e2::t_49d692672f0728 1-14,16-17,21-21,26-28,30-33,49-50,52-53
+  human 15-15,18-20,22-25,29-29,51-51
+.hopper/handoffs/T-100-grok-progress.log
+  s_c587ecf7bbc3e2::t_49d692672f0728 1-1
+.hopper/handoffs/T-101-codex-output.log
+  s_c587ecf7bbc3e2::t_1a215e1d0c5b42 1-1
+.hopper/handoffs/T-101-codex-output.md
+  s_c587ecf7bbc3e2::t_1a215e1d0c5b42 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-101-codex-progress.log
+  s_c587ecf7bbc3e2::t_1a215e1d0c5b42 1-1
+.hopper/handoffs/T-101-grok-output.log
+  s_c587ecf7bbc3e2::t_1a215e1d0c5b42 1-1
+.hopper/handoffs/T-101-grok-output.md
+  s_c587ecf7bbc3e2::t_1a215e1d0c5b42 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-101-grok-progress.log
+  s_c587ecf7bbc3e2::t_1a215e1d0c5b42 1-1
+.hopper/handoffs/T-102-codex-output.log
+  s_c587ecf7bbc3e2::t_676650341c222c 1-1
+  s_c587ecf7bbc3e2::t_9e3df089564d23 889-1179
+.hopper/handoffs/T-102-codex-output.md
+  s_c587ecf7bbc3e2::t_676650341c222c 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-102-codex-progress.log
+  s_c587ecf7bbc3e2::t_676650341c222c 1-1
+.hopper/handoffs/T-102-grok-output.log
+  s_c587ecf7bbc3e2::t_676650341c222c 1-1
+.hopper/handoffs/T-102-grok-output.md
+  s_c587ecf7bbc3e2::t_676650341c222c 1-1,8-17,363-364,367-367
+  human 18-18,23-23,27-31,33-33,40-43,49-49,84-84,95-95,109-109,113-113,129-129,138-138,140-140,142-142,145-145,154-154,158-158,160-160,173-174,181-181,187-187,192-192,199-199,205-205,237-237,266-266,297-297,307-307,368-368
+.hopper/handoffs/T-102-grok-progress.log
+  s_c587ecf7bbc3e2::t_676650341c222c 1-1
+.hopper/handoffs/T-103-codex-output.log
+  s_c587ecf7bbc3e2::t_37f2dd17624fee 1-1
+.hopper/handoffs/T-103-codex-output.md
+  s_c587ecf7bbc3e2::t_37f2dd17624fee 1-14,16-17,21-21,26-28,30-33,47-48,50-51
+  human 15-15,18-20,22-25,29-29,49-49
+.hopper/handoffs/T-103-codex-progress.log
+  s_c587ecf7bbc3e2::t_37f2dd17624fee 1-1
+.hopper/handoffs/T-103-grok-output.log
+  s_c587ecf7bbc3e2::t_37f2dd17624fee 1-1
+.hopper/handoffs/T-103-grok-output.md
+  s_c587ecf7bbc3e2::t_37f2dd17624fee 1-11,34-34,36-36,42-42
+  human 12-20,23-23,26-27,31-31,37-37,39-39,49-49,107-107,119-119,200-200,206-206
+.hopper/handoffs/T-103-grok-progress.log
+  s_c587ecf7bbc3e2::t_37f2dd17624fee 1-1
+.hopper/handoffs/T-099-codex-output-raw.txt
+  0000019ff55aa171 1-3935
+.hopper/handoffs/T-100-codex-output-raw.txt
+  0000019ff55aa171 1-6891
+.hopper/handoffs/T-100-grok-output-raw.txt
+  0000019ff55aa171 1-162
+.hopper/handoffs/T-102-codex-output-raw.txt
+  0000019ff55aa171 1-2681
+.hopper/handoffs/T-103-codex-output-raw.txt
+  0000019ff55aa171 1-6595
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "fc98bd8e76d1d74e42faddcfc240b6fe2859ab9b",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_edfc38b8a73177": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 3244,
+      "total_deletions": 0,
+      "accepted_lines": 3244,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_243bf2f5286361": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 106,
+      "total_deletions": 0,
+      "accepted_lines": 106,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_59d99b257315f5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 37,
+      "total_deletions": 0,
+      "accepted_lines": 37,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fd3b39d8a8d2b8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 75,
+      "total_deletions": 0,
+      "accepted_lines": 75,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3fc32f2c48f775": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 55,
+      "total_deletions": 0,
+      "accepted_lines": 55,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_5542b37b155b4e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_dcf33ceeee2c2a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 86699,
+      "total_deletions": 0,
+      "accepted_lines": 86699,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_7bc1610fe88a1c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 105,
+      "total_deletions": 0,
+      "accepted_lines": 105,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4d7b419d8003e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 80,
+      "total_deletions": 0,
+      "accepted_lines": 80,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4d91cc264442dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f36c3e488212ad": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 48,
+      "total_deletions": 0,
+      "accepted_lines": 48,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_913253ee8b9813": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 0,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9f43585a3763fc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 131,
+      "total_deletions": 0,
+      "accepted_lines": 131,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_45569dfbb4080e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d12db2150a000b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 22,
+      "total_deletions": 0,
+      "accepted_lines": 22,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_331d2e7d927b57": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 55,
+      "total_deletions": 0,
+      "accepted_lines": 55,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e1168e3055fa87": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6e27cf7aa25bda": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 114,
+      "total_deletions": 0,
+      "accepted_lines": 114,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_cb941701cc46c7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 103,
+      "total_deletions": 0,
+      "accepted_lines": 103,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_35a824ed6ee788": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 48,
+      "total_deletions": 0,
+      "accepted_lines": 48,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b293ad5e82c01c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 16,
+      "total_deletions": 0,
+      "accepted_lines": 16,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1ca8612645f892": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 357,
+      "total_deletions": 0,
+      "accepted_lines": 357,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_20962c61a11709": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 295,
+      "total_deletions": 0,
+      "accepted_lines": 295,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1c30e794a4cdaa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 113,
+      "total_deletions": 0,
+      "accepted_lines": 113,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b7e87cd0a2993c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 94,
+      "total_deletions": 0,
+      "accepted_lines": 94,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f8a69a048f0dca": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 0,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_12ebfb2902d523": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 0,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_cc1e050f2edd34": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 64,
+      "total_deletions": 0,
+      "accepted_lines": 64,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_15d52d73b5e904": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 104,
+      "total_deletions": 0,
+      "accepted_lines": 104,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d92620cbd40bf7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 74,
+      "total_deletions": 0,
+      "accepted_lines": 74,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_790f0e9f030d88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 174,
+      "total_deletions": 0,
+      "accepted_lines": 174,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_cc653a11a930e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 12493,
+      "total_deletions": 0,
+      "accepted_lines": 12493,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fe4438155faa1f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 12053,
+      "total_deletions": 0,
+      "accepted_lines": 12053,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f89dd181f80bea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 50,
+      "total_deletions": 0,
+      "accepted_lines": 50,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f81b2f5c6b4243": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 105,
+      "total_deletions": 0,
+      "accepted_lines": 105,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e59c8e0e6c71fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 0,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9974c8b5e900d8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 6777,
+      "total_deletions": 0,
+      "accepted_lines": 6777,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8f47320da0bde8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_7b146d10b9600c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 80,
+      "total_deletions": 0,
+      "accepted_lines": 80,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_36b09063230c96": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 0,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_88c181c6a68a0d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_22d886a7fd3399": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 140,
+      "total_deletions": 0,
+      "accepted_lines": 140,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8dbc4ca85b9172": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c1267cb264f6ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 138,
+      "total_deletions": 0,
+      "accepted_lines": 138,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9cbeb028d8026b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 221,
+      "total_deletions": 0,
+      "accepted_lines": 221,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c31b5566e978aa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 131,
+      "total_deletions": 0,
+      "accepted_lines": 131,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_937f918b509cf0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 0,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a11703a8d88ad4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 4436,
+      "total_deletions": 0,
+      "accepted_lines": 4436,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d1ca5e99281112": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 46,
+      "total_deletions": 0,
+      "accepted_lines": 46,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a98e186c8c232d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6a34b75c7e883f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1929,
+      "total_deletions": 0,
+      "accepted_lines": 1929,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_850f9acb46d546": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 22,
+      "total_deletions": 0,
+      "accepted_lines": 22,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e156990f15d4ce": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e128a6dff7c90e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2580,
+      "total_deletions": 0,
+      "accepted_lines": 2580,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_55297980c2299b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 74,
+      "total_deletions": 0,
+      "accepted_lines": 74,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c5aff5fcd65804": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 69,
+      "total_deletions": 0,
+      "accepted_lines": 69,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_16c174d281590f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1a9c3bf6219999": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 0,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_12bb5ff42de62e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 168,
+      "total_deletions": 0,
+      "accepted_lines": 168,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f81ca4c1164beb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6233d96e4a732b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2bfcf020eb6ea8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ebc64d56314590": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 155,
+      "total_deletions": 0,
+      "accepted_lines": 155,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f70f6ed71c6715": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 641,
+      "total_deletions": 0,
+      "accepted_lines": 641,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1fab34bfa589bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1124,
+      "total_deletions": 0,
+      "accepted_lines": 1124,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ade30a18cbbee4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 31,
+      "total_deletions": 0,
+      "accepted_lines": 31,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_5f39bd8c6ced12": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2029,
+      "total_deletions": 0,
+      "accepted_lines": 2029,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_cdacd6d34aa413": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 49,
+      "total_deletions": 0,
+      "accepted_lines": 49,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1b247cbbb67a4e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 60,
+      "total_deletions": 0,
+      "accepted_lines": 60,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2114f4837197e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 35,
+      "total_deletions": 0,
+      "accepted_lines": 35,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fa14b8b78a912c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 48801,
+      "total_deletions": 0,
+      "accepted_lines": 48801,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2ba612d80d3749": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2070,
+      "total_deletions": 0,
+      "accepted_lines": 2070,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_db728baec31ce3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a096223f8943b2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 3963,
+      "total_deletions": 0,
+      "accepted_lines": 3963,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2e5adcc10c75d1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 56,
+      "total_deletions": 0,
+      "accepted_lines": 56,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_734e2b3b30debd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 0,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a0b61e737699bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 53,
+      "total_deletions": 0,
+      "accepted_lines": 53,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b6bbaa4abfe961": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1947,
+      "total_deletions": 0,
+      "accepted_lines": 1947,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9293194f6686d4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 54,
+      "total_deletions": 0,
+      "accepted_lines": 54,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_cc9d2106a72109": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2416,
+      "total_deletions": 0,
+      "accepted_lines": 2416,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_24debd023dbe20": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 0,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_89a4ff6bfbe134": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 70,
+      "total_deletions": 0,
+      "accepted_lines": 70,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9008da02221297": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 74,
+      "total_deletions": 0,
+      "accepted_lines": 74,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_76fa62012985c7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 118,
+      "total_deletions": 0,
+      "accepted_lines": 118,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2cd86b8c4466e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2e7bc88bf300b1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fe822c9db41a8f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 629,
+      "total_deletions": 0,
+      "accepted_lines": 629,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8f7971287d9a70": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 1690,
+      "total_deletions": 0,
+      "accepted_lines": 1690,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_93aeb0f2046aaf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 132,
+      "total_deletions": 0,
+      "accepted_lines": 132,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c718a255c7ed0c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c71cc58eeae19b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 581,
+      "total_deletions": 0,
+      "accepted_lines": 581,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8c89b54e66d724": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 55,
+      "total_deletions": 0,
+      "accepted_lines": 55,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6438f52a7ad2f4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 37,
+      "total_deletions": 0,
+      "accepted_lines": 37,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_32fb0fb360fead": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 74,
+      "total_deletions": 0,
+      "accepted_lines": 74,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b4219ec1f4833d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 0,
+      "accepted_lines": 39,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_035b1e632b2cd5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 0,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_57963d3571b85f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 3564,
+      "total_deletions": 0,
+      "accepted_lines": 3564,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_46851c8b049202": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 58,
+      "total_deletions": 0,
+      "accepted_lines": 58,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_534d643afb19a7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 2438,
+      "total_deletions": 0,
+      "accepted_lines": 2438,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1c7618716e0469": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 0,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6efcb803a02553": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 70,
+      "total_deletions": 0,
+      "accepted_lines": 70,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_edb8a9e2147380": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 65,
+      "total_deletions": 0,
+      "accepted_lines": 65,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3fd925054a967b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_39152b759b8bb3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 0,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e6e3216b8d8c43": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 60,
+      "total_deletions": 0,
+      "accepted_lines": 60,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d5dce512c3cdcc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 0,
+      "accepted_lines": 39,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_73b274eb637ae0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 9498,
+      "total_deletions": 0,
+      "accepted_lines": 9498,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_912f211bfa2227": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 60,
+      "total_deletions": 0,
+      "accepted_lines": 60,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_50374b95323a13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 333,
+      "total_deletions": 0,
+      "accepted_lines": 333,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_17a781bea8ea04": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 48,
+      "total_deletions": 0,
+      "accepted_lines": 48,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_49d692672f0728": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 88,
+      "total_deletions": 0,
+      "accepted_lines": 88,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1a215e1d0c5b42": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 60,
+      "total_deletions": 0,
+      "accepted_lines": 60,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a1e36ffcb1fcb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_676650341c222c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-fable-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 46,
+      "total_deletions": 0,
+      "accepted_lines": 46,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_37f2dd17624fee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 46,
+      "total_deletions": 0,
+      "accepted_lines": 46,
+      "overriden_lines": 0
+    },
+    "0000019ff55aa171": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1786527785329"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 20264,
+      "total_deletions": 0,
+      "accepted_lines": 20264,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0c0dc179d83f83": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d59a459a4667da": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_401d220440868a": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_aa1904edfdfa24": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6c03924347f096": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a650a549911ae3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 25,
+      "total_deletions": 0,
+      "accepted_lines": 25,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_eafc7eeb12848e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 31,
+      "total_deletions": 0,
+      "accepted_lines": 31,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_604f082da8d50e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 51,
+      "total_deletions": 0,
+      "accepted_lines": 51,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9b653d577e31ef": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 0,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0b4105f43c7011": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 70,
+      "total_deletions": 0,
+      "accepted_lines": 70,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_db0d0124794d6e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 45,
+      "total_deletions": 0,
+      "accepted_lines": 45,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d99773787907ff": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 296,
+      "total_deletions": 0,
+      "accepted_lines": 296,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d3e99dc383ca8f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_861e0d2a03bb65": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 21,
+      "total_deletions": 0,
+      "accepted_lines": 21,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_737abdf3ea8ab3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_39901bd34198ca": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_7bce27bc20049b": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_66cce5bbf062ca": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8b8e8e8c538f72": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 140,
+      "total_deletions": 0,
+      "accepted_lines": 140,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_79bfa4381d2eef": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d774e6a477d55c": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4ade49129656de": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fd381745fe2a42": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_53da96754dc517": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 106,
+      "total_deletions": 0,
+      "accepted_lines": 106,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_47085d11ee1b9a": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 19,
+      "total_deletions": 0,
+      "accepted_lines": 19,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_453892961c05f6": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 72,
+      "total_deletions": 0,
+      "accepted_lines": 72,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_afa3b4b12a78a6": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 29,
+      "total_deletions": 0,
+      "accepted_lines": 29,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e30ac8b8dfb739": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a7d45a934bae13": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_aaa873f0214802": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_509dfa51c59057": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ff8491570f52a3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ac6e6c06dd354f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_69f7abd1eec922": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9ba75309c5619d": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e13c21f0a06c77": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 0,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2ad634817a29e5": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f36c68bc9a1da1": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f9c1232a6470ed": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 89,
+      "total_deletions": 0,
+      "accepted_lines": 89,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_5441482ceec1e6": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 114,
+      "total_deletions": 0,
+      "accepted_lines": 114,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_84d9057ab64bb9": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_783a39aa84b96d": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 69,
+      "total_deletions": 0,
+      "accepted_lines": 69,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8540a277a1be8d": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6ffa321b2f3aab": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_75eff0096caff4": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_15206b4f53e195": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 32,
+      "total_deletions": 0,
+      "accepted_lines": 32,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0641f6c06e86ad": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 0,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b2b171af6f1937": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_556b86632ccf7a": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 72,
+      "total_deletions": 0,
+      "accepted_lines": 72,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_adfd0186a28014": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d9416934868445": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 0,
+      "accepted_lines": 14,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6cf7bf4bfabd93": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_cc6c81c676b674": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 124,
+      "total_deletions": 0,
+      "accepted_lines": 124,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_354ede5e92acbe": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a479a6ff504e1b": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 147,
+      "total_deletions": 0,
+      "accepted_lines": 147,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0301d26e433295": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ccaddb46ab5dfb": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d182a65a33e5ab": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_91f503ee756b4c": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 60,
+      "total_deletions": 0,
+      "accepted_lines": 60,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b9e6f073962ea4": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 45,
+      "total_deletions": 0,
+      "accepted_lines": 45,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_06ce91d7e22f29": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9e5a171741dc6d": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 40,
+      "total_deletions": 0,
+      "accepted_lines": 40,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_59db44fc57ae4a": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_acc2e0882a505e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_abfefc4148088b": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 50,
+      "total_deletions": 0,
+      "accepted_lines": 50,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_48acb873de63dd": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 35,
+      "total_deletions": 0,
+      "accepted_lines": 35,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_973a69e6ee9e4c": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f2532b4033e665": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 28,
+      "total_deletions": 0,
+      "accepted_lines": 28,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ab2d48a02179bc": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_eaf3f360b3bfa3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b33591fe190c13": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 0,
+      "accepted_lines": 14,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a496a1f4cbfb49": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 34,
+      "total_deletions": 0,
+      "accepted_lines": 34,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6d2f8c4d8c14a8": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_011c6196c48cf3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 16,
+      "total_deletions": 0,
+      "accepted_lines": 16,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_5d8c87b712b597": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_236efea279f790": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 19,
+      "total_deletions": 0,
+      "accepted_lines": 19,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_7e73640b4eb455": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 21,
+      "total_deletions": 0,
+      "accepted_lines": 21,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_11afdbba83207e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_545ec44c15c3d3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 24,
+      "total_deletions": 0,
+      "accepted_lines": 24,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1ef819f058bcb2": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_93e0f61337226a": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 46,
+      "total_deletions": 0,
+      "accepted_lines": 46,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_052e66621188ab": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_26feebed8e562a": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3761e796e1d0c3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_73eaf7b18b8005": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a5f0ef97d2b4a7": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_79cf20437458b8": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 89,
+      "total_deletions": 0,
+      "accepted_lines": 89,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fc1f672a5a14da": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3208f055c874f2": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 138,
+      "total_deletions": 0,
+      "accepted_lines": 138,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a0ad29a724580f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c0094051de9ce0": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 0,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_af552219363a28": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 0,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ec5ecbafeee10f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 0,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c986288b7af2cf": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_aace9ab21a3d82": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 64,
+      "total_deletions": 0,
+      "accepted_lines": 64,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e5c5f90b961026": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 52,
+      "total_deletions": 0,
+      "accepted_lines": 52,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b2a9ab123d5199": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 35,
+      "total_deletions": 0,
+      "accepted_lines": 35,
+      "overriden_lines": 0
+    },
+    "human": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 189,
+      "total_deletions": 0,
+      "accepted_lines": 189,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_895286f62fec2f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_84d7694eed7a4d": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_01dff0f6929f95": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 22,
+      "total_deletions": 0,
+      "accepted_lines": 22,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2251fc20e70579": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9a643715aba317": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9aecec1028e417": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4ed5cfdd24acf7": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 0,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a844a271e949a5": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_de70cd0c0a3171": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 107,
+      "total_deletions": 0,
+      "accepted_lines": 107,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1c44a0733313f2": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_734940f98471d4": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 27,
+      "total_deletions": 0,
+      "accepted_lines": 27,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6ac1007b521ab7": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_12019f313e5e16": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6d573c6bcae2a3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b2dc388d5f493c": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_82b16671fa2bbf": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3049eddf39c8e3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 0,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_307ff8e05d1915": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2476437fd5c443": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 0,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4fd269adf19e90": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_27a5de618612d3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fdf30dbc1a1cdb": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1c702e5cf6d0d7": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c52cd1f0340d57": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_75ae0e597b9cdb": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4e179e1e0e2270": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_47431f70eb1cb9": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 0,
+      "accepted_lines": 14,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8e74f7d84441c9": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 0,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fc405549f34f53": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 96,
+      "total_deletions": 0,
+      "accepted_lines": 96,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_93e5ecd66115b1": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4dd8e9bc0dba7f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1f17b5ac9fdf4f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8234d7812f59cb": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 47,
+      "total_deletions": 0,
+      "accepted_lines": 47,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_960ff1f5775e8a": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 93,
+      "total_deletions": 0,
+      "accepted_lines": 93,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8d39b30541c158": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1204,
+      "total_deletions": 0,
+      "accepted_lines": 1204,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6016cdff42e930": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3122,
+      "total_deletions": 0,
+      "accepted_lines": 3122,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3b9b7851016b44": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a499ccbe6f9ee6": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f662b9c15631bd": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_49e88511e17a39": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e2ef96c17505fc": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_c5968c520a8c42": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2bd6195e0e39ca": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 42,
+      "total_deletions": 0,
+      "accepted_lines": 42,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3c89674eb7d134": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 0,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6a71b5a9614951": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b2f8e9e0860771": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 110,
+      "total_deletions": 0,
+      "accepted_lines": 110,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_d3b3cf80b78f10": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f31c60aa111837": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_25e90bdffea75b": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 0,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_327807bdf651a2": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 0,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_41e1f0473354a7": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f8eb43c749ca23": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9fffa9924bdb35": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 0,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e0f9b5665bcc6b": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 44,
+      "total_deletions": 0,
+      "accepted_lines": 44,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_faf87339684b11": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_427032e36d9c6d": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9ec2a18c8c73a5": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e4107bf5dac10c": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 24,
+      "total_deletions": 0,
+      "accepted_lines": 24,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9b29132f87bc19": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_63651f8716ffd9": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 5,
+      "total_deletions": 0,
+      "accepted_lines": 5,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_96915393b91309": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_bbfd5db5bd30f5": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e52989049ac688": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1bd408c74585cf": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 407,
+      "total_deletions": 0,
+      "accepted_lines": 407,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_93ae46d204c875": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0778424db127b0": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ae96e8b7b49588": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 28,
+      "total_deletions": 0,
+      "accepted_lines": 28,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a6939f2a6cb276": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_a36b0fd46b5ca0": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 26,
+      "total_deletions": 0,
+      "accepted_lines": 26,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ae78b04e5b5640": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_ec434a05f7f52f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 22,
+      "total_deletions": 0,
+      "accepted_lines": 22,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_be80b234b0c5e7": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_1d3d1ef4c88af4": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_205b30cfd4646f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_314ef7026058ed": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_055c5190e1391b": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_68dc7996fbcbce": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2bdc4d481d0c73": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_32b3beb2f07176": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 47,
+      "total_deletions": 0,
+      "accepted_lines": 47,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_55d7730460da20": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 0,
+      "accepted_lines": 14,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_009c71faf0f3b1": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2eac4cfa4c58f9": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_31b66ce48362a5": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 0,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_059ca2a4587a90": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 0,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_59cd58334d4711": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b9aaefbda58eb2": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 290,
+      "total_deletions": 0,
+      "accepted_lines": 290,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_146f9bb13c83fd": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 365,
+      "total_deletions": 0,
+      "accepted_lines": 365,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_caee0c4c6ca64f": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3495,
+      "total_deletions": 0,
+      "accepted_lines": 3495,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4548130c5c1fa3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6455395fcd2b2a": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2045,
+      "total_deletions": 0,
+      "accepted_lines": 2045,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9e6853d4420cc0": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2184,
+      "total_deletions": 0,
+      "accepted_lines": 2184,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3183ffe2313b7d": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_491afe01b936f1": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_351eba33b1bd67": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 28,
+      "total_deletions": 0,
+      "accepted_lines": 28,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_72ac916c5034e2": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 20,
+      "total_deletions": 0,
+      "accepted_lines": 20,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8e063d8c21174e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_01ea353b99d14c": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_b55b659ee0d534": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_db2dc1942aa337": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_fcdf226823f9d9": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1556,
+      "total_deletions": 0,
+      "accepted_lines": 1556,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e31c820f179d8a": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 419,
+      "total_deletions": 0,
+      "accepted_lines": 419,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0b1f3fb3874c6e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 85,
+      "total_deletions": 0,
+      "accepted_lines": 85,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3e871637f1c40e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_51c0742aa2dcf3": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_5e8bb19487f512": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_eda8f7ac768a73": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_7ddef04ccb23c0": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0cc646e3dca91b": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_53fbdb9d20a99e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_0c9d525e48c077": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 461,
+      "total_deletions": 0,
+      "accepted_lines": 461,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e8497759f7ea5d": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 30,
+      "total_deletions": 0,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_7b4e33095d6ff1": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_e2630461b514eb": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_806f4947d19719": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_97437b3bf38e86": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_7fe37876eb39da": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 34,
+      "total_deletions": 0,
+      "accepted_lines": 34,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_f01281847c916d": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_8dd08385a69d65": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 32,
+      "total_deletions": 0,
+      "accepted_lines": 32,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_879203b99186b4": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 0,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_155008e75bf94e": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 49,
+      "total_deletions": 0,
+      "accepted_lines": 49,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_29dc1720aded72": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_65aa0c9d431499": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 76,
+      "total_deletions": 0,
+      "accepted_lines": 76,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_452c75a73bbb1c": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_3cf878aeeda0ad": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_98c18521ee8361": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_6dbee4ac197570": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 0,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_08dd853ad722e1": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 27,
+      "total_deletions": 0,
+      "accepted_lines": 27,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_4ff521694d7ee6": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_9e3df089564d23": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 291,
+      "total_deletions": 0,
+      "accepted_lines": 291,
+      "overriden_lines": 0
+    }
+  }
+}
