@@ -17,6 +17,18 @@
 
 ---
 
+## 2026-08-12 hopper 0.55.1：守卫上岗第一件事是抓住了写它的人
+
+- **场景**：0.55.0 发版过程中发现 `package-lock.json` 的 `version` 停在 0.50.0、落后 5 个版本。当时为保持插件树与被三轮评审审过的版本逐字节一致，只改了值、没补守卫，登记为遗留。用户随后指定补上
+- **现象的要害不是"漏了一个文件"**：`package-lock.json` **白纸黑字写在 CLAUDE.md 的发版清单里**，照样漂了四次发版。所以根因不是清单不全，是**写下来的清单本身不构成任何检查**——这比此前 README 徽章、`.codex-plugin/plugin.json` 那两次都更锋利，那两次好歹还能归因于"清单没列全"
+- **两条既有守卫为什么都看不见它**：`claude-code-host.test.js:180` 的 `version consistency` 与 `vendored-plugin-sync.test.js` 的 `release metadata` **都是硬编码枚举**——逐个点名 plugin.json / package.json / CLI / smoke.md / vendors.md，两条都从未提及 `package-lock.json`
+- **插件改动**：0.55.0 → **0.55.1**。新增 `tests/unit/version-discovery.test.js`——递归走全仓 `*.json`（跳过 `node_modules`/`.git`），发现三种承载「本包自身版本」的形态并断言全部一致：顶层 `.version`、`.plugins[*].version`（marketplace 目录条目，它自己就有两处）、`.packages[""].version`（package-lock v2/v3 的自身条目）。**难点在第三种**：该文件有 **354 个第三方依赖条目各带 version，一个都不能收**，只有空字符串键那条是本包自己的；已实测确认恰好贡献 2 处
+- **另加一条"防空扫也绿"的下限断言**：一个什么都没匹配到的发现式扫描会**静默通过**——而那正是本轮 0.55.0 反复在修的同一族错误：**看起来在检查，其实什么都没检查**
+- **复验结果**：✅ 通过。主会话独立复跑 `npm test` **1348 pass / 0 fail / 2 skipped**（1350 总）、`sync --check` exit 0、`tasks.js` diff 为空、collector 实测 **2 处自身版本 / 354 个依赖条目一个未收**。**破坏性反证的两半都验了**：把 package-lock 改成 0.50.0 → 新守卫红，**而旧的 `version consistency` 守卫仍 17/17 全绿**——**后半才是要证明的东西**，它说明缺口真实存在而非碰巧没触发；嵌套的 `plugins[0].version` 单独改也能红
+- **守卫上岗第一件事是抓住了写它的人**：主会话做反证时用 `git checkout --` 还原文件，**还原基准是 HEAD（0.55.0）而非工作区（0.55.1）**，等于静默撤销了两个文件的 bump，且 `git status` 里看不出异常（那两个文件正好回到了 HEAD 状态）。**是这条新守卫当场把 4 个位置逐条报出来的。** 它抓的正是"清单会过时"的同一族错误——我以为 `git checkout --` 是安全的还原动作，实际它的基准与我以为的不一样
+- **版本号取 patch 而非 minor**：依据是 CHANGELOG 自己 Versioning 节的「patch is reserved for the rare non-functional tweak」。本仓 0.20.0 以来实际全走 minor，但**写下来的规则明确给非功能性改动留了 patch**，按写下来的走
+- **遗留**：`docs/archive/ISSUES.md` 里 Closed 索引的 `prompt-artifact-lifecycle-and-windows-permissions` 一行状态文字仍写着 open（grok 在 T-103 指出，既存、非本轮引入；判它究竟开还是关需要单独查证，未顺手改）
+
 ## 2026-08-12 hopper 0.55.0：brief-drop 闭环——修好之后，双路评审又在「修好了」里各自挖出一层
 
 - **场景**：2026-08-11 已登记的 hopper 缺陷（见下方同名条目）单独开一轮修。用户裁定「插件优先」，并要求**改动经异构模型审核**，且明确要**先审设计、再审代码**两道
