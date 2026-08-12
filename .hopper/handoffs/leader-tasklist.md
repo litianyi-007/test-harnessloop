@@ -1666,3 +1666,349 @@ v1/v2 在 git `e9ed73c` / `8354758`。**源码**：harnessloop `b389eac`（v0.26
 `.hopper/handoffs/T-079-output.md`，含 `## Verdict`（`PASS` / `PASS_WITH_NOTE` /
 `REWORK`）、`## Files touched`（应为 none）、以及独立成节的
 `## 是否放弃了需求` 与 `## 演进史指向什么`。
+
+## T-080（SG-10 L1 Mac UI 壳 — 四条 Pass 条件的证据充分性对抗审）
+
+**Task-type**: `code-review-adversarial` · **只读评审，不改任何代码/文档/状态文件**
+
+**为什么派你**：本轮（`.harnessloop/goals/20260718-002-agent-app/rounds/0011`）的代码由主会话的
+子代理写、由**主会话自己**复验、四条 Pass 条件也由**主会话自己**判定达成。写的人和验的人
+同源，这正是需要异构视角的场合。**你的任务不是复查代码风格，是证伪「达成」这个判断。**
+
+**评审对象**：
+- `.harnessloop/goals/20260718-002-agent-app/rounds/0011/scope-lock.md`（本轮契约，含四条 Pass 条件原文）
+- `.harnessloop/goals/20260718-002-agent-app/rounds/0011/evidence/`（全部，含 `screens/*.png` 四张截图与 `runtime/live-roundtrip-attempt.md`）
+- `app/apps/AgentShell/`（SwiftUI 壳源码，660 行）与 `app/Package.swift`
+- `app/kernel-client/OPENCLAW-ISOLATED-RUN-RECIPE.md`（本轮修改过的部分）
+
+**五问，每一问都可以否决**：
+
+1. **条件①「真实往返可见」是否真被截图支撑？** 截图 `l1-roundtrip-assistant-reply.png` 显示
+   `Reply with exactly two words: ROUNDTRIP OK` → `ROUNDTRIP OK`。问：这能否被伪造或被
+   误读？assistant 气泡里的文本有没有可能不是模型输出而是壳自己拼的？读
+   `SessionStore.swift` 的 `appendAssistantDelta`，确认 UI 上那段字**只能**来自
+   `evt.message.delta`。同一张图里第一条用户消息是 `aaaaaaaaaa`（证据文件解释为
+   AppleScript 打不出中文），核这个解释站不站得住、有没有掩盖别的问题。
+
+2. **条件②「隔离性可证」的证明方法被中途换过——新方法成立吗？** 原方法（`~/.openclaw`
+   整树 stat 指纹前后比对）被自承无效，改为「本轮 PID 在该树打开文件 0 个 + 4 个
+   session/run id 在该树命中 0 + 产物全在隔离目录」。问：这组正面证据是否真的比原方法强？
+   有没有它覆盖不到的泄漏路径（例如进程已退出后才写、或经由 `/tmp/openclaw/` 这类
+   不受 `OPENCLAW_STATE_DIR` 控制的全局路径——recipe §5 自己提过这一条）？
+
+3. **条件③「事件序列与契约一致」只在 CLI 层验过，UI 层没验，却判了「达成」——这是不是
+   越界？** 证据文件 §4 一度写「UI 层未跑，故整体只能记为部分」，§12 终态却写「达成」。
+   核这个改判有没有新证据支撑，还是只是随着别的条件达成被一起抬上去了。
+
+4. **条件④「失败可诊断」的注入反证够不够？** 主会话注入的是「停掉 D3-proxy」。问：
+   三种失败签名（NSURLError -1004 / network connection error / 502 + 映射未命中）是否
+   真的可区分、是否真的够定位到层？证据自承「UI 只显示 openclaw 的通用占位文本，不告诉
+   用户是哪一层坏的，分层归因只在日志里成立」——那么 scope-lock 写的「失败时**日志**足以
+   定位到层」是否被满足，还是被降低了标准？另外注意截图里错误文本**重复出现两次**
+   （`...reply.The agent run failed...`），这是 `(runID, index)` 分组假设的现形——评估它
+   在真实多段流下会不会造成更严重的错误拼接。
+
+5. **本轮有没有为了让条件达成而放宽标准？** 特别核两处：(a) 走 `aggregate` 兜底绕开了
+   session→newapi 映射，这是否等于绕过了本该验的东西？(b) `app/server/.env` 收尾时被
+   还原了——这意味着**当前仓库状态下无法复现本轮的成功往返**，这算不算证据不可复现？
+
+**产物路径**：`.hopper/handoffs/T-080-output.md`（只写这一个文件，不要碰别的任何路径）。
+
+**判定用词**：`PASS` / `PASS_WITH_NOTE` / `REWORK` / `MUST-FIX`，并逐问给出结论与依据
+（引用具体文件与行号/截图文件名）。**宁可否决，不要给面子分**——本项目的纪律是
+「绿灯≠真守门」，一份找不出问题的评审报告本身就是可疑的。
+
+## T-081 / T-082（SG-10 L1 两处设计裁决 — 异构双路独立作答）
+
+> **T-081 与 T-082 使用完全相同的 brief**，分别派 codex 与 grok，**互不可见**。
+> 目的是拿两份独立判断做对照，不是要两份一致的答案。
+
+**Task-type**: `code-review-adversarial` · **只读，不改任何代码/文档/状态文件**
+
+**为什么派你**：这两个问题的事实基础是主会话自己跑出来的、候选方案也是主会话自己列的。
+**你的任务不是复核事实，是独立作出裁决、并攻击主会话的倾向性判断。**
+如果你的结论和主会话一致，请给出**独立的**理由；如果不一致，明确说哪里错了。
+
+**必读（按序）**：
+1. `.harnessloop/goals/20260718-002-agent-app/rounds/0012/scope-lock.md` —— 本轮契约（修复轮，六项限定）
+2. `.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item1-mechanism-localization.md`
+3. `.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/instrumented-run-findings.md` —— **核心**，两个问题的全部事实依据
+4. `.harnessloop/goals/20260718-002-agent-app/rounds/0011/decision.md` —— 上一轮为何 not accepted（含一处后记补正）
+5. 原始数据 `rounds/0012/evidence/raw/wire-trace.jsonl`（36KB，JSON Lines，可直接解析）
+
+---
+
+## 问题一：消息分组的修法
+
+**已实测坐实的事实**（可自行用 `wire-trace.jsonl` 复核，别只信我转述）：
+
+- 正常回复：一条 `session.message` 帧 → 一个 `evt.message.delta`，`delta` 携带**完整全文**
+  （实测 `delta='1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12'`，`index=0`，`producedCount=1`）。
+  **`session.message` 层不做增量投递**；增量在 `chat` 旁路流上，kernel-client 不消费它。
+- 注入失败：**两条不同帧**（`messageId` 分别 `1cf68049` / `0aaec118`），同 `runID=0700f2fb`、
+  同 `index=0` → `SessionStore.appendAssistantDelta` 的键 `"\(runID)#\(index)"` 相同 →
+  `text += delta` → 文本重复两次。
+- `payload.messageId` 每帧唯一，是天然正确的分组键，但**全仓读取 0 次**，且 **D2 的
+  `MessageDeltaEventMessage` 不携带该字段**。
+
+**三个候选（主会话倾向 A，请攻击它）**：
+
+- **A. 壳侧不分组**：每个 `evt.message.delta` 开新气泡，删掉 `(runID,index)` 分组与 `+=`。
+  零契约改动，与实测语义一致。风险：将来若 `session.message` 层引入真流式，需回头重做。
+- **B. `+=` 改 `=`**：保留分组键但改成覆盖。主会话认为**比现状更糟**（两条不同消息共用气泡、
+  后者覆盖前者 → 丢消息）。**请独立判断这个否决对不对。**
+- **C. 透传 `messageId` 进 D2**：最正确，但要改 D2 schema，触碰 `app/generated/`（codegen 产物）
+  与 D1/D2 契约语义——**两处都是本轮 scope-lock 的明文禁区**，须另开设计轮。
+
+**要求**：给出你选哪个及理由；如果你认为还有第四条路，说出来。特别核：
+(a) A 在「同一条 assistant 消息含多个 content block」时会不会出问题（`index` 来自
+    `blocks.enumerated()`，一条消息多 block 时 index 会是 0,1,2…）；
+(b) A 是否真的零契约改动，还是我漏看了什么；
+(c) B 的否决理由成立吗。
+
+---
+
+## 问题二：条件② 的验收范围要不要收窄
+
+**已实测坐实的事实**：
+
+- 隔离实例**确实写入了全局 `/tmp/openclaw/openclaw-<date>.log`**——它自己的启动日志逐字写着
+  该落点；本轮 run id `b53d403a`(×1) / `0700f2fb`(×7) 与隔离目录名 `round0012-openclaw-iso`(×1)
+  都在那个全局文件里命中。该文件与用户自己的常驻实例共享。
+- `OPENCLAW_STATE_DIR` + `OPENCLAW_WORKSPACE_DIR` **都覆盖不到日志路径**。
+- **`TMPDIR` 假设已被实测证伪**：`resolvePreferredOpenClawTmpDir`
+  （`kernels/openclaw/src/infra/tmp-openclaw-dir.ts:40`）的 fallback 走 `os.tmpdir()`，而
+  `os.tmpdir()` 确实受 `TMPDIR` 控制（实测：默认 `/var/folders/…`，设 `TMPDIR` 后即变）。
+  但起一个 `TMPDIR=<隔离>/tmp` 的探针实例，**仍自报 `log file: /tmp/openclaw/…`**，隔离 tmp 下
+  零日志，全局文件里反有该探针 2 处命中。附带观察：`TMPDIR` 被部分组件采纳（jiti 缓存确实
+  落进了隔离 tmp），所以不是「TMPDIR 无效」，是日志路径不走那条链。
+
+**条件② 的原文**（rounds/0011 scope-lock，user-confirmed）：
+> 隔离性可证 —— **全程未触碰**用户环境既有 openclaw 状态目录与 gateway，前后比对留证
+
+**问题**：`/tmp/openclaw` 算不算「用户环境既有 openclaw 状态目录」？
+
+- 若算 → 条件② 本轮**达不成**，必须先解决日志隔离（而目前没找到手段）。
+- 若不算 → 需要明确写出范围与理由，且这是**验收判据的收窄**。
+
+**要求**：
+(a) 你认为算不算？给出判断依据，不要和稀泥。
+(b) **主会话没找到覆盖手段，不等于不存在。** 请自己去 `kernels/openclaw` 源码里找——
+    有没有别的 env / CLI flag / 配置项能改日志落点？找到就给出 file:line 与验证方法。
+    **这一条最有价值：如果存在手段，整个问题就不必裁决。**
+(c) 如果确实不存在手段，收窄条件② 会不会让 RAE-0001 变成一个「按需放宽」的判据？
+    本项目上一轮刚因为「按自己写的字面标准没验」被判 REWORK——**请特别警惕这次是不是在
+    重复同一个毛病，只是换成了改标准而不是改证据。**
+
+---
+
+**产物路径**：T-081 写 `.hopper/handoffs/T-081-output.md`；T-082 写 `.hopper/handoffs/T-082-output.md`。
+只写自己那一个文件，不碰任何别的路径。
+
+**输出要求**：两个问题各自给出明确裁决（不要「视情况而定」），逐条给依据（引用 file:line
+或 wire-trace 里的具体记录）。**宁可否决主会话的倾向，不要给面子分**——本项目纪律是
+「绿灯≠真守门」，一份处处附和的报告本身就是可疑的。
+
+## T-083 / T-084（rounds/0012 ②⑥ 收尾前独立审核 — 异构双路）
+
+> **完全相同的 brief**，分别派 codex 与 grok，互不可见。要的是两份独立判断，不是两份一致的答案。
+
+**Task-type**: `code-review-adversarial` · **只读，不改任何文件**
+
+**为什么派你**：这两项的结论都由主会话自己得出，且**都是"对自己有利"的方向**——② 的结论是「证不出来所以不改代码」，⑥ 的产出是主会话自己写的复现步骤、自己认为够用。**你的任务是攻击这两个结论。**
+
+**必读**：
+1. `.harnessloop/goals/20260718-002-agent-app/rounds/0012/scope-lock.md`（②⑥ 原文要求）
+2. `.harnessloop/goals/20260718-002-agent-app/rounds/0012/evidence/item2-subscribe-race.md`
+3. `app/apps/AgentShell/repro/L1-REPRO.md`
+4. 源码：`app/kernel-client/swift/OpenclawGatewayKernelClient.swift`（`subscribe` 与 `:274` 的 label）、`app/apps/AgentShell/Sources/AgentShell/SessionStore.swift`
+5. 原始数据：`rounds/0012/evidence/race/*.log`（含失败轮）
+
+---
+
+## 问题一：② 的「未证实，故不改」站得住吗
+
+主会话的链条是：
+
+1. 修正了评审的机制描述——**本地续体是同步注册的**（`eventContinuations[id] = continuation` 在 `subscribe` 内同步执行），所以不存在本地事件丢失；真正的竞态是**服务端订阅 RPC 未完成时就 send**。
+2. 两次实测日志里 `sessions.messages.subscribe` 帧都排在 `sessions.send` 帧之前。
+3. 想跑更多轮做统计，但**撞上 label 硬编码**（`:274` 写死 `sg4-kernel-client-l1`，openclaw 侧删会话后 label 仍占用），7 轮里 6 轮死在 `createSession`，**那组数据已作废**。
+4. 结论：按 scope-lock「证不出来就不改」，不改代码；同时**不宣称竞态不存在**。
+
+**请逐条攻击**：
+
+(a) **第 1 点的机制修正对吗？** 自己读 `subscribe` 源码。本地续体同步注册是否真的排除了本地丢失？有没有别的本地丢失路径（例如 `SessionStore` 那侧的消费 Task 尚未跑起来时事件就到了——`continuation.yield` 会缓冲还是丢弃？`AsyncThrowingStream` 的默认 buffering policy 是什么？）**这一条我认为最可能藏漏洞。**
+
+(b) **两个样本 + 「结构上仍可能」这个组合，够不够支撑「不改」？** 还是说存在一种**便宜的确定性验证**（不需要多轮统计），能一次性判定服务端 ordering 是否有保证？例如从 openclaw 网关源码读出它对同一 WS 连接上帧的处理顺序保证。**如果存在这种验证，主会话「成本太高所以没做」的理由就不成立。**
+
+(c) **「证不出来就不改」在这里是正确的纪律，还是懒惰的挡箭牌？** 注意本项目上一轮（0011）刚因「证据不足以证明结论」被判 REWORK。这次是不是把同一句纪律用在了相反方向——**上次是"没证据也宣称成功"，这次是不是"不想付成本所以宣称证不出来"**？
+
+---
+
+## 问题二：⑥ 的复现步骤有洞吗
+
+`app/apps/AgentShell/repro/L1-REPRO.md`（142 行）声称「任何人在干净机器上可复现」，且不含任何凭证。
+
+**请当作你要照着它从零跑一遍，逐条找洞**：
+
+(a) **步骤完整吗？** 有没有主会话因为"自己机器上已经有"而漏写的前置（submodule 初始化、npm 安装、Xcode CLT、权限、端口占用检查……）？
+
+(b) **"无秘密"是真的吗？** 除了明面的 API key，有没有别的东西实际上是环境特有、换台机器就不成立的（绝对路径、本机端口、`~/.llm-wiki` 之类）？
+
+(c) **§7 的验证方法真能区分修复前后吗？** 它让读者把 provider 指向死端口来制造「同 run 两条 assistant 消息」。**这个构造可靠吗**——死端口一定产出两条而不是一条或三条？如果产出条数不定，那这个验证步骤就是不可靠的。
+
+(d) **§5 那个已知限制（每 state 目录一次会话）会不会让整份步骤实际不可用？** 比如读者照着跑、失败一次、想重试——他会撞上什么？文件有没有把这条说清楚到"不会踩坑"的程度？
+
+---
+
+**产物**：T-083 写 `.hopper/handoffs/T-083-output.md`；T-084 写 `.hopper/handoffs/T-084-output.md`。只写自己那一个。
+
+**输出要求**：两个问题各给明确裁决（②该不该改代码 / ⑥够不够格作为可复现步骤），逐条给依据（file:line 或日志行号）。**宁可否决，不要给面子分**——一份处处附和的报告本身就是可疑的。
+
+## T-085 / T-086（rounds/0012 ②⑥ 返工后复审 — 异构双路）
+
+> 完全相同的 brief，分别派 codex 与 grok，互不可见。**这是对 T-083/T-084 所提问题的返工复审**，不是重新审一遍原始产物。
+
+**Task-type**: `code-review-adversarial` · **只读**
+
+**上一轮（T-083/T-084）你们双双判 REWORK，主会话全部采纳并返工。本轮请核：返工是真修好了，还是换了个姿势绕过去。**
+
+**必读**：
+1. `rounds/0012/evidence/item2-subscribe-race.md` —— **全文**，含「更正 1-4」与「返工结论」「实施」两节
+2. `app/apps/AgentShell/repro/L1-REPRO.md` + `app/apps/AgentShell/repro/start-isolated-kernel.sh`
+3. `app/kernel-client/swift/OpenclawGatewayKernelClient.swift`（`subscribe` / `send` / `stop` / `awaitSubscriptionRpcDispatchIfPending`）
+4. `app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift`（新增测试）
+5. `rounds/0012/evidence/live/`（含 `repro-wire-trace.jsonl`、`l1-repro-followed.png`）
+
+---
+
+## 主会话自认最没把握的三处，请优先攻击
+
+### (1) send 侧屏障等的是「RPC 已发出」而非「已被 ack」——这是真收口还是表演？
+
+第一版修法（`subscribe()` 等 ack）被推翻，理由是违反 D1 契约（`KernelClient.swift:73-79` 自述 subscribe 不是 Promise），证据是 CI 平价 runner 从 12/0/1 退化到 4/8/1、且失败 fixture 的 timeline 里 subscribe 无 `mock_response`。
+
+第二版改成：`subscribe()` 恢复立即返回；新增 per-session「订阅 RPC 已 dispatch」信号；`send()`/`stop()` 开头 await 它。
+
+**请判**：
+- (a) 这个屏障**实际关闭了什么**？主会话写的是「关闭客户端写序竞态、服务端 dispatch 竞态仍开着」。这个划分准确吗？
+- (b) **客户端写序竞态本来存在吗**？Swift actor 内，`subscribe()` 同步注册 + spawn Task 后返回，调用方再 `await send()`——**在 actor 重入语义下，spawn 的 Task 真有可能落到 send 之后吗**？如果本来就不可能，那这个屏障就是**在防一个不存在的窗口**，属自我安慰。
+- (c) 那两条屏障测试（注释掉屏障即 34/36 变红）**证明的是屏障生效，还是只证明了测试自己在测屏障**？它们有没有可能是**为通过而构造的自证测试**？
+
+### (2) 推翻第一版的理由站得住吗？会不会是 fixture 该改而不是修法该改？
+
+主会话的判断是「fixture 编码了 D1 契约，8 条红是守卫抓对了」。**反方观点**：fixture 也可能只是编码了**旧实现的偶然行为**，真正该做的是给 fixture 补 subscribe 的 `mock_response`。
+
+**请独立判**：D1 契约到底要不要求 subscribe 立即返回？依据是什么（不要只引 `KernelClient.swift` 的注释——那是本项目自己写的；去看 D1 spec 与 TS/C# 两端实现怎么做的）。**如果结论是 fixture 该改，那本轮的修法方向就是错的。**
+
+### (3) 复现文档真能在干净机器上跑通吗？
+
+主会话这次**照最终文档实跑了一遍**（`evidence/live/l1-repro-followed.png` + `repro-wire-trace.jsonl`，得到 `messageID=f22abd58` / `REPRO OK`）。但**他是在自己机器上跑的**，那台机器已装好一切。
+
+**请找出仍然只在他机器上成立的东西**：绝对路径、已存在的 submodule 状态、已装依赖、已授权的权限、`/tmp/l1-repro` 的可写性、`pick_free_port` 的竞态、脚本对 `set -euo pipefail` 下各分支的处理、清理是否完整（脚本没有配套的 stop 脚本，gateway 靠 pid 文件杀——**而主会话实测发现 pid 文件记的是 wrapper、真正的服务是子进程，53709 一度没杀掉**，文档/脚本有没有反映这一点？）。
+
+---
+
+## 另外两条常规核查
+
+(4) `item2-subscribe-race.md` 现在是一份「结论翻转过两次」的文档（未证实 → 源码证实 → 第一版修法被推翻 → 第二版）。**它读起来是否仍然自洽**？有没有前后矛盾、或旧结论未被明确标注作废的地方？
+
+(5) §7 拆成「7a 离线确定性主判据 / 7b 现场辅助观察」。**7a 真的确定性吗**？它依赖 `testDistinctAssistantMessagesInSameRunGetDistinctMessageIDs`——**该测试验的是 messageID 传递，不是 SessionStore 的合并行为**（`FrameReplayTests` 在依赖图上够不到 `SessionStore`，主会话已登记此限制）。**那么把它当作"消息分组修复"的主判据，是不是名不副实？**
+
+---
+
+**产物**：T-085 → `.hopper/handoffs/T-085-output.md`；T-086 → `.hopper/handoffs/T-086-output.md`。
+
+**输出要求**：五条各给明确裁决，逐条给依据（file:line / 日志行号 / 实测命令）。**宁可否决，不要给面子分。** 上一轮你们的否决直接改变了修法方向，这一轮同样期待。
+
+## T-087（rounds/0012 收盘前 ★审查闸）
+
+**Task-type**: `code-review-acceptance` · **只读**
+
+**vendor 轮换说明**：rounds/0011 的审查闸是 codex（T-080），本轮 scope-lock 指定**换 grok**，避免同源盲区。
+
+**评审对象**：`rounds/0012` 全轮产出，六项限定范围逐项核。
+
+**必读**：
+- `rounds/0012/scope-lock.md`（含 ①' 定向解除表与硬要求、⑤ 的录屏修订）
+- `rounds/0012/evidence/` 全部：`item1-mechanism-localization.md`、`instrumented-run-findings.md`、`item2-subscribe-race.md`、`item3-messageseq.md`、`live/live-closure.md`、`live/`、`raw/`
+- `app/apps/AgentShell/repro/`（`L1-REPRO.md` + 两个脚本）
+- `rounds/0011/decision.md`（本轮起因）
+
+**本轮已经过三轮异构评审**（T-081/082 设计裁决、T-083/084 首次 ②⑥ 审、T-085/086 返工复审），**每轮结论主会话都逐条自验后采纳并返工**。你的任务不是重复它们，而是**收盘前的最终确认**：
+
+1. **六项是否真的各自达成**——①分组 ②竞态 ③messageSeq ④recipe ⑤证据 ⑥可复现。逐项给 达成/未达成/部分，并指出**是否有"看起来达成实则没有"的项**。
+2. **未达成项是否被如实登记**——本轮明确宣称未做的有：服务端 dispatch 竞态、ack 版完整修法（登记为 scope blocker）、丢帧检测（本层做不到）、UI 合并行为的入库确定性判据（依赖图够不到）。**核这些登记是诚实的收窄，还是给失败找台阶。**
+3. **RAE-0001 四条 Pass 条件**（见 `setup/data-sources.md`，注意条件① 的取证方式已于 2026-08-09 user-confirmed 修订为「L1 截图+wire trace，录屏留 L2」）——**逐条判是否达成**，并说明依据。这直接决定本轮 outcome。
+4. **本轮多次出现"结论被推翻"**（未证实→证实、第一版修法被 CI 推翻、messageSeq 缺口被证明是观测偏差）。**核这些推翻是否都留了痕、旧结论是否明确作废**，还是有残留的自相矛盾。
+5. **主会话自述的过程失误**（破坏性反证做砸两次、脚本 bug、误判 env 未传等）——**核是否有未被记录的同类失误**。
+
+**产物**：`.hopper/handoffs/T-087-output.md`。
+
+**判定用词**：`PASS` / `PASS_WITH_NOTE` / `REWORK` / `MUST-FIX`。**宁可否决，不要给面子分。**
+
+## T-088 / T-089（per-subscription 投递序号 — 方案与路径裁决，异构双路）
+
+> 完全相同的 brief，分别派 codex 与 grok，互不可见。要两份独立判断。
+
+**Task-type**: `code-review-adversarial` · **只读**（本任务不写代码，只出判断）
+
+## 问题
+
+rounds/0012 的 RAE-0001 条件③ 要求「事件序列与契约一致——**无丢帧**、无乱序，由 e2e 日志断言」。**无乱序已做到**（wire `messageSeq` 单调非递减断言 + 破坏性反证）。**无丢帧做不到**，主会话的判断如下——**请先验证这个判断本身，再谈方案**。
+
+### 已核实的事实（可复核，别只信转述）
+
+1. **无订阅者时事件静默丢弃**：`kernels/openclaw/src/gateway/server-session-events.ts:178-188`
+   ```js
+   for (const connId of params.sessionMessageSubscribers.get(broadcastKey)) { connIds.add(connId); }
+   if (connIds.size === 0) { return; }      // ← 不排队、不重放、不记录
+   let messageSeq = ...                      // ← 在这之后才算
+   ```
+2. **现有两个序号都测不了丢帧**：
+   - D2 事件 `seq` —— kernel-client **自己的** per-run 计数器（`OpenclawGatewayKernelClient.swift` 的 `nextSeq()`），本地自增，wire 丢了照样连续
+   - wire `payload.messageSeq` —— 服务端的，但是 **transcript 行号**（`server-session-events.ts:189-215` 回落到 `readSessionMessageCountAsync`），未投递条目合法占号，**缺口天然合法**
+3. **订阅竞态真实存在**：`ws-connection/message-handler.ts:475-479` 的 `void` fire-and-forget，同连接帧无串行化保证（本轮已源码判定）
+4. **现状**：submodule 指向我们自己的 fork `litianyi-007/openclaw`（HEAD `c35df878`，含我们的补丁）；早前向上游提的 PR **#118674 仍 OPEN、约两周半未合**
+
+## 四个问题，逐个给明确裁决
+
+### Q1：**openclaw 是不是已经有能解决这件事的机制，而主会话没找到？**
+
+**这一问优先级最高。** 本轮已经有两次「主会话说没有、实际有」的先例：
+- 「无手段隔离日志」→ 实际有 `logging.file`（两家评审同时找到）
+- 「等 ack 违反契约」→ 实际 D2 §3.3 明确定义 subscribe 响应为「流已建立」
+
+**请自己去 `kernels/openclaw` 搜**：有没有任何形式的投递序号、游标（cursor）、水位（watermark）、重放（replay）、gap 检测、或订阅恢复机制？
+注意 `messageSeq` 的注释里出现过 "cursor-compatible live history" —— **那个 cursor 是什么？能不能用来补齐丢失区间？**
+**如果存在，Q2-Q4 全部作废，直接说怎么用。**
+
+### Q2：需求本身合理吗，还是问题被问歪了？
+
+主会话要的是「投递序号 → 客户端能检出丢帧」。**但这可能是错的方向**：
+
+- 反方一：真正该做的是**不丢**（修服务端竞态、加订阅确认/重放），而不是**丢了能发现**。
+- 反方二：这是**第三方内核的可观测性特性**，我们只是使用者。为一个我们不拥有的组件设计协议扩展，是否越界？
+- 反方三：**也许根本不该建**——直接改 RAE-0001 条件③ 的措辞（承认本层测不了丢帧，把它列为已知缺口）就够了，成本为零。
+
+**请独立判断：Q1 若无现成机制，那么「建投递序号」「改服务端不丢」「什么都不建只改验收条件」三者哪个正确？给理由，别和稀泥。**
+
+### Q3：若要建，方案长什么样？
+
+给出具体形状：作用域（连接 × 会话？还是别的）、放在哪一层、协议如何携带、老客户端的兼容性、重连/多订阅者/广播场景怎么处理、以及**它自己怎么被测试**。
+**特别注意**：openclaw 的事件是**扇出给多个 connId** 的（见事实 1 的代码），投递序号如果做成全局或 per-session 都会有歧义——请说清作用域为什么必须是你说的那个。
+
+### Q4：上游 PR 还是先 fork 自行解决？
+
+已知：我们已有 fork 且已在其上打过补丁；上游 PR #118674 **OPEN 约两周半未合**。
+
+**请给明确建议**，并说清：
+- 若走上游：这类「新增协议字段」的 PR 被接受的现实概率如何？需要先开 issue 讨论吗？
+- 若走 fork：维护成本（每次 rebase 上游）、与 submodule pin 的关系、以及**本项目是否真的需要它**——注意本项目的目的是**验证三个插件**，openclaw 只是被验证过程中用到的内核之一。为它做协议扩展是否偏离项目目的？
+- 有没有第三条路（例如客户端侧的间接检测、或在我们自己的 kernel-client 层做对账）？
+
+---
+
+**产物**：T-088 → `.hopper/handoffs/T-088-output.md`；T-089 → `.hopper/handoffs/T-089-output.md`。
+
+**输出要求**：四问各给明确裁决 + 依据（file:line）。**Q1 若找到现成机制，直接说，这比后面三问都重要。** 宁可否决主会话的前提，不要顺着它往下设计。

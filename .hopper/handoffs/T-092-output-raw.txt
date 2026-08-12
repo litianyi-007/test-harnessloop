@@ -1,0 +1,2712 @@
+Reading additional input from stdin...
+OpenAI Codex v0.146.0
+--------
+workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019fefb9-de69-7ea1-9994-baba0f51cb1a
+--------
+user
+# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+
+You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+on your role — it overrides anything you may read locally.
+
+1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+   specialist." Nothing is listening downstream — if you delegate, the task fails.
+3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+   complete, closed loop.
+5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+   output, and proceed. The loop is closed — begin now and finish.
+
+---
+
+# Task-type: code-review-adversarial
+
+Anchor: `.hopper/tasks/code-review-adversarial.md::root`
+
+## Purpose
+
+Independently review a change, hunting for defects the author would miss. Review only — no edits.
+
+## Input shape
+
+- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+- Positive scope (files allowed) and negative scope (files that must not change)
+- Budget: time and vendor-cost ceiling
+
+## Output shape (output.md)
+
+The output should contain, in this order:
+
+- **Summary**: what was delivered, in two to four sentences
+- **Files touched**: paths with a one-line rationale each (or "none")
+- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+- **Decisions / deviations**: judgment calls or scope changes (or "none")
+- **Open questions**: list, or "none"
+- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+- **Next recommendation**: what should happen next
+
+## Notes
+
+This frame describes the SHAPE of the work and the expected output, not an
+identity to adopt. The vendor CLI brings its own behavior; the frame only states
+what the protocol expects back.
+
+---
+
+## Task spec
+
+rounds/0013 ★审查闸第三轮（用户 2026-08-11 裁定补派，确认前两轮 REWORK 的处置是否真的闭合）。仓 /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop。**只读评审，不得改任何文件。**
+
+你（同一 vendor codex）在 T-090b 与 T-091 两轮共提出：Q1 证据未冻结、Q2 对账脚本假绿路径（五条 → 复审后仍剩两条）、Q3 public 暴露过宽、条件④ 缺 UI 层、D 的 exec 分类不成立、以及证据卫生三项。主会话已全部处置。**本轮只验最后残留的两条 + 卫生项是否闭合**，不必重做全量评审。
+
+逐项核：
+A. T-091 指出的两条残留假绿，`app/apps/AgentShell/repro/reconcile-history.py` 现在是否**真的堵住**——(1) wire 侧 role 缺失/非法被当成「非 assistant」静默过滤（依据 `app/kernel-client/swift/EventMapping.swift` 只有 assistant 才产出 evt.message.delta）；(2) `normalize_seq` 让 bool 与 int 因 Python `True == 1` 混淆、float 被 int() 截断。**自己构造反例验证，不要只读代码。**
+B. 有没有**修过头**（把合法数据判红）？特别是 history 侧含合法 role='user' 的消息必须仍 PASS；wire 侧同键重复（流式增量）必须仍属正常语义。
+C. `--expect-min-assistant` 现在硬性 >= 1、传 0 或负数被拒（exit 2）。主会话采纳的理由是「再加一个 --allow-empty 只是把洞挪低一层」。这个取舍是否可接受？有没有**合法用例被误伤**？
+D. 证据卫生三项是否闭合：`live/raw/isolation-transcript.txt` 末尾的 `<SESSION_KEY>` 占位符注记、`live/raw/ui-diag-badport.log` 从 0 字节改为说明为何为空、`itemC-rae0001-live.md` 里的文件计数与命令块数更正。
+E. 用本轮冻结的真实原件回归：`--trace .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-wire-trace.jsonl --history-file .../history-snapshot.json` 必须仍 PASS exit 0，加 `--drop-one` 必须 exit 1 且精确捕获被删键。
+
+最后给出：**rounds/0013 的 ★审查闸现在应判 PASS / PASS_WITH_NOTE / 仍 REWORK**，以及理由。**不要因为找不到某文件就下结论，先换搜索维度。**
+
+codex
+我会按只读闸审范围逐项验证：先定位脚本与三份卫生证据，再用进程替换构造反例/合法样例，最后回归冻结原件与 `--drop-one`，全程不改文件。
+exec
+/bin/zsh -lc "pwd && rg --files .harnessloop/goals/20260718-002-agent-app/rounds/0013 app/apps/AgentShell/repro app/kernel-client/swift | rg '(reconcile-history\\.py|EventMapping\\.swift|isolation-transcript\\.txt|ui-diag-badport\\.log|itemC-rae0001-live\\.md|cli-wire-trace\\.jsonl|history-snapshot\\.json)"'$'"' && git status --short" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 2548ms:
+2026-08-11 15:29:40.643 xcodebuild[26409:31413505]  DVTFilePathFSEvents: Failed to start fs event stream.
+2026-08-11 15:29:40.833 xcodebuild[26409:31413504] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+git: error: couldn't create cache file '/tmp/xcrun_db-nU24nBCk' (errno=Operation not permitted)
+2026-08-11 15:29:41.443 xcodebuild[26508:31414537]  DVTFilePathFSEvents: Failed to start fs event stream.
+2026-08-11 15:29:41.614 xcodebuild[26508:31414514] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+ M .harnessloop/goals/20260718-002-agent-app/goal-breakdown.md
+ M .harnessloop/meta/self-audit.md
+ M .harnessloop/setup/data-sources.md
+ M .harnessloop/state/current.md
+ M .harnessloop/state/evidence-index.md
+ M .hopper/handoffs/leader-tasklist.md
+ M .hopper/queue.md
+ M CLAUDE.md
+ M app/contracts/d2/schema/events/message-delta.schema.json
+ M app/generated/csharp/D2.cs
+ M app/generated/swift/D2.swift
+ M app/generated/ts/d2.d.ts
+ M app/kernel-client/OPENCLAW-ISOLATED-RUN-RECIPE.md
+ M app/kernel-client/RUN-EVIDENCE.md
+ M app/kernel-client/swift/CLIRunner.swift
+ M app/kernel-client/swift/EventMapping.swift
+ D app/kernel-client/swift/FrameReplayTestMain.swift
+ D app/kernel-client/swift/FrameReplayTests.swift
+ M app/kernel-client/swift/KernelClient.swift
+ M app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+ M app/kernel-client/swift/OpenclawWire.swift
+A  app/kernel-client/swift/cli/main.swift
+A  app/kernel-client/swift/frame-replay-tests/FrameReplayTestMain.swift
+AM app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+ D app/kernel-client/swift/main.swift
+ M docs/validation-log.md
+ M hopper-plugin
+ ? kernels/openclaw
+ M scripts/check-secrets.sh
+?? .harnessloop/goals/20260718-002-agent-app/rounds/0011/
+?? .harnessloop/goals/20260718-002-agent-app/rounds/0012/
+?? .harnessloop/goals/20260718-002-agent-app/rounds/0013/
+?? .harnessloop/goals/20260718-002-agent-app/rounds/0014/
+?? .harnessloop/meta/evolution-issues/0031-open-round-silently-suppresses-anomaly-metric.md
+?? .hopper/handoffs/T-080-output-full.txt
+?? .hopper/handoffs/T-080-output-raw.txt
+?? .hopper/handoffs/T-080-output.log
+?? .hopper/handoffs/T-080-output.md
+?? .hopper/handoffs/T-080-progress.log
+?? .hopper/handoffs/T-081-output-raw.txt
+?? .hopper/handoffs/T-081-output.log
+?? .hopper/handoffs/T-081-output.md
+?? .hopper/handoffs/T-081-progress.log
+?? .hopper/handoffs/T-082-output.log
+?? .hopper/handoffs/T-082-output.md
+?? .hopper/handoffs/T-082-progress.log
+?? .hopper/handoffs/T-083-output-raw.txt
+?? .hopper/handoffs/T-083-output.log
+?? .hopper/handoffs/T-083-output.md
+?? .hopper/handoffs/T-083-progress.log
+?? .hopper/handoffs/T-084-output.log
+?? .hopper/handoffs/T-084-output.md
+?? .hopper/handoffs/T-084-progress.log
+?? .hopper/handoffs/T-085-output-raw.txt
+?? .hopper/handoffs/T-085-output.log
+?? .hopper/handoffs/T-085-output.md
+?? .hopper/handoffs/T-085-progress.log
+?? .hopper/handoffs/T-086-output.log
+?? .hopper/handoffs/T-086-output.md
+?? .hopper/handoffs/T-086-progress.log
+?? .hopper/handoffs/T-087-output.log
+?? .hopper/handoffs/T-087-output.md
+?? .hopper/handoffs/T-087-progress.log
+?? .hopper/handoffs/T-088-output-raw.txt
+?? .hopper/handoffs/T-088-output.log
+?? .hopper/handoffs/T-088-output.md
+?? .hopper/handoffs/T-088-progress.log
+?? .hopper/handoffs/T-089-output.log
+?? .hopper/handoffs/T-089-output.md
+?? .hopper/handoffs/T-089-progress.log
+?? .hopper/handoffs/T-090-output.log
+?? .hopper/handoffs/T-090-output.md
+?? .hopper/handoffs/T-090-progress.log
+?? .hopper/handoffs/T-090b-output-raw.txt
+?? .hopper/handoffs/T-090b-output.log
+?? .hopper/handoffs/T-090b-output.md
+?? .hopper/handoffs/T-090b-progress.log
+?? .hopper/handoffs/T-091-output-raw.txt
+?? .hopper/handoffs/T-091-output.log
+?? .hopper/handoffs/T-091-output.md
+?? .hopper/handoffs/T-091-progress.log
+?? .hopper/handoffs/T-092-output.log
+?? .hopper/handoffs/T-092-output.md
+?? .hopper/handoffs/T-092-progress.log
+?? app/.gitignore
+?? app/Package.swift
+?? app/apps/
+?? app/kernel-client/swift/frame-replay-tests/SessionPersistenceTests.swift
+?? app/kernel-client/swift/frame-replay-tests/SessionRestoreHistoryTests.swift
+?? app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift
+
+exec
+/bin/zsh -lc "nl -ba app/apps/AgentShell/repro/reconcile-history.py | sed -n '1,320p'; nl -ba app/kernel-client/swift/EventMapping.swift | sed -n '1,260p'; nl -ba .hopper/handoffs/T-091-output.md | sed -n '1,260p'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+     1	#!/usr/bin/env python3
+     2	# -*- coding: utf-8 -*-
+     3	"""reconcile-history.py -- RAE-0001 条件③(b)(c) 取证脚本。
+     4	
+     5	比对两个来源的 assistant 消息集合，证明"受控会话内没有丢消息"：
+     6	
+     7	  A. wire trace（本地 JSONL，逐行事件记录，已录好，无需改任何代码）
+     8	     取每一行里 producedEvents[] 含 wireType == "evt.message.delta" 的帧，
+     9	     用 wireFrame.payload.message.role == "assistant" 过滤，
+    10	     键取 (wireFrame.payload.messageId, wireFrame.payload.messageSeq)。
+    11	
+    12	  B. 权威 history 快照（HTTP GET {base}/sessions/{sessionKey}/history?limit=N，
+    13	     跟着响应里的 nextCursor 持续翻页直到 hasMore 为 false；或本地 --history-file
+    14	     离线快照，同一 JSON 形状：{"messages": [...], "hasMore": bool, "nextCursor"?: str}）
+    15	     取 role == "assistant" 的消息，键取 (msg.__openclaw.id, msg.__openclaw.seq)。
+    16	
+    17	断言（两条都要，缺一不可）：
+    18	  1. wire ⊆ history        —— wire 侧每个 (id, seq) 都能在 history 里找到
+    19	  2. history ⊆ wire（反向） —— history 的 assistant 消息在 wire 侧全部出现
+    20	     （这一条就是条件③(b)"受控会话内无缺失"的直接取证）
+    21	
+    22	--drop-one：在同一次执行内先验证未删减数据的 baseline 是绿的，再从 wire 侧集合删掉一条
+    23	assistant 消息重跑对账，最后断言新增的差集精确等于被删的那一个 key——用于证明断言②确实
+    24	有牙齿（条件③(c) 破坏性反证）。删除前会原样打印被删记录（id、seq、文本前 60 字符）——
+    25	没打印出被删的内容，这次反证不算数。
+    26	
+    27	2026-08-11 加固（异构对抗评审 codex 只读实证发现 5 条"假绿"路径后的修复）：
+    28	  1. **去重不再掩盖基数丢失**：history 侧同一 (id, seq) 出现 >=2 次时，以前会被直接覆盖、
+    29	     只留最后一条，两向断言只看 key 集合看不出这里丢过东西。现在 history 侧的重复 key
+    30	     直接判失败并把每次出现的文本都打印出来。wire 侧的同键重复不受影响——那是流式增量的
+    31	     正常语义（同一条逻辑消息被拆成多个 delta 帧、后写覆盖合成最终文本），继续折叠为 1
+    32	     条，不计入异常。
+    33	  2. **解析异常 / 缺 metadata 不再 fail-open**：JSON 解析失败、JSON 顶层非对象、wire 侧缺
+    34	     messageId/messageSeq、history 侧缺 __openclaw.id/seq——这些以前只统计不参与 PASS
+    35	     判定，现在计数非零就直接判失败。role 过滤（非 assistant）在**history 侧**仍然是
+    36	     正常语义、继续忽略，报告里会把被过滤条数与角色分布显式列出来。（**wire 侧**当时也
+    37	     被一并放行，二轮评审发现这其实是假绿，已在下方"二轮加固"第 6 条单独收紧——wire 侧
+    38	     与 history 侧的 role 规则并不对称，不能套用同一条。）
+    39	  3. **新增 --expect-min-assistant N（默认 1）**：wire/history 两侧的 assistant 计数任一
+    40	     低于 N 就判失败，堵住"两个空集直接 PASS"的漏洞。（首轮曾允许显式传 0 关闭这条校验；
+    41	     二轮评审认定这个开关本身就是漏洞，已在下方"二轮加固"第 8 条收紧为拒绝 0。）
+    42	  4. **history 分页读全**：在线模式现在会跟着响应里的 nextCursor 持续请求，直到 hasMore
+    43	     为 false 才认为读到了完整 history；离线 --history-file 快照也会检查其中的 hasMore
+    44	     字段——hasMore 为 true（或缺失/不是合法布尔值）一律硬失败，不只是警告，因为离线快照
+    45	     没有办法继续翻页，不能假装对完了账。这是五条里最重要的一条：如果 wire 侧丢失的正好
+    46	     是 history 首页分页截断掉的旧消息，两侧会同时"缺失"、两条断言都会通过。
+    47	  5. **--drop-one 现在是单次执行内的三步流程**：(a) 先用同一份数据跑一次 baseline，
+    48	     baseline 必须完全干净（不干净就报"无法反证：baseline 本身是红的"，以新退出码 4
+    49	     失败，不再顺着旧逻辑误报"断言②捕获了删除"）；(b) 再删一条；(c) 断言删除后新增的
+    50	     差集精确等于被删的那一个 key，而不是"随便非空就算数"。同一次执行内完成，避免在线
+    51	     模式先后两次请求可能读到两个不同 history 快照的问题。
+    52	
+    53	2026-08-11 二轮加固（同一异构对抗评审 codex 只读、复验第一轮修复后又实证发现 2 条残留
+    54	"假绿"，均附可复现反例）：
+    55	  6. **wire 侧 role 缺失/非法不再当"非 assistant，正常忽略"静默放过**：
+    56	     `EventMapping.swift:149-177`（`mapOpenclawSessionMessageToKernelEvents`）是 wire 侧
+    57	     唯一产出 evt.message.delta 的地方，函数一开头就用 `message.role == "assistant"`
+    58	     （精确字符串匹配）把非 assistant 的 session.message 短路掉、不产出任何 D2 事件——换句
+    59	     话说，一条已经在 producedEvents[] 里出现了 evt.message.delta 的 wire 记录，其
+    60	     wireFrame.payload.message.role 只可能是 "assistant"，缺失/非字符串/其他取值都与
+    61	     "它确实产出了 evt.message.delta" 这个既成事实自相矛盾。以前脚本把这类记录一律当
+    62	     "正常非 assistant 流量"忽略，异常计数不动，是假绿；现在计入新的 wire 侧异常
+    63	     bad_role_delta_lines，参与 PASS 判定。**history 侧不受影响**：history 侧的
+    64	     role != assistant（例如 user 消息）依然是正常语义——两侧规则本来就不对称，这条
+    65	     只收紧 wire 侧。
+    66	  7. **id/seq 从"非 None 即可"改成严格类型校验**：Python 里 `True == 1` 且
+    67	     `hash(True) == hash(1)`，旧的 normalize_seq 对 bool 直接原样放行，导致 wire 侧一个
+    68	     非法的 JSON boolean seq 能在 (id, seq) 元组比较/哈希时跟 history 侧合法的整数 seq
+    69	     冒充成同一个 key 从而被判定"匹配"；float 还会被 `int(v)` 静默截断，掩盖类型不一致。
+    70	     现在 seq 必须是真正的 int（`isinstance(v, int) and not isinstance(v, bool)`，显式
+    71	     排除 bool）、拒绝 float/str/其他类型；id 必须是非空 str。不满足则计入该侧原有的
+    72	     metadata 异常统计（wire 侧 malformed_candidate_lines / history 侧
+    73	     malformed_metadata_messages），不再进入 recs——原 normalize_seq 的"尽量转成 int"
+    74	     容错路径已整体移除，改为 is_valid_id() / is_valid_seq() 两个不做任何类型强转的
+    75	     纯校验函数。
+    76	  8. **--expect-min-assistant 不再接受 0**：0 曾是显式关闭"两个空集直接 PASS"下限校验的
+    77	     后门。作为 RAE 专用取证工具，这条下限存在的意义就是防止"其实什么都没检查、却报
+    78	     PASS"，允许一个开关把它关掉等于把同一个漏洞换个入口留在原地。现在下限最小值收紧
+    79	     为 1，传 0 或负数在参数校验阶段直接判用法错误（退出码 2），没有可以绕过的开关。
+    80	
+    81	退出码：
+    82	  0  PASS —— 正常模式，全部断言/校验都成立
+    83	  1  FAIL —— 正常模式下不成立；或 --drop-one 模式下按预期精确变红（自证断言有效：
+    84	     baseline 干净、删除后差集精确等于被删的键——这正是 --drop-one 模式"成功"的表现）
+    85	  2  用法/环境错误 —— 参数缺失、trace/history 文件读取失败、HTTP 请求失败、history 响应
+    86	     形状不对、分页读不全（含离线快照 hasMore 非 false、在线翻页出现重复 cursor 或缺
+    87	     nextCursor）等，在能跑对账之前就出的错
+    88	  3  --drop-one 完整性失败 —— 删了一条消息，对账却仍然是全绿；或差集不精确等于被删的那
+    89	     个 key（说明这次反证不精确、方法本身不可信）。脚本会明确打印具体是哪一种
+    90	  4  --drop-one 基线不干净 —— 同一次执行内，删除前的 baseline 本身就没通过全部校验
+    91	     （断言①②、history 侧重复 key、双方异常计数、assistant 数量下限任一不满足），无法
+    92	     在脏 baseline 上做破坏性反证，脚本会打印"无法反证：baseline 本身是红的"
+    93	
+    94	用法示例：
+    95	  # 在线：对着真实 gateway 取 history（自动翻页直到 hasMore=false）
+    96	  reconcile-history.py --trace wire-trace.jsonl --base http://127.0.0.1:PORT --session-key agent:main:dashboard:xxx
+    97	
+    98	  # 离线：用存档快照代替 HTTP（也可用于把某次线上 history 存档留证；快照必须自带 hasMore=false）
+    99	  reconcile-history.py --trace wire-trace.jsonl --history-file history-snapshot.json
+   100	
+   101	  # 破坏性反证
+   102	  reconcile-history.py --trace wire-trace.jsonl --history-file history-snapshot.json --drop-one
+   103	
+   104	  # 调整 assistant 数量下限（默认且最小值 1；0 与负数会被拒绝，见"二轮加固"第 8 条）
+   105	  reconcile-history.py --trace wire-trace.jsonl --history-file history-snapshot.json --expect-min-assistant 3
+   106	
+   107	token 只从环境变量 OPENCLAW_GATEWAY_TOKEN 读取（--token 可覆盖，但命令行参数会留痕在
+   108	shell history / `ps`，能用环境变量就不要用这个）。脚本任何时候都不打印 token 本身，
+   109	包括出错时。
+   110	
+   111	只用标准库，不引入任何第三方依赖；本机 python3 基线是 3.9（见 L1-REPRO.md 前置表），
+   112	本脚本按 3.9 语法边界编写。
+   113	"""
+   114	
+   115	import argparse
+   116	import json
+   117	import os
+   118	import sys
+   119	import urllib.error
+   120	import urllib.parse
+   121	import urllib.request
+   122	from collections import Counter
+   123	from typing import Any, Dict, List, Optional, Tuple
+   124	
+   125	EXIT_PASS = 0
+   126	EXIT_FAIL = 1
+   127	EXIT_USAGE_ERROR = 2
+   128	EXIT_DROP_ONE_INTEGRITY_FAILURE = 3
+   129	EXIT_DROP_ONE_BASELINE_DIRTY = 4
+   130	
+   131	Key = Tuple[str, Any]
+   132	
+   133	DEFAULT_EXPECT_MIN_ASSISTANT = 1
+   134	# Sanity bound so a server-side pagination bug (cursor never advancing, or
+   135	# hasMore stuck true) can't spin the client forever.
+   136	MAX_HISTORY_PAGES = 10000
+   137	
+   138	
+   139	class ReconcileError(Exception):
+   140	    """Fatal error surfaced before/outside the actual set comparison."""
+   141	
+   142	
+   143	# ---------------------------------------------------------------------------
+   144	# small helpers
+   145	# ---------------------------------------------------------------------------
+   146	
+   147	def dig(obj: Any, *path: str) -> Any:
+   148	    """Safely walk a chain of dict keys; returns None as soon as something isn't a dict."""
+   149	    cur = obj
+   150	    for p in path:
+   151	        if isinstance(cur, dict):
+   152	            cur = cur.get(p)
+   153	        else:
+   154	            return None
+   155	    return cur
+   156	
+   157	
+   158	def is_valid_seq(v: Any) -> bool:
+   159	    """seq must be a genuine int -- no coercion.
+   160	
+   161	    2026-08-11 second-round fix: the previous normalize_seq() let a JSON
+   162	    boolean through unchanged, which is a real hole because in Python
+   163	    `True == 1` and `hash(True) == hash(1)` -- so a (id, True) key from one
+   164	    source and a (id, 1) key from the other would silently collide in a
+   165	    dict/set and be treated as "matched", even though a JSON `true` on the
+   166	    wire and a JSON `1` in history are not the same value at all. A plain
+   167	    `isinstance(v, int)` check alone does NOT catch this, because bool is a
+   168	    subclass of int in Python -- the bool exclusion has to be explicit.
+   169	    Floats are rejected too (the old code's `int(v)` would silently
+   170	    floor-truncate e.g. 2.7 -> 2, which could just as easily mask a genuine
+   171	    type mismatch instead of a harmless representation difference), and so is
+   172	    any other type (str included -- no more "best-effort" parsing of numeric
+   173	    strings). This mirrors is_valid_id() below: both halves of a key must now
+   174	    pass a real type check, not just "is not None".
+   175	    """
+   176	    return isinstance(v, int) and not isinstance(v, bool)
+   177	
+   178	
+   179	def is_valid_id(v: Any) -> bool:
+   180	    """id must be a non-empty str -- no coercion from int or any other type
+   181	    (2026-08-11 second-round fix; see is_valid_seq() above for the matching
+   182	    seq-side rationale)."""
+   183	    return isinstance(v, str) and v != ""
+   184	
+   185	
+   186	def extract_assistant_text(message: Any) -> str:
+   187	    """Pull human-readable text out of a message object.
+   188	
+   189	    Handles both shapes seen in this project's real data:
+   190	      - message.content is a plain string
+   191	      - message.content is a list of blocks like {"type": "text", "text": "..."}
+   192	        (thinking blocks and anything without type == "text" are ignored)
+   193	    Never raises; returns "" if nothing recognizable is found.
+   194	    """
+   195	    if not isinstance(message, dict):
+   196	        return ""
+   197	    content = message.get("content")
+   198	    if isinstance(content, str):
+   199	        return content
+   200	    if isinstance(content, list):
+   201	        parts = []
+   202	        for block in content:
+   203	            if isinstance(block, dict) and block.get("type") == "text":
+   204	                text = block.get("text")
+   205	                if isinstance(text, str):
+   206	                    parts.append(text)
+   207	        return "".join(parts)
+   208	    return ""
+   209	
+   210	
+   211	def preview(text: Optional[str], n: int = 60) -> str:
+   212	    flat = (text or "").replace("\n", "\\n").replace("\r", "\\r")
+   213	    if len(flat) > n:
+   214	        return flat[:n] + "...[截断]"
+   215	    return flat
+   216	
+   217	
+   218	def fmt_key(key: Key) -> str:
+   219	    return "id=%r seq=%r" % (key[0], key[1])
+   220	
+   221	
+   222	def kv(label: str, value: Any) -> None:
+   223	    print("  %-38s: %s" % (label, value))
+   224	
+   225	
+   226	def sub(label: str, values: List[Any]) -> None:
+   227	    if values:
+   228	        print("      %-34s: %s" % (label, values))
+   229	
+   230	
+   231	def fatal(msg: str, code: int = EXIT_USAGE_ERROR) -> None:
+   232	    print("[FATAL] %s" % msg, file=sys.stderr)
+   233	    sys.exit(code)
+   234	
+   235	
+   236	# ---------------------------------------------------------------------------
+   237	# source A: wire trace (local JSONL)
+   238	# ---------------------------------------------------------------------------
+   239	
+   240	def parse_wire_trace(path: str) -> Tuple[Dict[Key, str], Dict[str, Any]]:
+   241	    stats: Dict[str, Any] = {
+   242	        "total_lines": 0,
+   243	        "blank_lines": 0,
+   244	        "parse_error_lines": 0,
+   245	        "parse_error_line_numbers": [],
+   246	        "unexpected_shape_lines": 0,
+   247	        "unexpected_shape_line_numbers": [],
+   248	        "no_delta_lines": 0,
+   249	        "bad_role_delta_lines": 0,
+   250	        "bad_role_delta_line_numbers": [],
+   251	        "role_distribution": Counter(),
+   252	        "malformed_candidate_lines": 0,
+   253	        "malformed_line_numbers": [],
+   254	        "matched_frames": 0,
+   255	        "duplicate_keys": 0,
+   256	    }
+   257	    recs: Dict[Key, str] = {}
+   258	
+   259	    with open(path, "r", encoding="utf-8") as fh:
+   260	        for lineno, raw_line in enumerate(fh, start=1):
+   261	            stats["total_lines"] += 1
+   262	            line = raw_line.strip()
+   263	            if not line:
+   264	                stats["blank_lines"] += 1
+   265	                continue
+   266	
+   267	            try:
+   268	                obj = json.loads(line)
+   269	            except json.JSONDecodeError:
+   270	                # Anomaly, not benign noise: a line that isn't valid JSON at all
+   271	                # means the trace itself is suspect. Counted here and gated on
+   272	                # in main() -- see anomaly_count below.
+   273	                stats["parse_error_lines"] += 1
+   274	                stats["parse_error_line_numbers"].append(lineno)
+   275	                continue
+   276	
+   277	            if not isinstance(obj, dict):
+   278	                stats["unexpected_shape_lines"] += 1
+   279	                stats["unexpected_shape_line_numbers"].append(lineno)
+   280	                continue
+   281	
+   282	            produced = obj.get("producedEvents")
+   283	            has_delta = isinstance(produced, list) and any(
+   284	                isinstance(e, dict) and e.get("wireType") == "evt.message.delta"
+   285	                for e in produced
+   286	            )
+   287	            if not has_delta:
+   288	                stats["no_delta_lines"] += 1
+   289	                continue
+   290	
+   291	            role = dig(obj, "wireFrame", "payload", "message", "role")
+   292	            stats["role_distribution"][str(role)] += 1
+   293	            if role != "assistant":
+   294	                # Anomaly, NOT benign filtering (2026-08-11 second-round fix):
+   295	                # EventMapping.swift:149-177 (mapOpenclawSessionMessageToKernelEvents)
+   296	                # is the ONLY place evt.message.delta is ever constructed, and it
+   297	                # short-circuits to "no events" unless message.role == "assistant"
+   298	                # (exact string match) BEFORE producing anything. So a wire line
+   299	                # whose producedEvents[] already contains evt.message.delta is only
+   300	                # consistent with wireFrame.payload.message.role being exactly
+   301	                # "assistant" -- missing/non-string/any-other-value role here
+   302	                # contradicts that already-observed fact and must fail closed.
+   303	                # This is NOT the same rule as the history side: history's
+   304	                # messages[] legitimately interleaves role == "user" entries
+   305	                # (see extract_history_records below, where role != assistant
+   306	                # stays normal semantics) -- the two sides are asymmetric on
+   307	                # purpose and must not share this check.
+   308	                stats["bad_role_delta_lines"] += 1
+   309	                stats["bad_role_delta_line_numbers"].append(lineno)
+   310	                continue
+   311	
+   312	            message_id = dig(obj, "wireFrame", "payload", "messageId")
+   313	            message_seq = dig(obj, "wireFrame", "payload", "messageSeq")
+   314	            message_obj = dig(obj, "wireFrame", "payload", "message") or {}
+   315	
+   316	            if not is_valid_id(message_id) or not is_valid_seq(message_seq):
+   317	                # Anomaly, fail-closed (2026-08-11 second-round fix): see
+   318	                # is_valid_id()/is_valid_seq() near the top of this file for
+   319	                # why "is not None" wasn't enough (bool/float/str type
+   320	                # confusion, e.g. JSON `true` aliasing integer `1`).
+     1	// openclaw 事件 -> D2 EventMessageUnion（11 变体）映射。SG-5 Stage A 大修（对抗审 T-044 REWORK 后的
+     2	// rework 轮）。
+     3	//
+     4	// 现场结论（rework 轮用 scratchpad/openclaw-iso3 重起隔离 openclaw + D3-proxy(localhost:3001) + Pi
+     5	// Postgres/new-api 真实探针补测，逐条在下面每个函数的文档注释标注 grounding 层级；上一轮（a07dc67）
+     6	// 已有的现场结论原样保留并在此基础上订正）：
+     7	//
+     8	//   1. openclaw 的 `session.message` 事件只承载"assistant 助手消息"（text/thinking/toolCall
+     9	//      content block）——从未观察到 role="toolResult" 的 session.message 广播（两次独立探针
+    10	//      复现同一结论：live 长连接从发送前就订阅、经历完整 toolCall→toolResult→下一轮，始终没有
+    11	//      role=toolResult 的 session.message 事件），尽管原始 transcript（sqlite
+    12	//      `transcript_events` 表）里确实持久化了 role="toolResult" 的消息——说明
+    13	//      `handleTranscriptUpdateBroadcast`（kernels/openclaw/src/gateway/server-session-events.ts）
+    14	//      的广播路径在工具结果这一步被跳过，只有真正的模型回合（user/assistant）会广播。
+    15	//   2. exec 工具调用的执行结果通过 `agent`（payload.stream 分好几种：run_status/lifecycle/item/
+    16	//      command_output/usage/assistant/thinking/error/approval/plan）实时推送，其中
+    17	//      `stream:"command_output"` 且 `data.phase:"end"` 的形状最贴近 D2 ToolResultEventPayload
+    18	//      （output/exitCode/durationMs/cwd 齐备），已用真实 exec 工具调用样本验证两次。
+    19	//      **rework 轮新真实样本（`scratchpad/openclaw-iso3/nonexec-run4.jsonl`，真实 Kimi + update_plan
+    20	//      工具）坐实：非 exec 工具（如 openclaw 内置 `update_plan`）走的是 `stream:"item"`
+    21	//      （`kind:"tool"`，phase:"start"/"end"，字段只有 itemId/title/status/name/meta/toolCallId/
+    22	//      startedAt/endedAt）——**没有 command_output 的 output 字段**，也没有观察到任何
+    23	//      `stream:"tool"`（handlers.tools.ts 源码里 `emitAgentEvent({stream:"tool",...})` 确实存在、
+    24	//      带 `data.result` 完整输出，但本轮真实探针在 `sessions.messages.subscribe` 客户端上从未收到
+    25	//      过一条 `stream:"tool"` 事件——gateway 侧似乎只把这个通用 tool 流投给注册为
+    26	//      run-scoped "tool event recipient" 的连接，plain subscribe 客户端不在其列，具体注册机制未
+    27	//      深挖，诚实登记为协议层未探明的缺口，见 F5 小节）。因此非 exec 工具的 toolResult 只能用
+    28	//      `item`(kind:"tool",phase:"end") 的 status 字段做 isError/duration 判定，`output` 字段
+    29	//      **诚实置空**（`null`），不编造。
+    30	//   3. `session.approval`（需要 `sessions.messages.subscribe` 传 `includeApprovals:true` 才收得到）
+    31	//      phase:"pending" 就是 evt.approval_request 的现场原型，已用真实样本验证（把 execAsk 临时
+    32	//      patch 成 "always" 触发）。phase:"terminal" 的 reason 词表（user/timeout/malformed-verdict/
+    33	//      no-route/run-aborted/gateway-restart/storage-corrupt，见
+    34	//      packages/gateway-protocol/src/schema/approvals.ts）与 D1 `ApprovalBufferResolvedEvent` 要求的
+    35	//      reason（仅 buffered_timeout/queue_overflow）完全不相交——真实 openclaw 从不产生后者，
+    36	//      approval_buffer_resolved 是 D1 §6.2"pending #2 本地缓冲策略"要求适配器自己维护的一个
+    37	//      本地状态机产物，respondApproval()/审批缓冲队列本轮未实现，因此本文件不把它接到任何真实
+    38	//      wire 事件上——见文末 `buildApprovalBufferResolvedEvent`。
+    39	//      **rework 轮订正（F4）**：上一轮的 `toolCallID` 关联用"同 session 最近一次 toolCall"猜测，
+    40	//      对抗审 codex 指出会串号（两个 toolCall 交错、旧缓存残留时误配）。openclaw 源码坐实
+    41	//      （`embedded-agent-subscribe.handlers.tools.ts:1669-1699`）：exec 审批还会经由
+    42	//      `emitAgentApprovalEvent` 广播一条 **`agent(stream:"approval", data.phase:"requested")`**
+    43	//      事件，`data.toolCallId`/`data.approvalId` 均为该次审批的**准确值**（不是猜测），且这条
+    44	//      `agent` 事件的外层 `payload.runId` 由 `enrichAgentEvent` 统一盖章、可靠。本文件改为：调用方
+    45	//      （OpenclawGatewayKernelClient）在收到这条 `agent(stream:"approval")` 时，把
+    46	//      `data.approvalId -> data.toolCallId` 的精确映射存进一个按 approvalId 为键的缓存；
+    47	//      `session.approval`(phase:"pending") 到达时用 `approval.id` 去查这个缓存，而不是"最近一次
+    48	//      toolCall"。两个交错的 pending 审批不会再互相踩，见 `mapOpenclawSessionApprovalToKernelEvent`
+    49	//      的新签名 `toolCallIDForApprovalID`。
+    50	//   4. `agent` 的 `stream:"lifecycle"` 在 `data.phase` 为 "end"/"error" 时是一次 run 的终态信号，
+    51	//      `data.aborted` 是判别键：`aborted:false` 对应 evt.turn_complete（真实样本：正常回合结束）；
+    52	//      `aborted:true` 对应 **evt.operation_completed + evt.turn_complete(stopReason:.cancelled) 两者
+    53	//      一起**（rework 轮订正，见 F6：D1 §9.3 stop() 事件顺序保证要求"先完成该 run 的强制取消并产出
+    54	//      TurnCompleteEvent(stopReason:'cancelled')"，不能只发 operation_completed 不发 turn_complete）。
+    55	//      **rework 轮新真实样本**（`scratchpad/openclaw-iso3/nonexec-run4.jsonl`）额外证实：正常回合
+    56	//      结束时 lifecycle 会先后发两条几乎相同的帧——`phase:"finishing"` 然后 `phase:"end"`（字段
+    57	//      一致，只有 `phase` 不同）——本文件继续只对 `phase == "end"`/`"error"` 触发映射，`"finishing"`
+    58	//      如实忽略，避免同一个终态被翻译成两条重复的 D2 事件（未观察到 `"finishing"` 单独出现而没有
+    59	//      随后的 `"end"`，如实标注为经验性假设，非源码级证明）。
+    60	//   5. gateway 关闭时会给所有连接广播一次全局 `shutdown` 事件（真实样本：向隔离 gateway 发
+    61	//      SIGTERM 实测）——本文件把它映射为对所有当前活跃 session 广播 evt.session_end(reason:
+    62	//      kernel_exited)。WS 传输层自身断开（receiveLoop 报错、没有先收到 shutdown 帧）走
+    63	//      reason: transport_closed；两者互斥去重（F8，见调用方 terminal 状态记录）。
+    64	//   6. evt.error（rework 轮由 blocker 转为已接入，F5）：openclaw `gateway/server-chat.ts:1387-1403`
+    65	//      源码坐实存在 `agent(stream:"error", data:{reason:"seq gap", expected, received})` 这一真实
+    66	//      wire 事件（连接侧收到的 `agent` 事件 seq 与本地期望的 seq 不连续时同步产出）——**diff 不再
+    67	//      诚实 defer**，本文件接入并映射到 D2 evt.error（code 用 `.unknown`，因为 D1 ErrorEvent.code
+    68	//      封闭枚举里没有专门对应"协议层 seq 断档"的取值，如实标注是推断映射不是字面对应；
+    69	//      recoverable 记 `.run`，因为 seq gap 只影响这个 run 的事件流完整性，不代表 session 本身失效）。
+    70	//      evt.capability_changed 本轮仍未接到任何真实触发路径：D1 INV-4 原文就说"能力变更的感知路径是
+    71	//      内核 RPC 报错(被动发现)+我方 Server 能力开关 override(主动决策)"——即它从来不是一个 kernel
+    72	//      主动 push 的事件，需要 capabilities() 方法本身先落地（本轮仍是 TODO 桩）才有基线可 diff，
+    73	//      构造函数保留、明确未接入 dispatch，诚实标 unsupported。
+    74	
+    75	import Foundation
+    76	// `canImport` 门卫理由见 KernelClient.swift 同名注释——这个文件也被 ci.yml 的 flat swiftc
+    77	// parity-runner 步骤直接编译，那条路径下没有独立的 D2Generated module。
+    78	#if canImport(D2Generated)
+    79	import D2Generated
+    80	#endif
+    81	
+    82	// MARK: - JSON 取值小工具（JSONSerialization 产物的 [String: Any] 上做安全取值）
+    83	
+    84	func jsonInt(_ any: Any?) -> Int? {
+    85	    if let i = any as? Int { return i }
+    86	    if let n = any as? NSNumber { return n.intValue }
+    87	    if let d = any as? Double { return Int(d) }
+    88	    return nil
+    89	}
+    90	
+    91	func jsonString(_ any: Any?) -> String? {
+    92	    any as? String
+    93	}
+    94	
+    95	func jsonBool(_ any: Any?) -> Bool? {
+    96	    if let b = any as? Bool { return b }
+    97	    if let n = any as? NSNumber { return n.boolValue }
+    98	    return nil
+    99	}
+   100	
+   101	func jsonObject(_ any: Any?) -> JSONObject? {
+   102	    any as? JSONObject
+   103	}
+   104	
+   105	func jsonArray(_ any: Any?) -> [Any]? {
+   106	    any as? [Any]
+   107	}
+   108	
+   109	/// 把一个内存里的 `Any`（来自 JSONSerialization 解出的 JSON 值）包成 D2 codegen 的 `JSONAny`。
+   110	/// `JSONAny` 只暴露 `init(from: Decoder)`（Decodable 要求），没有直接take `Any` 的构造器——这里借道
+   111	/// `JSONSerialization` + `JSONDecoder` 往返一次：包一层 `{"v": value}` 再解出来，是因为
+   112	/// `JSONSerialization.data(withJSONObject:)` 在顶层只接受 Array/Dictionary，标量值（纯字符串/数字/
+   113	/// 布尔）必须先包一层才能序列化。`value` 传 `NSNull()` 时往返出的是 JSON `null`——用于诚实表达"这个
+   114	/// 字段本轮确实取不到真实值"（如非 exec 工具的 output，见②），不是遗漏，是明确的空值。
+   115	func makeJSONAny(_ value: Any) -> JSONAny {
+   116	    let wrapper: JSONObject = ["v": value]
+   117	    guard JSONSerialization.isValidJSONObject(wrapper),
+   118	          let data = try? JSONSerialization.data(withJSONObject: wrapper, options: []),
+   119	          let decoded = try? JSONDecoder().decode([String: JSONAny].self, from: data),
+   120	          let result = decoded["v"] else {
+   121	        // "null" 恒可解码（走 JSONAny.init(from:) 的 singleValueContainer + decodeNil 分支），
+   122	        // 用作不可序列化输入（例如非 JSON 兼容的 Swift 值）时的诚实兜底，不是伪造业务数据。
+   123	        return try! JSONDecoder().decode(JSONAny.self, from: Data("null".utf8))
+   124	    }
+   125	    return result
+   126	}
+   127	
+   128	/// 把 openclaw wire 上的毫秒 epoch 数字字段转成 `Date`——用于 F3：D2 `KernelEventBase.ts` 语义是
+   129	/// "事件发生时刻"，必须取 openclaw 原始 payload/message 自带的时间戳，不能用 `Date()`（那是适配器
+   130	/// 本地处理/转发时刻，属于 envelope 的 `sentAt` 语义，两者是 D2 v3 §2 明确分开的两个字段）。
+   131	/// 缺失时退化到 `Date()` 只发生在 openclaw 自己也没有提供任何时间戳的合成事件上（如 transport_closed，
+   132	/// 没有更早的 wire 帧可以取时间戳），且发生处均有单独注释标注。
+   133	func msEpochToDate(_ ms: Int?) -> Date {
+   134	    guard let ms = ms else { return Date() }
+   135	    return Date(timeIntervalSince1970: Double(ms) / 1000.0)
+   136	}
+   137	
+   138	// MARK: - F3：per-run seq 生成器契约
+   139	//
+   140	// D1 v3 §9.2/§3：`seq` 仅承诺"同一 runId 内排序"，不是全局单调、也不是 wire 帧外层 `seq`/
+   141	// `messageSeq` 的直接透传——上一轮（a07dc67）在 `session.message` 用 `messageSeq`、在 `agent` 事件用
+   142	// frame 外层 `seq`，两个域混用导致同一个 run 观察到 `2→21→4→30`（对抗审 T-044 F3 复现）。
+   143	// rework 轮改为：每个 mapper 函数都不再自己从 wire 读 seq，而是通过调用方传入的 `nextSeq` 闭包按
+   144	// **runId 作用域**取号——闭包本身由 `OpenclawGatewayKernelClient`（actor 隔离，状态安全）按
+   145	// `runID ?? sessionID` 维护一个从 1 开始递增的计数器，保证同一 run 内先产出的事件 seq 更小。
+   146	
+   147	// MARK: - ① session.message -> messageDelta / thinking / toolCall（三种，均现场实测样本 grounding）
+   148	
+   149	/// openclaw `session.message` 的 `payload.message` 只在 role=="assistant" 时才可能产出 D2 事件——
+   150	/// role=="user" 是调用方自己发的输入回显，D1 的 KernelEvent 流不表达"回显我方输入"这件事（D2
+   151	/// MessageDeltaEventMessagePayload.role 这个类型本身就只有一个取值 `.assistant`，quicktype
+   152	/// 从 schema 生成时就把这一点固化了）。一条 assistant 消息的 `content` 可以是纯字符串，也可以是
+   153	/// 多个 block 的数组（真实样本证实：文本 block 和 toolCall block 可以同时出现在同一条消息里），
+   154	/// 因此一条 session.message 可能产出 0~N 个 D2 事件，返回值是数组，`nextSeq()` 每产出一个事件调用
+   155	/// 一次，保证同一条消息里的多个 block 拿到严格递增的 run 内 seq（F3）。
+   156	///
+   157	/// 现场样本（`scratchpad/openclaw-iso3`，D3-proxy + 真实 Kimi）：
+   158	/// ```
+   159	/// {"role":"assistant","content":[{"type":"toolCall","id":"tool_...","name":"exec",
+   160	///   "arguments":{"command":"ls -la"},"partialArgs":"..."}],
+   161	///  "usage":{"input":9288,"output":2346,...},"stopReason":"toolUse","timestamp":1784...,
+   162	///  "responseId":"..."}
+   163	/// ```
+   164	/// `timestamp` 字段（ms epoch）是本条 assistant 消息真正产出的时刻——F3 要求的 `ts` 就取这里，
+   165	/// 不用 `Date()`。
+   166	func mapOpenclawSessionMessageToKernelEvents(
+   167	    _ payload: JSONObject,
+   168	    ourSessionID: String,
+   169	    runIDHint: String?,
+   170	    nextSeq: () -> Int
+   171	) -> [EventMessageUnion] {
+   172	    guard let message = jsonObject(payload["message"]) else { return [] }
+   173	    guard jsonString(message["role"]) == "assistant" else {
+   174	        // role=="user"：回显，无 D2 对应事件。role=="toolResult" 从未在 session.message 里现场
+   175	        // 观察到（见头注释①），如果未来 openclaw 版本改变了这一点、这里会静默丢弃——保留在这里
+   176	        // 一并说明，而不是假装处理了一个从未见过的分支。
+   177	        return []
+   178	    }
+   179	
+   180	    let sentAt = Date()
+   181	    let originTS = msEpochToDate(jsonInt(message["timestamp"]))
+   182	    var events: [EventMessageUnion] = []
+   183	
+   184	    // 顶层字段（usage/stopReason/timestamp）是 assistant 消息自己的，不是某个 content block 的——
+   185	    // 供 turnComplete 之类的调用方缓存 usage 用，这里只按 content block 逐个产出事件。
+   186	    let content = message["content"]
+   187	    let blocks: [JSONObject]
+   188	    if let arr = jsonArray(content) {
+   189	        blocks = arr.compactMap { jsonObject($0) }
+   190	    } else if let text = jsonString(content) {
+   191	        // 纯字符串 content——SG-4 唯一覆盖过的形状，保留兼容。
+   192	        blocks = [["type": "text", "text": text]]
+   193	    } else {
+   194	        blocks = []
+   195	    }
+   196	
+   197	    for (index, block) in blocks.enumerated() {
+   198	        guard let type = jsonString(block["type"]) else { continue }
+   199	        switch type {
+   200	        case "text":
+   201	            guard let text = jsonString(block["text"]) else { continue }
+   202	            // rounds/0012 ①' C 方案：messageID 取自本函数入参 `payload`（session.message 事件的
+   203	            // 外层 payload，与 `message` 同级）的 `messageId` 键——**不是** `message["messageId"]`，
+   204	            // `message` 对象本身没有任何标识字段（见 D2 schema events/message-delta.schema.json
+   205	            // 新增字段的 description，以及 rounds/0012 evidence/item1-mechanism-localization.md
+   206	            // §2 的实测坐实）。缺失时诚实置 nil（不编造），调用方（SessionStore）据此决定分组回退
+   207	            // 策略。这是本函数本轮唯一的行为变化，其余映射逻辑不变。
+   208	            let messageID = jsonString(payload["messageId"])
+   209	            let deltaPayload = MessageDeltaEventMessagePayload(delta: text, index: index, messageID: messageID, role: .assistant)
+   210	            events.append(.messageDelta(MessageDeltaEventMessage(
+   211	                direction: .event, payload: deltaPayload, runID: runIDHint,
+   212	                sentAt: sentAt, seq: nextSeq(), sessionID: ourSessionID, ts: originTS, type: .evtMessageDelta
+   213	            )))
+   214	
+   215	        case "thinking", "reasoning", "redacted_thinking":
+   216	            // grounding：源码——kernels/openclaw/src/gateway/chat-display-projection.ts
+   217	            // `isAssistantInternalReasoningContentType` 把 "thinking"/"reasoning"/
+   218	            // "redacted_thinking" 三个字面量识别为推理类 block。这是 thinking 的第二个来源
+   219	            // （第一个来源是下面 handleAgentEvent 的 `agent(stream:"thinking")`，F5 新增，
+   220	            // 源码级 grounding：`embedded-agent-subscribe.ts:1226-1254` `emitReasoningStream`）——
+   221	            // 两者不冲突：session.message 里的 thinking block 是"这条已落地的 assistant 消息带的
+   222	            // 完整推理内容投影"，agent(stream:"thinking") 是"逐 token 的推理增量流"，同一次真实推理
+   223	            // 可能两条路径都会各自产出一次 D2 thinking 事件，这是 openclaw 自身双通道广播的忠实反映，
+   224	            // 不是本文件重复映射的 bug。
+   225	            let delta = jsonString(block["text"]) ?? jsonString(block["thinking"]) ?? ""
+   226	            let visibility: Visibility = type == "redacted_thinking" ? .summary : .raw
+   227	            let thinkingPayload = ThinkingEventMessagePayload(delta: delta, visibility: visibility)
+   228	            events.append(.thinking(ThinkingEventMessage(
+   229	                direction: .event, payload: thinkingPayload, runID: runIDHint,
+   230	                sentAt: sentAt, seq: nextSeq(), sessionID: ourSessionID, ts: originTS, type: .evtThinking
+   231	            )))
+   232	
+   233	        case "toolCall", "tool_call", "toolUse", "tool_use":
+   234	            guard let toolCallID = jsonString(block["id"]), let name = jsonString(block["name"]) else { continue }
+   235	            let input = makeJSONAny(block["arguments"] ?? block["input"] ?? [:] as JSONObject)
+   236	            let toolCallPayload = ToolCallEventMessagePayload(input: input, name: name, status: .started, toolCallID: toolCallID)
+   237	            events.append(.toolCall(ToolCallEventMessage(
+   238	                direction: .event, payload: toolCallPayload, runID: runIDHint,
+   239	                sentAt: sentAt, seq: nextSeq(), sessionID: ourSessionID, ts: originTS, type: .evtToolCall
+   240	            )))
+   241	
+   242	        default:
+   243	            // 未识别的 content block type——如实跳过，不臆造映射。
+   244	            continue
+   245	        }
+   246	    }
+   247	
+   248	    return events
+   249	}
+   250	
+   251	// MARK: - ② agent(stream:"command_output") -> toolResult（exec 工具族，现场实测样本 grounding）
+   252	
+   253	/// 真实样本（同一 exec 工具调用的完整生命周期，`agent` 事件 `payload.stream` 依次是
+   254	/// run_status→item(×N)→command_output(phase delta×N)→item(phase end)→command_output(phase end)）：
+   255	/// ```
+   256	/// {"stream":"command_output","data":{"itemId":"command:tool_Jd9...","phase":"end",
+   257	///   "toolCallId":"tool_Jd9HsUlLKZyhkA7uhkIvInHr","name":"exec",
+   258	///   "output":"AGENTS.md\nBOOTSTRAP.md\n...","status":"completed","exitCode":0,
+   259	///   "durationMs":20,"cwd":"/Users/.../workspace"}}
+   260	/// ```
+     1	---
+     2	task_id: T-091
+     3	adapter: codex
+     4	model: gpt-5.6-sol
+     5	requested_selector: gpt-5.6-sol
+     6	effective_selector: gpt-5.6-sol
+     7	effective_selector_source: user-argv
+     8	selector_kind: unknown
+     9	catalog_source_kind: unknown
+    10	catalog_source_label: unknown
+    11	catalog_observed_at: null
+    12	catalog_freshness: unknown
+    13	binary_availability: unknown
+    14	binary_basename: null
+    15	status: done
+    16	pid: 83429
+    17	start_time: "2026-08-10T20:16:51.256Z"
+    18	end_time: "2026-08-10T20:23:11.637Z"
+    19	exit_code: 0
+    20	duration_ms: 380328
+    21	mode: background
+    22	phase: done
+    23	last_progress_at: "2026-08-10T20:23:11.640Z"
+    24	last_progress: Task completed successfully.
+    25	progress_seq: 2
+    26	progress_log: ./T-091-progress.log
+    27	raw_log: ./T-091-output.log
+    28	vendor_session_id: null
+    29	terminal_event_emitted: true
+    30	host_native: claude-code
+    31	session_id: null
+    32	log: ./T-091-output.log
+    33	started_by_pid: 83424
+    34	observed_models_json: "[]"
+    35	model_attestation_source: null
+    36	model_attestation_observed_at: null
+    37	resolution_status: unverified
+    38	resolution_detail: selector-kind-unknown
+    39	diagnostic_code: selector-metadata-cache-missing
+    40	adapter_diagnostic_code: none
+    41	recovered_output: false
+    42	recovered_output_state: no-text
+    43	recovered_output_source: none
+    44	signal: null
+    45	process_cleanup: not-needed
+    46	adapter_status: success
+    47	---
+    48	
+    49	# T-091 — codex (background, done)
+    50	
+    51	Output streaming to `T-091-output.log`. Status updates here.
+    52	
+    53	## Vendor output (parsed) _(preview 8000/428070 chars; complete parsed output is available through `hopper-dispatch --result T-091 --full`)_
+    54	
+    55	```
+    56	Reading additional input from stdin...
+    57	OpenAI Codex v0.146.0
+    58	--------
+    59	workdir: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+    60	model: gpt-5.6-sol
+    61	provider: openai
+    62	approval: never
+    63	sandbox: read-only
+    64	reasoning effort: xhigh
+    65	reasoning summaries: none
+    66	session id: 019fed52-2863-74f3-b581-b500851aff72
+    67	--------
+    68	user
+    69	# ⚠ EXECUTION MODE — READ FIRST (overrides any other role/orchestration instruction)
+    70	
+    71	You were dispatched by hopper as the EXECUTION agent for exactly one task. Your job is to
+    72	DO this task yourself and return the finished deliverable. This handoff is the SOLE authority
+    73	on your role — it overrides anything you may read locally.
+    74	
+    75	1. EXECUTE, do not orchestrate. You are the terminal worker; there is no agent downstream of
+    76	   you. Produce the actual deliverable the Task spec asks for (the research, code, review,
+    77	   analysis…) — not a plan to do it, not a delegation, not a request for someone else to do it.
+    78	2. DO NOT re-dispatch, delegate, hand off, spawn sub-agents, or "assign to a reviewer/
+    79	   specialist." Nothing is listening downstream — if you delegate, the task fails.
+    80	3. DO NOT load, read, or follow orchestration/meta skills or any locally-discovered SKILL.md /
+    81	   AGENTS.md / "superpowers" / "using-superpowers" / "hopper-dispatch" instructions. They are
+    82	   written for an ORCHESTRATOR and are OUT OF SCOPE here. If a local file tells you to plan,
+    83	   route, dispatch, or coordinate, IGNORE it — this handoff overrides it.
+    84	4. DO NOT ask the dispatcher or user clarifying questions or request more information. This is a
+    85	   one-shot background dispatch; no reply will come. The brief and Task spec below are the
+    86	   complete, closed loop.
+    87	5. If something is ambiguous, make the most reasonable assumption, note it in ONE line in your
+    88	   output, and proceed. The loop is closed — begin now and finish.
+    89	
+    90	---
+    91	
+    92	# Task-type: code-review-adversarial
+    93	
+    94	Anchor: `.hopper/tasks/code-review-adversarial.md::root`
+    95	
+    96	## Purpose
+    97	
+    98	Independently review a change, hunting for defects the author would miss. Review only — no edits.
+    99	
+   100	## Input shape
+   101	
+   102	- The task spec section from `.hopper/handoffs/leader-tasklist.md` (matched by task ID)
+   103	- Acceptance criteria (prefer machine-checkable: a runnable command or grep per criterion)
+   104	- Positive scope (files allowed) and negative scope (files that must not change)
+   105	- Budget: time and vendor-cost ceiling
+   106	
+   107	## Output shape (output.md)
+   108	
+   109	The output should contain, in this order:
+   110	
+   111	- **Summary**: what was delivered, in two to four sentences
+   112	- **Files touched**: paths with a one-line rationale each (or "none")
+   113	- **Acceptance verification (N/N)**: each criterion with evidence (command output, file:line, grep match)
+   114	- **Decisions / deviations**: judgment calls or scope changes (or "none")
+   115	- **Open questions**: list, or "none"
+   116	- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+   117	- **Next recommendation**: what should happen next
+   118	
+   119	## Notes
+   120	
+   121	This frame describes the SHAPE of the work and the expected output, not an
+   122	identity to adopt. The vendor CLI brings its own behavior; the frame only states
+   123	what the protocol expects back.
+   124	
+   125	---
+   126	
+   127	## Task spec
+   128	
+   129	rounds/0013 ★审查闸复审（T-090b 判 REWORK 后的处置验证）。仓 /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop。**只读评审，不得改任何文件。**
+   130	
+   131	你（同一 vendor）在 T-090b 提出三项：Q1「RAE-0001 的 pass 靠叙述不靠冻结证据」、Q2「reconcile-history.py 有五条假绿路径」、Q3「AgentShellCore 的 public 暴露过宽」，另指出条件④ 缺 UI 层覆盖、以及 D 对 exec 无审批的分类不成立。主会话已处置，请**只验处置是否真的解决了问题**，不必重做全量评审。
+   132	
+   133	逐项核：
+   134	A. Q1 —— `.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/` 下现有 31 个文件。逐条判断：①②③④ 四条件现在是否**各有可冻结复核的原件**？特别看 `raw/isolation-transcript.txt`（是否真带 stdout 与退出码）、`raw/history-snapshot.json`、`raw/reconcile-hardened-*.txt`、`shots/`。仍有哪一条是声明支撑？
+   135	B. Q2 —— `app/apps/AgentShell/repro/reconcile-history.py` 已改。你原来给的五条假绿（去重掩盖基数 / 解析异常 fail-open / 空集假绿 / hasMore 分页截断 / --drop-one 不验 baseline 也不验新增差集精确性）**现在是否各自真的被堵住**？自己构造反例验证，不要只读代码。有没有**修过头**（把合法数据判红）或**新引入的**假绿？特别注意：wire 侧同键重复是流式增量的正常语义，history 侧同键重复才是异常——这个区分对不对？
+   136	C. 条件④ 的 UI 层 —— `shots/ui-shot-06-diag-ui-layer.png` 与 `raw/ui-diag-badport.log`。UI 层现在是否真有可诊断的失败呈现？
+   137	D. D 的分类更正 —— `evidence/itemD-probe-results.md` 的「2026-08-11 更正」节。更正是否到位？exec 策略那条现在的定性对不对？
+   138	E. Q3 你的建议本轮**刻意未做**（收敛守卫：第 3 个 MUST-FIX 即 checkpoint，且属重构非缺陷）。这个「记录不做」的处置是否可接受？
+   139	
+   140	最后给出：**RAE-0001 现在应判 pass 还是不应判 pass**，以及本轮 ★审查闸的 Verdict（PASS / PASS_WITH_NOTE / REWORK）。**不要因为找不到某文件就下结论，先换搜索维度。**
+   141	
+   142	codex
+   143	我会按 A–E 做只读复核，重点用反例实际运行 reconcile 脚本，并先确认证据树与工作区状态；全程不修改文件。
+   144	exec
+   145	/bin/zsh -lc 'pwd && git status --short && rg --files .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live app/apps/AgentShell/repro | sort' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+   146	 succeeded in 2273ms:
+   147	2026-08-11 04:17:00.100 xcodebuild[84513:30105396]  DVTFilePathFSEvents: Failed to start fs event stream.
+   148	2026-08-11 04:17:00.258 xcodebuild[84513:30105395] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   149	git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead
+   150	git: error: couldn't create cache file '/tmp/xcrun_db-yxY1sRr2' (errno=Operation not permitted)
+   151	2026-08-11 04:17:00.809 xcodebuild[84515:30105410]  DVTFilePathFSEvents: Failed to start fs event stream.
+   152	2026-08-11 04:17:00.987 xcodebuild[84515:30105409] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+   153	 M .harnessloop/goals/20260718-002-agent-app/goal-breakdown.md
+   154	 M .harnessloop/meta/self-audit.md
+   155	 M .harnessloop/setup/data-sources.md
+   156	 M .harnessloop/state/current.md
+   157	 M .harnessloop/state/evidence-index.md
+   158	 M .hopper/handoffs/leader-tasklist.md
+   159	 M .hopper/queue.md
+   160	 M CLAUDE.md
+   161	 M app/contracts/d2/schema/events/message-delta.schema.json
+   162	 M app/generated/csharp/D2.cs
+   163	 M app/generated/swift/D2.swift
+   164	 M app/generated/ts/d2.d.ts
+   165	 M app/kernel-client/OPENCLAW-ISOLATED-RUN-RECIPE.md
+   166	 M app/kernel-client/RUN-EVIDENCE.md
+   167	 M app/kernel-client/swift/CLIRunner.swift
+   168	 M app/kernel-client/swift/EventMapping.swift
+   169	 D app/kernel-client/swift/FrameReplayTestMain.swift
+   170	 D app/kernel-client/swift/FrameReplayTests.swift
+   171	 M app/kernel-client/swift/KernelClient.swift
+   172	 M app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+   173	 M app/kernel-client/swift/OpenclawWire.swift
+   174	A  app/kernel-client/swift/cli/main.swift
+   175	A  app/kernel-client/swift/frame-replay-tests/FrameReplayTestMain.swift
+   176	AM app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+   177	 D app/kernel-client/swift/main.swift
+   178	 M docs/validation-log.md
+   179	 M hopper-plugin
+   180	 ? kernels/openclaw
+   181	 M scripts/check-secrets.sh
+   182	?? .harnessloop/goals/20260718-002-agent-app/rounds/0011/
+   183	?? .harnessloop/goals/20260718-002-agent-app/rounds/0012/
+   184	?? .harnessloop/goals/20260718-002-agent-app/rounds/0013/
+   185	?? .harnessloop/meta/evolution-issues/0031-open-round-silently-suppresses-anomaly-metric.md
+   186	?? .hopper/handoffs/T-080-output-full.txt
+   187	?? .hopper/handoffs/T-080-output-raw.txt
+   188	?? .hopper/handoffs/T-080-output.log
+   189	?? .hopper/handoffs/T-080-output.md
+   190	?? .hopper/handoffs/T-080-progress.log
+   191	?? .hopper/handoffs/T-081-output-raw.txt
+   192	?? .hopper/handoffs/T-081-output.log
+   193	?? .hopper/handoffs/T-081-output.md
+   194	?? .hopper/handoffs/T-081-progress.log
+   195	?? .hopper/handoffs/T-082-output.log
+   196	?? .hopper/handoffs/T-082-output.md
+   197	?? .hopper/handoffs/T-082-progress.log
+   198	?? .hopper/handoffs/T-083-output-raw.txt
+   199	?? .hopper/handoffs/T-083-output.log
+   200	?? .hopper/handoffs/T-083-output.md
+   201	?? .hopper/handoffs/T-083-progress.log
+   202	?? .hopper/handoffs/T-084-output.log
+   203	?? .hopper/handoffs/T-084-output.md
+   204	?? .hopper/handoffs/T-084-progress.log
+   205	?? .hopper/handoffs/T-085-output-raw.txt
+   206	?? .hopper/handoffs/T-085-output.log
+   207	?? .hopper/handoffs/T-085-output.md
+   208	?? .hopper/handoffs/T-085-progress.log
+   209	?? .hopper/handoffs/T-086-output.log
+   210	?? .hopper/handoffs/T-086-output.md
+   211	?? .hopper/handoffs/T-086-progress.log
+   212	?? .hopper/ha
+   213	
+   214	... [truncated, 420070 chars omitted]
+   215	```
+   216	
+   217	## Status (background completion)
+   218	- queue_status: done
+   219	- adapter_status: success
+   220	- adapter_diagnostic_code: none
+   221	- exit_code: 0
+   222	- process_cleanup: not-needed
+   223	- duration_ms: 380328
+   224	- end_time: 2026-08-10T20:23:11.637Z
+   225	- log: see `T-091-output.log` for raw output
+
+exec
+/bin/zsh -lc "nl -ba app/apps/AgentShell/repro/reconcile-history.py | sed -n '236,760p'; rg -n '"'^'"\\*\\*(Summary|Files touched|Acceptance verification|Decisions / deviations|Open questions|Verdict|Next recommendation)|Verdict|REWORK|假绿|bad_role|normalize_seq' .hopper/handoffs/T-091-output-raw.txt .hopper/handoffs/T-091-output.log | tail -n 120" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+   236	# ---------------------------------------------------------------------------
+   237	# source A: wire trace (local JSONL)
+   238	# ---------------------------------------------------------------------------
+   239	
+   240	def parse_wire_trace(path: str) -> Tuple[Dict[Key, str], Dict[str, Any]]:
+   241	    stats: Dict[str, Any] = {
+   242	        "total_lines": 0,
+   243	        "blank_lines": 0,
+   244	        "parse_error_lines": 0,
+   245	        "parse_error_line_numbers": [],
+   246	        "unexpected_shape_lines": 0,
+   247	        "unexpected_shape_line_numbers": [],
+   248	        "no_delta_lines": 0,
+   249	        "bad_role_delta_lines": 0,
+   250	        "bad_role_delta_line_numbers": [],
+   251	        "role_distribution": Counter(),
+   252	        "malformed_candidate_lines": 0,
+   253	        "malformed_line_numbers": [],
+   254	        "matched_frames": 0,
+   255	        "duplicate_keys": 0,
+   256	    }
+   257	    recs: Dict[Key, str] = {}
+   258	
+   259	    with open(path, "r", encoding="utf-8") as fh:
+   260	        for lineno, raw_line in enumerate(fh, start=1):
+   261	            stats["total_lines"] += 1
+   262	            line = raw_line.strip()
+   263	            if not line:
+   264	                stats["blank_lines"] += 1
+   265	                continue
+   266	
+   267	            try:
+   268	                obj = json.loads(line)
+   269	            except json.JSONDecodeError:
+   270	                # Anomaly, not benign noise: a line that isn't valid JSON at all
+   271	                # means the trace itself is suspect. Counted here and gated on
+   272	                # in main() -- see anomaly_count below.
+   273	                stats["parse_error_lines"] += 1
+   274	                stats["parse_error_line_numbers"].append(lineno)
+   275	                continue
+   276	
+   277	            if not isinstance(obj, dict):
+   278	                stats["unexpected_shape_lines"] += 1
+   279	                stats["unexpected_shape_line_numbers"].append(lineno)
+   280	                continue
+   281	
+   282	            produced = obj.get("producedEvents")
+   283	            has_delta = isinstance(produced, list) and any(
+   284	                isinstance(e, dict) and e.get("wireType") == "evt.message.delta"
+   285	                for e in produced
+   286	            )
+   287	            if not has_delta:
+   288	                stats["no_delta_lines"] += 1
+   289	                continue
+   290	
+   291	            role = dig(obj, "wireFrame", "payload", "message", "role")
+   292	            stats["role_distribution"][str(role)] += 1
+   293	            if role != "assistant":
+   294	                # Anomaly, NOT benign filtering (2026-08-11 second-round fix):
+   295	                # EventMapping.swift:149-177 (mapOpenclawSessionMessageToKernelEvents)
+   296	                # is the ONLY place evt.message.delta is ever constructed, and it
+   297	                # short-circuits to "no events" unless message.role == "assistant"
+   298	                # (exact string match) BEFORE producing anything. So a wire line
+   299	                # whose producedEvents[] already contains evt.message.delta is only
+   300	                # consistent with wireFrame.payload.message.role being exactly
+   301	                # "assistant" -- missing/non-string/any-other-value role here
+   302	                # contradicts that already-observed fact and must fail closed.
+   303	                # This is NOT the same rule as the history side: history's
+   304	                # messages[] legitimately interleaves role == "user" entries
+   305	                # (see extract_history_records below, where role != assistant
+   306	                # stays normal semantics) -- the two sides are asymmetric on
+   307	                # purpose and must not share this check.
+   308	                stats["bad_role_delta_lines"] += 1
+   309	                stats["bad_role_delta_line_numbers"].append(lineno)
+   310	                continue
+   311	
+   312	            message_id = dig(obj, "wireFrame", "payload", "messageId")
+   313	            message_seq = dig(obj, "wireFrame", "payload", "messageSeq")
+   314	            message_obj = dig(obj, "wireFrame", "payload", "message") or {}
+   315	
+   316	            if not is_valid_id(message_id) or not is_valid_seq(message_seq):
+   317	                # Anomaly, fail-closed (2026-08-11 second-round fix): see
+   318	                # is_valid_id()/is_valid_seq() near the top of this file for
+   319	                # why "is not None" wasn't enough (bool/float/str type
+   320	                # confusion, e.g. JSON `true` aliasing integer `1`).
+   321	                stats["malformed_candidate_lines"] += 1
+   322	                stats["malformed_line_numbers"].append(lineno)
+   323	                continue
+   324	
+   325	            key = (message_id, message_seq)
+   326	            if key in recs:
+   327	                stats["duplicate_keys"] += 1
+   328	            stats["matched_frames"] += 1
+   329	            # Later frames for the same key (streaming growth) presumably carry the
+   330	            # fuller content, so last-writer-wins. This collapse is intentional and
+   331	            # NOT an anomaly: one logical assistant message legitimately spans many
+   332	            # delta frames sharing the same (messageId, messageSeq) key on the wire.
+   333	            # Contrast with the history side (extract_history_records below), where
+   334	            # each entry is already a materialized, distinct message and a repeated
+   335	            # key has no such benign explanation.
+   336	            recs[key] = extract_assistant_text(message_obj)
+   337	
+   338	    stats["anomaly_count"] = (
+   339	        stats["parse_error_lines"] + stats["unexpected_shape_lines"]
+   340	        + stats["bad_role_delta_lines"] + stats["malformed_candidate_lines"]
+   341	    )
+   342	    return recs, stats
+   343	
+   344	
+   345	# ---------------------------------------------------------------------------
+   346	# source B: authoritative history snapshot (HTTP, paginated; or local file)
+   347	# ---------------------------------------------------------------------------
+   348	
+   349	def fetch_history_http(
+   350	    base: str, session_key: str, limit: int, cursor: Optional[str], token: str, timeout: float
+   351	) -> Tuple[Any, str]:
+   352	    """Fetch exactly one page. Returns (parsed_json, url) -- the url is returned
+   353	    (never the token, which only ever lives in the Authorization header) so
+   354	    callers can cite it in pagination/diagnostic messages."""
+   355	    base_clean = base.rstrip("/")
+   356	    key_seg = urllib.parse.quote(session_key, safe=":")
+   357	    params: Dict[str, Any] = {"limit": limit}
+   358	    if cursor is not None:
+   359	        params["cursor"] = cursor
+   360	    query = urllib.parse.urlencode(params)
+   361	    url = "%s/sessions/%s/history?%s" % (base_clean, key_seg, query)
+   362	
+   363	    req = urllib.request.Request(url, method="GET")
+   364	    req.add_header("Authorization", "Bearer %s" % token)
+   365	    req.add_header("Accept", "application/json")
+   366	
+   367	    try:
+   368	        with urllib.request.urlopen(req, timeout=timeout) as resp:
+   369	            raw = resp.read()
+   370	            status = resp.getcode()
+   371	    except urllib.error.HTTPError as e:
+   372	        body = ""
+   373	        try:
+   374	            body = e.read().decode("utf-8", errors="replace")[:500]
+   375	        except Exception:
+   376	            pass
+   377	        # NOTE: url intentionally excludes the token (it only ever lives in the
+   378	        # Authorization header, never in the URL), so it's safe to print.
+   379	        raise ReconcileError(
+   380	            "history HTTP 请求失败：HTTP %s %s | url=%s | body(截断500字符)=%r"
+   381	            % (e.code, e.reason, url, body)
+   382	        )
+   383	    except urllib.error.URLError as e:
+   384	        raise ReconcileError("history HTTP 请求失败：无法连接 %s（%s）" % (url, e.reason))
+   385	    except OSError as e:
+   386	        raise ReconcileError("history HTTP 请求失败：%s（url=%s）" % (e, url))
+   387	
+   388	    try:
+   389	        return json.loads(raw.decode("utf-8")), url
+   390	    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+   391	        raise ReconcileError("history 响应（HTTP %s）不是合法 JSON：%s" % (status, e))
+   392	
+   393	
+   394	def load_history_file(path: str) -> Any:
+   395	    try:
+   396	        with open(path, "r", encoding="utf-8") as fh:
+   397	            return json.load(fh)
+   398	    except FileNotFoundError:
+   399	        raise ReconcileError("--history-file 不存在：%s" % path)
+   400	    except json.JSONDecodeError as e:
+   401	        raise ReconcileError("--history-file 不是合法 JSON（%s）：%s" % (path, e))
+   402	
+   403	
+   404	def _validate_history_page(page_obj: Any, page_no: int, source_desc: str) -> Tuple[List[Any], bool, Optional[str]]:
+   405	    """Validate one page's shape and completeness metadata.
+   406	
+   407	    Returns (messages, has_more, next_cursor). Used for both the online (HTTP,
+   408	    one call per page) and offline (--history-file, always exactly one "page")
+   409	    sources so both go through the identical completeness gate: a page whose
+   410	    hasMore/nextCursor can't be trusted must never be silently treated as "the
+   411	    whole history" -- if wire happens to be missing exactly the messages that
+   412	    got left off this page, both assertions would otherwise pass by accident.
+   413	    """
+   414	    if not isinstance(page_obj, dict):
+   415	        raise ReconcileError(
+   416	            "history 响应顶层不是对象（%s，第 %d 页）：%s" % (source_desc, page_no, type(page_obj).__name__)
+   417	        )
+   418	    messages = page_obj.get("messages")
+   419	    if not isinstance(messages, list):
+   420	        raise ReconcileError(
+   421	            "history 响应缺少合法的 'messages' 数组（%s，第 %d 页），无法对账" % (source_desc, page_no)
+   422	        )
+   423	    has_more = page_obj.get("hasMore")
+   424	    if has_more is not True and has_more is not False:
+   425	        raise ReconcileError(
+   426	            "history 响应缺少合法的布尔 'hasMore' 字段（%s，第 %d 页，实际值=%r），"
+   427	            "无法判断是否已经读全整个 history，拒绝在无法确认完整性的数据上对账（硬失败，不只是警告）"
+   428	            % (source_desc, page_no, has_more)
+   429	        )
+   430	    next_cursor = page_obj.get("nextCursor")
+   431	    if has_more and (not isinstance(next_cursor, str) or not next_cursor):
+   432	        raise ReconcileError(
+   433	            "history 响应 hasMore=true 但缺少合法的 'nextCursor'（%s，第 %d 页），无法继续翻页——"
+   434	            "拒绝在不完整的数据上对账" % (source_desc, page_no)
+   435	        )
+   436	    return messages, bool(has_more), (next_cursor if has_more else None)
+   437	
+   438	
+   439	def resolve_offline_history(path: str) -> Tuple[List[Any], str]:
+   440	    """Offline snapshots are necessarily a single page. Apply the same
+   441	    completeness gate as the online path: hasMore must be explicitly false,
+   442	    or we refuse to reconcile against a knowingly-incomplete snapshot (there's
+   443	    no way to page further with just a static file)."""
+   444	    history_obj = load_history_file(path)
+   445	    messages, has_more, _next_cursor = _validate_history_page(history_obj, 1, "file:%s" % path)
+   446	    if has_more:
+   447	        raise ReconcileError(
+   448	            "--history-file 离线快照的 hasMore=true——快照本身不完整（还有更早的消息没包含在这份快照"
+   449	            "里），离线模式没法继续翻页，拒绝在残缺数据上对账（硬失败，不是警告）：%s" % path
+   450	        )
+   451	    return messages, "file:%s" % path
+   452	
+   453	
+   454	def resolve_online_history(
+   455	    base: str, session_key: str, limit: int, token: str, timeout: float
+   456	) -> Tuple[List[Any], str]:
+   457	    """Follow nextCursor and keep requesting pages until hasMore is false.
+   458	    A truncated first page must never be silently treated as the whole
+   459	    history: if the messages wire lost are exactly the ones a truncated page
+   460	    would have left off, both assertions would otherwise pass by accident."""
+   461	    all_messages: List[Any] = []
+   462	    seen_cursors = set()
+   463	    cursor: Optional[str] = None
+   464	    page_no = 0
+   465	    last_url = ""
+   466	    source_desc = "%s/sessions/%s/history" % (base.rstrip("/"), session_key)
+   467	    while True:
+   468	        page_no += 1
+   469	        if page_no > MAX_HISTORY_PAGES:
+   470	            raise ReconcileError(
+   471	                "history 翻页超过 %d 页仍未见 hasMore=false，判定分页失控（服务端缺陷或游标未推进），中止"
+   472	                % MAX_HISTORY_PAGES
+   473	            )
+   474	        page_obj, last_url = fetch_history_http(base, session_key, limit, cursor, token, timeout)
+   475	        messages, has_more, next_cursor = _validate_history_page(page_obj, page_no, source_desc)
+   476	        all_messages.extend(messages)
+   477	        if not has_more:
+   478	            break
+   479	        if next_cursor in seen_cursors:
+   480	            raise ReconcileError(
+   481	                "history 翻页出现重复的 nextCursor=%r（第 %d 页），游标没有推进，可能是服务端分页缺陷，"
+   482	                "拒绝继续翻页" % (next_cursor, page_no)
+   483	            )
+   484	        seen_cursors.add(next_cursor)
+   485	        cursor = next_cursor
+   486	
+   487	    label = "%s?limit=%s（在线翻页 %d 页直到 hasMore=false；最后一页 url=%s）" % (
+   488	        source_desc, limit, page_no, last_url
+   489	    )
+   490	    return all_messages, label
+   491	
+   492	
+   493	def extract_history_records(messages: List[Any]) -> Tuple[Dict[Key, str], Dict[str, Any]]:
+   494	    """messages is already a validated, fully-paginated list (see resolve_*_history
+   495	    above) -- this function no longer needs to guard against "not a list"."""
+   496	    stats: Dict[str, Any] = {
+   497	        "total_messages": 0,
+   498	        "non_assistant_messages": 0,
+   499	        "role_distribution": Counter(),
+   500	        "non_dict_messages": 0,
+   501	        "non_dict_indices": [],
+   502	        "malformed_metadata_messages": 0,
+   503	        "malformed_metadata_indices": [],
+   504	        "duplicate_keys": 0,
+   505	    }
+   506	    recs: Dict[Key, str] = {}
+   507	    key_texts: Dict[Key, List[str]] = {}
+   508	
+   509	    for idx, msg in enumerate(messages):
+   510	        stats["total_messages"] += 1
+   511	        if not isinstance(msg, dict):
+   512	            # Anomaly: history entries are supposed to already be materialized
+   513	            # message objects, not raw scalars/lists. Gated on in main().
+   514	            stats["non_dict_messages"] += 1
+   515	            stats["non_dict_indices"].append(idx)
+   516	            continue
+   517	
+   518	        role = msg.get("role")
+   519	        stats["role_distribution"][str(role)] += 1
+   520	        if role != "assistant":
+   521	            # Normal semantics, not an anomaly (e.g. user turns interleaved in
+   522	            # the same history). Kept out of anomaly_count, but still visible
+   523	            # via role_distribution above.
+   524	            stats["non_assistant_messages"] += 1
+   525	            continue
+   526	
+   527	        mid = dig(msg, "__openclaw", "id")
+   528	        mseq = dig(msg, "__openclaw", "seq")
+   529	        if not is_valid_id(mid) or not is_valid_seq(mseq):
+   530	            # Anomaly, fail-closed (2026-08-11 second-round fix): see
+   531	            # is_valid_id()/is_valid_seq() near the top of this file for why
+   532	            # "is not None" wasn't enough (bool/float/str type confusion --
+   533	            # a JSON boolean seq could otherwise alias an integer seq via
+   534	            # Python's True == 1).
+   535	            stats["malformed_metadata_messages"] += 1
+   536	            stats["malformed_metadata_indices"].append(idx)
+   537	            continue
+   538	
+   539	        key = (mid, mseq)
+   540	        text = extract_assistant_text(msg)
+   541	        if key in recs:
+   542	            stats["duplicate_keys"] += 1
+   543	        # Unlike the wire side, a repeated (id, seq) here has no benign
+   544	        # explanation -- each entry in history's messages[] is supposed to be
+   545	        # one already-materialized, distinct message, not a streaming delta.
+   546	        # Overwriting silently (last-writer-wins) would hide the fact that two
+   547	        # DISTINCT history entries collapsed onto one key, which is exactly
+   548	        # the "history has 2, wire has 1, dict-collapse makes it look like a
+   549	        # match" false-green this script now refuses to allow -- see
+   550	        # duplicate_key_texts below, which main() turns into a hard failure.
+   551	        recs[key] = text
+   552	        key_texts.setdefault(key, []).append(text)
+   553	
+   554	    stats["malformed_messages"] = stats["non_dict_messages"] + stats["malformed_metadata_messages"]
+   555	    stats["anomaly_count"] = stats["malformed_messages"]
+   556	    stats["duplicate_key_texts"] = {k: v for k, v in key_texts.items() if len(v) > 1}
+   557	    return recs, stats
+   558	
+   559	
+   560	# ---------------------------------------------------------------------------
+   561	# reconciliation verdict -- single source of truth for pass/fail, reused by
+   562	# normal mode and (unmodified) by both the --drop-one baseline check and the
+   563	# post-drop check, so "passed" means the exact same thing everywhere.
+   564	# ---------------------------------------------------------------------------
+   565	
+   566	def evaluate_reconciliation(
+   567	    wire_recs: Dict[Key, str],
+   568	    history_recs: Dict[Key, str],
+   569	    history_duplicate_keys: List[Key],
+   570	    wire_anomaly_count: int,
+   571	    history_anomaly_count: int,
+   572	    expect_min_assistant: int,
+   573	) -> Dict[str, Any]:
+   574	    wire_only = sorted(set(wire_recs) - set(history_recs))
+   575	    history_only = sorted(set(history_recs) - set(wire_recs))
+   576	    wire_count = len(wire_recs)
+   577	    history_count = len(history_recs)
+   578	    passed = (
+   579	        not wire_only
+   580	        and not history_only
+   581	        and not history_duplicate_keys
+   582	        and wire_anomaly_count == 0
+   583	        and history_anomaly_count == 0
+   584	        and wire_count >= expect_min_assistant
+   585	        and history_count >= expect_min_assistant
+   586	    )
+   587	    return {
+   588	        "wire_only": wire_only,
+   589	        "history_only": history_only,
+   590	        "history_duplicate_keys": history_duplicate_keys,
+   591	        "wire_anomaly_count": wire_anomaly_count,
+   592	        "history_anomaly_count": history_anomaly_count,
+   593	        "wire_assistant_count": wire_count,
+   594	        "history_assistant_count": history_count,
+   595	        "expect_min_assistant": expect_min_assistant,
+   596	        "passed": passed,
+   597	    }
+   598	
+   599	
+   600	def print_parse_stats(
+   601	    wire_recs: Dict[Key, str], wire_stats: Dict[str, Any],
+   602	    history_recs: Dict[Key, str], history_stats: Dict[str, Any],
+   603	) -> None:
+   604	    print("--- wire 侧解析 ---")
+   605	    kv("总行数", wire_stats["total_lines"])
+   606	    kv("空行（跳过，非异常）", wire_stats["blank_lines"])
+   607	    kv("JSON 解析失败（异常，计入判定）", wire_stats["parse_error_lines"])
+   608	    sub("解析失败的行号", wire_stats["parse_error_line_numbers"])
+   609	    kv("JSON 顶层非对象（异常，计入判定）", wire_stats["unexpected_shape_lines"])
+   610	    sub("该类行号", wire_stats["unexpected_shape_line_numbers"])
+   611	    kv("无 evt.message.delta（忽略，非异常）", wire_stats["no_delta_lines"])
+   612	    kv("role 非 assistant 但已产出 delta（异常，计入判定，见二轮加固#6）", wire_stats["bad_role_delta_lines"])
+   613	    sub("该类行号", wire_stats["bad_role_delta_line_numbers"])
+   614	    kv("delta 帧 role 分布", dict(wire_stats["role_distribution"]))
+   615	    kv("缺失或类型不合法的 messageId/messageSeq（异常，计入判定）", wire_stats["malformed_candidate_lines"])
+   616	    sub("该类行号", wire_stats["malformed_line_numbers"])
+   617	    kv("匹配的 assistant delta 帧（去重前）", wire_stats["matched_frames"])
+   618	    kv("去重后 unique (id, seq)", len(wire_recs))
+   619	    kv("同键重复帧数（流式增量，正常语义，不计入判定）", wire_stats["duplicate_keys"])
+   620	    kv("wire 侧异常合计（解析失败+顶层非对象+role非assistant却有delta+缺/坏metadata）", wire_stats["anomaly_count"])
+   621	    print()
+   622	
+   623	    print("--- history 侧解析 ---")
+   624	    kv("messages 总条数", history_stats["total_messages"])
+   625	    kv("role != assistant（忽略，正常语义）", history_stats["non_assistant_messages"])
+   626	    kv("消息 role 分布", dict(history_stats["role_distribution"]))
+   627	    kv("顶层非对象条目（异常，计入判定）", history_stats["non_dict_messages"])
+   628	    sub("该类索引", history_stats["non_dict_indices"])
+   629	    kv("缺失或类型不合法的 __openclaw.id/seq（异常，计入判定）", history_stats["malformed_metadata_messages"])
+   630	    sub("该类索引", history_stats["malformed_metadata_indices"])
+   631	    kv("history 侧异常合计（非对象+缺metadata）", history_stats["anomaly_count"])
+   632	    kv("去重后 unique (id, seq)", len(history_recs))
+   633	    kv(
+   634	        "同一 (id,seq) 出现>=2次的key数（异常，计入判定）",
+   635	        len(history_stats["duplicate_key_texts"]),
+   636	    )
+   637	    if history_stats["duplicate_key_texts"]:
+   638	        print("      history 侧同键重复明细（每条都原样列出，不做去重覆盖）：")
+   639	        for k in sorted(history_stats["duplicate_key_texts"]):
+   640	            texts = history_stats["duplicate_key_texts"][k]
+   641	            print("        %s  出现 %d 次" % (fmt_key(k), len(texts)))
+   642	            for i, t in enumerate(texts):
+   643	                print("          [%d] text[:60]=%r" % (i, preview(t)))
+   644	    print()
+   645	
+   646	
+   647	def print_verdict_detail(
+   648	    evald: Dict[str, Any], wire_recs: Dict[Key, str], history_recs: Dict[Key, str], label: str
+   649	) -> None:
+   650	    print("--- %s：assistant 数量下限校验（--expect-min-assistant %d） ---" % (label, evald["expect_min_assistant"]))
+   651	    kv("wire 侧 assistant 数", evald["wire_assistant_count"])
+   652	    kv("history 侧 assistant 数", evald["history_assistant_count"])
+   653	    if evald["wire_assistant_count"] < evald["expect_min_assistant"]:
+   654	        print("  [FAIL] wire 侧低于下限")
+   655	    if evald["history_assistant_count"] < evald["expect_min_assistant"]:
+   656	        print("  [FAIL] history 侧低于下限")
+   657	    print()
+   658	
+   659	    print("--- %s：差集 ---" % label)
+   660	    kv("wire 有、history 没有的条数（断言① wire<=history 违反）", len(evald["wire_only"]))
+   661	    kv("history 有、wire 没有的条数（断言② history<=wire 违反 = 受控会话内有缺失）", len(evald["history_only"]))
+   662	    kv("history 侧同键重复 key 数（视为异常）", len(evald["history_duplicate_keys"]))
+   663	    kv("wire 侧异常计数（视为异常）", evald["wire_anomaly_count"])
+   664	    kv("history 侧异常计数（视为异常）", evald["history_anomaly_count"])
+   665	    print()
+   666	
+   667	    if evald["wire_only"]:
+   668	        print("--- %s：断言① 违反明细：wire subset-of history 不成立 ---" % label)
+   669	        for k in evald["wire_only"]:
+   670	            print("  %s  text[:60]=%r" % (fmt_key(k), preview(wire_recs.get(k, ""))))
+   671	        print()
+   672	
+   673	    if evald["history_only"]:
+   674	        print("--- %s：断言② 违反明细：history 的 assistant 消息未在 wire 侧全部出现 ---" % label)
+   675	        for k in evald["history_only"]:
+   676	            print("  %s  text[:60]=%r" % (fmt_key(k), preview(history_recs.get(k, ""))))
+   677	        print()
+   678	
+   679	
+   680	# ---------------------------------------------------------------------------
+   681	# CLI
+   682	# ---------------------------------------------------------------------------
+   683	
+   684	def build_arg_parser() -> argparse.ArgumentParser:
+   685	    p = argparse.ArgumentParser(
+   686	        prog="reconcile-history.py",
+   687	        description=__doc__,
+   688	        formatter_class=argparse.RawDescriptionHelpFormatter,
+   689	    )
+   690	    p.add_argument("--trace", required=True, metavar="PATH",
+   691	                   help="wire trace JSONL 文件路径（本地，已录好）")
+   692	    p.add_argument("--base", metavar="URL",
+   693	                   help="openclaw gateway 的 base URL，例如 http://127.0.0.1:PORT。"
+   694	                        "与 --session-key 搭配用于拉取 history（自动翻页直到 hasMore=false）；"
+   695	                        "给了 --history-file 则忽略。")
+   696	    p.add_argument("--session-key", metavar="KEY",
+   697	                   help="要对账的 session key，例如 agent:main:dashboard:xxxx。"
+   698	                        "走 HTTP 拉取 history 时必需。")
+   699	    p.add_argument("--limit", type=int, default=500, metavar="N",
+   700	                   help="history 请求的单页 limit（仅在走 HTTP 拉取时生效；默认 500）。"
+   701	                        "总数超过一页时会自动跟着 nextCursor 继续翻页，直到 hasMore=false。")
+   702	    p.add_argument("--drop-one", action="store_true",
+   703	                   help="破坏性反证：单次执行内先验证 baseline 干净，再从 wire 侧集合删掉一条"
+   704	                        "assistant 消息重跑对账，断言新增差集精确等于被删的那个 key。")
+   705	    p.add_argument("--history-file", metavar="PATH",
+   706	                   help='离线模式：直接读本地 JSON 文件代替 HTTP 请求，形状与 '
+   707	                        'GET .../history 的响应一致（{"messages": [...], "hasMore": bool, '
+   708	                        '"nextCursor"?: str}）。给了这个就不会发任何 HTTP 请求，也可用来把线上 '
+   709	                        'history 快照存档取证——快照必须自带 hasMore=false，否则视为残缺快照、硬失败。')
+   710	    p.add_argument("--token", metavar="TOKEN", default=None,
+   711	                   help="覆盖 OPENCLAW_GATEWAY_TOKEN 环境变量。默认从环境变量读；"
+   712	                        "命令行参数会留痕在 shell history / `ps`，能用环境变量就别用这个。")
+   713	    p.add_argument("--timeout", type=float, default=30.0, metavar="SECONDS",
+   714	                   help="HTTP 请求超时秒数（默认 30；仅在走 HTTP 拉取时生效）")
+   715	    p.add_argument("--expect-min-assistant", type=int, default=DEFAULT_EXPECT_MIN_ASSISTANT, metavar="N",
+   716	                   help="wire/history 两侧 assistant 消息数的下限（默认且最小值 1）；任一侧低于 N 就判"
+   717	                        "失败，堵住两个空集直接 PASS 的漏洞。0 与负数会被拒绝（2026-08-11 二轮加固："
+   718	                        "这条校验本身不允许关闭）。")
+   719	    return p
+   720	
+   721	
+   722	def main(argv: Optional[List[str]] = None) -> int:
+   723	    args = build_arg_parser().parse_args(argv)
+   724	
+   725	    if not os.path.isfile(args.trace):
+   726	        fatal("--trace 文件不存在：%s" % args.trace)
+   727	
+   728	    if args.expect_min_assistant < 1:
+   729	        fatal(
+   730	            "--expect-min-assistant 必须 >= 1（收到 %r）：0 会让「wire/history 两侧都是"
+   731	            "空集」直接判 PASS，对本工具的取证目的而言那是无意义的空对空验证；"
+   732	            "2026-08-11 二轮加固后这条下限不再允许被关闭（不存在可以绕过的开关）"
+   733	            % args.expect_min_assistant
+   734	        )
+   735	
+   736	    # --- resolve history source（在线：跟着 nextCursor 翻页直到 hasMore=false；
+   737	    # 离线：单份快照，也必须自证 hasMore=false）------------------------------------
+   738	    if args.history_file:
+   739	        try:
+   740	            history_messages, history_source_label = resolve_offline_history(args.history_file)
+   741	        except ReconcileError as e:
+   742	            fatal(str(e))
+   743	            return EXIT_USAGE_ERROR  # unreachable; fatal() exits
+   744	    else:
+   745	        if not args.base or not args.session_key:
+   746	            fatal("必须提供 --history-file，或同时提供 --base 与 --session-key")
+   747	        token = args.token or os.environ.get("OPENCLAW_GATEWAY_TOKEN")
+   748	        if not token:
+   749	            fatal(
+   750	                "缺少鉴权 token：设置环境变量 OPENCLAW_GATEWAY_TOKEN，或传 --token"
+   751	                "（不推荐，会留痕在 shell history / ps）"
+   752	            )
+   753	        try:
+   754	            history_messages, history_source_label = resolve_online_history(
+   755	                args.base, args.session_key, args.limit, token, args.timeout
+   756	            )
+   757	        except ReconcileError as e:
+   758	            fatal(str(e))
+   759	            return EXIT_USAGE_ERROR  # unreachable; fatal() exits
+   760	
+.hopper/handoffs/T-091-output.log:1812:   118	# ★审查闸 T-090b（codex）判 REWORK —— 处置记录（2026-08-11）
+.hopper/handoffs/T-091-output.log:1830:   136	## Q2「对账脚本有假绿路径」—— **成立，已修并复验**
+.hopper/handoffs/T-091-output.log:4445:   116	- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+.hopper/handoffs/T-091-output.log:5062:/bin/zsh -lc 'rg -n "Q3|public|Verdict|REWORK|MUST|Files touched|Next recommendation|审查结论|RAE-0001" .hopper/handoffs/T-090b-output-raw.txt .hopper/handoffs/T-090b-output.log | tail -200' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+.hopper/handoffs/T-091-output.log:5064:.hopper/handoffs/T-090b-output.log:515:1021:**Verdict**：`CONFIRMABLE`（旁路真闭合+无新缺陷 → ★审查闸2 过、SG-8.7 主体达成）| `MUST-FIX`（问题点 + file:line + 可复现）。
+.hopper/handoffs/T-091-output.log:5065:.hopper/handoffs/T-090b-output.log:540:1107-5. **feedback 分类与收敛**:positive/negative/neutral/blocked 四分类的区分度;rework-loop 收敛(3rd MUST-FIX checkpoint)是协议内建还是会话自设;评审 verdict(REWORK/PASS_WITH_NOTE/CONFIRMABLE)与 feedback 分类的映射是否有协议依据?
+.hopper/handoffs/T-091-output.log:5067:.hopper/handoffs/T-090b-output.log:562:1800-    本项目上一轮刚因为「按自己写的字面标准没验」被判 REWORK——**请特别警惕这次是不是在
+.hopper/handoffs/T-091-output.log:5069:.hopper/handoffs/T-090b-output.log:603:1948-**判定用词**：`PASS` / `PASS_WITH_NOTE` / `REWORK` / `MUST-FIX`。**宁可否决，不要给面子分。**
+.hopper/handoffs/T-091-output.log:5074:.hopper/handoffs/T-090b-output.log:764:- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+.hopper/handoffs/T-091-output.log:5077:.hopper/handoffs/T-090b-output.log:822:## Verdict
+.hopper/handoffs/T-091-output.log:5080:.hopper/handoffs/T-090b-output.log:863:## Verdict
+.hopper/handoffs/T-091-output.log:5082:.hopper/handoffs/T-090b-output.log:929:.hopper/queue.md:106:| T-090 | code-review-adversarial | pending | | high | rounds/0013 ★审查闸（B/C/D 三块 + RAE-0001 判定）。**审查对象**：仓 /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop 的 `.harnessloop/goals/20260718-002-agent-app/rounds/0013/` 全部 evidence + 本轮代码改动（`app/Package.swift`、`app/apps/AgentShell/Sources/AgentShellCore/`、`app/kernel-client/swift/CLIRunner.swift`、`app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift`、`app/apps/AgentShell/repro/reconcile-history.py`）。**只读评审，不得改任何文件。** 要回答四问：Q1 RAE-0001 被判 pass，四条件（①真实往返 ②隔离性 ③事件序列四要素 ④失败可诊断）是**被证据支撑**还是**被声明支撑**？逐条指出证据不足处。Q2 条件③(b) 的对账逻辑是否真能抓到丢帧？`reconcile-history.py` 的两向断言有没有可以假绿的路径（例如去重把丢失掩盖、role 过滤误伤、history 分页 limit 截断导致 history 侧偏小反而使断言②通过）？Q3 B2 把 `AgentShellCore` 大量符号改成 `public` 是否超出必要？有没有更小的暴露面能达到同样的可测性？Q4 D 探查把「会话不持久」判为阻断、把「无审批关卡」判为非阻断，这个分类是否站得住？特别是 Q4b：`exec` 工具在无任何审批的情况下直接执行——报告说「尚未查清是隔离配置还是 gateway 默认行为」，请你去 `kernels/openclaw/` 查清并给出结论与 file:line。**产物必须写到** `.hopper/handoffs/T-090-output.md`。**不要**因为找不到某文件就下结论，先换搜索维度（本项目已三次因此误判）。 | codex |
+.hopper/handoffs/T-091-output.log:5099:.hopper/handoffs/T-090b-output.log:1601:.harnessloop/goals/20260718-002-agent-app/goal-breakdown.md-155-- **SG-8.7 金标 parity runner 补齐（横切）**——**主体 done（2026-07-25，rounds/0006）**：runner 落点据实归位到 `app/contracts/d2/fixtures/{ts,swift,csharp}-runner/`（非本行原文旧指向的空 `app/parity/`——TS runner 已在此，Swift/C# 新建亦共址，比另立 `app/parity/` 反向 import contracts 更内聚，已在 rounds/0006/scope-lock.md 中记录归位）。三端（TS/Swift/C#）runner 均驱动 SG-5 交付的真实 client（非 mock），fixture 从 2 扩到三组全集 13 条（审批五态 FSM 3 条 + `OperationOutcome` 七态全集 6 条 + `SessionLockState` 四态 3 条 + basic 1 条），三端 parity 矩阵：**TS 13/13 + Swift 12/13 + C# 12/13**（同一 `expected`，唯一 1 条 DEGRADED 同因于 `interrupt()` 仍是 SG-5 桩，两个 native 端遇到同一已知产品缺口，非三端不一致）+ Ajv 2020 严格校验 34/34。**经两个 ★审查闸、共 5 次异构对抗审、2 轮+1 轮 rework 收敛**：★审查闸1（Stage A）经 codex T-048 REWORK（7 条 fixture 塞臆造 `_openclaw*` 私有字段致 TS 金标假绿 2/12）→ 收残 `1c320553` → codex T-050 确认性再审 MUST-FIX（5 处"绿灯≠真 parity"表面绕过：自构 request 非真捕获/force-deny 空转 oracle/不断言 RPC 顺序/非法枚举/漏 `seq`）→ 收残 `98d38e0e`（治根+逐处破坏性反证自验）→ grok T-051 换异构视角 CONFIRMABLE，Stage A 终收；★审查闸2（Stage B）经 codex T-052 REWORK（`NormalizeNativeParams` 条件 remap 假绿旁路，Swift 权威端同病）→ 收残 `2a60b010`（两端 strict 剥键）→ codex T-053 用原始复现两端验证修复前后 PASS/FAIL 翻转，CONFIRMABLE，★审查闸2 通过。收敛守卫（同阶段第 3 轮 MUST-FIX 即停报）全程未触发。**副产（下游揭上游第 6+ 例）**：形式化 parity 揪出 SG-5 `stop()` 真实 D1 §6.2 force-deny 缺口（rounds/0005 三轮对抗审全部漏掉），user-confirmed 定向修复 `ed90f138`（+ NOTE-A drain-loop 加固，grok T-049 PASS_WITH_NOTE，Swift/C# 测试 26→30）。**Stage C（D4 §4.6 产品行为 parity 首批）明确结转**——按 scope-lock 授权的诚实 defer 边界判断，非本轮 scope，独立工作包留待后续轮。诚实 defer：`interrupt()`/`respondApproval()`/`capabilities()` 仍是桩；`includeApprovals` 等 openclaw 原生特有字段两端均诚实未跨端断言。详见 `rounds/0006/round-summary.md`、`decision.md`、`state/evidence-index.md` E17。
+.hopper/handoffs/T-091-output.log:5108:.hopper/handoffs/T-090b-output.log:1698:.harnessloop/state/evidence-index.md-12-| E8 | runtime | app/server/src/（D3-proxy session-affinity 路由）；设计 spec ~/.llm-wiki/agent-app-design/architecture/sg6-openclaw-persession-patch-design.md | goal 002 SG-6（方案B：openclaw 主路径零改 + 辅助小 patch + D3-proxy session-affinity 路由；**code+对抗审级**，e2e wire defer 至 SG-8 build+run） | 随收口 commit c69041e 冻结；e2e wire 待 SG-8 build+run 补证 | 2026-07-23（补记；impl 5fcf9de→REWORK 362b04e→收口 c69041e→openclaw 指针 5b133b7→状态 399c793；openclaw fork 补丁 submodule 824adcf） | build 通过 + jest 18-19 pass + eslint 全过（静态级）；e2e wire 未证 | 无 | yes | valid（静态级；e2e 部分 blocked） | partial（code+对抗审级 supports；billingAttribution:session 端到端 defer） | pass（code 级） | 可重现（commit 固定；build/jest 可重跑） | internal |
+.hopper/handoffs/T-091-output.log:5110:.hopper/handoffs/T-090b-output.log:1700:.harnessloop/state/evidence-index.md-14-| E10 | source | hopper handoff T-042（grok 对抗审 verdict）；SG-6 REWORK 362b04e→收口 c69041e | goal 002 SG-6 对抗审（verdict=REWORK→整改收口） | 随 SG-6 收口 c69041e 冻结 | 2026-07-23（补记；grok T-042 REWORK→收口；尾部 auth-fail=XAI_API_KEY 失效已恢复） | hopper 派 grok 对抗审 verdict=REWORK → 按整改收口 commit 核对 | XAI_API_KEY（grok；曾失效已恢复，后续需重新登录） | yes | valid | supports | pass | 部分可重现（review 可重派，需 grok 重新登录） | internal |
+.hopper/handoffs/T-091-output.log:5111:.hopper/handoffs/T-090b-output.log:1705:.harnessloop/state/evidence-index.md-19-| E15 | review | `.hopper/handoffs/T-043-output.md`（grok PASS_WITH_NOTE）+ workflow `wf_ff2ffea4`（Claude 4 维 REWORK-medium）+ `kernels/openclaw` 收残 commit `c35df878` | goal 002 SG-8.5 的 2 个 openclaw 补丁（`4ddcb52` schema / `35f8739` transport 热路径）异构对抗复核 + 收残 | 随 `c35df878` 冻结 | 2026-07-23（rounds/0004 后续硬化） | 两路收敛：schema 补丁干净；transport 无回归、我们用例（Kimi/openai-completions）e2e 已 work，唯一 medium=openrouter gate 未忠实镜像 provider（edge config：OpenRouter 模型+显式覆写 thinkingFormat 时 per-session 静默失效）。已收残：transport 本地精确复刻 provider 3 项 OR（补 detectCompat raw 信号）+ 补 `sendSessionIdHeader`/`supportsEagerToolInputStreaming` 修尽 zod 漂移 + docstring/header 覆盖对齐 + 7 个自证单测（git stash 验证修前 fail/修后 pass，vitest 54/54）+ `config validate` + 我们用例不回归确认 | 无 | yes | valid | supports（2 补丁 validated：无回归 + edge-case 忠实性已修 + 漂移修尽；openclaw submodule HEAD 现为 `c35df878`） | pass | 可重现（回归单测常驻 `src/agents/openai-transport-stream.base.test.ts`；commit `c35df878`） | internal |
+.hopper/handoffs/T-091-output.log:5112:.hopper/handoffs/T-090b-output.log:1706:.harnessloop/state/evidence-index.md-20-| E16 | static+runtime | `app/kernel-client/{swift,csharp}`（含 tests）；commits `a07dc67`/`db489f0e`/`f303f608`/`02a22c0b`/`3ae6fa81`/`6cf2dcc5` | goal 002 SG-5（kernel-client 完整化：Swift `send` 做实 + 完整 openclaw→D2 事件适配 11 变体 + 真实客户端驱动完整链 e2e + C# kernel-client parity，闭合客户端交互环） | 随 `6cf2dcc5`（Swift+C# 两端 NOTE-1 收尾）冻结；kernel-client 代码变更时需重跑双端测试与 parity 回归 | 2026-07-24（rounds/0005；continue 驱动 + 关键节点独立审查全流程） | Swift 26/26 + C# 26/26 单测（含 M1-M6 与 NOTE-1 的真 actor 级测试，修前 fail/修后 pass）+ Stage B 真实 Swift 客户端驱动 live e2e（对隔离 openclaw→D3-proxy→自托管 new-api→Kimi 全链，9 条真实 D2 事件字段级断言全 PASS：`seq` 单调/`runId` 一致/终态唯一/`operationId` 与 `stop()` 一致；new-api 计费 id=39 与 `turnComplete.usage` 逐字段吻合，主会话独立复验）+ 跨端 parity 25/25 逐字段一致（唯一差异为已知的 D2.cs 时间戳格式 `Z` vs `+00:00`，记未来 SG-1 收尾）+ 3 次异构对抗审（T-044 codex REWORK→T-045 codex MUST-FIX→T-047 grok PASS_WITH_NOTE，其间 T-046 codex 因自身安全过滤器中止未采信、已改派） | 无（凭证走 gitignored channel-params，不作为 channel parameter reference 登记值） | yes | valid | supports（Swift+C# 双端 kernel-client 可信，无已知挂起；`interrupt`/`respondApproval`/`capabilities` 桩、`capability_changed`/`approval_buffer_resolved` 产品消费路径缺失、C# 侧真 openclaw live e2e、金标 parity 完整三端均非本条 claim 覆盖范围，如实 defer） | pass | 可重现（两端测试常驻 `app/kernel-client/{swift,csharp}`；commits 固定，可重新编译+重跑） | internal |
+.hopper/handoffs/T-091-output.log:5113:.hopper/handoffs/T-090b-output.log:1707:.harnessloop/state/evidence-index.md-21-| E17 | static+runtime | `app/contracts/d2/fixtures/`（`dsl.ts` + 13 fixtures：`approval/` 3、`basic/` 1、`operation-outcome/` 6、`session-lock/` 3 + `ts-runner/`/`swift-runner/`/`csharp-runner/` + `README.md` + 2 处 `OPEN.md`）；commits `1c320553`/`98d38e0e`（Stage A）、`ed90f138`（SG-5 stop 副产修复）、`505202a5`/`2a60b010`（Stage B）、`0a6b06df`（state） | goal 002 SG-8.7（金标 parity runner 补齐：三端 TS/Swift/C# runner 均驱动 SG-5 真实 client、读同一批 13 条 fixture、产出同一 `ClientObservableState` 逐字段比对；主体达成，Stage C 产品行为 parity 结转） | 随 `2a60b010`（Stage B 收残）冻结；fixtures/runner 代码变更时需重跑三端 parity | 2026-07-25（rounds/0006；continue 驱动 + 关键节点独立审查，Stage A 2 轮 rework + Stage B 1 轮 rework） | 三端 parity 矩阵 TS 13/13 + Swift 12/13 + C# 12/13（同一 `expected`，1 条 DEGRADED 同因于 `interrupt()` 仍是 SG-5 桩，非三端不一致）+ Ajv 2020 严格校验 34/34 + 5 次异构对抗审（T-048 codex REWORK→T-050 codex MUST-FIX→T-051 grok CONFIRMABLE；T-052 codex REWORK→T-053 codex CONFIRMABLE）+ 多轮"有牙齿"破坏性反证（临时改坏→确认目标 fixture 真 FAIL→git 还原确认无残留，含主会话亲手验证）+ SG-5 `stop()` D1 §6.2 force-deny 缺口修复链（`ed90f138`，T-049 grok PASS_WITH_NOTE + NOTE-A drain-loop 有界加固，Swift/C# 测试 26→30） | 无（凭证走 gitignored channel-params，不作为 channel parameter reference 登记值） | yes | valid | supports（三端金标 parity 基建可信、有牙齿，非表面绿灯；Stage C 产品行为 parity、`interrupt`/`respondApproval`/`capabilities` 桩、`includeApprovals` 等 native-only 字段跨端断言均非本条 claim 覆盖范围，如实 defer） | pass | 可重现（三端 runner 常驻 `app/contracts/d2/fixtures/{ts,swift,csharp}-runner/`；commits 固定，可重新编译+重跑） | internal |
+.hopper/handoffs/T-091-output.log:5114:.hopper/handoffs/T-090b-output.log:1709:.harnessloop/state/evidence-index.md-23-| E19 | runtime | `app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md` + `app/kernel-client/HERMES-RUN-EVIDENCE.md`；commits `47177412`（实现）、`fead0dde`（收 T-055 REWORK） | goal 002 SG-7（hermes per-session key 接线：PRE-① 裁定的「api_server `model_routes` per-session baseUrl/key 零改动」claim 的 e2e 检验） | 随 `fead0dde`（收残）冻结；`kernels/hermes` submodule HEAD（`17155e3`）/recipe/evidence 变更时需重跑复验 | 2026-07-25（rounds/0008；continue 驱动 + 关键节点独立审查，单阶段轮） | 真实 Kimi 两 session 归因 e2e：new-api `/api/log` log45→token_id=4（`sg7-hermes-session-a`，completion 22）/ log46→token_id=5（`sg7-hermes-session-b`，completion 15），两条均 `prompt_tokens=244+cache_tokens=11264=11508`，与 Hermes 侧 usage 逐字段吻合，主会话独立亲查 new-api 复验一致 + 隔离 `state.db` 独立佐证（T-055 挖出，PING-A/B 请求响应逐条、时间戳与计费秒级相关、`request_id` 互异）+ 零改动核验（`git -C kernels/hermes` tracked+untracked+ignored 全程终态全空）+ 两审收敛（codex T-055 REWORK[文档+卫生 5 处]→收残 `fead0dde`→codex T-056 CONFIRMABLE[4/5 项逐条闭合亲验+file:line 抽验一致]） | 无（凭证走 gitignored channel-params，不作为 channel parameter reference 登记值） | yes | valid | supports（hermes api_server `model_routes` 路径零改动 per-session 归因 claim 成立，C-3 path① 双内核首次实证；ACP 路径未走、sessions-chat 路径排除、Pi SQLite workaround limitation 均非本条 claim 覆盖范围，如实 defer） | pass | 可重现（recipe 常驻 `app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md`；commits 固定，可重新隔离起 hermes 复跑） | internal |
+.hopper/handoffs/T-091-output.log:5115:.hopper/handoffs/T-090b-output.log:1711:.harnessloop/state/evidence-index.md-25-| E21 | static | wiki commits `da764f8`/`2ee61d2b`（`~/.llm-wiki/agent-app-design`）+ `rounds/0010/evidence/correction-table.md`（`.harnessloop/goals/20260718-002-agent-app/rounds/0010/evidence/`） | goal 002 SG-11 conformance 修正批（第二批首轮：把 rounds/0008/0009 的 5 处 runtime 发现②③④⑤ + D3 mint 501 再确认 + T-005/T-009 早期推断修正回写进 design wiki conformance 文档） | 随 wiki commit `2ee61d2b`（收残）冻结；`research/pre1-{openclaw,hermes}-source-conformance.md`/`kernel/kernel-ecosystem-facts.md`/`architecture/d6-newapi-integration.md` 再修订时需重跑复验 | 2026-07-26（rounds/0010；continue 驱动 + 关键节点独立审查，单阶段轮） | 7 项修正逐条回写 4 个 wiki 文件（openclaw ack 层不可区分§4/interruptedActiveRun 不透出§5/hermes session-load 静默失败根因链+PRE-7 阈值+§4.3 上游处置建议中立段/new-api 两处 API 实况修正 v4 blockquote/D3 mint 501 residual 再确认/validate-schemas 无落点如实记录）+ 修订标注（blockquote changelog + frontmatter `updated`/`sources` 全部更新）+ `git diff-tree` 确认仅 4 允许文件、D1/D2/D5 契约文本零改动 + hopper 派 codex T-060 逐条确认审（Verdict=MUST-FIX，但 7 项主体事实全确认无漂移/无夹带/上游建议中立，MUST-FIX 仅 2 处机械精度问题——对照表父提交旧行号漂移 L103/L34→实为 L112/L43、引文多余右花括号）+ 主会话用 codex 复现命令自验处方级收残（commit `2ee61d2b`），按 T-030 先例不再 gate | 无（凭证走 gitignored channel-params，不作为 channel parameter reference 登记值） | yes | valid | supports（conformance 文档与 runtime 实况重新对齐；hermes 上游 issue 报不报决策、validate-schemas 脚本本身的实际修复均非本条 claim 覆盖范围，如实 defer） | pass | 可重现（wiki 仓 commit 固定，`git show`/`git diff` 可重跑；对照表常驻 `rounds/0010/evidence/`） | internal |
+.hopper/handoffs/T-091-output.log:5233:.hopper/handoffs/T-090b-output.log:11636:    15	> ## Verdict
+.hopper/handoffs/T-091-output.log:5236:.hopper/handoffs/T-090b-output.log:11703:四问结论已收敛：RAE-0001 的 `pass` 目前主要由汇总文档声明支撑，不能由轮次内冻结原始证据复核；对账脚本可稳定复现多类假绿；无审批不是 `--allow-unconfigured` 特例，而是 OpenClaw 在未配置策略且无 sandbox 时的 `gateway + full/off` 默认路径。现在只写指定交付文件。
+.hopper/handoffs/T-091-output.log:5238:.hopper/handoffs/T-090b-output.log:11715:已完成 rounds/0013 的 B/C/D、RAE-0001、指定代码及 OpenClaw exec 策略链的只读对抗审查。B2 测试有效，但 RAE-0001 的 `pass` 缺少可冻结复核的原始证据，且对账脚本存在确定的假绿路径；D 对 exec 无审批的风险分类也不成立。指定文件写入被只读沙箱拒绝：`writing is blocked by read-only sandbox`，以下为完整交付内容。
+.hopper/handoffs/T-091-output.log:5245:.hopper/handoffs/T-090b-output.log:11847:## Verdict
+.hopper/handoffs/T-091-output.log:5246:.hopper/handoffs/T-090b-output.log:11849:REWORK
+.hopper/handoffs/T-091-output.log:5251:.hopper/handoffs/T-090b-output.log:11863:已完成 rounds/0013 的 B/C/D、RAE-0001、指定代码及 OpenClaw exec 策略链的只读对抗审查。B2 测试有效，但 RAE-0001 的 `pass` 缺少可冻结复核的原始证据，且对账脚本存在确定的假绿路径；D 对 exec 无审批的风险分类也不成立。指定文件写入被只读沙箱拒绝：`writing is blocked by read-only sandbox`，以下为完整交付内容。
+.hopper/handoffs/T-091-output.log:5258:.hopper/handoffs/T-090b-output.log:11995:## Verdict
+.hopper/handoffs/T-091-output.log:5259:.hopper/handoffs/T-090b-output.log:11997:REWORK
+.hopper/handoffs/T-091-output.log:5273:已完成 rounds/0013 的 B/C/D、RAE-0001、指定代码及 OpenClaw exec 策略链的只读对抗审查。B2 测试有效，但 RAE-0001 的 `pass` 缺少可冻结复核的原始证据，且对账脚本存在确定的假绿路径；D 对 exec 无审批的风险分类也不成立。指定文件写入被只读沙箱拒绝：`writing is blocked by read-only sandbox`，以下为完整交付内容。
+.hopper/handoffs/T-091-output.log:5300:   - (b) 同源键的源码前提基本成立，但 wire、history 快照及对账 stdout 均未冻结；脚本还存在 Q2 所述假绿。
+.hopper/handoffs/T-091-output.log:5313:结论：它只能判断“成功提取出的两个 key 集合是否相同”，不能证明消息全集无缺失；存在以下假绿：
+.hopper/handoffs/T-091-output.log:5321:   JSON 错误、异常 shape、`role != assistant`、缺 id/seq 都被跳过（`:179-212,293-310`），异常计数不参与 PASS。双方同一消息都缺 metadata 或被 role/shape 过滤时，会同时消失并假绿。
+.hopper/handoffs/T-091-output.log:5323:3. 空集假绿。
+.hopper/handoffs/T-091-output.log:5405:## Verdict
+.hopper/handoffs/T-091-output.log:5407:REWORK
+.hopper/handoffs/T-091-output.log:5811:本轮处置大体有效：冻结证据已足以支持当前这一次 RAE-0001 实跑，条件④也确实补到了 UI 层，D 的 exec 机制与安全分类更正正确。可是 Q2 没有完全闭合：我构造出了两条仍可 PASS 的解析假绿，因此 ★审查闸仍应判 `REWORK`；当前 RAE-0001 的具体实跑可维持 `pass`。
+.hopper/handoffs/T-091-output.log:5832:### 2. B — Q2 五条假绿与反例
+.hopper/handoffs/T-091-output.log:5855:   - `normalize_seq` 保留 bool，而 Python 中 `True == 1` 且哈希相同，因此非法 JSON boolean 可以匹配合法整数。浮点数还会被 `int(v)` 截断。id/seq 当前只检查非 `None`，没有严格类型检查。
+.hopper/handoffs/T-091-output.log:5863:未发现“修过头”：真实数据、history 中合法 user 记录、wire 同键增量、合法两页分页均正常通过。上述两条是假绿残留，不是合法数据误判。
+.hopper/handoffs/T-091-output.log:5889:- **RAE-0001：应维持 `pass`。** 当前冻结数据可绕过脚本、直接复核为角色/类型合法、三键完全相等、顺序不倒退且 drop-one 精确变红；新发现的假绿不发生在本次输入上。
+.hopper/handoffs/T-091-output.log:5890:- **★审查闸：`REWORK`。** 原“解析异常全部 fail-closed”的处置不成立，仍存在可运行复现的假绿。
+.hopper/handoffs/T-091-output.log:5900:## Verdict
+.hopper/handoffs/T-091-output.log:5902:REWORK
+.hopper/handoffs/T-091-output.log:5911:本轮处置大体有效：冻结证据已足以支持当前这一次 RAE-0001 实跑，条件④也确实补到了 UI 层，D 的 exec 机制与安全分类更正正确。可是 Q2 没有完全闭合：我构造出了两条仍可 PASS 的解析假绿，因此 ★审查闸仍应判 `REWORK`；当前 RAE-0001 的具体实跑可维持 `pass`。
+.hopper/handoffs/T-091-output.log:5932:### 2. B — Q2 五条假绿与反例
+.hopper/handoffs/T-091-output.log:5955:   - `normalize_seq` 保留 bool，而 Python 中 `True == 1` 且哈希相同，因此非法 JSON boolean 可以匹配合法整数。浮点数还会被 `int(v)` 截断。id/seq 当前只检查非 `None`，没有严格类型检查。
+.hopper/handoffs/T-091-output.log:5963:未发现“修过头”：真实数据、history 中合法 user 记录、wire 同键增量、合法两页分页均正常通过。上述两条是假绿残留，不是合法数据误判。
+.hopper/handoffs/T-091-output.log:5989:- **RAE-0001：应维持 `pass`。** 当前冻结数据可绕过脚本、直接复核为角色/类型合法、三键完全相等、顺序不倒退且 drop-one 精确变红；新发现的假绿不发生在本次输入上。
+.hopper/handoffs/T-091-output.log:5990:- **★审查闸：`REWORK`。** 原“解析异常全部 fail-closed”的处置不成立，仍存在可运行复现的假绿。
+.hopper/handoffs/T-091-output.log:6000:## Verdict
+.hopper/handoffs/T-091-output.log:6002:REWORK
+.hopper/handoffs/T-091-output-raw.txt:61:- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+.hopper/handoffs/T-091-output-raw.txt:74:rounds/0013 ★审查闸复审（T-090b 判 REWORK 后的处置验证）。仓 /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop。**只读评审，不得改任何文件。**
+.hopper/handoffs/T-091-output-raw.txt:76:你（同一 vendor）在 T-090b 提出三项：Q1「RAE-0001 的 pass 靠叙述不靠冻结证据」、Q2「reconcile-history.py 有五条假绿路径」、Q3「AgentShellCore 的 public 暴露过宽」，另指出条件④ 缺 UI 层覆盖、以及 D 对 exec 无审批的分类不成立。主会话已处置，请**只验处置是否真的解决了问题**，不必重做全量评审。
+.hopper/handoffs/T-091-output-raw.txt:80:B. Q2 —— `app/apps/AgentShell/repro/reconcile-history.py` 已改。你原来给的五条假绿（去重掩盖基数 / 解析异常 fail-open / 空集假绿 / hasMore 分页截断 / --drop-one 不验 baseline 也不验新增差集精确性）**现在是否各自真的被堵住**？自己构造反例验证，不要只读代码。有没有**修过头**（把合法数据判红）或**新引入的**假绿？特别注意：wire 侧同键重复是流式增量的正常语义，history 侧同键重复才是异常——这个区分对不对？
+.hopper/handoffs/T-091-output-raw.txt:85:最后给出：**RAE-0001 现在应判 pass 还是不应判 pass**，以及本轮 ★审查闸的 Verdict（PASS / PASS_WITH_NOTE / REWORK）。**不要因为找不到某文件就下结论，先换搜索维度。**
+.hopper/handoffs/T-091-output-raw.txt:240:.hopper/handoffs/T-090b-output.md:129:rounds/0013 ★审查闸（B/C/D 三块 + RAE-0001 判定）。**审查对象**：仓 /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop 的 `.harnessloop/goals/20260718-002-agent-app/rounds/0013/` 全部 evidence + 本轮代码改动（`app/Package.swift`、`app/apps/AgentShell/Sources/AgentShellCore/`、`app/kernel-client/swift/CLIRunner.swift`、`app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift`、`app/apps/AgentShell/repro/reconcile-history.py`）。**只读评审，不得改任何文件。** 要回答四问：Q1 RAE-0001 被判 pass，四条件（①真实往返 ②隔离性 ③事件序列四要素 ④失败可诊断）是**被证据支撑**还是**被声明支撑**？逐条指出证据不足处。Q2 条件③(b) 的对账逻辑是否真能抓到丢帧？`reconcile-history.py` 的两向断言有没有可以假绿的路径（例如去重把丢失掩盖、role 过滤误伤、history 分页 limit 截断导致 history 侧偏小反而使断言②通过）？Q3 B2 把 `AgentShellCore` 大量符号改成 `public` 是否超出必要？有没有更小的暴露面能达到同样的可测性？Q4 D 探查把「会话不持久」判为阻断、把「无审批关卡」判为非阻断，这个分类是否站得住？特别是 Q4b：`exec` 工具在无任何审批的情况下直接执行——报告说「尚未查清是隔离配置还是 gateway 默认行为」，请你去 `kernels/openclaw/` 查清并给出结论与 file:line。**产物必须写到** `.hopper/handoffs/T-090-output.md`。**不要**因为找不到某文件就下结论，先换搜索维度（本项目已三次因此误判）。
+.hopper/handoffs/T-091-output-raw.txt:254:.hopper/handoffs/leader-tasklist.md:387:**背景**：D2 v1 经 grok(T-014)+codex(T-015) 双轨均判 REWORK。v2 是落实修复的局部修订：①字段名冲突（envelope `sentAt` vs 事件 `ts` 分名）②protocolVersion 裁决为单一契约版本 `"kernelport/1"`（握手确定，D1 的 v3.x 字面量裁为设计修订史）③判别联合封闭化（`req/res/evt` 枚举绑定、result/failure 互斥、ProtocolFailure 并入、res.unknown 定义）④§9.2 补 F-13/F-15/S-11 标"继承自 D1、实现前决策、不阻塞 D2"⑤D1 加 3 处澄清注释（design_status 维持 confirmed，仅澄清 protocolVersion 字面量非 wire 值、不改语义）。
+.hopper/handoffs/T-091-output-raw.txt:333:.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-rae0001-live.md:104:但必然从**断言①**（wire ⊆ history）那一侧暴露。**两向断言的设计堵住了这条假绿路径。**
+.hopper/handoffs/T-091-output-raw.txt:696:    96	## 主会话自查：一条被堵住的假绿路径，与一条**残余风险**
+.hopper/handoffs/T-091-output-raw.txt:704:   104	但必然从**断言①**（wire ⊆ history）那一侧暴露。**两向断言的设计堵住了这条假绿路径。**
+.hopper/handoffs/T-091-output-raw.txt:718:   118	# ★审查闸 T-090b（codex）判 REWORK —— 处置记录（2026-08-11）
+.hopper/handoffs/T-091-output-raw.txt:736:   136	## Q2「对账脚本有假绿路径」—— **成立，已修并复验**
+.hopper/handoffs/T-091-output-raw.txt:933:    27	2026-08-11 加固（异构对抗评审 codex 只读实证发现 5 条"假绿"路径后的修复）：
+.hopper/handoffs/T-091-output-raw.txt:1033:   127	def normalize_seq(v: Any) -> Any:
+.hopper/handoffs/T-091-output-raw.txt:1167:   261	            key = (str(message_id), normalize_seq(message_seq))
+.hopper/handoffs/T-091-output-raw.txt:1403:   469	        key = (str(mid), normalize_seq(mseq))
+.hopper/handoffs/T-091-output-raw.txt:1790:    96	## 主会话自查：一条被堵住的假绿路径，与一条**残余风险**
+.hopper/handoffs/T-091-output-raw.txt:1798:   104	但必然从**断言①**（wire ⊆ history）那一侧暴露。**两向断言的设计堵住了这条假绿路径。**
+.hopper/handoffs/T-091-output-raw.txt:1812:   118	# ★审查闸 T-090b（codex）判 REWORK —— 处置记录（2026-08-11）
+.hopper/handoffs/T-091-output-raw.txt:1830:   136	## Q2「对账脚本有假绿路径」—— **成立，已修并复验**
+.hopper/handoffs/T-091-output-raw.txt:4445:   116	- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+.hopper/handoffs/T-091-output-raw.txt:5062:/bin/zsh -lc 'rg -n "Q3|public|Verdict|REWORK|MUST|Files touched|Next recommendation|审查结论|RAE-0001" .hopper/handoffs/T-090b-output-raw.txt .hopper/handoffs/T-090b-output.log | tail -200' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+.hopper/handoffs/T-091-output-raw.txt:5064:.hopper/handoffs/T-090b-output.log:515:1021:**Verdict**：`CONFIRMABLE`（旁路真闭合+无新缺陷 → ★审查闸2 过、SG-8.7 主体达成）| `MUST-FIX`（问题点 + file:line + 可复现）。
+.hopper/handoffs/T-091-output-raw.txt:5065:.hopper/handoffs/T-090b-output.log:540:1107-5. **feedback 分类与收敛**:positive/negative/neutral/blocked 四分类的区分度;rework-loop 收敛(3rd MUST-FIX checkpoint)是协议内建还是会话自设;评审 verdict(REWORK/PASS_WITH_NOTE/CONFIRMABLE)与 feedback 分类的映射是否有协议依据?
+.hopper/handoffs/T-091-output-raw.txt:5067:.hopper/handoffs/T-090b-output.log:562:1800-    本项目上一轮刚因为「按自己写的字面标准没验」被判 REWORK——**请特别警惕这次是不是在
+.hopper/handoffs/T-091-output-raw.txt:5069:.hopper/handoffs/T-090b-output.log:603:1948-**判定用词**：`PASS` / `PASS_WITH_NOTE` / `REWORK` / `MUST-FIX`。**宁可否决，不要给面子分。**
+.hopper/handoffs/T-091-output-raw.txt:5074:.hopper/handoffs/T-090b-output.log:764:- **Verdict**: PASS | PASS_WITH_NOTE | REWORK | FAIL
+.hopper/handoffs/T-091-output-raw.txt:5077:.hopper/handoffs/T-090b-output.log:822:## Verdict
+.hopper/handoffs/T-091-output-raw.txt:5080:.hopper/handoffs/T-090b-output.log:863:## Verdict
+.hopper/handoffs/T-091-output-raw.txt:5082:.hopper/handoffs/T-090b-output.log:929:.hopper/queue.md:106:| T-090 | code-review-adversarial | pending | | high | rounds/0013 ★审查闸（B/C/D 三块 + RAE-0001 判定）。**审查对象**：仓 /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop 的 `.harnessloop/goals/20260718-002-agent-app/rounds/0013/` 全部 evidence + 本轮代码改动（`app/Package.swift`、`app/apps/AgentShell/Sources/AgentShellCore/`、`app/kernel-client/swift/CLIRunner.swift`、`app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift`、`app/apps/AgentShell/repro/reconcile-history.py`）。**只读评审，不得改任何文件。** 要回答四问：Q1 RAE-0001 被判 pass，四条件（①真实往返 ②隔离性 ③事件序列四要素 ④失败可诊断）是**被证据支撑**还是**被声明支撑**？逐条指出证据不足处。Q2 条件③(b) 的对账逻辑是否真能抓到丢帧？`reconcile-history.py` 的两向断言有没有可以假绿的路径（例如去重把丢失掩盖、role 过滤误伤、history 分页 limit 截断导致 history 侧偏小反而使断言②通过）？Q3 B2 把 `AgentShellCore` 大量符号改成 `public` 是否超出必要？有没有更小的暴露面能达到同样的可测性？Q4 D 探查把「会话不持久」判为阻断、把「无审批关卡」判为非阻断，这个分类是否站得住？特别是 Q4b：`exec` 工具在无任何审批的情况下直接执行——报告说「尚未查清是隔离配置还是 gateway 默认行为」，请你去 `kernels/openclaw/` 查清并给出结论与 file:line。**产物必须写到** `.hopper/handoffs/T-090-output.md`。**不要**因为找不到某文件就下结论，先换搜索维度（本项目已三次因此误判）。 | codex |
+.hopper/handoffs/T-091-output-raw.txt:5099:.hopper/handoffs/T-090b-output.log:1601:.harnessloop/goals/20260718-002-agent-app/goal-breakdown.md-155-- **SG-8.7 金标 parity runner 补齐（横切）**——**主体 done（2026-07-25，rounds/0006）**：runner 落点据实归位到 `app/contracts/d2/fixtures/{ts,swift,csharp}-runner/`（非本行原文旧指向的空 `app/parity/`——TS runner 已在此，Swift/C# 新建亦共址，比另立 `app/parity/` 反向 import contracts 更内聚，已在 rounds/0006/scope-lock.md 中记录归位）。三端（TS/Swift/C#）runner 均驱动 SG-5 交付的真实 client（非 mock），fixture 从 2 扩到三组全集 13 条（审批五态 FSM 3 条 + `OperationOutcome` 七态全集 6 条 + `SessionLockState` 四态 3 条 + basic 1 条），三端 parity 矩阵：**TS 13/13 + Swift 12/13 + C# 12/13**（同一 `expected`，唯一 1 条 DEGRADED 同因于 `interrupt()` 仍是 SG-5 桩，两个 native 端遇到同一已知产品缺口，非三端不一致）+ Ajv 2020 严格校验 34/34。**经两个 ★审查闸、共 5 次异构对抗审、2 轮+1 轮 rework 收敛**：★审查闸1（Stage A）经 codex T-048 REWORK（7 条 fixture 塞臆造 `_openclaw*` 私有字段致 TS 金标假绿 2/12）→ 收残 `1c320553` → codex T-050 确认性再审 MUST-FIX（5 处"绿灯≠真 parity"表面绕过：自构 request 非真捕获/force-deny 空转 oracle/不断言 RPC 顺序/非法枚举/漏 `seq`）→ 收残 `98d38e0e`（治根+逐处破坏性反证自验）→ grok T-051 换异构视角 CONFIRMABLE，Stage A 终收；★审查闸2（Stage B）经 codex T-052 REWORK（`NormalizeNativeParams` 条件 remap 假绿旁路，Swift 权威端同病）→ 收残 `2a60b010`（两端 strict 剥键）→ codex T-053 用原始复现两端验证修复前后 PASS/FAIL 翻转，CONFIRMABLE，★审查闸2 通过。收敛守卫（同阶段第 3 轮 MUST-FIX 即停报）全程未触发。**副产（下游揭上游第 6+ 例）**：形式化 parity 揪出 SG-5 `stop()` 真实 D1 §6.2 force-deny 缺口（rounds/0005 三轮对抗审全部漏掉），user-confirmed 定向修复 `ed90f138`（+ NOTE-A drain-loop 加固，grok T-049 PASS_WITH_NOTE，Swift/C# 测试 26→30）。**Stage C（D4 §4.6 产品行为 parity 首批）明确结转**——按 scope-lock 授权的诚实 defer 边界判断，非本轮 scope，独立工作包留待后续轮。诚实 defer：`interrupt()`/`respondApproval()`/`capabilities()` 仍是桩；`includeApprovals` 等 openclaw 原生特有字段两端均诚实未跨端断言。详见 `rounds/0006/round-summary.md`、`decision.md`、`state/evidence-index.md` E17。
+.hopper/handoffs/T-091-output-raw.txt:5108:.hopper/handoffs/T-090b-output.log:1698:.harnessloop/state/evidence-index.md-12-| E8 | runtime | app/server/src/（D3-proxy session-affinity 路由）；设计 spec ~/.llm-wiki/agent-app-design/architecture/sg6-openclaw-persession-patch-design.md | goal 002 SG-6（方案B：openclaw 主路径零改 + 辅助小 patch + D3-proxy session-affinity 路由；**code+对抗审级**，e2e wire defer 至 SG-8 build+run） | 随收口 commit c69041e 冻结；e2e wire 待 SG-8 build+run 补证 | 2026-07-23（补记；impl 5fcf9de→REWORK 362b04e→收口 c69041e→openclaw 指针 5b133b7→状态 399c793；openclaw fork 补丁 submodule 824adcf） | build 通过 + jest 18-19 pass + eslint 全过（静态级）；e2e wire 未证 | 无 | yes | valid（静态级；e2e 部分 blocked） | partial（code+对抗审级 supports；billingAttribution:session 端到端 defer） | pass（code 级） | 可重现（commit 固定；build/jest 可重跑） | internal |
+.hopper/handoffs/T-091-output-raw.txt:5110:.hopper/handoffs/T-090b-output.log:1700:.harnessloop/state/evidence-index.md-14-| E10 | source | hopper handoff T-042（grok 对抗审 verdict）；SG-6 REWORK 362b04e→收口 c69041e | goal 002 SG-6 对抗审（verdict=REWORK→整改收口） | 随 SG-6 收口 c69041e 冻结 | 2026-07-23（补记；grok T-042 REWORK→收口；尾部 auth-fail=XAI_API_KEY 失效已恢复） | hopper 派 grok 对抗审 verdict=REWORK → 按整改收口 commit 核对 | XAI_API_KEY（grok；曾失效已恢复，后续需重新登录） | yes | valid | supports | pass | 部分可重现（review 可重派，需 grok 重新登录） | internal |
+.hopper/handoffs/T-091-output-raw.txt:5111:.hopper/handoffs/T-090b-output.log:1705:.harnessloop/state/evidence-index.md-19-| E15 | review | `.hopper/handoffs/T-043-output.md`（grok PASS_WITH_NOTE）+ workflow `wf_ff2ffea4`（Claude 4 维 REWORK-medium）+ `kernels/openclaw` 收残 commit `c35df878` | goal 002 SG-8.5 的 2 个 openclaw 补丁（`4ddcb52` schema / `35f8739` transport 热路径）异构对抗复核 + 收残 | 随 `c35df878` 冻结 | 2026-07-23（rounds/0004 后续硬化） | 两路收敛：schema 补丁干净；transport 无回归、我们用例（Kimi/openai-completions）e2e 已 work，唯一 medium=openrouter gate 未忠实镜像 provider（edge config：OpenRouter 模型+显式覆写 thinkingFormat 时 per-session 静默失效）。已收残：transport 本地精确复刻 provider 3 项 OR（补 detectCompat raw 信号）+ 补 `sendSessionIdHeader`/`supportsEagerToolInputStreaming` 修尽 zod 漂移 + docstring/header 覆盖对齐 + 7 个自证单测（git stash 验证修前 fail/修后 pass，vitest 54/54）+ `config validate` + 我们用例不回归确认 | 无 | yes | valid | supports（2 补丁 validated：无回归 + edge-case 忠实性已修 + 漂移修尽；openclaw submodule HEAD 现为 `c35df878`） | pass | 可重现（回归单测常驻 `src/agents/openai-transport-stream.base.test.ts`；commit `c35df878`） | internal |
+.hopper/handoffs/T-091-output-raw.txt:5112:.hopper/handoffs/T-090b-output.log:1706:.harnessloop/state/evidence-index.md-20-| E16 | static+runtime | `app/kernel-client/{swift,csharp}`（含 tests）；commits `a07dc67`/`db489f0e`/`f303f608`/`02a22c0b`/`3ae6fa81`/`6cf2dcc5` | goal 002 SG-5（kernel-client 完整化：Swift `send` 做实 + 完整 openclaw→D2 事件适配 11 变体 + 真实客户端驱动完整链 e2e + C# kernel-client parity，闭合客户端交互环） | 随 `6cf2dcc5`（Swift+C# 两端 NOTE-1 收尾）冻结；kernel-client 代码变更时需重跑双端测试与 parity 回归 | 2026-07-24（rounds/0005；continue 驱动 + 关键节点独立审查全流程） | Swift 26/26 + C# 26/26 单测（含 M1-M6 与 NOTE-1 的真 actor 级测试，修前 fail/修后 pass）+ Stage B 真实 Swift 客户端驱动 live e2e（对隔离 openclaw→D3-proxy→自托管 new-api→Kimi 全链，9 条真实 D2 事件字段级断言全 PASS：`seq` 单调/`runId` 一致/终态唯一/`operationId` 与 `stop()` 一致；new-api 计费 id=39 与 `turnComplete.usage` 逐字段吻合，主会话独立复验）+ 跨端 parity 25/25 逐字段一致（唯一差异为已知的 D2.cs 时间戳格式 `Z` vs `+00:00`，记未来 SG-1 收尾）+ 3 次异构对抗审（T-044 codex REWORK→T-045 codex MUST-FIX→T-047 grok PASS_WITH_NOTE，其间 T-046 codex 因自身安全过滤器中止未采信、已改派） | 无（凭证走 gitignored channel-params，不作为 channel parameter reference 登记值） | yes | valid | supports（Swift+C# 双端 kernel-client 可信，无已知挂起；`interrupt`/`respondApproval`/`capabilities` 桩、`capability_changed`/`approval_buffer_resolved` 产品消费路径缺失、C# 侧真 openclaw live e2e、金标 parity 完整三端均非本条 claim 覆盖范围，如实 defer） | pass | 可重现（两端测试常驻 `app/kernel-client/{swift,csharp}`；commits 固定，可重新编译+重跑） | internal |
+.hopper/handoffs/T-091-output-raw.txt:5113:.hopper/handoffs/T-090b-output.log:1707:.harnessloop/state/evidence-index.md-21-| E17 | static+runtime | `app/contracts/d2/fixtures/`（`dsl.ts` + 13 fixtures：`approval/` 3、`basic/` 1、`operation-outcome/` 6、`session-lock/` 3 + `ts-runner/`/`swift-runner/`/`csharp-runner/` + `README.md` + 2 处 `OPEN.md`）；commits `1c320553`/`98d38e0e`（Stage A）、`ed90f138`（SG-5 stop 副产修复）、`505202a5`/`2a60b010`（Stage B）、`0a6b06df`（state） | goal 002 SG-8.7（金标 parity runner 补齐：三端 TS/Swift/C# runner 均驱动 SG-5 真实 client、读同一批 13 条 fixture、产出同一 `ClientObservableState` 逐字段比对；主体达成，Stage C 产品行为 parity 结转） | 随 `2a60b010`（Stage B 收残）冻结；fixtures/runner 代码变更时需重跑三端 parity | 2026-07-25（rounds/0006；continue 驱动 + 关键节点独立审查，Stage A 2 轮 rework + Stage B 1 轮 rework） | 三端 parity 矩阵 TS 13/13 + Swift 12/13 + C# 12/13（同一 `expected`，1 条 DEGRADED 同因于 `interrupt()` 仍是 SG-5 桩，非三端不一致）+ Ajv 2020 严格校验 34/34 + 5 次异构对抗审（T-048 codex REWORK→T-050 codex MUST-FIX→T-051 grok CONFIRMABLE；T-052 codex REWORK→T-053 codex CONFIRMABLE）+ 多轮"有牙齿"破坏性反证（临时改坏→确认目标 fixture 真 FAIL→git 还原确认无残留，含主会话亲手验证）+ SG-5 `stop()` D1 §6.2 force-deny 缺口修复链（`ed90f138`，T-049 grok PASS_WITH_NOTE + NOTE-A drain-loop 有界加固，Swift/C# 测试 26→30） | 无（凭证走 gitignored channel-params，不作为 channel parameter reference 登记值） | yes | valid | supports（三端金标 parity 基建可信、有牙齿，非表面绿灯；Stage C 产品行为 parity、`interrupt`/`respondApproval`/`capabilities` 桩、`includeApprovals` 等 native-only 字段跨端断言均非本条 claim 覆盖范围，如实 defer） | pass | 可重现（三端 runner 常驻 `app/contracts/d2/fixtures/{ts,swift,csharp}-runner/`；commits 固定，可重新编译+重跑） | internal |
+.hopper/handoffs/T-091-output-raw.txt:5114:.hopper/handoffs/T-090b-output.log:1709:.harnessloop/state/evidence-index.md-23-| E19 | runtime | `app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md` + `app/kernel-client/HERMES-RUN-EVIDENCE.md`；commits `47177412`（实现）、`fead0dde`（收 T-055 REWORK） | goal 002 SG-7（hermes per-session key 接线：PRE-① 裁定的「api_server `model_routes` per-session baseUrl/key 零改动」claim 的 e2e 检验） | 随 `fead0dde`（收残）冻结；`kernels/hermes` submodule HEAD（`17155e3`）/recipe/evidence 变更时需重跑复验 | 2026-07-25（rounds/0008；continue 驱动 + 关键节点独立审查，单阶段轮） | 真实 Kimi 两 session 归因 e2e：new-api `/api/log` log45→token_id=4（`sg7-hermes-session-a`，completion 22）/ log46→token_id=5（`sg7-hermes-session-b`，completion 15），两条均 `prompt_tokens=244+cache_tokens=11264=11508`，与 Hermes 侧 usage 逐字段吻合，主会话独立亲查 new-api 复验一致 + 隔离 `state.db` 独立佐证（T-055 挖出，PING-A/B 请求响应逐条、时间戳与计费秒级相关、`request_id` 互异）+ 零改动核验（`git -C kernels/hermes` tracked+untracked+ignored 全程终态全空）+ 两审收敛（codex T-055 REWORK[文档+卫生 5 处]→收残 `fead0dde`→codex T-056 CONFIRMABLE[4/5 项逐条闭合亲验+file:line 抽验一致]） | 无（凭证走 gitignored channel-params，不作为 channel parameter reference 登记值） | yes | valid | supports（hermes api_server `model_routes` 路径零改动 per-session 归因 claim 成立，C-3 path① 双内核首次实证；ACP 路径未走、sessions-chat 路径排除、Pi SQLite workaround limitation 均非本条 claim 覆盖范围，如实 defer） | pass | 可重现（recipe 常驻 `app/kernel-client/HERMES-ISOLATED-RUN-RECIPE.md`；commits 固定，可重新隔离起 hermes 复跑） | internal |
+.hopper/handoffs/T-091-output-raw.txt:5115:.hopper/handoffs/T-090b-output.log:1711:.harnessloop/state/evidence-index.md-25-| E21 | static | wiki commits `da764f8`/`2ee61d2b`（`~/.llm-wiki/agent-app-design`）+ `rounds/0010/evidence/correction-table.md`（`.harnessloop/goals/20260718-002-agent-app/rounds/0010/evidence/`） | goal 002 SG-11 conformance 修正批（第二批首轮：把 rounds/0008/0009 的 5 处 runtime 发现②③④⑤ + D3 mint 501 再确认 + T-005/T-009 早期推断修正回写进 design wiki conformance 文档） | 随 wiki commit `2ee61d2b`（收残）冻结；`research/pre1-{openclaw,hermes}-source-conformance.md`/`kernel/kernel-ecosystem-facts.md`/`architecture/d6-newapi-integration.md` 再修订时需重跑复验 | 2026-07-26（rounds/0010；continue 驱动 + 关键节点独立审查，单阶段轮） | 7 项修正逐条回写 4 个 wiki 文件（openclaw ack 层不可区分§4/interruptedActiveRun 不透出§5/hermes session-load 静默失败根因链+PRE-7 阈值+§4.3 上游处置建议中立段/new-api 两处 API 实况修正 v4 blockquote/D3 mint 501 residual 再确认/validate-schemas 无落点如实记录）+ 修订标注（blockquote changelog + frontmatter `updated`/`sources` 全部更新）+ `git diff-tree` 确认仅 4 允许文件、D1/D2/D5 契约文本零改动 + hopper 派 codex T-060 逐条确认审（Verdict=MUST-FIX，但 7 项主体事实全确认无漂移/无夹带/上游建议中立，MUST-FIX 仅 2 处机械精度问题——对照表父提交旧行号漂移 L103/L34→实为 L112/L43、引文多余右花括号）+ 主会话用 codex 复现命令自验处方级收残（commit `2ee61d2b`），按 T-030 先例不再 gate | 无（凭证走 gitignored channel-params，不作为 channel parameter reference 登记值） | yes | valid | supports（conformance 文档与 runtime 实况重新对齐；hermes 上游 issue 报不报决策、validate-schemas 脚本本身的实际修复均非本条 claim 覆盖范围，如实 defer） | pass | 可重现（wiki 仓 commit 固定，`git show`/`git diff` 可重跑；对照表常驻 `rounds/0010/evidence/`） | internal |
+.hopper/handoffs/T-091-output-raw.txt:5233:.hopper/handoffs/T-090b-output.log:11636:    15	> ## Verdict
+.hopper/handoffs/T-091-output-raw.txt:5236:.hopper/handoffs/T-090b-output.log:11703:四问结论已收敛：RAE-0001 的 `pass` 目前主要由汇总文档声明支撑，不能由轮次内冻结原始证据复核；对账脚本可稳定复现多类假绿；无审批不是 `--allow-unconfigured` 特例，而是 OpenClaw 在未配置策略且无 sandbox 时的 `gateway + full/off` 默认路径。现在只写指定交付文件。
+.hopper/handoffs/T-091-output-raw.txt:5238:.hopper/handoffs/T-090b-output.log:11715:已完成 rounds/0013 的 B/C/D、RAE-0001、指定代码及 OpenClaw exec 策略链的只读对抗审查。B2 测试有效，但 RAE-0001 的 `pass` 缺少可冻结复核的原始证据，且对账脚本存在确定的假绿路径；D 对 exec 无审批的风险分类也不成立。指定文件写入被只读沙箱拒绝：`writing is blocked by read-only sandbox`，以下为完整交付内容。
+.hopper/handoffs/T-091-output-raw.txt:5245:.hopper/handoffs/T-090b-output.log:11847:## Verdict
+.hopper/handoffs/T-091-output-raw.txt:5246:.hopper/handoffs/T-090b-output.log:11849:REWORK
+.hopper/handoffs/T-091-output-raw.txt:5251:.hopper/handoffs/T-090b-output.log:11863:已完成 rounds/0013 的 B/C/D、RAE-0001、指定代码及 OpenClaw exec 策略链的只读对抗审查。B2 测试有效，但 RAE-0001 的 `pass` 缺少可冻结复核的原始证据，且对账脚本存在确定的假绿路径；D 对 exec 无审批的风险分类也不成立。指定文件写入被只读沙箱拒绝：`writing is blocked by read-only sandbox`，以下为完整交付内容。
+.hopper/handoffs/T-091-output-raw.txt:5258:.hopper/handoffs/T-090b-output.log:11995:## Verdict
+.hopper/handoffs/T-091-output-raw.txt:5259:.hopper/handoffs/T-090b-output.log:11997:REWORK
+.hopper/handoffs/T-091-output-raw.txt:5273:已完成 rounds/0013 的 B/C/D、RAE-0001、指定代码及 OpenClaw exec 策略链的只读对抗审查。B2 测试有效，但 RAE-0001 的 `pass` 缺少可冻结复核的原始证据，且对账脚本存在确定的假绿路径；D 对 exec 无审批的风险分类也不成立。指定文件写入被只读沙箱拒绝：`writing is blocked by read-only sandbox`，以下为完整交付内容。
+.hopper/handoffs/T-091-output-raw.txt:5300:   - (b) 同源键的源码前提基本成立，但 wire、history 快照及对账 stdout 均未冻结；脚本还存在 Q2 所述假绿。
+.hopper/handoffs/T-091-output-raw.txt:5313:结论：它只能判断“成功提取出的两个 key 集合是否相同”，不能证明消息全集无缺失；存在以下假绿：
+.hopper/handoffs/T-091-output-raw.txt:5321:   JSON 错误、异常 shape、`role != assistant`、缺 id/seq 都被跳过（`:179-212,293-310`），异常计数不参与 PASS。双方同一消息都缺 metadata 或被 role/shape 过滤时，会同时消失并假绿。
+.hopper/handoffs/T-091-output-raw.txt:5323:3. 空集假绿。
+.hopper/handoffs/T-091-output-raw.txt:5405:## Verdict
+.hopper/handoffs/T-091-output-raw.txt:5407:REWORK
+.hopper/handoffs/T-091-output-raw.txt:5811:本轮处置大体有效：冻结证据已足以支持当前这一次 RAE-0001 实跑，条件④也确实补到了 UI 层，D 的 exec 机制与安全分类更正正确。可是 Q2 没有完全闭合：我构造出了两条仍可 PASS 的解析假绿，因此 ★审查闸仍应判 `REWORK`；当前 RAE-0001 的具体实跑可维持 `pass`。
+.hopper/handoffs/T-091-output-raw.txt:5832:### 2. B — Q2 五条假绿与反例
+.hopper/handoffs/T-091-output-raw.txt:5855:   - `normalize_seq` 保留 bool，而 Python 中 `True == 1` 且哈希相同，因此非法 JSON boolean 可以匹配合法整数。浮点数还会被 `int(v)` 截断。id/seq 当前只检查非 `None`，没有严格类型检查。
+.hopper/handoffs/T-091-output-raw.txt:5863:未发现“修过头”：真实数据、history 中合法 user 记录、wire 同键增量、合法两页分页均正常通过。上述两条是假绿残留，不是合法数据误判。
+.hopper/handoffs/T-091-output-raw.txt:5889:- **RAE-0001：应维持 `pass`。** 当前冻结数据可绕过脚本、直接复核为角色/类型合法、三键完全相等、顺序不倒退且 drop-one 精确变红；新发现的假绿不发生在本次输入上。
+.hopper/handoffs/T-091-output-raw.txt:5890:- **★审查闸：`REWORK`。** 原“解析异常全部 fail-closed”的处置不成立，仍存在可运行复现的假绿。
+.hopper/handoffs/T-091-output-raw.txt:5900:## Verdict
+.hopper/handoffs/T-091-output-raw.txt:5902:REWORK
+.hopper/handoffs/T-091-output-raw.txt:5911:本轮处置大体有效：冻结证据已足以支持当前这一次 RAE-0001 实跑，条件④也确实补到了 UI 层，D 的 exec 机制与安全分类更正正确。可是 Q2 没有完全闭合：我构造出了两条仍可 PASS 的解析假绿，因此 ★审查闸仍应判 `REWORK`；当前 RAE-0001 的具体实跑可维持 `pass`。
+.hopper/handoffs/T-091-output-raw.txt:5932:### 2. B — Q2 五条假绿与反例
+.hopper/handoffs/T-091-output-raw.txt:5955:   - `normalize_seq` 保留 bool，而 Python 中 `True == 1` 且哈希相同，因此非法 JSON boolean 可以匹配合法整数。浮点数还会被 `int(v)` 截断。id/seq 当前只检查非 `None`，没有严格类型检查。
+.hopper/handoffs/T-091-output-raw.txt:5963:未发现“修过头”：真实数据、history 中合法 user 记录、wire 同键增量、合法两页分页均正常通过。上述两条是假绿残留，不是合法数据误判。
+.hopper/handoffs/T-091-output-raw.txt:5989:- **RAE-0001：应维持 `pass`。** 当前冻结数据可绕过脚本、直接复核为角色/类型合法、三键完全相等、顺序不倒退且 drop-one 精确变红；新发现的假绿不发生在本次输入上。
+.hopper/handoffs/T-091-output-raw.txt:5990:- **★审查闸：`REWORK`。** 原“解析异常全部 fail-closed”的处置不成立，仍存在可运行复现的假绿。
+.hopper/handoffs/T-091-output-raw.txt:6000:## Verdict
+.hopper/handoffs/T-091-output-raw.txt:6002:REWORK
+
+exec
+/bin/zsh -lc "nl -ba app/apps/AgentShell/repro/reconcile-history.py | sed -n '560,920p'; nl -ba .hopper/handoffs/T-091-output-raw.txt | sed -n '5800,5910p'" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+   560	# ---------------------------------------------------------------------------
+   561	# reconciliation verdict -- single source of truth for pass/fail, reused by
+   562	# normal mode and (unmodified) by both the --drop-one baseline check and the
+   563	# post-drop check, so "passed" means the exact same thing everywhere.
+   564	# ---------------------------------------------------------------------------
+   565	
+   566	def evaluate_reconciliation(
+   567	    wire_recs: Dict[Key, str],
+   568	    history_recs: Dict[Key, str],
+   569	    history_duplicate_keys: List[Key],
+   570	    wire_anomaly_count: int,
+   571	    history_anomaly_count: int,
+   572	    expect_min_assistant: int,
+   573	) -> Dict[str, Any]:
+   574	    wire_only = sorted(set(wire_recs) - set(history_recs))
+   575	    history_only = sorted(set(history_recs) - set(wire_recs))
+   576	    wire_count = len(wire_recs)
+   577	    history_count = len(history_recs)
+   578	    passed = (
+   579	        not wire_only
+   580	        and not history_only
+   581	        and not history_duplicate_keys
+   582	        and wire_anomaly_count == 0
+   583	        and history_anomaly_count == 0
+   584	        and wire_count >= expect_min_assistant
+   585	        and history_count >= expect_min_assistant
+   586	    )
+   587	    return {
+   588	        "wire_only": wire_only,
+   589	        "history_only": history_only,
+   590	        "history_duplicate_keys": history_duplicate_keys,
+   591	        "wire_anomaly_count": wire_anomaly_count,
+   592	        "history_anomaly_count": history_anomaly_count,
+   593	        "wire_assistant_count": wire_count,
+   594	        "history_assistant_count": history_count,
+   595	        "expect_min_assistant": expect_min_assistant,
+   596	        "passed": passed,
+   597	    }
+   598	
+   599	
+   600	def print_parse_stats(
+   601	    wire_recs: Dict[Key, str], wire_stats: Dict[str, Any],
+   602	    history_recs: Dict[Key, str], history_stats: Dict[str, Any],
+   603	) -> None:
+   604	    print("--- wire 侧解析 ---")
+   605	    kv("总行数", wire_stats["total_lines"])
+   606	    kv("空行（跳过，非异常）", wire_stats["blank_lines"])
+   607	    kv("JSON 解析失败（异常，计入判定）", wire_stats["parse_error_lines"])
+   608	    sub("解析失败的行号", wire_stats["parse_error_line_numbers"])
+   609	    kv("JSON 顶层非对象（异常，计入判定）", wire_stats["unexpected_shape_lines"])
+   610	    sub("该类行号", wire_stats["unexpected_shape_line_numbers"])
+   611	    kv("无 evt.message.delta（忽略，非异常）", wire_stats["no_delta_lines"])
+   612	    kv("role 非 assistant 但已产出 delta（异常，计入判定，见二轮加固#6）", wire_stats["bad_role_delta_lines"])
+   613	    sub("该类行号", wire_stats["bad_role_delta_line_numbers"])
+   614	    kv("delta 帧 role 分布", dict(wire_stats["role_distribution"]))
+   615	    kv("缺失或类型不合法的 messageId/messageSeq（异常，计入判定）", wire_stats["malformed_candidate_lines"])
+   616	    sub("该类行号", wire_stats["malformed_line_numbers"])
+   617	    kv("匹配的 assistant delta 帧（去重前）", wire_stats["matched_frames"])
+   618	    kv("去重后 unique (id, seq)", len(wire_recs))
+   619	    kv("同键重复帧数（流式增量，正常语义，不计入判定）", wire_stats["duplicate_keys"])
+   620	    kv("wire 侧异常合计（解析失败+顶层非对象+role非assistant却有delta+缺/坏metadata）", wire_stats["anomaly_count"])
+   621	    print()
+   622	
+   623	    print("--- history 侧解析 ---")
+   624	    kv("messages 总条数", history_stats["total_messages"])
+   625	    kv("role != assistant（忽略，正常语义）", history_stats["non_assistant_messages"])
+   626	    kv("消息 role 分布", dict(history_stats["role_distribution"]))
+   627	    kv("顶层非对象条目（异常，计入判定）", history_stats["non_dict_messages"])
+   628	    sub("该类索引", history_stats["non_dict_indices"])
+   629	    kv("缺失或类型不合法的 __openclaw.id/seq（异常，计入判定）", history_stats["malformed_metadata_messages"])
+   630	    sub("该类索引", history_stats["malformed_metadata_indices"])
+   631	    kv("history 侧异常合计（非对象+缺metadata）", history_stats["anomaly_count"])
+   632	    kv("去重后 unique (id, seq)", len(history_recs))
+   633	    kv(
+   634	        "同一 (id,seq) 出现>=2次的key数（异常，计入判定）",
+   635	        len(history_stats["duplicate_key_texts"]),
+   636	    )
+   637	    if history_stats["duplicate_key_texts"]:
+   638	        print("      history 侧同键重复明细（每条都原样列出，不做去重覆盖）：")
+   639	        for k in sorted(history_stats["duplicate_key_texts"]):
+   640	            texts = history_stats["duplicate_key_texts"][k]
+   641	            print("        %s  出现 %d 次" % (fmt_key(k), len(texts)))
+   642	            for i, t in enumerate(texts):
+   643	                print("          [%d] text[:60]=%r" % (i, preview(t)))
+   644	    print()
+   645	
+   646	
+   647	def print_verdict_detail(
+   648	    evald: Dict[str, Any], wire_recs: Dict[Key, str], history_recs: Dict[Key, str], label: str
+   649	) -> None:
+   650	    print("--- %s：assistant 数量下限校验（--expect-min-assistant %d） ---" % (label, evald["expect_min_assistant"]))
+   651	    kv("wire 侧 assistant 数", evald["wire_assistant_count"])
+   652	    kv("history 侧 assistant 数", evald["history_assistant_count"])
+   653	    if evald["wire_assistant_count"] < evald["expect_min_assistant"]:
+   654	        print("  [FAIL] wire 侧低于下限")
+   655	    if evald["history_assistant_count"] < evald["expect_min_assistant"]:
+   656	        print("  [FAIL] history 侧低于下限")
+   657	    print()
+   658	
+   659	    print("--- %s：差集 ---" % label)
+   660	    kv("wire 有、history 没有的条数（断言① wire<=history 违反）", len(evald["wire_only"]))
+   661	    kv("history 有、wire 没有的条数（断言② history<=wire 违反 = 受控会话内有缺失）", len(evald["history_only"]))
+   662	    kv("history 侧同键重复 key 数（视为异常）", len(evald["history_duplicate_keys"]))
+   663	    kv("wire 侧异常计数（视为异常）", evald["wire_anomaly_count"])
+   664	    kv("history 侧异常计数（视为异常）", evald["history_anomaly_count"])
+   665	    print()
+   666	
+   667	    if evald["wire_only"]:
+   668	        print("--- %s：断言① 违反明细：wire subset-of history 不成立 ---" % label)
+   669	        for k in evald["wire_only"]:
+   670	            print("  %s  text[:60]=%r" % (fmt_key(k), preview(wire_recs.get(k, ""))))
+   671	        print()
+   672	
+   673	    if evald["history_only"]:
+   674	        print("--- %s：断言② 违反明细：history 的 assistant 消息未在 wire 侧全部出现 ---" % label)
+   675	        for k in evald["history_only"]:
+   676	            print("  %s  text[:60]=%r" % (fmt_key(k), preview(history_recs.get(k, ""))))
+   677	        print()
+   678	
+   679	
+   680	# ---------------------------------------------------------------------------
+   681	# CLI
+   682	# ---------------------------------------------------------------------------
+   683	
+   684	def build_arg_parser() -> argparse.ArgumentParser:
+   685	    p = argparse.ArgumentParser(
+   686	        prog="reconcile-history.py",
+   687	        description=__doc__,
+   688	        formatter_class=argparse.RawDescriptionHelpFormatter,
+   689	    )
+   690	    p.add_argument("--trace", required=True, metavar="PATH",
+   691	                   help="wire trace JSONL 文件路径（本地，已录好）")
+   692	    p.add_argument("--base", metavar="URL",
+   693	                   help="openclaw gateway 的 base URL，例如 http://127.0.0.1:PORT。"
+   694	                        "与 --session-key 搭配用于拉取 history（自动翻页直到 hasMore=false）；"
+   695	                        "给了 --history-file 则忽略。")
+   696	    p.add_argument("--session-key", metavar="KEY",
+   697	                   help="要对账的 session key，例如 agent:main:dashboard:xxxx。"
+   698	                        "走 HTTP 拉取 history 时必需。")
+   699	    p.add_argument("--limit", type=int, default=500, metavar="N",
+   700	                   help="history 请求的单页 limit（仅在走 HTTP 拉取时生效；默认 500）。"
+   701	                        "总数超过一页时会自动跟着 nextCursor 继续翻页，直到 hasMore=false。")
+   702	    p.add_argument("--drop-one", action="store_true",
+   703	                   help="破坏性反证：单次执行内先验证 baseline 干净，再从 wire 侧集合删掉一条"
+   704	                        "assistant 消息重跑对账，断言新增差集精确等于被删的那个 key。")
+   705	    p.add_argument("--history-file", metavar="PATH",
+   706	                   help='离线模式：直接读本地 JSON 文件代替 HTTP 请求，形状与 '
+   707	                        'GET .../history 的响应一致（{"messages": [...], "hasMore": bool, '
+   708	                        '"nextCursor"?: str}）。给了这个就不会发任何 HTTP 请求，也可用来把线上 '
+   709	                        'history 快照存档取证——快照必须自带 hasMore=false，否则视为残缺快照、硬失败。')
+   710	    p.add_argument("--token", metavar="TOKEN", default=None,
+   711	                   help="覆盖 OPENCLAW_GATEWAY_TOKEN 环境变量。默认从环境变量读；"
+   712	                        "命令行参数会留痕在 shell history / `ps`，能用环境变量就别用这个。")
+   713	    p.add_argument("--timeout", type=float, default=30.0, metavar="SECONDS",
+   714	                   help="HTTP 请求超时秒数（默认 30；仅在走 HTTP 拉取时生效）")
+   715	    p.add_argument("--expect-min-assistant", type=int, default=DEFAULT_EXPECT_MIN_ASSISTANT, metavar="N",
+   716	                   help="wire/history 两侧 assistant 消息数的下限（默认且最小值 1）；任一侧低于 N 就判"
+   717	                        "失败，堵住两个空集直接 PASS 的漏洞。0 与负数会被拒绝（2026-08-11 二轮加固："
+   718	                        "这条校验本身不允许关闭）。")
+   719	    return p
+   720	
+   721	
+   722	def main(argv: Optional[List[str]] = None) -> int:
+   723	    args = build_arg_parser().parse_args(argv)
+   724	
+   725	    if not os.path.isfile(args.trace):
+   726	        fatal("--trace 文件不存在：%s" % args.trace)
+   727	
+   728	    if args.expect_min_assistant < 1:
+   729	        fatal(
+   730	            "--expect-min-assistant 必须 >= 1（收到 %r）：0 会让「wire/history 两侧都是"
+   731	            "空集」直接判 PASS，对本工具的取证目的而言那是无意义的空对空验证；"
+   732	            "2026-08-11 二轮加固后这条下限不再允许被关闭（不存在可以绕过的开关）"
+   733	            % args.expect_min_assistant
+   734	        )
+   735	
+   736	    # --- resolve history source（在线：跟着 nextCursor 翻页直到 hasMore=false；
+   737	    # 离线：单份快照，也必须自证 hasMore=false）------------------------------------
+   738	    if args.history_file:
+   739	        try:
+   740	            history_messages, history_source_label = resolve_offline_history(args.history_file)
+   741	        except ReconcileError as e:
+   742	            fatal(str(e))
+   743	            return EXIT_USAGE_ERROR  # unreachable; fatal() exits
+   744	    else:
+   745	        if not args.base or not args.session_key:
+   746	            fatal("必须提供 --history-file，或同时提供 --base 与 --session-key")
+   747	        token = args.token or os.environ.get("OPENCLAW_GATEWAY_TOKEN")
+   748	        if not token:
+   749	            fatal(
+   750	                "缺少鉴权 token：设置环境变量 OPENCLAW_GATEWAY_TOKEN，或传 --token"
+   751	                "（不推荐，会留痕在 shell history / ps）"
+   752	            )
+   753	        try:
+   754	            history_messages, history_source_label = resolve_online_history(
+   755	                args.base, args.session_key, args.limit, token, args.timeout
+   756	            )
+   757	        except ReconcileError as e:
+   758	            fatal(str(e))
+   759	            return EXIT_USAGE_ERROR  # unreachable; fatal() exits
+   760	
+   761	    # --- parse both sides ---------------------------------------------------
+   762	    try:
+   763	        wire_recs, wire_stats = parse_wire_trace(args.trace)
+   764	    except OSError as e:
+   765	        fatal("读取 --trace 失败：%s" % e)
+   766	        return EXIT_USAGE_ERROR  # unreachable; fatal() exits
+   767	
+   768	    history_recs, history_stats = extract_history_records(history_messages)
+   769	    history_duplicate_keys = sorted(history_stats["duplicate_key_texts"].keys())
+   770	
+   771	    # --- report header -------------------------------------------------------
+   772	    print("=" * 70)
+   773	    print("RAE-0001 条件③(b)(c) 对账报告")
+   774	    print("=" * 70)
+   775	    print("wire trace   : %s" % args.trace)
+   776	    print("history 来源  : %s" % history_source_label)
+   777	    print("session key  : %s" % (args.session_key or "(未提供)"))
+   778	    print("drop-one     : %s" % ("开" if args.drop_one else "关"))
+   779	    print("expect-min-assistant: %d" % args.expect_min_assistant)
+   780	    print()
+   781	
+   782	    print_parse_stats(wire_recs, wire_stats, history_recs, history_stats)
+   783	
+   784	    if not args.drop_one:
+   785	        evald = evaluate_reconciliation(
+   786	            wire_recs, history_recs, history_duplicate_keys,
+   787	            wire_stats["anomaly_count"], history_stats["anomaly_count"],
+   788	            args.expect_min_assistant,
+   789	        )
+   790	        print_verdict_detail(evald, wire_recs, history_recs, "正常模式")
+   791	        print("=" * 70)
+   792	        if evald["passed"]:
+   793	            print("结果：PASS")
+   794	            print("=" * 70)
+   795	            return EXIT_PASS
+   796	        else:
+   797	            print("结果：FAIL")
+   798	            print("=" * 70)
+   799	            return EXIT_FAIL
+   800	
+   801	    # --- --drop-one：单次执行内三步：(a) baseline 必须绿 -> (b) 删一条 -> (c) 断言
+   802	    # 新增差集精确等于被删的那个 key -------------------------------------------
+   803	    if not wire_recs:
+   804	        fatal("wire 侧没有任何 assistant 消息，无法 --drop-one（没有可删的记录）")
+   805	
+   806	    baseline = evaluate_reconciliation(
+   807	        wire_recs, history_recs, history_duplicate_keys,
+   808	        wire_stats["anomaly_count"], history_stats["anomaly_count"],
+   809	        args.expect_min_assistant,
+   810	    )
+   811	    print_verdict_detail(baseline, wire_recs, history_recs, "[DROP-ONE] (a) baseline（删除前）")
+   812	
+   813	    if not baseline["passed"]:
+   814	        print("=" * 70)
+   815	        print("结果：无法反证——baseline 本身是红的（细节见上面 baseline 差集/异常/下限明细）。")
+   816	        print("--drop-one 的前提是「删除前必须先是绿的」，否则删除后出现的差集没法证明是这次删除")
+   817	        print("造成的，也可能只是复述了删除前就已经存在的缺陷。拒绝在脏 baseline 上假装完成了")
+   818	        print("破坏性反证。")
+   819	        print("=" * 70)
+   820	        return EXIT_DROP_ONE_BASELINE_DIRTY
+   821	
+   822	    # baseline 干净 == wire_keys 与 history_keys 作为集合完全相等，所以 wire_recs
+   823	    # 里随便取一个 key 一定也在 history_recs 里，不需要再算交集/处理"没有交集"的
+   824	    # 兜底分支。
+   825	    dropped_key = sorted(wire_recs.keys())[0]
+   826	    dropped_text = wire_recs[dropped_key]
+   827	    print("[DROP-ONE] (b) baseline 干净，开始删除。删除前原样打印被删记录（硬要求——没打印出来")
+   828	    print("这次反证不算数）：")
+   829	    print("  %s  text[:60]=%r" % (fmt_key(dropped_key), preview(dropped_text)))
+   830	    wire_recs_after = dict(wire_recs)
+   831	    del wire_recs_after[dropped_key]
+   832	    print()
+   833	
+   834	    after = evaluate_reconciliation(
+   835	        wire_recs_after, history_recs, history_duplicate_keys,
+   836	        wire_stats["anomaly_count"], history_stats["anomaly_count"],
+   837	        args.expect_min_assistant,
+   838	    )
+   839	    print_verdict_detail(after, wire_recs_after, history_recs, "[DROP-ONE] (c) 删除后")
+   840	
+   841	    print("=" * 70)
+   842	    exact_match = after["history_only"] == [dropped_key] and not after["wire_only"]
+   843	    if not after["history_only"] and not after["wire_only"]:
+   844	        print("结果：FAIL（不应该！）—— 删了一条消息，对账却仍然是全绿！")
+   845	        print("破坏性反证失效——断言不守门。")
+   846	        print("=" * 70)
+   847	        return EXIT_DROP_ONE_INTEGRITY_FAILURE
+   848	    elif exact_match:
+   849	        print("结果：FAIL（符合预期）—— [DROP-ONE 自证] baseline 干净，删除后新增的差集精确等于")
+   850	        print("被删的那一个 key（%s），断言②确实捕获了这次删除，且没有牵连别的 key。" % fmt_key(dropped_key))
+   851	        print("=" * 70)
+   852	        return EXIT_FAIL
+   853	    else:
+   854	        print("结果：FAIL，但不是精确匹配——删除后的差集不等于「只有被删的那个 key」：")
+   855	        print("  history_only = %s" % [fmt_key(k) for k in after["history_only"]])
+   856	        print("  wire_only    = %s" % [fmt_key(k) for k in after["wire_only"]])
+   857	        print("  期望的 history_only 应该精确等于 [%s]，wire_only 应该是空。" % fmt_key(dropped_key))
+   858	        print("说明这次破坏性反证不精确——差集里混进了跟这次删除无关的东西，反证方法本身不可信。")
+   859	        print("=" * 70)
+   860	        return EXIT_DROP_ONE_INTEGRITY_FAILURE
+   861	
+   862	
+   863	if __name__ == "__main__":
+   864	    try:
+   865	        sys.exit(main())
+   866	    except KeyboardInterrupt:
+   867	        sys.exit(130)
+   868	    except ReconcileError as e:
+   869	        print("[FATAL] %s" % e, file=sys.stderr)
+   870	        sys.exit(EXIT_USAGE_ERROR)
+   871	    except Exception as e:  # last-resort guard: never dump a raw traceback
+   872	        print("[FATAL] 未预期的异常：%s: %s" % (type(e).__name__, e), file=sys.stderr)
+   873	        sys.exit(EXIT_USAGE_ERROR)
+  5800	       6
+  5801	[
+  5802	  {
+  5803	    "role": "assistant",
+  5804	    "count": 6
+  5805	  }
+  5806	]
+  5807	
+  5808	codex
+  5809	## Summary
+  5810	
+  5811	本轮处置大体有效：冻结证据已足以支持当前这一次 RAE-0001 实跑，条件④也确实补到了 UI 层，D 的 exec 机制与安全分类更正正确。可是 Q2 没有完全闭合：我构造出了两条仍可 PASS 的解析假绿，因此 ★审查闸仍应判 `REWORK`；当前 RAE-0001 的具体实跑可维持 `pass`。
+  5812	
+  5813	## Files touched
+  5814	
+  5815	None — 全程只读评审，未修改任何文件。
+  5816	
+  5817	## Acceptance verification (6/6)
+  5818	
+  5819	### 1. A — Q1 冻结证据
+  5820	
+  5821	`live/` 当前实际是 **25 个文件、2,991,664 bytes（2.853 MiB）**，不是记录所称 31 个；所有任务点名文件均存在。
+  5822	
+  5823	| 条件 | 判定 | 原件与残留 |
+  5824	|---|---|---|
+  5825	| ① 真实往返 | 原件支撑 | UI 截图显示 ALPHA/CHARLIE；`ui-wire-trace.jsonl` 独立解析出 `(c5ee9ca7,2,"ALPHA")`、`(1c1e2996,4,"CHARLIE")`。CLI trace/history 另有 ALPHA/BRAVO/CHARLIE 三轮。 |
+  5826	| ② 隔离性 | 原件支撑，有证据卫生注记 | [isolation-transcript.txt](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt:4) 确实包含 stdout 和退出码：PID 启动时间、`lsof -p` 零命中、用户树持有者、三个真实 messageId 零命中、隔离库命中和实际 state 路径。唯一仍靠声明的是第 20 行被替换成 `<SESSION_KEY>` 后，无法复核实际 session key 是否就是当时 grep 的字符串；另外文档称 9 条命令，实际有 10 个命令块。 |
+  5827	| ③ 事件序列 | 原件支撑 | [history-snapshot.json](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/history-snapshot.json:1) 有 6 条消息、3 个 assistant 键且 `hasMore=false`；[pass 输出](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-hardened-pass.txt:34) 两向差集均为 0；[drop-one 输出](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/reconcile-hardened-droponme.txt:34) 先验 baseline 绿，再精确捕获被删的 `(18c28cec,6)`。 |
+  5828	| ④ 失败可诊断 | 原件支撑，有空日志注记 | CLI 原件分别给出传输层 `NSURLErrorDomain -1004` 和 gateway 鉴权 `token mismatch`；[UI 截图](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/shots/ui-shot-06-diag-ui-layer.png) 确实显示红色“连接失败 / transport error / NSURLErrorDomain”横幅。`raw/ui-diag-badport.log` 是 **0 字节**，所以 UI 层证据完全由截图承担，但截图本身足以证明失败在 UI 可见。 |
+  5829	
+  5830	结论：不再有整条条件完全靠声明支撑；② 的实际 session-key grep 和④的空 UI 日志属于证据卫生问题。
+  5831	
+  5832	### 2. B — Q2 五条假绿与反例
+  5833	
+  5834	真实冻结数据重跑结果：
+  5835	
+  5836	```text
+  5837	real-baseline exit=0
+  5838	real-drop-one exit=1
+  5839	real-min4 exit=1
+  5840	```
+  5841	
+  5842	五条原问题中，**4 条完整堵住，1 条只部分堵住**：
+  5843	
+  5844	1. 去重掩盖基数：已堵住。构造 history 同键两条得到 duplicate hard-fail；构造 wire 同键两帧仍合法 PASS。wire/history 区分正确。
+  5845	
+  5846	2. 解析异常 fail-open：**未完全堵住**。坏 JSON、缺 messageId 都会变红，但仍有两条反例：
+  5847	
+  5848	   ```text
+  5849	   NEW missing-role-hidden: FALSE_GREEN anomalies=0 filtered=1
+  5850	   NEW bool-int-seq-alias: FALSE_GREEN
+  5851	   wire_keys=[('k', True)] history_keys=[('k', 1)]
+  5852	   ```
+  5853	
+  5854	   - [reconcile-history.py](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/apps/AgentShell/repro/reconcile-history.py:243) 在验证 metadata 之前把缺失/非法 role 当作普通非 assistant 过滤，异常计数仍为 0。但 [EventMapping.swift](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/EventMapping.swift:149) 明确说明只有 assistant 才可能产生 `evt.message.delta`；wire 上这种组合应当 fail-closed。history 侧过滤 user 是合法的，wire 侧不能照搬。
+  5855	   - `normalize_seq` 保留 bool，而 Python 中 `True == 1` 且哈希相同，因此非法 JSON boolean 可以匹配合法整数。浮点数还会被 `int(v)` 截断。id/seq 当前只检查非 `None`，没有严格类型检查。
+  5856	
+  5857	3. 空集：默认路径已堵住；`--expect-min-assistant 0` 仍可显式恢复空集 PASS。当前证据运行使用默认值 1，所以本次实跑不受影响，但作为 RAE 专用工具不应保留无约束绕过。
+  5858	
+  5859	4. `hasMore` 分页：已堵住。`hasMore=true` 无 cursor、缺字段、字符串类型均硬失败；构造合法两页得到 `cursors=[None,'2']` 并读全，未发现误杀合法分页。
+  5860	
+  5861	5. `--drop-one`：已堵住。构造脏 baseline 的真实 `main()` 路径返回专用 **exit 4**；冻结实跑则 baseline 绿、删除后唯一新增差集精确等于被删键。
+  5862	
+  5863	未发现“修过头”：真实数据、history 中合法 user 记录、wire 同键增量、合法两页分页均正常通过。上述两条是假绿残留，不是合法数据误判。
+  5864	
+  5865	### 3. C — 条件④ UI 层
+  5866	
+  5867	通过。截图中的失败横幅是真正的 UI 呈现，不是终端文字覆盖；它把错误至少定位到连接/传输层。空的 `ui-diag-badport.log` 应修正或从证据清单移除，但不推翻截图事实。
+  5868	
+  5869	### 4. D — exec 分类更正
+  5870	
+  5871	机制与核心分类均正确：
+  5872	
+  5873	- 隔离启动配置没有 `tools.exec` 或 sandbox：[start-isolated-kernel.sh](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/apps/AgentShell/repro/start-isolated-kernel.sh:81)。
+  5874	- `--allow-unconfigured` 只绕过 gateway mode 守门：[run.ts](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kernels/openclaw/src/cli/gateway-cli/run.ts:245)。
+  5875	- `host=auto` 在无 sandbox 时解析为 gateway：[bash-tools.exec-runtime.ts](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kernels/openclaw/src/agents/bash-tools.exec-runtime.ts:227)。
+  5876	- 默认确为 `security=full / ask=off`：[exec-approvals.ts](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kernels/openclaw/src/infra/exec-approvals.ts:317)。
+  5877	- 只有 `always` 或 `on-miss + allowlist miss` 才审批：[exec-approvals.ts](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/kernels/openclaw/src/infra/exec-approvals.ts:1840)。
+  5878	
+  5879	因此“任务完成性不阻断、但安全/信任维度阻断”是正确分类；独立 state/workspace 不是 sandbox。
+  5880	
+  5881	文档仍有未同步的旧结论：[itemD-probe-results.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemD-probe-results.md:7) 和第 86 行仍称“唯一阻断”是会话持久化，第 109–110 行仍提出“接受隔离环境下直接执行”。这些与第 42–70 行更正矛盾，需机械清理。
+  5882	
+  5883	### 5. E — Q3 刻意不做
+  5884	
+  5885	可接受。B2 测试不依赖这些 public，明确多余暴露属于 API/模块边界重构，不是当前功能正确性或安全缺陷；在“第 3 个 MUST-FIX 即 checkpoint”的收敛规则下记录并结转合理。后续可单独采用 feature library + 薄 `@main` shim 收窄，不应阻塞本轮 RAE 判定。
+  5886	
+  5887	### 6. 最终判定
+  5888	
+  5889	- **RAE-0001：应维持 `pass`。** 当前冻结数据可绕过脚本、直接复核为角色/类型合法、三键完全相等、顺序不倒退且 drop-one 精确变红；新发现的假绿不发生在本次输入上。
+  5890	- **★审查闸：`REWORK`。** 原“解析异常全部 fail-closed”的处置不成立，仍存在可运行复现的假绿。
+  5891	
+  5892	## Decisions / deviations
+  5893	
+  5894	任务称 `live/` 有 31 个文件；按实际文件系统审查到 25 个文件、2.853 MiB，并继续核完所有点名证据，未因数量差异中止或推断文件缺失。
+  5895	
+  5896	## Open questions
+  5897	
+  5898	- 日常壳最终采用 `deny`、`allowlist`、`ask + 审批 UI`，还是在真实 sandbox 中显式 `full`，仍待产品裁决。
+  5899	
+  5900	## Verdict
+  5901	
+  5902	REWORK
+  5903	
+  5904	## Next recommendation
+  5905	
+  5906	先让 wire 侧非 assistant/缺 role 直接判异常，并严格要求非空 string id、非 bool 的整数 seq；RAE 模式禁止 `--expect-min-assistant 0`。随后用现有冻结快照重跑 baseline/drop-one 及上述反例，不必重新执行整套 live RAE；同时清理 D 文档的“唯一阻断”旧表述和空 UI 日志清单。
+  5907	tokens used
+  5908	185,322
+  5909	## Summary
+  5910	
+
+codex
+脚本的关键收紧已在代码路径上对齐：wire 侧异常 role 被计入 `anomaly_count`，id/seq 改为不强转的严格校验；history 侧仍单独保留非 assistant 过滤。现在进入内存反例实跑，重点确认这些分支的最终 verdict，而不只看计数。
+exec
+/bin/zsh -lc "PYTHONDONTWRITEBYTECODE=1 python3 -c \"import base64;exec(base64.b64decode('aW1wb3J0IGJ1aWx0aW5zCmltcG9ydCBpbwppbXBvcnQganNvbgppbXBvcnQgcnVucHkKZnJvbSB1bml0dGVzdC5tb2NrIGltcG9ydCBwYXRjaAoKbSA9IHJ1bnB5LnJ1bl9wYXRoKCJhcHAvYXBwcy9BZ2VudFNoZWxsL3JlcHJvL3JlY29uY2lsZS1oaXN0b3J5LnB5IikKCmRlZiB3aXJlX2xpbmUoc2VxPTEsIHJvbGU9ImFzc2lzdGFudCIsIGluY2x1ZGVfcm9sZT1UcnVlLCBtaWQ9ImsiLCB0ZXh0PSJvayIpOgogICAgbXNnID0geyJjb250ZW50IjogdGV4dH0KICAgIGlmIGluY2x1ZGVfcm9sZToKICAgICAgICBtc2dbInJvbGUiXSA9IHJvbGUKICAgIHJldHVybiB7CiAgICAgICAgInByb2R1Y2VkRXZlbnRzIjogW3sid2lyZVR5cGUiOiAiZXZ0Lm1lc3NhZ2UuZGVsdGEifV0sCiAgICAgICAgIndpcmVGcmFtZSI6IHsicGF5bG9hZCI6IHsibWVzc2FnZUlkIjogbWlkLCAibWVzc2FnZVNlcSI6IHNlcSwgIm1lc3NhZ2UiOiBtc2d9fSwKICAgIH0KCmRlZiBoaXN0X21zZyhzZXE9MSwgcm9sZT0iYXNzaXN0YW50IiwgbWlkPSJrIiwgdGV4dD0ib2siKToKICAgIHggPSB7InJvbGUiOiByb2xlLCAiY29udGVudCI6IHRleHR9CiAgICBpZiByb2xlID09ICJhc3Npc3RhbnQiOgogICAgICAgIHhbIl9fb3BlbmNsYXciXSA9IHsiaWQiOiBtaWQsICJzZXEiOiBzZXF9CiAgICByZXR1cm4geAoKZGVmIHBhcnNlX3dpcmUob2Jqcyk6CiAgICBwYXlsb2FkID0gIiIuam9pbihqc29uLmR1bXBzKG8sIHNlcGFyYXRvcnM9KCIsIiwgIjoiKSkgKyAiXG4iIGZvciBvIGluIG9ianMpCiAgICByZWFsX29wZW4gPSBidWlsdGlucy5vcGVuCiAgICBkZWYgZmFrZV9vcGVuKHBhdGgsICphcmdzLCAqKmt3YXJncyk6CiAgICAgICAgaWYgcGF0aCA9PSAiPG1lbW9yeS13aXJlPiI6CiAgICAgICAgICAgIHJldHVybiBpby5TdHJpbmdJTyhwYXlsb2FkKQogICAgICAgIHJldHVybiByZWFsX29wZW4ocGF0aCwgKmFyZ3MsICoqa3dhcmdzKQogICAgd2l0aCBwYXRjaCgiYnVpbHRpbnMub3BlbiIsIGZha2Vfb3Blbik6CiAgICAgICAgcmV0dXJuIG1bInBhcnNlX3dpcmVfdHJhY2UiXSgiPG1lbW9yeS13aXJlPiIpCgpkZWYgY2hlY2sobmFtZSwgd2lyZV9vYmpzLCBoaXN0b3J5X21zZ3MpOgogICAgd3IsIHdzID0gcGFyc2Vfd2lyZSh3aXJlX29ianMpCiAgICBociwgaHMgPSBtWyJleHRyYWN0X2hpc3RvcnlfcmVjb3JkcyJdKGhpc3RvcnlfbXNncykKICAgIGV2ID0gbVsiZXZhbHVhdGVfcmVjb25jaWxpYXRpb24iXSgKICAgICAgICB3ciwgaHIsIHNvcnRlZChoc1siZHVwbGljYXRlX2tleV90ZXh0cyJdKSwKICAgICAgICB3c1siYW5vbWFseV9jb3VudCJdLCBoc1siYW5vbWFseV9jb3VudCJdLCAxLAogICAgKQogICAgcHJpbnQoIiUtMjlzIHBhc3NlZD0lLTVzIHdpcmVfa2V5cz0lcyBoaXN0X2tleXM9JXMgYmFkX3JvbGU9JWQgd2lyZV9tYWxmb3JtZWQ9JWQgaGlzdF9tYWxmb3JtZWQ9JWQgaGlzdF9maWx0ZXJlZD0lZCB3aXJlX2R1cHM9JWQiICUgKAogICAgICAgIG5hbWUsIGV2WyJwYXNzZWQiXSwgbGlzdCh3ciksIGxpc3QoaHIpLCB3c1siYmFkX3JvbGVfZGVsdGFfbGluZXMiXSwKICAgICAgICB3c1sibWFsZm9ybWVkX2NhbmRpZGF0ZV9saW5lcyJdLCBoc1sibWFsZm9ybWVkX21ldGFkYXRhX21lc3NhZ2VzIl0sCiAgICAgICAgaHNbIm5vbl9hc3Npc3RhbnRfbWVzc2FnZXMiXSwgd3NbImR1cGxpY2F0ZV9rZXlzIl0pKQoKY2hlY2soIm1pc3Npbmctd2lyZS1yb2xlIiwgW3dpcmVfbGluZShpbmNsdWRlX3JvbGU9RmFsc2UpXSwgW2hpc3RfbXNnKCldKQpjaGVjaygiaWxsZWdhbC13aXJlLXJvbGUtdXNlciIsIFt3aXJlX2xpbmUocm9sZT0idXNlciIpXSwgW2hpc3RfbXNnKCldKQpjaGVjaygiaWxsZWdhbC13aXJlLXJvbGUtbnVtYmVyIiwgW3dpcmVfbGluZShyb2xlPTcpXSwgW2hpc3RfbXNnKCldKQpjaGVjaygid2lyZS1ib29sLXZzLWhpc3RvcnktaW50IiwgW3dpcmVfbGluZShzZXE9VHJ1ZSldLCBbaGlzdF9tc2coc2VxPTEpXSkKY2hlY2soIndpcmUtZmxvYXQtdnMtaGlzdG9yeS1pbnQiLCBbd2lyZV9saW5lKHNlcT0xLjkpXSwgW2hpc3RfbXNnKHNlcT0xKV0pCmNoZWNrKCJoaXN0b3J5LWJvb2wtdnMtd2lyZS1pbnQiLCBbd2lyZV9saW5lKHNlcT0xKV0sIFtoaXN0X21zZyhzZXE9VHJ1ZSldKQpjaGVjaygibGVnYWwtaGlzdG9yeS11c2VyIiwgW3dpcmVfbGluZSgpXSwgW2hpc3RfbXNnKHJvbGU9InVzZXIiLCB0ZXh0PSJwcm9tcHQiKSwgaGlzdF9tc2coKV0pCmNoZWNrKCJsZWdhbC13aXJlLXNhbWUta2V5LXN0cmVhbSIsIFt3aXJlX2xpbmUodGV4dD0ibyIpLCB3aXJlX2xpbmUodGV4dD0ib2siKV0sIFtoaXN0X21zZyh0ZXh0PSJvayIpXSkK'))\"" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 366ms:
+missing-wire-role             passed=False wire_keys=[] hist_keys=[('k', 1)] bad_role=1 wire_malformed=0 hist_malformed=0 hist_filtered=0 wire_dups=0
+illegal-wire-role-user        passed=False wire_keys=[] hist_keys=[('k', 1)] bad_role=1 wire_malformed=0 hist_malformed=0 hist_filtered=0 wire_dups=0
+illegal-wire-role-number      passed=False wire_keys=[] hist_keys=[('k', 1)] bad_role=1 wire_malformed=0 hist_malformed=0 hist_filtered=0 wire_dups=0
+wire-bool-vs-history-int      passed=False wire_keys=[] hist_keys=[('k', 1)] bad_role=0 wire_malformed=1 hist_malformed=0 hist_filtered=0 wire_dups=0
+wire-float-vs-history-int     passed=False wire_keys=[] hist_keys=[('k', 1)] bad_role=0 wire_malformed=1 hist_malformed=0 hist_filtered=0 wire_dups=0
+history-bool-vs-wire-int      passed=False wire_keys=[('k', 1)] hist_keys=[] bad_role=0 wire_malformed=0 hist_malformed=1 hist_filtered=0 wire_dups=0
+legal-history-user            passed=True  wire_keys=[('k', 1)] hist_keys=[('k', 1)] bad_role=0 wire_malformed=0 hist_malformed=0 hist_filtered=1 wire_dups=0
+legal-wire-same-key-stream    passed=True  wire_keys=[('k', 1)] hist_keys=[('k', 1)] bad_role=0 wire_malformed=0 hist_malformed=0 hist_filtered=0 wire_dups=1
+
+exec
+/bin/zsh -lc 'PYTHONDONTWRITEBYTECODE=1 python3 app/apps/AgentShell/repro/reconcile-history.py --trace .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-wire-trace.jsonl --history-file .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/history-snapshot.json --expect-min-assistant -2' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+exec
+/bin/zsh -lc 'PYTHONDONTWRITEBYTECODE=1 python3 app/apps/AgentShell/repro/reconcile-history.py --trace .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-wire-trace.jsonl --history-file .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/history-snapshot.json --drop-one' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+exec
+/bin/zsh -lc 'PYTHONDONTWRITEBYTECODE=1 python3 app/apps/AgentShell/repro/reconcile-history.py --trace .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-wire-trace.jsonl --history-file .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/history-snapshot.json' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+exec
+/bin/zsh -lc 'PYTHONDONTWRITEBYTECODE=1 python3 app/apps/AgentShell/repro/reconcile-history.py --trace .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-wire-trace.jsonl --history-file .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/history-snapshot.json --expect-min-assistant 0' in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ exited 2 in 130ms:
+[FATAL] --expect-min-assistant 必须 >= 1（收到 -2）：0 会让「wire/history 两侧都是空集」直接判 PASS，对本工具的取证目的而言那是无意义的空对空验证；2026-08-11 二轮加固后这条下限不再允许被关闭（不存在可以绕过的开关）
+
+ exited 2 in 131ms:
+[FATAL] --expect-min-assistant 必须 >= 1（收到 0）：0 会让「wire/history 两侧都是空集」直接判 PASS，对本工具的取证目的而言那是无意义的空对空验证；2026-08-11 二轮加固后这条下限不再允许被关闭（不存在可以绕过的开关）
+
+ succeeded in 137ms:
+======================================================================
+RAE-0001 条件③(b)(c) 对账报告
+======================================================================
+wire trace   : .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-wire-trace.jsonl
+history 来源  : file:.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/history-snapshot.json
+session key  : (未提供)
+drop-one     : 关
+expect-min-assistant: 1
+
+--- wire 侧解析 ---
+  总行数                                   : 81
+  空行（跳过，非异常）                            : 0
+  JSON 解析失败（异常，计入判定）                    : 0
+  JSON 顶层非对象（异常，计入判定）                   : 0
+  无 evt.message.delta（忽略，非异常）           : 78
+  role 非 assistant 但已产出 delta（异常，计入判定，见二轮加固#6）: 0
+  delta 帧 role 分布                       : {'assistant': 3}
+  缺失或类型不合法的 messageId/messageSeq（异常，计入判定）: 0
+  匹配的 assistant delta 帧（去重前）            : 3
+  去重后 unique (id, seq)                  : 3
+  同键重复帧数（流式增量，正常语义，不计入判定）               : 0
+  wire 侧异常合计（解析失败+顶层非对象+role非assistant却有delta+缺/坏metadata）: 0
+
+--- history 侧解析 ---
+  messages 总条数                          : 6
+  role != assistant（忽略，正常语义）            : 3
+  消息 role 分布                            : {'user': 3, 'assistant': 3}
+  顶层非对象条目（异常，计入判定）                      : 0
+  缺失或类型不合法的 __openclaw.id/seq（异常，计入判定）  : 0
+  history 侧异常合计（非对象+缺metadata）          : 0
+  去重后 unique (id, seq)                  : 3
+  同一 (id,seq) 出现>=2次的key数（异常，计入判定）      : 0
+
+--- 正常模式：assistant 数量下限校验（--expect-min-assistant 1） ---
+  wire 侧 assistant 数                    : 3
+  history 侧 assistant 数                 : 3
+
+--- 正常模式：差集 ---
+  wire 有、history 没有的条数（断言① wire<=history 违反）: 0
+  history 有、wire 没有的条数（断言② history<=wire 违反 = 受控会话内有缺失）: 0
+  history 侧同键重复 key 数（视为异常）             : 0
+  wire 侧异常计数（视为异常）                      : 0
+  history 侧异常计数（视为异常）                   : 0
+
+======================================================================
+结果：PASS
+======================================================================
+
+ exited 1 in 140ms:
+======================================================================
+RAE-0001 条件③(b)(c) 对账报告
+======================================================================
+wire trace   : .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-wire-trace.jsonl
+history 来源  : file:.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/history-snapshot.json
+session key  : (未提供)
+drop-one     : 开
+expect-min-assistant: 1
+
+--- wire 侧解析 ---
+  总行数                                   : 81
+  空行（跳过，非异常）                            : 0
+  JSON 解析失败（异常，计入判定）                    : 0
+  JSON 顶层非对象（异常，计入判定）                   : 0
+  无 evt.message.delta（忽略，非异常）           : 78
+  role 非 assistant 但已产出 delta（异常，计入判定，见二轮加固#6）: 0
+  delta 帧 role 分布                       : {'assistant': 3}
+  缺失或类型不合法的 messageId/messageSeq（异常，计入判定）: 0
+  匹配的 assistant delta 帧（去重前）            : 3
+  去重后 unique (id, seq)                  : 3
+  同键重复帧数（流式增量，正常语义，不计入判定）               : 0
+  wire 侧异常合计（解析失败+顶层非对象+role非assistant却有delta+缺/坏metadata）: 0
+
+--- history 侧解析 ---
+  messages 总条数                          : 6
+  role != assistant（忽略，正常语义）            : 3
+  消息 role 分布                            : {'user': 3, 'assistant': 3}
+  顶层非对象条目（异常，计入判定）                      : 0
+  缺失或类型不合法的 __openclaw.id/seq（异常，计入判定）  : 0
+  history 侧异常合计（非对象+缺metadata）          : 0
+  去重后 unique (id, seq)                  : 3
+  同一 (id,seq) 出现>=2次的key数（异常，计入判定）      : 0
+
+--- [DROP-ONE] (a) baseline（删除前）：assistant 数量下限校验（--expect-min-assistant 1） ---
+  wire 侧 assistant 数                    : 3
+  history 侧 assistant 数                 : 3
+
+--- [DROP-ONE] (a) baseline（删除前）：差集 ---
+  wire 有、history 没有的条数（断言① wire<=history 违反）: 0
+  history 有、wire 没有的条数（断言② history<=wire 违反 = 受控会话内有缺失）: 0
+  history 侧同键重复 key 数（视为异常）             : 0
+  wire 侧异常计数（视为异常）                      : 0
+  history 侧异常计数（视为异常）                   : 0
+
+[DROP-ONE] (b) baseline 干净，开始删除。删除前原样打印被删记录（硬要求——没打印出来
+这次反证不算数）：
+  id='18c28cec' seq=6  text[:60]='CHARLIE'
+
+--- [DROP-ONE] (c) 删除后：assistant 数量下限校验（--expect-min-assistant 1） ---
+  wire 侧 assistant 数                    : 2
+  history 侧 assistant 数                 : 3
+
+--- [DROP-ONE] (c) 删除后：差集 ---
+  wire 有、history 没有的条数（断言① wire<=history 违反）: 0
+  history 有、wire 没有的条数（断言② history<=wire 违反 = 受控会话内有缺失）: 1
+  history 侧同键重复 key 数（视为异常）             : 0
+  wire 侧异常计数（视为异常）                      : 0
+  history 侧异常计数（视为异常）                   : 0
+
+--- [DROP-ONE] (c) 删除后：断言② 违反明细：history 的 assistant 消息未在 wire 侧全部出现 ---
+  id='18c28cec' seq=6  text[:60]='CHARLIE'
+
+======================================================================
+结果：FAIL（符合预期）—— [DROP-ONE 自证] baseline 干净，删除后新增的差集精确等于
+被删的那一个 key（id='18c28cec' seq=6），断言②确实捕获了这次删除，且没有牵连别的 key。
+======================================================================
+
+exec
+/bin/zsh -lc "nl -ba .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt | tail -n 80; wc -c .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-diag-badport.log; nl -ba .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-diag-badport.log; nl -ba .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-rae0001-live.md | sed -n '1,320p'; find .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live -type f | wc -l" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+     1	# rounds/0013 ② 隔离性 —— 命令 transcript（含退出码）
+     2	# 采集时间: 2026-08-10T19:46:27Z  gateway pid=27158  port=63814
+     3	
+     4	$ ps -o pid=,lstart=,command= -p 27158 -p 29071
+     5	27158 Tue Aug 11 02:58:19 2026     openclaw-gateway        
+     6	29071 Fri Jul 31 09:58:07 2026     openclaw-gateway    
+     7	exit=0
+     8	
+     9	$ lsof -p 27158 | grep -c '\.openclaw'   # 本轮实例在用户树下打开的文件数
+    10	0
+    11	exit=1
+    12	
+    13	$ lsof +D $HOME/.openclaw   # 谁在持有用户树里的文件
+    14	COMMAND   PID     USER   FD   TYPE DEVICE SIZE/OFF      NODE NAME
+    15	node    29071 litianyi    1u   REG   1,18  5732774 449912384 /Users/litianyi/.openclaw/logs/gateway.log
+    16	node    29071 litianyi    2u   REG   1,18  2196238 449912385 /Users/litianyi/.openclaw/logs/gateway.err.log
+    17	node    29071 litianyi   29r   REG   1,18     3985 449919911 /Users/litianyi/.openclaw/openclaw.json
+    18	exit=0
+    19	
+    20	$ grep -rl '<SESSION_KEY>' $HOME/.openclaw | wc -l
+    21	       0
+    22	exit=0
+    23	
+    24	$ grep -rl '985c3d92' $HOME/.openclaw | wc -l
+    25	       0
+    26	exit=0
+    27	
+    28	$ grep -rl '9e9026bf' $HOME/.openclaw | wc -l
+    29	       0
+    30	exit=0
+    31	
+    32	$ grep -rl '18c28cec' $HOME/.openclaw | wc -l
+    33	       0
+    34	exit=0
+    35	
+    36	$ sqlite3 <隔离库> "SELECT count(*) FROM sessions;"
+    37	5
+    38	exit=0
+    39	
+    40	$ sqlite3 <隔离库> .dump | grep -c '<SESSION_KEY>'
+    41	24
+    42	exit=0
+    43	
+    44	$ lsof -p 27158 | grep -oE '/[^ ]*l1-repro[^ ]*' | head -5   # 实例实际打开的 state 路径
+    45	/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/state/state/openclaw.sqlite-shm
+    46	/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/state/agents/main/agent/openclaw-agent.sqlite-shm
+    47	/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/logs/gateway-stdout.log
+    48	/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/logs/gateway-stdout.log
+    49	/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/state/state/openclaw.sqlite
+    50	exit=0
+    51	
+    52	# ── 证据卫生注记（2026-08-11，★审查闸 T-091 指出后补）──────────────────────
+    53	# 上面 echo 行里的 `<SESSION_KEY>` 是**字面量占位符**（我在 echo 的单引号串里写死了它），
+    54	# 但实际执行的 grep 用的是 shell 变量 $KEY，其真值可在同目录
+    55	#   raw/cli-run.log 中搜 `[C] SESSION_KEY=` 复核
+    56	# （本轮值：agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798）。
+    57	# 输出（0 命中）是真实执行结果，未经修改。
+    58	# 另：本文件实际含 10 个命令块，`itemC-rae0001-live.md` 曾写作 9 条，已更正。
+     542 .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-diag-badport.log
+     1	# 本文件为空（0 字节）—— 这是真实观察结果，不是采集失败：
+     2	# 把 AgentShell 指向死端口 ws://127.0.0.1:1 启动时，壳**不向 stdout/stderr 写任何东西**，
+     3	# 连接失败只呈现在 UI 上（见 ../shots/ui-shot-06-diag-ui-layer.png 的红色横幅
+     4	# `● 连接失败: transport error: Error Domain=NSURLErrorDomain Code=-1...`）。
+     5	# 因此条件④ 的 UI 层证据完全由截图承担。
+     6	# 这本身也是一条可用性观察：**壳没有可供事后排查的本地日志**（记入 D-4）。
+     1	# rounds/0013 C —— RAE-0001 四条件实跑（2026-08-11）
+     2	
+     3	隔离实例：`openclaw-isolated`，gateway pid 27158，port 63814，state 根
+     4	`<scratchpad>/l1-repro`（`L1_ROOT` 覆盖默认 `/tmp/l1-repro`）。provider = deepseek，
+     5	model = `deepseek-v4-flash`，凭证从 gitignored `channel-params.json` 注入，未落任何 tracked 文件。
+     6	
+     7	## 结论：**四条件全部达成 → RAE-0001 = pass**
+     8	
+     9	---
+    10	
+    11	## ① 真实往返 —— 达成
+    12	
+    13	- **UI 侧**：`AgentShell.app` 连上隔离实例（左栏「● 已连接 (scopes: operator.admin)」），
+    14	  同一 state 目录内**连建 3 个会话全部成功**并在侧栏可区分（会话 1/2/3），
+    15	  发消息后渲染出 assistant 回复 `ALPHA` / `CHARLIE`。截图 `ui-shot-01..04`。
+    16	- **CLI 侧**：3 轮 send 全部完成，各自拿到不同 runId。
+    17	
+    18	> **B1 反证的现实意义**：修复前第二次 `createSession()` 必因 label 撞名失败。本轮连建 4 个
+    19	> 会话（UI 3 + CLI 1）零冲突，隔离库 `sessions` 表 4 行。
+    20	
+    21	## ② 隔离性 —— 达成（正面归因，证据强于 0011）
+    22	
+    23	rounds/0011 已证「整树 `stat` 指纹前后比对」**不可用**——`~/.openclaw` 有并发第三方写者。
+    24	本轮把那个写者**指名道姓地抓出来了**：
+    25	
+    26	| PID | 身份 | 启动时间 |
+    27	|---|---|---|
+    28	| 27158 | **本轮隔离实例** | 2026-08-11 02:58:19（本会话内） |
+    29	| 29071 | **用户自己的常驻 gateway** | **2026-07-31 09:58:07（早 11 天）** |
+    30	
+    31	- `lsof +D ~/.openclaw` → 只有 **29071** 持有其中文件（`gateway.log` / `gateway.err.log` / `openclaw.json`）
+    32	- `lsof -p 27158 | grep .openclaw` → **0**
+    33	- 27158 实际打开的 state 文件全部在 `l1-repro/state/` 下（sqlite/shm/wal）
+    34	- 本轮 SESSION_KEY 与 messageId 在 `~/.openclaw` 全树 grep → **0 命中**
+    35	- 隔离库 `agents/main/agent/openclaw-agent.sqlite` 中 SESSION_KEY 命中 **24**
+    36	
+    37	> 期间 `~/.openclaw/agents/main/sessions/sessions.json` 于 02:59 被修改过——**不是本轮实例干的**，
+    38	> 是 29071。这正是「整树指纹法」失效的原因，也是必须用正面归因的原因。
+    39	> **差一点又要误判**：只看时间戳会得出「隔离失败」的结论。
+    40	
+    41	## ③ 事件序列 —— 四要素逐条达成
+    42	
+    43	条件③ 于 2026-08-10 user-confirmed 修订为四要素（权威落点 `setup/data-sources.md`）。
+    44	
+    45	### (a) 不乱序 —— 0 处倒退
+    46	
+    47	| 指标 | 结果 |
+    48	|---|---|
+    49	| D2 `seq`（**每 run 内**递增） | run `9471e2c1`: 42 个值 1..42，倒退 **0**；run `a95294c8`: 1..2，倒退 **0**；run `c7ee4c77`: 1..2，倒退 **0** |
+    50	| wire `messageSeq` | `[1,1,2,3,3,4,5,5,6]`，倒退 **0** |
+    51	
+    52	> **一处测法纠正**：初次把三个 run 的 `seq` 串成一条序列去查单调性，得到「2 处倒退」——
+    53	> **是测法错的**。D2 的 `seq` 是 per-run 语义，跨 run 重置属正常。按 run 分组后为 0。
+    54	> 记此一笔，因为「指标看起来红了」与「东西真坏了」是两件事。
+    55	
+    56	### (b) 受控会话内与权威 history 对账 —— PASS
+    57	
+    58	- 会话：`agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798`（3 轮往返）
+    59	- wire 侧 assistant `(messageId, messageSeq)`：`(985c3d92,2) (9e9026bf,4) (18c28cec,6)` — unique 3
+    60	- history 侧（`GET /sessions/<key>/history?limit=200`）：6 条消息，3 条 user 被 role 过滤，assistant unique 3
+    61	- **两向差集均为 0** → PASS
+    62	
+    63	### (c) 破坏性反证 —— 变红（守门有效）
+    64	
+    65	`--drop-one` → **exit 1**，且**删除前逐字打印了被删记录**：
+    66	`id='18c28cec' seq=6 text[:60]='CHARLIE'`，随后断言② 精确捕获该缺失。
+    67	
+    68	> 打印被删内容是硬要求：rounds/0012 有两次「破坏没生效却读成没问题」。
+    69	
+    70	### (d) 协议级无丢帧 —— 按条件③ 显式列为**内核已知缺口**，不在本层验收
+    71	
+    72	## ④ 失败可诊断 —— 达成（两次注入，两种定位）
+    73	
+    74	| 注入 | 输出 | 定位到 |
+    75	|---|---|---|
+    76	| 指向错端口 `ws://127.0.0.1:1` | `FATAL: transport error: NSURLErrorDomain Code=-1004 "Could not connect to the server."` + 确切 URL | **传输/可达性层** |
+    77	| 对端口 + 错 token | `FATAL: rpc rejected [INVALID_REQUEST]: unauthorized: gateway token mismatch (set gateway.remote.token to match gateway.auth.token)` | **鉴权层**，且带修复提示 |
+    78	
+    79	两者 exit 均为 1，但错误信息把层次分得很清——这正是条件④ 要的「失败也要是有信息的失败」。
+    80	
+    81	---
+    82	
+    83	## 一个必须记下的纠正：`kernelSessionID` ≠ history 的 `key`
+    84	
+    85	对账差点跑错对象。openclaw `sessions.create` 同时返回两个**独立字段**：
+    86	
+    87	- `key` —— 形如 `agent:main:dashboard:<uuid>`，**`GET /sessions/<key>/history` 要的是这个**
+    88	- `sessionId` —— 另一个独立生成的 id
+    89	
+    90	而 `SessionHandle.kernelSessionID` 存的是 `sessionId ?? key`，实际几乎总是 `sessionId`。
+    91	CLI 原先只打印 `kernelSessionID`——**照它去查 history 会查到一个不存在的会话**。
+    92	现已改为打印 `[C] SESSION_KEY=` 并附一行说明二者区别。
+    93	
+    94	本轮实测两值：`key=agent:main:dashboard:1be7cfd9-...`，`sessionId=8f0a808f-...`，**确实不同**。
+    95	
+    96	## 主会话自查：一条被堵住的假绿路径，与一条**残余风险**
+    97	
+    98	对账最危险的失败模式不是「报红」，是「本该红却绿」。自查了 history 分页截断这条路径：
+    99	
+   100	**实测**：把 `--limit` 从 200 压到 **2**（少于该会话的 6 条消息）→
+   101	wire 侧 3 条、history 侧只剩 1 条 → **断言① 被违反 2 条 → FAIL（exit 1）**。
+   102	
+   103	**结论**：截断使 history 变小，虽然让断言②（history ⊆ wire）更容易通过，
+   104	但必然从**断言①**（wire ⊆ history）那一侧暴露。**两向断言的设计堵住了这条假绿路径。**
+   105	
+   106	### 残余风险（未消除，如实登记）
+   107	
+   108	脚本**不会**在 `返回条数 == limit` 时发出「history 可能被截断」的警告。
+   109	存在一个理论上的窄缝：**当 wire 真正丢失的消息，恰好就是被截断掉的那几条最旧消息，
+   110	且没有其他消息落在截断区**——此时两个断言可同时通过。
+   111	
+   112	- 本轮不构成问题：`--limit 200` 对 6 条消息，无截断。
+   113	- **未修的原因**：发现时 ★审查闸正在只读评审这个文件，中途改动会使评审失效。
+   114	- **建议修法**：`len(messages) >= limit` 时打印显式警告并计入报告头。
+   115	
+   116	---
+   117	
+   118	# ★审查闸 T-090b（codex）判 REWORK —— 处置记录（2026-08-11）
+   119	
+   120	**评审是对的。** 三项发现主会话逐条核过，两项属实、一项为建议：
+   121	
+   122	## Q1「pass 靠叙述、不靠冻结证据」—— **成立，已修**
+   123	
+   124	原稿把结果写进本文件，但**原件全在 scratchpad，没进证据树**（当时树里只有 5 个 md +
+   125	两个更早的 B1 产物）。这与 rounds/0011 判 negative 的毛病同形。
+   126	
+   127	**已冻结**：`evidence/live/` 下 **25 个文件 / 2,991,664 bytes**（整个 `evidence/` 树含 md 与台账共 31 个文件）。
+   128	下表列冻结位置：
+   129	
+   130	| 条件 | 冻结的原件 |
+   131	|---|---|
+   132	| ① | `shots/ui-shot-03..05`（三会话并列 / 消息往返 / 重启后）、`raw/cli-run.log`、`raw/cli-wire-trace.jsonl`、`raw/ui-stdout.log` |
+   133	| ② | **`raw/isolation-transcript.txt`** —— **10 个命令块**逐条带 stdout 与 `exit=`，含 `ps -o lstart`（两个 gateway 的启动时间）、`lsof -p`、`lsof +D`、全树 grep、sqlite 计数。**注**：文件内 echo 行里的 `<SESSION_KEY>` 是字面量占位符，实际 grep 用的是变量真值，可在 `raw/cli-run.log` 搜 `[C] SESSION_KEY=` 复核（见该文件末尾的证据卫生注记） |
+   134	| ③ | `raw/history-snapshot.json`、`raw/reconcile-hardened-pass.txt`、`raw/reconcile-hardened-droponme.txt`、`raw/reconcile-limit2.txt` |
+   135	| ④ | `raw/diag-badport.log`、`raw/diag-badtoken.log`、**`raw/ui-diag-badport.log` + `shots/ui-shot-06-diag-ui-layer.png`** |
+   136	
+   137	## Q2「对账脚本有假绿路径」—— **成立，已修并复验**
+   138	
+   139	评审给的五条经复现全部属实，已全部加固。**主会话独立复验**（用自己造的反例，不用子代理的 fixture）：
+   140	
+   141	| 检查 | 结果 |
+   142	|---|---|
+   143	| 本轮真实原件重跑 | **PASS，exit 0**，两侧异常计数均 0 |
+   144	| 真实原件 `--drop-one` | **exit 1**；先验 baseline 干净，再删，新增差集**精确等于**被删键 `id='18c28cec' seq=6` |
+   145	| 把真实快照 `hasMore` 改成 `true` | **exit 2 硬失败**：「拒绝在残缺数据上对账」 |
+   146	| 把 `hasMore` 字段删掉 | **exit 2 硬失败**：「无法判断是否已读全，拒绝对账」 |
+   147	
+   148	> **一条反过来加强原结论的事实**：冻结的 `history-snapshot.json` 自身
+   149	> `hasMore: false`、`nextCursor: null`、6 条消息 —— **说明本轮对账当时就跑在一份可证完整的
+   150	> history 上**，截断风险在本轮实际未发生。这一点原稿没能证明，现在能了。
+   151	
+   152	## Q3「`public` 暴露面过宽」—— **属重构建议，本轮只记录不动手**
+   153	
+   154	评审指出 4 处确属多余（`ChatMessage.createdAt`/`.init`、`ChatSessionViewModel.init`、
+   155	`AgentShellCore` 的 library product），并提了更小的方案（feature library + 薄 `@main` shim）。
+   156	**不在本轮动**：scope-lock 的收敛守卫是「第 3 个 MUST-FIX → checkpoint」，且这是重构不是缺陷。
+   157	登记为下一轮候选。
+   158	
+   159	### 二轮加固的第三处改动（超出那两条残留，记录完整性）
+   160	
+   161	复审另提「`--expect-min-assistant 0` 仍可显式恢复空集 PASS，RAE 专用工具不应保留无约束绕过」。
+   162	处置：**直接把下限硬定为 1**，传 `0` 或负数 → `exit 2` 拒绝执行（实测确认）。
+   163	**没有**改成加一个 `--allow-empty` 双重确认开关，理由是：
+   164	
+   165	> 再加一个 flag 不消除这个洞，只把它挪低一层——原本需要传 `--expect-min-assistant 0` 的调用，
+   166	> 同样会把 `--allow-empty` 一并固化进脚本里带着走，而没人会去复核已经写死在调用串里的参数。
+   167	> 这正是本轮一系列修复要消灭的「有文档的绕过，但没人注意」模式。
+   168	
+   169	本轮真实原件用默认值 1 即可通过，去掉这个逃生口零成本。
+   170	
+   171	**主会话独立复验的最终态**（用自己构造的反例，不用子代理的 fixture）：
+   172	
+   173	| 用例 | exit | 期望 |
+   174	|---|---|---|
+   175	| wire 侧产出了 delta 但 role 缺失 | 1 | 红 ✓ |
+   176	| wire `seq=true` vs history `seq=1`（`True == 1` 别名） | 1 | 红 ✓ |
+   177	| history 含合法 `role='user'` 消息 | 0 | **绿**（未修过头）✓ |
+   178	| 本轮真实原件 | 0 | 绿 ✓ |
+   179	| 本轮真实原件 `--drop-one` | 1 | 红且精确捕获 `18c28cec`/6 ✓ |
+   180	| `--expect-min-assistant 0` | 2 | 拒绝 ✓ |
+   181	
+   182	## 条件④ 的 UI 层缺口 —— **成立，已补**
+   183	
+   184	评审指出原稿两例都是 CLI 摘录，「没有证明错误最终在 UI 可见」。**属实。**
+   185	补做：把壳指向死端口启动 → UI 左栏直接出红色横幅
+   186	`● 连接失败: transport error: Error Domain=NSURLErrorDomain Code=-1...`
+   187	（`shots/ui-shot-06-diag-ui-layer.png`）。三层（UI / kernel-client / gateway）现已各有一例。
+   188	
+   189	## 复现命令
+   190	
+   191	```bash
+   192	# 起隔离实例（L1_PROVIDER_* 从 channel-params.json 注入，勿写进任何 tracked 文件）
+   193	L1_ROOT=<scratchpad>/l1-repro ./app/apps/AgentShell/repro/start-isolated-kernel.sh > start.log 2>&1
+   194	source <scratchpad>/l1-repro/conn.env
+   195	
+   196	# 多轮取数（保留会话供事后查 history）
+   197	SG4_KERNEL_URL="ws://127.0.0.1:$PORT" SG4_KERNEL_TOKEN="$TOKEN" \
+   198	AGENT_KERNEL_WIRE_TRACE=cli-wire-trace.jsonl \
+   199	SG5_SEND_MESSAGES="…||…||…" SG5_SEND_WAIT_MS=25000 SG5_SKIP_STOP=1 \
+   200	  ./app/.build/debug/kernel-client-cli > cli-run.log 2>&1
+   201	
+   202	# 对账（KEY 取 cli-run.log 里的 [C] SESSION_KEY=）
+   203	OPENCLAW_GATEWAY_TOKEN="$TOKEN" python3 app/apps/AgentShell/repro/reconcile-history.py \
+   204	  --trace cli-wire-trace.jsonl --base "http://127.0.0.1:$PORT" --session-key "$KEY" --limit 200
+   205	# 破坏性反证：同上加 --drop-one，必须 exit 非 0
+   206	```
+      25
+
+codex
+反例结果符合预期：缺失/非法 wire role、bool/int 混淆、float 截断候选均已变红；合法 history user 与 wire 同键流式增量仍通过。剩余工作是核实三项证据卫生的“文字所称”与实际文件统计是否一致。
+exec
+/bin/zsh -lc "rg -n '"'^'"\\"'$ '"' .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt; rg -n '"'^'"\\[C\\] SESSION_KEY=' .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-run.log; find .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live -type f | wc -l; find .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence -type f | wc -l; find .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live -type f -exec stat -f '%z' {} + | awk '{s+="'$1} END {print s}'"'; rg -n '25 个文件|31 个文件|10 个命令块|9 条|0 字节|真实观察结果|SESSION_KEY.*字面量占位符' .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-rae0001-live.md .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-diag-badport.log" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+4:$ ps -o pid=,lstart=,command= -p 27158 -p 29071
+9:$ lsof -p 27158 | grep -c '\.openclaw'   # 本轮实例在用户树下打开的文件数
+13:$ lsof +D $HOME/.openclaw   # 谁在持有用户树里的文件
+20:$ grep -rl '<SESSION_KEY>' $HOME/.openclaw | wc -l
+24:$ grep -rl '985c3d92' $HOME/.openclaw | wc -l
+28:$ grep -rl '9e9026bf' $HOME/.openclaw | wc -l
+32:$ grep -rl '18c28cec' $HOME/.openclaw | wc -l
+36:$ sqlite3 <隔离库> "SELECT count(*) FROM sessions;"
+40:$ sqlite3 <隔离库> .dump | grep -c '<SESSION_KEY>'
+44:$ lsof -p 27158 | grep -oE '/[^ ]*l1-repro[^ ]*' | head -5   # 实例实际打开的 state 路径
+916:[C] SESSION_KEY=agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798
+      25
+      31
+2993019
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-rae0001-live.md:127:**已冻结**：`evidence/live/` 下 **25 个文件 / 2,991,664 bytes**（整个 `evidence/` 树含 md 与台账共 31 个文件）。
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-rae0001-live.md:133:| ② | **`raw/isolation-transcript.txt`** —— **10 个命令块**逐条带 stdout 与 `exit=`，含 `ps -o lstart`（两个 gateway 的启动时间）、`lsof -p`、`lsof +D`、全树 grep、sqlite 计数。**注**：文件内 echo 行里的 `<SESSION_KEY>` 是字面量占位符，实际 grep 用的是变量真值，可在 `raw/cli-run.log` 搜 `[C] SESSION_KEY=` 复核（见该文件末尾的证据卫生注记） |
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-diag-badport.log:1:# 本文件为空（0 字节）—— 这是真实观察结果，不是采集失败：
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt:53:# 上面 echo 行里的 `<SESSION_KEY>` 是**字面量占位符**（我在 echo 的单引号串里写死了它），
+.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt:58:# 另：本文件实际含 10 个命令块，`itemC-rae0001-live.md` 曾写作 9 条，已更正。
+
+exec
+/bin/zsh -lc "rg -n 'evt\\.message\\.delta|\\.messageDelta\\(' app/kernel-client/swift --glob '*.swift'; rg -c '"'^'"\\"'$ '"' .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt; rg -c '"'^exit='"' .harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt" in /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop
+ succeeded in 0ms:
+app/kernel-client/swift/OpenclawWire.swift:266:    case .messageDelta(let e):
+app/kernel-client/swift/EventMapping.swift:210:            events.append(.messageDelta(MessageDeltaEventMessage(
+app/kernel-client/swift/CLIRunner.swift:257:    case .messageDelta(let e):
+app/kernel-client/swift/CLIRunner.swift:378:        case .messageDelta(let e): return (e.runID, e.seq, "messageDelta")
+app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift:35:/// 构造一条 `evt.message.delta` 事件——`MessageDeltaEventMessage` 各字段均为 D2Generated 的
+app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift:43:    .messageDelta(MessageDeltaEventMessage(
+app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift:55:/// **B2 核心测试**：喂两条 messageId 不同、runId 相同、index 均为 0 的 `evt.message.delta`
+app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift:113:    return pass(name, "两条共享 runId=\(runID)、index=0（rounds/0011 撞键形状）、messageID 不同的 evt.message.delta，经 SessionStore.handle() 后正确产生 2 条独立 session.messages（文本互不污染，各自的气泡 id 与 inProgressDeltaMessageID 记录一致）")
+app/kernel-client/swift/frame-replay-tests/SessionRestoreHistoryTests.swift:80:    guard events.count == 1, case .messageDelta(let e) = events[0] else {
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift:120:        case .messageDelta(let e): return e.seq
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift:132:        case .messageDelta(let e): ts = e.ts
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift:1588:/// 的真实形状 wire 帧,各自产出一个独立的 `evt.message.delta`,且两个事件的 `payload.messageID`
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift:1643:    guard case .messageDelta(let first) = events[0], case .messageDelta(let second) = events[1] else {
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift:1658:    return pass(name, "两条共享 runId=\(runID)、index=0（旧键会撞车的形状）的不同 assistant 消息，各自的 evt.message.delta.payload.messageID 正确透传且互异（\(firstID) ≠ \(secondID))——SessionStore 按 messageID 分组不会再把它们误判成同一条")
+10
+10
+
+codex
+**Summary**
+
+两条残留假绿均已实测堵住，且合法 history user、wire 流式同键增量没有被误判。冻结原件回归与 `--drop-one` 均符合预期；`--expect-min-assistant >= 1` 对 RAE 专用取证工具是可接受取舍。证据卫生实质闭合，但仍有两处机械文字不一致，因此判 `PASS_WITH_NOTE`。
+
+**Files touched**
+
+None — 全程只读评审，未修改任何文件。
+
+**Acceptance verification (5/5)**
+
+1. **A — 两条残留假绿：通过**
+
+   [EventMapping.swift](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/EventMapping.swift:172) 在产出 `.messageDelta` 前精确要求 `role == "assistant"`。搜索生产代码仅发现该文件实际构造 `.messageDelta`。
+
+   [reconcile-history.py](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/apps/AgentShell/repro/reconcile-history.py:158) 已严格拒绝 bool、float、字符串等非真实整数 seq；wire 异常 role 在 `:291–341` 计入最终异常判定。内存构造反例实跑：
+
+   ```text
+   missing-wire-role          passed=False bad_role=1
+   illegal-wire-role-user     passed=False bad_role=1
+   illegal-wire-role-number   passed=False bad_role=1
+   wire-bool-vs-history-int   passed=False wire_malformed=1
+   wire-float-vs-history-int  passed=False wire_malformed=1
+   history-bool-vs-wire-int   passed=False hist_malformed=1
+   ```
+
+2. **B — 未修过头：通过**
+
+   ```text
+   legal-history-user         passed=True hist_filtered=1
+   legal-wire-same-key-stream passed=True wire_dups=1
+   ```
+
+   history 中合法 `role="user"` 仍被正常过滤；wire 同键两帧仍折叠为一个逻辑消息，没有因重复判红。
+
+3. **C — assistant 下限：通过**
+
+   冻结原件传入非法下限的实际结果：
+
+   ```text
+   --expect-min-assistant 0   exit=2
+   --expect-min-assistant -2  exit=2
+   [FATAL] --expect-min-assistant 必须 >= 1
+   ```
+
+   空会话或仅有 user 的会话本身是合法系统状态，但不能构成 RAE“确实核过 assistant 消息”的有效证据。以脚本当前明确的 RAE 专用用途判断，这种排除是合理范围约束；若未来改成通用 history 对账器，才需要另行设计空会话语义。
+
+4. **D — 证据卫生：实质闭合，有两项非阻断注记**
+
+   - [isolation-transcript.txt](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt:52) 已解释 `<SESSION_KEY>` 是显示占位符、实际执行使用 `$KEY`，并给出真实值；[cli-run.log](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-run.log:916) 可独立找到相同 session key。
+   - [ui-diag-badport.log](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-diag-badport.log:1) 已由 0 字节变为 542 字节说明文件，清楚解释原始 stdout/stderr 为空、错误只在 UI 展示。
+   - [itemC-rae0001-live.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-rae0001-live.md:127) 的文件数已正确写成 `live=25`、整个 evidence 树 `=31`；命令块已更正为 10。实查 transcript 为 `10` 个 `$` 命令和 `10` 个 `exit=`。
+   - 小瑕疵：`ui-diag-badport.log` 首句仍字面称“本文件为空（0 字节）”，但文件当前是 542 字节；应改成“原始采集输出为空”。此外 itemC 所写 `2,991,664 bytes` 已滞后，当前 live 总大小为 `2,993,019 bytes`。
+
+5. **E — 冻结原件回归：通过**
+
+   ```text
+   baseline: exit=0
+   wire assistant=3, history assistant=3
+   两向差集=0
+   结果：PASS
+
+   --drop-one: exit=1
+   删除 id='18c28cec' seq=6 text='CHARLIE'
+   history_only=1
+   精确捕获 id='18c28cec' seq=6，未牵连其他 key
+   ```
+
+**Decisions / deviations**
+
+按脚本声明的“RAE 专用取证工具”范围评价 assistant 下限，而非按通用空会话比较器评价。本轮只复核指定两条残留与卫生项，没有重做 rounds/0013 全量评审。
+
+**Open questions**
+
+None.
+
+**Verdict**
+
+PASS_WITH_NOTE
+
+两条影响可信度的假绿已真正闭合，合法输入与冻结原件均无回归；剩余问题仅是证据说明中的字节数和“本文件为空”措辞不精确，不足以要求再次 REWORK。
+
+**Next recommendation**
+
+★审查闸可以通过。归档前机械修正 `ui-diag-badport.log` 首句，并在最终文字稳定后重算或移除易漂移的总字节数；无需重跑 live RAE。
+tokens used
+79,466
+**Summary**
+
+两条残留假绿均已实测堵住，且合法 history user、wire 流式同键增量没有被误判。冻结原件回归与 `--drop-one` 均符合预期；`--expect-min-assistant >= 1` 对 RAE 专用取证工具是可接受取舍。证据卫生实质闭合，但仍有两处机械文字不一致，因此判 `PASS_WITH_NOTE`。
+
+**Files touched**
+
+None — 全程只读评审，未修改任何文件。
+
+**Acceptance verification (5/5)**
+
+1. **A — 两条残留假绿：通过**
+
+   [EventMapping.swift](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/EventMapping.swift:172) 在产出 `.messageDelta` 前精确要求 `role == "assistant"`。搜索生产代码仅发现该文件实际构造 `.messageDelta`。
+
+   [reconcile-history.py](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/apps/AgentShell/repro/reconcile-history.py:158) 已严格拒绝 bool、float、字符串等非真实整数 seq；wire 异常 role 在 `:291–341` 计入最终异常判定。内存构造反例实跑：
+
+   ```text
+   missing-wire-role          passed=False bad_role=1
+   illegal-wire-role-user     passed=False bad_role=1
+   illegal-wire-role-number   passed=False bad_role=1
+   wire-bool-vs-history-int   passed=False wire_malformed=1
+   wire-float-vs-history-int  passed=False wire_malformed=1
+   history-bool-vs-wire-int   passed=False hist_malformed=1
+   ```
+
+2. **B — 未修过头：通过**
+
+   ```text
+   legal-history-user         passed=True hist_filtered=1
+   legal-wire-same-key-stream passed=True wire_dups=1
+   ```
+
+   history 中合法 `role="user"` 仍被正常过滤；wire 同键两帧仍折叠为一个逻辑消息，没有因重复判红。
+
+3. **C — assistant 下限：通过**
+
+   冻结原件传入非法下限的实际结果：
+
+   ```text
+   --expect-min-assistant 0   exit=2
+   --expect-min-assistant -2  exit=2
+   [FATAL] --expect-min-assistant 必须 >= 1
+   ```
+
+   空会话或仅有 user 的会话本身是合法系统状态，但不能构成 RAE“确实核过 assistant 消息”的有效证据。以脚本当前明确的 RAE 专用用途判断，这种排除是合理范围约束；若未来改成通用 history 对账器，才需要另行设计空会话语义。
+
+4. **D — 证据卫生：实质闭合，有两项非阻断注记**
+
+   - [isolation-transcript.txt](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/isolation-transcript.txt:52) 已解释 `<SESSION_KEY>` 是显示占位符、实际执行使用 `$KEY`，并给出真实值；[cli-run.log](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/cli-run.log:916) 可独立找到相同 session key。
+   - [ui-diag-badport.log](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/live/raw/ui-diag-badport.log:1) 已由 0 字节变为 542 字节说明文件，清楚解释原始 stdout/stderr 为空、错误只在 UI 展示。
+   - [itemC-rae0001-live.md](/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/.harnessloop/goals/20260718-002-agent-app/rounds/0013/evidence/itemC-rae0001-live.md:127) 的文件数已正确写成 `live=25`、整个 evidence 树 `=31`；命令块已更正为 10。实查 transcript 为 `10` 个 `$` 命令和 `10` 个 `exit=`。
+   - 小瑕疵：`ui-diag-badport.log` 首句仍字面称“本文件为空（0 字节）”，但文件当前是 542 字节；应改成“原始采集输出为空”。此外 itemC 所写 `2,991,664 bytes` 已滞后，当前 live 总大小为 `2,993,019 bytes`。
+
+5. **E — 冻结原件回归：通过**
+
+   ```text
+   baseline: exit=0
+   wire assistant=3, history assistant=3
+   两向差集=0
+   结果：PASS
+
+   --drop-one: exit=1
+   删除 id='18c28cec' seq=6 text='CHARLIE'
+   history_only=1
+   精确捕获 id='18c28cec' seq=6，未牵连其他 key
+   ```
+
+**Decisions / deviations**
+
+按脚本声明的“RAE 专用取证工具”范围评价 assistant 下限，而非按通用空会话比较器评价。本轮只复核指定两条残留与卫生项，没有重做 rounds/0013 全量评审。
+
+**Open questions**
+
+None.
+
+**Verdict**
+
+PASS_WITH_NOTE
+
+两条影响可信度的假绿已真正闭合，合法输入与冻结原件均无回归；剩余问题仅是证据说明中的字节数和“本文件为空”措辞不精确，不足以要求再次 REWORK。
+
+**Next recommendation**
+
+★审查闸可以通过。归档前机械修正 `ui-diag-badport.log` 首句，并在最终文字稳定后重算或移除易漂移的总字节数；无需重跑 live RAE。

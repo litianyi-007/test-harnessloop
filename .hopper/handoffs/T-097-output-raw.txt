@@ -1,0 +1,149 @@
+I'll independently review the four approval-FSM boundary fixes with code reading and constructed counterexamples—no edits, no process changes.Reading the critical implementation sections and evidence files next.Checking where openclaw actually emits the terminal approval event relative to the RPC response — the claimed ordering is load-bearing.## Summary
+
+Adversarial read-only review of rounds/0016’s four approval-FSM boundary fixes. Implementation matches the stated intent: overflow deny is success-gated, `FORCE_DENY_PENDING_KERNEL_ACK` blocks allow-without-RPC, bounded resolve wait uses actor settle/epoch (not task groups), and active-timeout UI clear-then-promote is dual-layered. All four implementer corrections to codex T-096 hold; openclaw source confirms terminal lifecycle emits before `respond(true, …)` on the durable path. Residual risk is evidence completeness (live allow→execute not re-run), not a found implementation defect that should force REWORK.
+
+## Files touched
+
+none (review only)
+
+## Acceptance verification (12/12)
+
+### 1. Overflow deny success criteria
+
+| Check | Evidence |
+|---|---|
+| Strict success = `applied==true && status=="denied"` | `OpenclawGatewayKernelClient.swift:1523–1546` dual guards; emit only at `:1550` |
+| Failures → `failQueueOverflowDeny` | catch `:1506–1512`, `applied!=true` `:1523–1534`, non-denied `:1538–1545` → `:1557` |
+| `queue_overflow` not pre-emitted | admission branch only `beginQueueOverflowDeny` `:2862–2872`; no emit before RPC |
+| `applied:false` does not enter FORCE_DENY | `enterPendingKernelAck: false` at `:1532` |
+
+**Counterexample (constructed, not code-skim):**  
+RPC throw / `applied:false` / `applied:true+allowed` must never produce `approval_buffer_resolved(queue_overflow)`. Green evidence:
+
+```
+失败形态① RPC 抛错 -> queue_overflow=[] | evt.error=[…queue_overflow_deny_unconfirmed…] | FORCE_DENY=…
+失败形态② applied:false -> queue_overflow=[] | FORCE_DENY=无
+失败形态③ applied:true 非 denied -> queue_overflow=[] | FORCE_DENY=…
+成功对照 -> queue_overflow=[…queue_overflow] | evt.error=[]
+```
+(`rounds0016-counterproofs-green.txt` L1–5; red demolitions in `counterproof-red-checks.md` ①-a/b)
+
+**Swallow path hunt:** No remaining “warn-only” overflow path. One doc drift only: older comment at `:2832` still says overflow “产出 queue_overflow 并对它发起强制 deny”; body is correct.
+
+### 2. `FORCE_DENY_PENDING_KERNEL_ACK`
+
+| Check | Evidence |
+|---|---|
+| Persistent state | struct `:411–424`; record on stop-path fail `:1175–1179`, `:1208–1214`; overflow fail `:1564–1568` |
+| Gate 2b: allow rejected, zero RPC | `:1827–1843` before slot/RPC |
+| Clear criteria | deny retry with `status=="denied"` (any applied) `:1920–1934`; authoritative terminal any status `:1622–1625`; session clear `:2055–2060` |
+
+**Stuck-forever hunt:**  
+- `applied:false` correctly excluded → avoids un-clearable retry loop (kernel will keep returning `applied:false`).  
+- Clear paths: successful denied, kernel terminal, session teardown.  
+- Residual: synthetic `applied:true+allowed` (test-only anomaly) can leave the gate until terminal/session end; not a live openclaw deny path.
+
+Green: allow-once rejected with call count `1→1`; deny retry clears (`rounds0016-counterproofs-green.txt` L6–9; red ②-a/b).
+
+### 3. Bounded `approval.resolve` wait
+
+| Check | Evidence |
+|---|---|
+| Implementation | `sendApprovalResolveBounded` `:1302`, `settleApprovalResolve` `:1350`, `endApproval…Terminal` `:1398` |
+| Default 30s | `approvalResolveBoundedWaitDefaultMS = 30_000` `:384` |
+| Actor inbox + settled + epoch | `:341–358`, `:1349–1376` |
+| No task-group wait | Comment `:1282–1288` rejects `withThrowingTaskGroup`; implementation uses detached RPC Task + deadline Task + continuation inbox |
+
+**Is the “continuation not cancel-aware” rationale sound?** Yes. `request()` waits on `withCheckedThrowingContinuation`; cancelling a sibling Task does not resume it. A task-group that waits for all children would re-introduce hang-on-missing-response.
+
+**Permanent occupancy hunt:**  
+- Timeout settles and `defer { endApprovalResolveInFlight }` releases the slot.  
+- `expired` terminal settles in-flight independently (red ③-b proves this is not just timeout covering).  
+- `clearSessionDerivedCaches` forces settle then end `:2042–2051`.  
+- Late orphan RPC dropped by epoch/settled.  
+- Residual: orphan Task may remain suspended after timeout (no slot occupancy, no drain block) — acceptable leak of a hung Task, not a permanent FSM lock.
+
+Green: A timeout 160ms; B terminal ends in-flight with 600s bound (`rounds0016-counterproofs-green.txt` L10–12).
+
+### 4. Active terminal → UI sync + badge
+
+| Check | Evidence |
+|---|---|
+| Adapter order: `evt.error(approval_timeout)` then promote | `:1649–1664` yield error before `promoteNextBufferedApprovalIfPossible` |
+| Shell: removeAll then append | `SessionStore.swift:364–377` |
+| Shell: `approvalTimeout` clears cards | `SessionStore.swift:399–405` |
+| Badge deleted | `SessionDetailView.swift:97–114` only renders `pendingApprovals.first`; no `count-1` badge |
+
+Green: event stream `["error","approval_request(ui-b)"]`; cards `[ui-a]→[]→[ui-b]`; second guarantee replace-on-request; badge structural proof buffered=2 shell-visible badge digit=0 (`rounds0016-counterproofs-green.txt` L15–20).
+
+---
+
+### Implementer corrections to codex T-096
+
+| # | Claim | Verdict |
+|---|---|---|
+| **①** Narrow authoritative-terminal settle to `status=="expired"` | **Holds.** Durable path: `resolveDetailed` → `settleLocalFromStore` → `emitLifecycle({phase:"terminal"})` (`exec-approval-manager.ts:506–511,620`) **before** `respond(true,{applied,approval})` (`approval.ts:540`). Wide “any terminal” would abort the user’s own allow/deny after kernel applied it. Regression test nails this (`green.txt` L13–14; red ③-c). Residual after narrow: non-expired external terminals rely on RPC result or 30s bound — correct. |
+| **②** Exclude `applied:false` from FORCE_DENY | **Holds.** `applied:false` means durable terminal already exists; deny retries only re-get `applied:false` (approval.ts:460–471). Entering FORCE_DENY would create an un-clearable gate. |
+| **③** Delete badge; cannot wire real buffer count inside red lines | **Holds.** Buffer never yields `approval_request` (D1 §6.2 “不触发新的可见 pending 状态”). Shell can only see active; `count-1` is structurally wrong (test: real buffered 2, fabricated badge 0). True count needs D1 surface or side channel — both out of scope. Delete is the only T-096-compliant option. |
+| **④** Refuse to map non-`expired` terminals to `approval_timeout` | **Holds.** D2 `KernelErrorCode` enum is only `rate_limited|kernel_crashed|auth_failed|sandbox_denied|network_lost|approval_timeout|unknown` (`errors.schema.json:10–18`). Mapping cancelled/denied/allowed → `approval_timeout` is a lie; using `unknown` would still be a fake semantic. Defer to D2 is correct; scope-lock already excludes contract edits. |
+
+---
+
+### Regressions / new races / silent failures
+
+| Item | Severity | Notes |
+|---|---|---|
+| Wide terminal settle (pre-narrow) would break live allow path | **Avoided** | Regression test present |
+| Orphan RPC Task after timeout | Low | Slot released; drain not blocked |
+| Active `denied`/`cancelled`/`allowed` without promote | Known gap | Dead card until local timer / next request; honest D2 registration, not a silent success |
+| Overflow doc comment at `:2832` stale | Cosmetic | Body correct |
+| FORCE_DENY after stop-path fail + failed stop leaves session locked until caller handles error | Pre-existing shape | Gate correctly blocks subsequent allow |
+
+No new “claim success while kernel still pending” path found for the four items.
+
+### Evidence sufficiency
+
+| Item | Support quality |
+|---|---|
+| ① Overflow | **Strong** — 4 stubs + red demolitions of pre-emit and weak success criteria |
+| ② FORCE_DENY | **Strong** — allow zero-RPC + deny clears; reds for missing gate/state |
+| ③ Bounded wait | **Strong** — hang-on-red for unbounded; independent terminal path with 600s bound |
+| ④ UI order | **Strong** in frame-replay/SessionStore; **not** live-UI screenshot (`shots/` empty) |
+| Allowed-terminal race | **Strong** unit; **order also independently verified** in openclaw source |
+| Live main chain this round | **Partial only** — wire shows `session.approval(pending)` + `evt.approval_request` for `echo R16_MAIN_PATH_OK` (`r16-wire-partial.jsonl` L37–38); no allow RPC / command result / deny path |
+
+**Closest to “declaration-only”:** live allow→execute / reject→no-execute for this round (scope-lock still lists it; 0015 holds prior live proof; 0016 adds unit regression against the main regression mode of this round).
+
+### Live gap impact
+
+**Medium process / low implementation risk for the four boundary items.**
+
+- Those four are failure/timeout paths; frame-replay + red/green directly target them.  
+- The gap matters for “did 0016 regress the 0015 happy path?”  
+- The highest-probability 0016 regression (wide terminal settle) is unit-regressed.  
+- Honest mid-run abort does **not** invalidate the four boundary proofs, but it **does** leave scope-lock’s live main-chain row incomplete.
+
+## Decisions / deviations
+
+- Did not start/stop processes, touch pid 29071 / `~/.openclaw`, or run UI automation (per brief).  
+- Counterexamples taken from frozen red/green evidence plus independent source walks (Swift + openclaw approval manager).  
+- Treated “main session verified order” as claim-to-recheck; re-verified via openclaw source, not trust alone.
+
+## Open questions
+
+1. When can the remaining live allow→execute half be finished without competing for the user’s machine?  
+2. Design-round follow-up: D2 codes for non-timeout active terminal card clear (④ residual).  
+3. Optional hygiene: fix stale overflow comment at `OpenclawGatewayKernelClient.swift:2832`.
+
+## Verdict
+
+**PASS_WITH_NOTE**
+
+Four T-096 boundary items are correctly implemented, counterproved, and free of the silent-success classes codex named. All four implementer corrections are sound. Notes only: (a) this-round live happy-path half unfinished; (b) registered D2 vocabulary gaps for non-expired terminals remain deferred, not papered over.
+
+## Next recommendation
+
+1. Accept 0016 implementation for the four boundary items.  
+2. When machine free: one short live re-run of allow→command + deny→no-command; freeze screenshots into `evidence/live/shots/`.  
+3. Do **not** reopen the four items for “wide terminal settle” or “badge with real count” without a D1/D2 contract change.  
+4. Park non-expired active-terminal UI clear as an explicit design-round / D2 issue, not silent product debt.
