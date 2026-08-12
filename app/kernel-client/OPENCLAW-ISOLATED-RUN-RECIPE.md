@@ -38,11 +38,14 @@ PORT=18889                                # 任选空闲端口，本轮验证用
 TOKEN=$(openssl rand -hex 24)             # 任意生成一个共享密钥字符串
 
 OPENCLAW_STATE_DIR="$PROFILE_DIR/state" \
+OPENCLAW_WORKSPACE_DIR="$PROFILE_DIR/workspace" \
 OPENCLAW_GATEWAY_PORT="$PORT" \
 OPENCLAW_GATEWAY_TOKEN="$TOKEN" \
 OPENCLAW_SKIP_CHANNELS=1 \
 node scripts/run-node.mjs gateway --port "$PORT" --allow-unconfigured --token "$TOKEN"
 ```
+
+> `OPENCLAW_WORKSPACE_DIR` 于 2026-08-05（rounds/0011）加入本命令。**不设它则任何 `sessions.send` 都会伸向用户全局 `~/.openclaw/workspace`**——详见下方要点第一条的作用域限制框。本 recipe 的 §3/§5 `[实测]` 记录来自 SG-4，当时 `send` 被 defer（见 §4），故那些记录里没有这个变量；这不是记录有误，是它们的场景不含 `send`。
 
 要点（全部指向确切 env/flag 名）：
 
@@ -50,7 +53,21 @@ node scripts/run-node.mjs gateway --port "$PORT" --allow-unconfigured --token "$
   `[源码]` `kernels/openclaw/src/config/paths.ts:65-94`（`resolveStateDir`）、`:159-168`（`resolveCanonicalConfigPath`）、`:315-324`（`resolveOAuthDir`）。
   只要目录里没有 `openclaw.json`，`io.load` 走默认配置，不会解析出任何 schema 冲突。
   另有更底层的 `OPENCLAW_HOME` 可以整体挪家目录（影响 `resolveRequiredHomeDir` 进而影响 `~/.openclaw` 默认路径）
-  `[源码]` `kernels/openclaw/src/infra/home-dir.ts:45-54`，但**只设 `OPENCLAW_STATE_DIR` 已经足够隔离本任务需要的 state/config/oauth**，更简单、副作用面更小，本轮就是只设了这一个就跑通的。
+  `[源码]` `kernels/openclaw/src/infra/home-dir.ts:45-54`，但只设 `OPENCLAW_STATE_DIR` 已足够隔离 **state/config/oauth 这三样**，更简单、副作用面更小。
+
+  > ⚠️ **作用域限制（2026-08-05 rounds/0011 实测补正）**。本行原文写的是「**只设 `OPENCLAW_STATE_DIR` 已经足够隔离本任务需要的 state/config/oauth**，……本轮就是只设了这一个就跑通的」——读起来像通用结论，实际不是。
+  >
+  > 那句话在**本 recipe 的原始范围内**成立，因为 §4 明确把 `sessions.send` defer 掉了，全程只跑 `createSession → subscribe → stop`，这条路径确实不碰 workspace。
+  >
+  > **一旦真的 `send`，workspace 解析会伸向用户全局的 `~/.openclaw/workspace`，隔离即告破。** rounds/0011 严格照本行原文只设 `OPENCLAW_STATE_DIR` 起实例，`createSession`/`subscribe`/`stop` 全部正常，一 `send` 就报：
+  >
+  > ```
+  > "errorMessage": "Error: Legacy workspace setup state requires migration for
+  >                  /Users/litianyi/.openclaw/workspace; run openclaw doctor --fix."
+  > ```
+  >
+  > rounds/0009 其实早就额外设了 `OPENCLAW_WORKSPACE_DIR`（见其证据文件：「`OPENCLAW_STATE_DIR`/`OPENCLAW_WORKSPACE_DIR` 均在 scratchpad 下全新目录」），但本 recipe 当时未据此更新，于是 rounds/0011 又踩了一次同一个坑。**结论写在这里，是为了让下一个人不必再踩第三次。**
+- **`OPENCLAW_WORKSPACE_DIR`**：workspace 根目录的显式覆盖。**只要场景会走到 `sessions.send`，就必须一并设置**（理由见上一条的作用域限制）。不设时落到 `~/.openclaw/workspace`，即用户全局工作区——既破坏隔离，也可能因该目录的历史状态直接让 run 失败（rounds/0011 实测就是被「Legacy workspace setup state requires migration」挡下的）。
 - **不要传 `--dev` / `--profile dev`**：见 §0，会触发已知 bug。也不需要 `--profile <name>`——`OPENCLAW_STATE_DIR` 一旦显式设置，profile 相关代码只会去尝试填充它（不会覆盖）
   `[源码]` `kernels/openclaw/src/cli/profile.ts:94-101`。
 - **`--allow-unconfigured`**：全新空目录没有任何 `gateway.mode=local` 之类的配置，需要这个 flag 才能起
@@ -64,6 +81,11 @@ node scripts/run-node.mjs gateway --port "$PORT" --allow-unconfigured --token "$
   `[源码]` `kernels/openclaw/src/cli/gateway-cli/run-command.ts:26-27`、`kernels/openclaw/src/gateway/startup-auth.ts:224-259`（不显式给 token 时会 `crypto.randomBytes(24)` 生成且**不落盘**，只在进程内存里，客户端无法凭空读到）。
 
 `[实测]` 本轮实际执行的命令（用于验证，未改动任何源码）：
+
+> ⚠️ **这是 SG-4 当时的历史记录，不是可直接复制的模板——它没有 `OPENCLAW_WORKSPACE_DIR`。**
+> 保持原样是因为它记录的是「当时真跑了什么」，改动它等于篡改记录；而 SG-4 的场景**不含 `sessions.send`**（见 §4），所以当时缺这个变量并不构成问题。
+> **要复制去跑，请用 §1 顶部那条命令**（含 `OPENCLAW_WORKSPACE_DIR`）。
+
 ```bash
 OPENCLAW_STATE_DIR="$SCRATCH/openclaw-iso/state" \
 OPENCLAW_GATEWAY_PORT=18889 \
@@ -225,14 +247,38 @@ Params schema `[源码]` `kernels/openclaw/packages/gateway-protocol/src/schema/
   - `lsof -iTCP:18789` 仍显示 PID 5197 在监听，`ps -p 5197` 显示该进程持续运行、uptime 未受影响——**全程未连接、未干扰、未重启用户全局 gateway**。
 - 遗留文件：`kernels/openclaw` 源码**零改动**（全程只读）；`/tmp/openclaw/openclaw-<date>.log` 这个日志目录不受 `OPENCLAW_STATE_DIR` 控制、是个全局固定路径（本轮未深挖其覆盖 env，只读到 append 而非覆盖行为），如果后续要更严格的日志隔离需要再查一下有没有单独的日志目录 env override——这是本轮唯一没有完全钉死的隔离维度，不影响本任务的验收目标（RPC 闭环 + 不碰用户 gateway 状态/端口/配置）。
 
+> **后续（2026-08-07，rounds/0012 实测）**：上面这句「未深挖其覆盖 env」已经深挖过一次，结论是**这确实是一个真实泄漏面，且 `TMPDIR` 不是它的开关**。
+>
+> - **泄漏被直接归因坐实**：rounds/0012 的隔离实例自报 `[gateway] log file: /tmp/openclaw/openclaw-2026-08-05.log`；该全局文件里命中本轮 run id `b53d403a`(×1)、`0700f2fb`(×7) 与隔离目录名 `round0012-openclaw-iso`(×1)。即 `OPENCLAW_STATE_DIR` + `OPENCLAW_WORKSPACE_DIR` 全设之后，日志仍写进与用户实例共享的全局文件。
+> - **`TMPDIR` 假设已被证伪**：`resolvePreferredOpenClawTmpDir`（`kernels/openclaw/src/infra/tmp-openclaw-dir.ts:40`）的 fallback 走 `os.tmpdir()`，而 `os.tmpdir()` 确实受 `TMPDIR` 控制（实测：默认 `/var/folders/…`，设 `TMPDIR` 后即变）。但起一个 `TMPDIR=<隔离>/tmp` 的探针实例，**仍自报同一个全局落点**，隔离 tmp 下零 `.log`，全局文件里反有该探针 2 处命中。
+> - **附带观察**：`TMPDIR` 被**部分**组件采纳（探针的隔离 tmp 下确实生成了 `tmp/jiti/openclaw/…` 缓存）。所以不是「`TMPDIR` 无效」，而是**日志路径的解析不走那条链**。
+>
+> **~~目前仍无已知手段隔离该日志路径。~~ 这句结论是错的，已于 2026-08-07 撤回。**
+>
+> **正确做法：在隔离实例的 `openclaw.json` 里设 `logging.file`。**
+>
+> ```json
+> { "logging": { "file": "<隔离目录>/logs/openclaw-isolated.log" } }
+> ```
+>
+> `[源码]` `kernels/openclaw/src/logging/log-file-path.ts:17` —— `return config?.logging?.file ?? resolveDefaultRollingLogFile();`，即设了就用它、没设才回落全局滚动日志。schema 定义见 `src/config/zod-schema.root-shape.ts:107`（`file: z.string().optional()`），标签见 `src/config/schema.labels.ts:36`（`"logging.file": "Log File Path"`）。
+>
+> `[实测 2026-08-07]` **双向证明**：设了 `logging.file` 的探针实例自报 `[gateway] log file: <隔离目录>/logs/openclaw-isolated.log`，隔离目录内生成 7530 字节日志，而全局 `/tmp/openclaw/openclaw-2026-08-0{5,7}.log` 里该探针的目录名与端口号**命中 0 次**；作为对照，同轮未设该字段的探针在全局文件里**命中 1 次**。
+>
+> **这个错误结论是怎么来的**：主会话搜索时只找 **env 变量**，而这个开关是**配置字段**，于是得出「无手段」。由 hopper 双路异构评审（codex T-081 / grok T-082）**各自独立**指出同一个 `logging.file`，主会话复核源码并实测后撤回原结论。**搜索维度选错会让「找不到」看起来像「不存在」。**
+
 ---
 
 ## 回主会话摘要（供上层引用）
 
 1. 隔离启动一行命令 + 端口：
    ```
-   OPENCLAW_STATE_DIR=<fresh-empty-dir> OPENCLAW_GATEWAY_PORT=18889 OPENCLAW_GATEWAY_TOKEN=<token> OPENCLAW_SKIP_CHANNELS=1 node scripts/run-node.mjs gateway --port 18889 --allow-unconfigured --token <token>
+   OPENCLAW_STATE_DIR=<fresh-empty-dir> OPENCLAW_WORKSPACE_DIR=<fresh-empty-dir-2> OPENCLAW_GATEWAY_PORT=18889 OPENCLAW_GATEWAY_TOKEN=<token> OPENCLAW_SKIP_CHANNELS=1 node scripts/run-node.mjs gateway --port 18889 --allow-unconfigured --token <token>
    ```
+   > `OPENCLAW_WORKSPACE_DIR` 于 **2026-08-07（rounds/0012）** 补入本行。此前本行只有 `OPENCLAW_STATE_DIR`——**§1 已于 rounds/0011 补齐，这条摘要却漏了**，于是它一直是一条能复现已知越界的可复制命令。理由与作用域限制见 §1 的告警框。
+   >
+   > **登记这次漏改本身**：rounds/0011 修 §1 时以为改完了，没有全文枚举 `OPENCLAW_STATE_DIR` 的每一处出现，直到 rounds/0011 的对抗审（codex T-080）指出来。**「改了主文、漏了摘要」是同一份文档内的清单过时**——比跨文件的版本清单更容易漏，因为它看起来已经改过了。
+
    端口 18889（任选空闲端口即可）。**关键：不要加 `--dev`**——`--dev` 自举代码在这个 pin commit 里写出的 `agents.list` 配置和当前 schema 不兼容，必现 "Unrecognized key: list"，这是本轮找到的真实根因（比"读了用户全局配置"更精确）。
 2. 鉴权：需要配（显式传 `--token`/`OPENCLAW_GATEWAY_TOKEN`，别指望读随机生成的临时 token，它不落盘）。客户端一句话：收到 `connect.challenge` 事件后，直接发 `connect` 请求带 `auth.token`（共享密钥场景下 nonce 不用回传），`client.id`/`client.mode` 必须用 `"cli"`/`"cli"` 才能在无设备配对的情况下保留 `operator.write` 等写权限 scope（用 `test`/`backend` 会握手成功但 scope 被清空，写操作全部 403）。
 3. send 能否 mock 跑通：**不能，本轮 defer**。源码里没有 echo/mock provider，`sessions.create` 返回的 `resolved.model` 证实会打真实模型。`createSession → subscribe → stop` 这个闭环（L1，不含 send）已经**完整实测跑通**，全程零模型调用。

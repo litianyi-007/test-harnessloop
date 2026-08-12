@@ -405,6 +405,269 @@ func testApprovalReplayConsumedFromSubscribeResponse() async -> Bool {
     return pass(name, "approvalReplay 里的 pending 审批被正确缓冲，agent 帧补上后正确 join 产出 approvalRequest(reqID=\(approvalID))")
 }
 
+// MARK: - rounds/0016：exec.approval.requested（握手补 `exec-approvals` cap 之后才收得到的那条事件）
+
+/// 构造一条真实形状的 `exec.approval.requested` wire 帧——payload 结构逐字对齐
+/// `gateway/server-methods/approval-shared.ts:255-264` `buildRequestedApprovalEvent`
+/// （`{id, request, createdAtMs, expiresAtMs}`），`request` 字段集取自
+/// `infra/exec-approvals.ts:225-253` `ExecApprovalRequestPayload`。
+func execApprovalRequestedFrame(
+    approvalID: String, kernelKey: String, runID: String?, toolCallID: String?, createdAtMs: Int
+) -> JSONObject {
+    var request: JSONObject = [
+        "command": "echo \(approvalID)",
+        "host": "gateway",
+        "agentId": "main",
+        "warningText": "writes outside workspace",
+        "sessionKey": kernelKey,
+        "allowedDecisions": ["allow-once", "deny"],
+    ]
+    if let runID { request["runId"] = runID }
+    if let toolCallID { request["toolCallId"] = toolCallID }
+    return [
+        "type": "event", "event": "exec.approval.requested",
+        "payload": [
+            "id": approvalID, "request": request,
+            "createdAtMs": createdAtMs, "expiresAtMs": createdAtMs + 1_800_000,
+        ] as JSONObject,
+    ]
+}
+
+/// **修前 fail / 修后 pass**：`exec.approval.requested` 此前落在 `handleIncoming` 的 `default:`
+/// 分支被原样打印后丢弃（它根本没有 case）。而这条事件恰恰是"补了 `exec-approvals` cap 之后才会
+/// 收到"的那条——不认它，补 cap 就只剩"审批不再被 no-approval-route 判死"这一半收益，事件本身仍
+/// 然是白收的。
+///
+/// 本测试同时钉死两件事：
+///  1. 只有 `exec.approval.requested` 一条帧（没有 session.approval、也没有
+///     agent(stream:"approval")）时也能产出 `evt.approval_request`——它自带 `request.runId` 与
+///     `request.toolCallId`，不需要等 agent 帧（`bash-tools.exec-approval-request.ts:97-98` 原样
+///     透传）。
+///  2. **reqID 必须等于 `payload.id`**，也就是 `approval.resolve` 要的那个 id
+///     （`approval-shared.ts:259` `id: record.id`）——对不上就会"弹得出、点了没用"。这里直接断言
+///     产出后该 reqID 已进入 respondApproval() 的 pending 表。
+func testExecApprovalRequestedAloneProducesApprovalRequest() async -> Bool {
+    let name = "rounds/0016: exec.approval.requested alone produces evt.approval_request with the resolve-compatible reqID"
+    let client = freshClient()
+    let sessionID = "sess-exec-approval-req-1"
+    let kernelKey = "kernel-key-exec-approval-req-1"
+    let stream = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+
+    let approvalID = "approval-exec-requested-1"
+    await client.testSupportFeedFrame(execApprovalRequestedFrame(
+        approvalID: approvalID, kernelKey: kernelKey,
+        runID: "run-exec-requested-1", toolCallID: "tool-exec-requested-1",
+        createdAtMs: 1_784_871_900_000
+    ))
+
+    let events = await collectUpTo(stream, maxCount: 2)
+    guard events.count == 1, case .approvalRequest(let e) = events[0] else {
+        return fail(name, "expected exactly 1 approvalRequest from exec.approval.requested, got \(events.count) — 修前这条事件落在 default: 分支被丢弃")
+    }
+    guard e.payload.reqID == approvalID else {
+        return fail(name, "reqID 必须逐字等于 exec.approval.requested 的 payload.id（= approval.resolve 的 id），got \(e.payload.reqID)")
+    }
+    guard e.runID == "run-exec-requested-1", e.payload.toolCallID == "tool-exec-requested-1" else {
+        return fail(name, "runID/toolCallID 必须取自 request.runId/request.toolCallId，got runID=\(e.runID) toolCallID=\(e.payload.toolCallID)")
+    }
+    guard e.payload.timeoutMS == 1_800_000 else {
+        return fail(name, "timeoutMS 应为 expiresAtMs-createdAtMs=1800000，got \(e.payload.timeoutMS)")
+    }
+    // presentation 合成得对不对，用生产代码自己的提炼函数验（UI 卡片读的就是它）。
+    let summary = summarizeApprovalPresentation(e.payload)
+    guard summary.openclawKind == "exec", summary.commandText == "echo \(approvalID)",
+          summary.host == "gateway", summary.agentID == "main",
+          summary.allowedDecisions == [.allowOnce, .deny] else {
+        return fail(name, "合成的 presentation 不对：kind=\(summary.openclawKind ?? "nil") command=\(summary.commandText ?? "nil") host=\(summary.host ?? "nil") agent=\(summary.agentID ?? "nil") allowed=\(summary.allowedDecisions)")
+    }
+    // 出站关联：这个 reqID 必须已经在 respondApproval() 的 pending 表里，否则用户点了按钮会被
+    // 客户端以 approval_not_pending 拦下——"弹得出、点了没用"。
+    guard await client.testSupportHasPendingApprovalAwaitingDecision(reqID: approvalID) else {
+        return fail(name, "reqID \(approvalID) 未进入 respondApproval() 的 pending 表——出站决策会被自己拦下")
+    }
+    return pass(name, "只凭 exec.approval.requested 一条帧就产出 approval_request(reqID=\(approvalID))，字段与 approval.resolve 的 id 同源，且已可被 respondApproval() 关联")
+}
+
+/// **修前 fail / 修后 pass**（去重反证）：补上映射之后，同一次审批在 wire 上有**两条**独立事件能
+/// 触发产出——`session.approval(phase:"pending")`（`operator-approval-session-events.ts:110`，与
+/// caps 无关）与 `exec.approval.requested`（`approval-shared.ts:463-471`，被 caps 门禁）。真实到达
+/// 顺序是 session.approval 先（`exec-approval-manager.ts:358` 在 register 内发）、
+/// exec.approval.requested 后、agent(stream:"approval") 最后
+/// （`embedded-agent-subscribe.handlers.tools.ts:1665-1699` 要等两阶段注册返回才发）。
+///
+/// 本测试按这个真实顺序喂前三条帧，再补一条**重放**的 `session.approval(pending)`——那不是杜撰的
+/// 场景：`consumeApprovalReplay` 在断线重连后的 `sessions.messages.subscribe` 响应里，就是把仍处于
+/// pending 的审批合成成同样形状的 `session.approval(pending)` 帧再走一遍
+/// （见 `OpenclawGatewayKernelClient.consumeApprovalReplay`）。断言调用方**只**收到 1 条
+/// approval_request（不是 2 条），且没有留下永远配不上对的孤儿缓冲条目。
+func testExecApprovalRequestedDoesNotDoubleEmitWithSessionApproval() async -> Bool {
+    let name = "rounds/0016: session.approval + exec.approval.requested + agent(approval) + 重放 三条来源只产出 1 条 approval_request"
+    let client = freshClient()
+    let sessionID = "sess-exec-approval-dedup-1"
+    let kernelKey = "kernel-key-exec-approval-dedup-1"
+    let stream = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+
+    let approvalID = "approval-exec-dedup-1"
+    let createdAtMs = 1_784_872_000_000
+    let sessionApprovalFrame: JSONObject = [
+        "type": "event", "event": "session.approval",
+        "payload": [
+            "sessionKey": kernelKey, "updatedAtMs": createdAtMs, "phase": "pending",
+            "approval": [
+                "id": approvalID, "status": "pending",
+                "presentation": [
+                    "kind": "exec", "commandText": "echo from-session-approval",
+                    "allowedDecisions": ["allow-once", "deny"],
+                ] as JSONObject,
+                "createdAtMs": createdAtMs, "expiresAtMs": createdAtMs + 1_800_000,
+            ] as JSONObject,
+        ] as JSONObject,
+    ]
+
+    // ① session.approval(pending) 先到——此刻还缺 {runId,toolCallId}，按 M1 被缓冲。
+    await client.testSupportFeedFrame(sessionApprovalFrame)
+    // ② exec.approval.requested 后到，带来 {runId,toolCallId}——此刻应当立即 join 并产出。
+    await client.testSupportFeedFrame(execApprovalRequestedFrame(
+        approvalID: approvalID, kernelKey: kernelKey,
+        runID: "run-exec-dedup-1", toolCallID: "tool-exec-dedup-1", createdAtMs: createdAtMs
+    ))
+    // ③ agent(stream:"approval") 最后到——不得触发第二条 approval_request。
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": [
+            "runId": "run-exec-dedup-1", "sessionKey": kernelKey, "stream": "approval",
+            "data": ["phase": "requested", "toolCallId": "tool-exec-dedup-1", "approvalId": approvalID] as JSONObject,
+            "ts": createdAtMs + 200,
+        ] as JSONObject,
+    ])
+    // ④ 断线重连后 approvalReplay 把同一条仍 pending 的审批重放一遍（合成帧与 ① 同形）——去重闸门
+    //   被拿掉时，这一步会拿 ③ 缓存下来的 {runId,toolCallId} 补发出第二条同 reqID 的 approval_request。
+    await client.testSupportFeedFrame(sessionApprovalFrame)
+
+    let events = await collectUpTo(stream, maxCount: 3)
+    guard events.count == 1, case .approvalRequest(let e) = events[0] else {
+        return fail(name, "expected exactly 1 approvalRequest across the four frames, got \(events.count) — 重复交付会让调用方误以为是两次独立审批")
+    }
+    guard e.payload.reqID == approvalID, e.runID == "run-exec-dedup-1", e.payload.toolCallID == "tool-exec-dedup-1" else {
+        return fail(name, "unexpected fields reqID=\(e.payload.reqID) runID=\(e.runID) toolCallID=\(e.payload.toolCallID)")
+    }
+    // join 用的是内核自己投影出来的那份权威 presentation（来自 session.approval），不是合成的那份。
+    let summary = summarizeApprovalPresentation(e.payload)
+    guard summary.commandText == "echo from-session-approval" else {
+        return fail(name, "已缓冲的 session.approval 权威 presentation 应当优先于合成版本，got commandText=\(summary.commandText ?? "nil")")
+    }
+    guard await !client.testSupportHasBufferedApproval(approvalID: approvalID) else {
+        return fail(name, "四条帧都处理完之后不应该还留着双向 join 缓冲条目（孤儿条目只能等 session 结束才清）")
+    }
+    return pass(name, "四条帧只产出 1 条 approval_request（reqID=\(approvalID)），采用 session.approval 的权威 presentation，且无孤儿缓冲残留")
+}
+
+// MARK: - rounds/0016 live 实测：agent(stream:"lifecycle", phase:"waiting-approval") 关联采集
+
+/// **修前 fail / 修后 pass**：live 隔离实例（`ask=always`，客户端已声明 `caps:["exec-approvals"]`）
+/// 实测到的 `agent` 关联帧根本不是 `stream:"approval"`+`phase:"requested"`，而是
+/// **`stream:"lifecycle"`+`phase:"waiting-approval"`**——webchat 是 native approval channel，exec
+/// 走的是内联等待分支（`bash-tools.exec-host-gateway.ts:414-428` `shouldAwaitGatewayApprovalInline()`
+/// → `:1085-1091` `emitAgentEvent({stream:"lifecycle", data:{phase:"waiting-approval", ...}})`）。
+/// 修前采集处只认 `"requested"`，这条帧落进 `case "lifecycle"` 被 end/error 守卫丢弃，
+/// `session.approval(phase:"pending")` 因此永远等不到 `{runId,toolCallId}`，`producedEvents` 为空、
+/// UI 上没有审批卡片（界面停在"等待回复…"）。
+///
+/// 本测试的两条帧**逐字取自冻结的真实 wire trace**，不是构造的：
+/// `.harnessloop/goals/20260718-002-agent-app/rounds/0015/evidence/live/raw/approval-frames-extract.json`
+/// （同源于 `r15b-wire.jsonl`）。到达顺序也与实测一致：`session.approval` 先、`agent` 后
+/// （createdAtMs 1786476738788 → ts 1786476738938）。
+func testAgentLifecycleWaitingApprovalJoinsRealFrozenFrames() async -> Bool {
+    let name = "rounds/0016 live: agent(stream:lifecycle, phase:waiting-approval) 真实帧能与 session.approval join 出 approval_request"
+    let client = freshClient()
+    let sessionID = "sess-waiting-approval-live-1"
+    // 真实 sessionKey（冻结帧 payload.sessionKey / payload.sourceSessionKey 同值）。
+    let kernelKey = "agent:main:dashboard:5f25e610-69b4-4cc6-af3b-fd2d65f0c8ff"
+    let stream = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+
+    let approvalID = "d09b3b34-874e-4c95-b363-8680c1fb6b20"
+    let toolCallID = "call_00_hcUZ27OoJFUsBDkJ08M47382"
+    let runID = "6208dd06-d45c-4f46-b146-b1a6164f3675"
+
+    // ① 冻结帧 #1：session.approval(phase:"pending")。字段逐字照抄，含 openclaw 真实送出的 null
+    //   （commandPreview/nodeId/warningText），用 NSNull() 如实表示，不悄悄删掉。
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "session.approval",
+        "payload": [
+            "approval": [
+                "createdAtMs": 1_786_476_738_788,
+                "expiresAtMs": 1_786_478_538_788,
+                "id": approvalID,
+                "presentation": [
+                    "agentId": "main",
+                    "allowedDecisions": ["allow-once", "deny"],
+                    "commandPreview": NSNull(),
+                    "commandText": "echo APPROVAL_GATE_OK",
+                    "host": "gateway",
+                    "kind": "exec",
+                    "nodeId": NSNull(),
+                    "warningText": NSNull(),
+                ] as JSONObject,
+                "status": "pending",
+                "urlPath": "/approve/\(approvalID)",
+            ] as JSONObject,
+            "phase": "pending",
+            "sessionKey": kernelKey,
+            "sourceSessionKey": kernelKey,
+            "updatedAtMs": 1_786_476_738_788,
+        ] as JSONObject,
+    ])
+
+    // 此刻还缺 {runId,toolCallId}——按 M1 双向 join 应当处于缓冲态（修前也是这一步，问题在下一步）。
+    guard await client.testSupportHasBufferedApproval(approvalID: approvalID) else {
+        return fail(name, "expected the real session.approval(pending) frame to be buffered while waiting for the agent frame")
+    }
+
+    // ② 冻结帧 #2：agent(stream:"lifecycle", data.phase:"waiting-approval")。**这条就是修前被丢弃的
+    //   那条**——把采集处的 phase 判定改回 "requested" 或把它交回 end/error 守卫，本条测试即变红。
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": [
+            "agentId": "main",
+            "data": [
+                "approvalId": approvalID,
+                "phase": "waiting-approval",
+                "toolCallId": toolCallID,
+            ] as JSONObject,
+            "isHeartbeat": false,
+            "runId": runID,
+            "seq": 623,
+            "sessionId": "fb677311-e166-4f60-9ca9-8748b5990594",
+            "sessionKey": kernelKey,
+            "stream": "lifecycle",
+            "ts": 1_786_476_738_938,
+        ] as JSONObject,
+    ])
+
+    let events = await collectUpTo(stream, maxCount: 2)
+    guard events.count == 1, case .approvalRequest(let e) = events[0] else {
+        return fail(name, "expected exactly 1 approval_request once the real lifecycle/waiting-approval frame lands, got \(events.count) — 修前这条 agent 帧被 end/error 守卫丢弃，producedEvents 为空、UI 无审批卡片")
+    }
+    guard e.payload.reqID == approvalID else {
+        return fail(name, "reqID 必须是内核的 approvalId \(approvalID)，got \(e.payload.reqID)")
+    }
+    guard e.payload.toolCallID == toolCallID else {
+        return fail(name, "toolCallID 必须取自这条 lifecycle 帧的 data.toolCallId \(toolCallID)，got \(e.payload.toolCallID)")
+    }
+    guard e.runID == runID else {
+        return fail(name, "runID 必须取自这条 agent 帧自己的 payload.runId \(runID)，got \(e.runID)")
+    }
+    // 卡片能真正渲染出来（而不是只产出一条空壳事件）：presentation 是内核那份权威 payload。
+    let summary = summarizeApprovalPresentation(e.payload)
+    guard summary.commandText == "echo APPROVAL_GATE_OK" else {
+        return fail(name, "UI 卡片的命令文本应当来自真实 presentation，got \(summary.commandText ?? "nil")")
+    }
+    guard await !client.testSupportHasBufferedApproval(approvalID: approvalID) else {
+        return fail(name, "join 成功后不应再残留双向 join 缓冲条目")
+    }
+    return pass(name, "真实冻结帧 lifecycle/waiting-approval 正确 join 出 approval_request(reqID=\(approvalID), toolCallID=\(toolCallID), runID=\(runID))，命令文本=\(summary.commandText ?? "nil")")
+}
+
 // MARK: - F5：非 exec 工具（item stream）诚实映射（纯函数，回归覆盖）
 
 func testNonExecToolItemHonestMapping() -> Bool {
@@ -1558,6 +1821,19 @@ func testFullD2JSONEncodeDecodeRoundTrip() -> Bool {
 
 // MARK: - rounds/0012 ①'：messageID 透传离线破坏性反证（KernelClient/EventMapping 层）
 
+/// **rounds/0013 B2 订正**：下面这段"范围说明"写于 rounds/0012，当时的限制（`frame-replay-tests`
+/// 够不到 `SessionStore`、本轮 Allowed Changes 未授权改 Package.swift）**已在 rounds/0013 B2 解除**
+/// ——`app/Package.swift` 新增了 `AgentShellCore` library target（模型层从 `AgentShell` 拆出），
+/// `frame-replay-tests` 现在显式依赖它并 `@testable import`，`SessionStore.handle(_:for:)` 也从
+/// `private` 放宽到 internal（细节见 app/Package.swift 该 target 定义处、
+/// SessionStore.swift 该方法上方的文档注释）。**下面这条测试本身没有变**——它验的是
+/// kernel-client wire-mapping 层（messageID 透传），这是一个独立、仍然成立的正确性属性，不是
+/// SessionStore 分组行为的替代品，继续保留。SessionStore 层的分组行为现在有了直接的入库测试：见
+/// 本 target 内 `SessionStoreGroupingTests.swift` 的
+/// `testSessionStoreHandleGroupsDistinctMessageIDsAsSeparateMessages`——下面这段关于"SessionStore
+/// 的独立验证不在本 target 内、要去任务报告找"的描述已经过时，那条验证现在就在本 target 内、
+/// 入库常驻。以下原文保留作为 rounds/0012 时点的历史记录：
+///
 /// **范围说明（诚实标注,不是回避)**：scope-lock rounds/0012 §①' 要求的破坏性反证原文是"喂两条
 /// messageId 不同、runId 相同、index 均为 0 的 session.message 帧,断言它们不被合并成一条"。真正
 /// 执行"是否合并成一条气泡"这个决策的代码是 `SessionStore.appendAssistantDelta`
@@ -1566,7 +1842,8 @@ func testFullD2JSONEncodeDecodeRoundTrip() -> Bool {
 /// `.executableTarget(name: "frame-replay-tests", dependencies: ["KernelClient", "D2Generated"], ...)`），
 /// 够不到姊妹 executableTarget `AgentShell`；`SessionStore`/`appendAssistantDelta` 本身也是
 /// `private`（Swift 的 file-private 语义,同模块其它文件同样访问不到），本轮 Allowed Changes 也没有
-/// 授权改 Package.swift 去连通两者或放宽 SessionStore 的访问级别。
+/// 授权改 Package.swift 去连通两者或放宽 SessionStore 的访问级别。（**rounds/0013 起不再成立，见
+/// 上方订正**。）
 ///
 /// 因此本测试改为断言 FrameReplayTests 实际够得到的那一层——kernel-client 的真实 dispatch 路径
 /// （`handleIncoming` -> `handleSessionMessageEvent` -> `mapOpenclawSessionMessageToKernelEvents`，
@@ -1574,9 +1851,10 @@ func testFullD2JSONEncodeDecodeRoundTrip() -> Bool {
 /// 的真实形状 wire 帧,各自产出一个独立的 `evt.message.delta`,且两个事件的 `payload.messageID`
 /// 互异、均非 nil。这正是 SessionStore 新分组逻辑赖以工作的必要前提——SessionStore 按 messageID
 /// 做字典键分组,这里的 messageID 一旦缺失或雷同,SessionStore 的分组必然失效(退化成到处开新气泡,
-/// 或者更糟——错误合并回本轮要修的重复 bug)。SessionStore 实际改动本身的独立红→绿验证（不在本
-/// target 内,原因见上）记在本轮任务报告"破坏性反证"一节，使用的是从 SessionStore.swift 逐字抽出
-/// 的分组算法本体（非重新实现），针对真实 D2Generated 事件类型在 scratchpad 里跑，同样先红后绿。
+/// 或者更糟——错误合并回本轮要修的重复 bug)。（rounds/0012 时点：）SessionStore 实际改动本身的
+/// 独立红→绿验证（不在本 target 内,原因见上）记在本轮任务报告"破坏性反证"一节，使用的是从
+/// SessionStore.swift 逐字抽出的分组算法本体（非重新实现），针对真实 D2Generated 事件类型在
+/// scratchpad 里跑，同样先红后绿。
 ///
 /// **修前 fail / 修后 pass**：本测试断言的 `event.payload.messageID` 字段本身是本轮新增（D2 schema
 /// `events/message-delta.schema.json` 的 `MessageDeltaPayload.messageId`，rounds/0012 之前
@@ -2009,6 +2287,111 @@ func testWireMessageSeqDetectsRegression() async -> Bool {
     return pass(name, "倒退帧被正确抓到（1 处违例）：\(snapshot.violations[0])")
 }
 
+// MARK: - B1（rounds/0013）：createSession() label 唯一性
+//
+// openclaw `sessions.create` 经 `session-create-service.ts:723`（`applySessionsPatchToStore`）转发进
+// `gateway/sessions-patch.ts:422-441`（label 分支）——对同一 store 内**全部**会话强制 label 互不相同
+// （`entry?.label === parsed.label` 逐条比对现有条目，`:435-437`），撞名直接
+// `INVALID_REQUEST: label already in use: <label>`，没有重试机会（本轮在 openclaw 源码里逐层核对过
+// 这条调用链，不是转述任务书）。旧实现在 `OpenclawGatewayKernelClient.createSession()` 里把 label
+// 写死成字面量 `"sg4-kernel-client-l1"`，同一 openclaw state 目录下第二次 `createSession()` 必然撞上
+// 第一次留下的同名条目——本轮已 UI 侧 + CLI 侧双路径实证（`app/apps/AgentShell/repro/L1-REPRO.md` §5
+// 修复前版本）。
+
+/// **纯函数测试**（同款风格见 `testAttachmentOnlyEncodesContent`）：固定 `ourSessionID` + 固定
+/// `Date`，断言 `makeSessionLabel` 产出的 label 同时满足 scope-lock B1 的两条要求——"人眼可辨认"
+/// （含可读时间戳，不是裸 UUID）与"保证唯一/可反查"（尾部就是传入的 `ourSessionID` 原文，供人在
+/// openclaw 侧按 label 反查是客户端哪一次 createSession() 铸造的）。
+func testMakeSessionLabelIsHumanReadableAndTraceableToSessionID() -> Bool {
+    let name = "B1 (rounds/0013): makeSessionLabel 产出人眼可辨认(含时间戳)且可反查(含完整 ourSessionID)的 label"
+    let sessionID = "b1-fixed-uuid-aaaa-bbbb-cccccccccccc"
+    // 2026-08-08 12:34:56 UTC 的固定 epoch 秒数（python3 -c "import datetime;
+    // print(datetime.datetime.utcfromtimestamp(1786192496))" 核对过）——避免测试结果随运行机器
+    // 所在时区漂移。
+    let fixedDate = Date(timeIntervalSince1970: 1_786_192_496)
+    let label = makeSessionLabel(ourSessionID: sessionID, createdAt: fixedDate)
+
+    guard label != sessionID else {
+        return fail(name, "label 不应该只是一串裸 UUID（scope-lock 明文要求「别只有一串裸 UUID」）")
+    }
+    guard label.hasSuffix(sessionID) else {
+        return fail(name, "expected label to end with the exact ourSessionID '\(sessionID)' for reverse lookup, got '\(label)'")
+    }
+    guard label.hasPrefix("sg4-") else {
+        return fail(name, "expected label to start with a recognizable 'sg4-' prefix, got '\(label)'")
+    }
+    // 时间戳段落必须是 label 前缀与 sessionID 后缀之间人眼可读的一段——形如 8 位日期 + 'T' + 6 位
+    // 时间 + 'Z'（yyyyMMdd'T'HHmmss'Z'，共 16 字符）。
+    let timestampSegment = label
+        .dropFirst("sg4-".count)
+        .dropLast(sessionID.count + 1) // 再去掉 sessionID 前面那个连字符
+    guard timestampSegment.count == 16, timestampSegment.contains("T"), timestampSegment.hasSuffix("Z") else {
+        return fail(name, "expected a human-readable yyyyMMdd'T'HHmmss'Z' timestamp segment between prefix and sessionID, got segment '\(timestampSegment)' from label '\(label)'")
+    }
+    return pass(name, "label='\(label)'：前缀 sg4- + 可读时间戳段 '\(timestampSegment)' + 完整 ourSessionID 后缀，人眼可辨认且可反查")
+}
+
+/// 供下面这条测试记录每次 `sessions.create` RPC 实际发出的 `params["label"]`——同款 `actor` 捕获盒
+/// 模式见 `CallOrderLog`/`DispatchOutcomeBox`，这里存字符串数组（保留调用顺序，供断言按下标比较
+/// "第一次"与"第二次"分别拿到什么）。
+actor CapturedLabelsBox {
+    private(set) var labels: [String] = []
+    func record(_ label: String) { labels.append(label) }
+}
+
+/// **破坏性反证核心（scope-lock rounds/0013 B1 硬要求）**：同一个 `OpenclawGatewayKernelClient`
+/// 实例连续调用两次 `createSession()`，两次真正发给 openclaw 的 `sessions.create` RPC
+/// `params["label"]` 必须不同——这是本轮要修的 bug 本身的直接断言，不是绕道验证某个内部状态。
+///
+/// **修前（本轮改动之前 `:337` 的 `"sg4-kernel-client-l1"` 字面量）这条测试必须失败**：两次调用会
+/// 拿到完全相同的 label，`labels[0] != labels[1]` 判定为 false——已实测确认（交付报告有红→绿两段
+/// 实际输出）。
+///
+/// 不驱动真实网络——`testSupportStubRPC(method: "sessions.create")` 桩替代 RPC 响应（`request()`
+/// 对已注册方法名的短路机制，见该方法文档注释），真实调用的是 `createSession(config:)` 方法体本身
+/// （不是 seed 内部状态），捕获它真正构造、真正发出的 `params`。两次调用返回相同的桩造 `key`/
+/// `sessionId` 是有意的——本测试只关心 label 是否不同，`SessionHandle.sessionID`（`ourSessionID`）
+/// 由 actor 内部各自铸造，与桩造的返回值无关，混用同一份桩造返回值不影响这条断言的有效性。
+func testCreateSessionAssignsDistinctLabelsAcrossConsecutiveCalls() async -> Bool {
+    let name = "B1 (rounds/0013): 同一 client 连续 createSession() 两次，两次的 label 不同（openclaw 侧 label 全 store 唯一，撞名即 INVALID_REQUEST）"
+    let client = freshClient()
+    let captured = CapturedLabelsBox()
+
+    await client.testSupportStubRPC(method: "sessions.create") { params in
+        guard let label = params["label"] as? String, !label.isEmpty else {
+            throw KernelClientError.protocolMismatch("sessions.create params missing non-empty 'label': \(params)")
+        }
+        await captured.record(label)
+        return ["key": "kernel-key-b1-label-test", "sessionId": "kernel-session-b1-label-test"] as JSONObject
+    }
+
+    let config = Config(
+        approvalProfile: nil, cwd: "/tmp/frame-replay-tests-b1-cwd", model: nil,
+        newapiEndpoint: NewapiEndpoint(baseURL: "http://127.0.0.1:0/frame-replay-tests-unused", deploymentTokenRef: nil),
+        resume: nil, sandbox: nil, toolset: nil
+    )
+
+    guard let firstHandle = try? await client.createSession(config: config) else {
+        return fail(name, "first createSession() unexpectedly threw")
+    }
+    guard let secondHandle = try? await client.createSession(config: config) else {
+        return fail(name, "second createSession() unexpectedly threw")
+    }
+
+    let labels = await captured.labels
+    guard labels.count == 2 else {
+        return fail(name, "expected sessions.create to be called exactly twice, observed \(labels.count) calls: \(labels)")
+    }
+    guard labels[0] != labels[1] else {
+        return fail(name, "expected two distinct labels across consecutive createSession() calls, both were '\(labels[0])' — openclaw would reject the second with INVALID_REQUEST: label already in use")
+    }
+    guard firstHandle.sessionID != secondHandle.sessionID else {
+        return fail(name, "expected distinct SessionHandle.sessionID across calls, both were '\(firstHandle.sessionID)'")
+    }
+
+    return pass(name, "两次 createSession() 的 label 分别是 '\(labels[0])' 与 '\(labels[1])'，互不相同；SessionHandle.sessionID 分别是 \(firstHandle.sessionID)/\(secondHandle.sessionID)")
+}
+
 // MARK: - 总入口
 
 public func runFrameReplayTests() async -> Bool {
@@ -2022,6 +2405,13 @@ public func runFrameReplayTests() async -> Bool {
     results.append(await testApprovalCrossRunDoesNotStealLastActiveRunID())
     results.append(await testApprovalPendingFirstIsBufferedNotDropped())
     results.append(await testApprovalReplayConsumedFromSubscribeResponse())
+    // rounds/0016：握手补 `exec-approvals` cap 之后才收得到的 `exec.approval.requested`——映射本身
+    // 与"同一次审批不得重复交付"的去重闸门。
+    results.append(await testExecApprovalRequestedAloneProducesApprovalRequest())
+    results.append(await testExecApprovalRequestedDoesNotDoubleEmitWithSessionApproval())
+    // rounds/0016 live 实测：webchat（native approval channel）走 exec 内联等待分支，关联帧是
+    // agent(stream:"lifecycle", phase:"waiting-approval")，帧数据取自冻结的真实 wire trace。
+    results.append(await testAgentLifecycleWaitingApprovalJoinsRealFrozenFrames())
     results.append(testNonExecToolItemHonestMapping())
     results.append(testExecToolNameFiltering())
     results.append(testSeqGapErrorEvent())
@@ -2052,6 +2442,37 @@ public func runFrameReplayTests() async -> Bool {
     results.append(await testSendProceedsImmediatelyWhenSessionWasNeverSubscribed())
     results.append(await testWireMessageSeqAcceptsRealLegalNonDecreasingSequence())
     results.append(await testWireMessageSeqDetectsRegression())
+    results.append(testMakeSessionLabelIsHumanReadableAndTraceableToSessionID())
+    results.append(await testCreateSessionAssignsDistinctLabelsAcrossConsecutiveCalls())
+    // rounds/0013 B2（SessionStoreGroupingTests.swift）：入库测试直接验 SessionStore 的分组行为
+    // ——上面 testDistinctAssistantMessagesInSameRunGetDistinctMessageIDs 只验 kernel-client
+    // wire-mapping 层的 messageID 透传，够不到 SessionStore 本身；这条新测试驱动
+    // SessionStore.handle() 真实分发路径，直接断言 session.messages 的分组结果。
+    results.append(await testSessionStoreHandleGroupsDistinctMessageIDsAsSeparateMessages())
+
+    // rounds/0014（会话持久化）：SessionRestoreHistoryTests.swift —— B(适配器状态重建)/
+    // D(重新订阅)/C(历史回填分页) 三块在 KernelClient 层的真 actor 级验证。
+    results.append(await testRestoreSessionSeedsKernelKeyAndReestablishesEventFlow())
+    results.append(await testRestoreSessionDoesNotCallSessionsCreateRpc())
+    results.append(await testFetchFullHistoryPaginatesAcrossMultiplePages())
+    results.append(await testFetchFullHistoryRejectsRepeatedNextOffsetInsteadOfLoopingForever())
+    results.append(testParseHistoryRecordExtractsStringAndBlockContentIgnoringNonTextBlocks())
+
+    // rounds/0014（会话持久化）：SessionPersistenceTests.swift —— A(会话清单持久化) 块，含反证1
+    // （坏数据不得永久卡死壳）的自动化版本。
+    results.append(testSessionPersistenceRoundTripsSavedSessions())
+    results.append(testSessionPersistenceCorruptFileFallsBackToEmptyListWithoutCrashing())
+    results.append(testSessionPersistenceResetRemovesFileAndSubsequentLoadIsEmpty())
+    results.append(testSessionPersistenceMissingFileReturnsEmptyWithoutCreatingAnything())
+
+    // rounds/0015（exec 工具审批）：ApprovalDecisionTests.swift —— A(respondApproval 真打 RPC)/
+    // B(决策映射 + 每条请求自带 allowedDecisions 的发出前校验，含反证①②)/C(审批 UI 卡片生命周期)。
+    results.append(contentsOf: await runApprovalDecisionTests())
+
+    // rounds/0016（★审查闸 T-096 的四条边界失败态）：ApprovalFailurePathTests.swift ——
+    // ①溢出 deny 的成功判据 / ②FORCE_DENY_PENDING_KERNEL_ACK / ③approval.resolve 有界等待 +
+    // 权威 terminal 结束 in-flight / ④active terminal 后的 UI 同步（先清旧卡再呈现提升项）。
+    results.append(contentsOf: await runApprovalFailurePathTests())
 
     let passCount = results.filter { $0 }.count
     let total = results.count

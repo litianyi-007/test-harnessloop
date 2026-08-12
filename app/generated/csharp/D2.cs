@@ -511,6 +511,20 @@ namespace D2
         [JsonPropertyName("index")]
         public long Index { get; set; }
 
+        /// <summary>
+        /// 对应 wire session.message 事件外层 payload.messageId（不是 message.id——message 对象本身不带任何标识字段，见
+        /// rounds/0012 evidence/item1-mechanism-localization.md §2）。openclaw
+        /// 为每条落地的消息（user/assistant）分配的全局唯一 id，每帧互异（实测样本见 rounds/0012
+        /// evidence/instrumented-run-findings.md §1.3）——是消费方做消息分组/去重的正确键，取代此前错误使用的 (runId,index)
+        /// 复用键：index 只是单条 assistant 消息内的 content-block 下标，每条新消息都从 0 重新计数，同一 run 产出多条 assistant
+        /// 消息时会撞出相同的 (runId,index) 组合，导致文本被错误地追加拼接（根因坐实见 rounds/0012
+        /// evidence/instrumented-run-findings.md §1.2）。可选字段（不在 required 里）：rounds/0012
+        /// 新增，现存消费方（C#/TS 端、FrameReplayTests 里的历史帧）不携带该字段，不得因缺失而失败。
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonPropertyName("messageId")]
+        public string? MessageId { get; set; }
+
         [JsonPropertyName("role")]
         public Role Role { get; set; }
     }

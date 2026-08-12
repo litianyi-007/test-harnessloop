@@ -1,0 +1,3 @@
+# SwiftPM 包（app/Package.swift，SG-10 起）构建产物——不入库，跟 npm 的 node_modules/ 同理。
+.build/
+.swiftpm/

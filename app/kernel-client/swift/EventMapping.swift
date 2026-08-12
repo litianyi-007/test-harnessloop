@@ -37,17 +37,26 @@
 //      本地状态机产物，respondApproval()/审批缓冲队列本轮未实现，因此本文件不把它接到任何真实
 //      wire 事件上——见文末 `buildApprovalBufferResolvedEvent`。
 //      **rework 轮订正（F4）**：上一轮的 `toolCallID` 关联用"同 session 最近一次 toolCall"猜测，
-//      对抗审 codex 指出会串号（两个 toolCall 交错、旧缓存残留时误配）。openclaw 源码坐实
-//      （`embedded-agent-subscribe.handlers.tools.ts:1669-1699`）：exec 审批还会经由
-//      `emitAgentApprovalEvent` 广播一条 **`agent(stream:"approval", data.phase:"requested")`**
-//      事件，`data.toolCallId`/`data.approvalId` 均为该次审批的**准确值**（不是猜测），且这条
-//      `agent` 事件的外层 `payload.runId` 由 `enrichAgentEvent` 统一盖章、可靠。本文件改为：调用方
-//      （OpenclawGatewayKernelClient）在收到这条 `agent(stream:"approval")` 时，把
-//      `data.approvalId -> data.toolCallId` 的精确映射存进一个按 approvalId 为键的缓存；
-//      `session.approval`(phase:"pending") 到达时用 `approval.id` 去查这个缓存，而不是"最近一次
-//      toolCall"。两个交错的 pending 审批不会再互相踩，见 `mapOpenclawSessionApprovalToKernelEvent`
-//      的新签名 `toolCallIDForApprovalID`。
-//   4. `agent` 的 `stream:"lifecycle"` 在 `data.phase` 为 "end"/"error" 时是一次 run 的终态信号，
+//      对抗审 codex 指出会串号（两个 toolCall 交错、旧缓存残留时误配）。openclaw 源码坐实：exec
+//      审批还会经由一条 `agent` 事件广播 `data.approvalId`+`data.toolCallId`（均为该次审批的
+//      **准确值**，不是猜测），且这条 `agent` 事件的外层 `payload.runId` 由 `enrichAgentEvent`
+//      统一盖章、可靠。**rounds/0016 订正（live 实测）**：这条关联帧有**两种**形状，取决于 exec
+//      工具是否内联等待网关审批（`bash-tools.exec-host-gateway.ts:414-428`
+//      `shouldAwaitGatewayApprovalInline()`）——
+//        - 不内联（直接返回 `approval-pending` 工具结果）：
+//          **`agent(stream:"approval", data.phase:"requested")`**
+//          （`embedded-agent-subscribe.handlers.tools.ts:1665-1699` `emitAgentApprovalEvent`）。
+//        - 内联等待（webchat 等 native approval channel 走这条，**我们的 mac 壳就是这条**）：
+//          **`agent(stream:"lifecycle", data.phase:"waiting-approval")`**
+//          （`bash-tools.exec-host-gateway.ts:1085-1091`）。真实冻结帧见
+//          `rounds/0015/evidence/live/raw/approval-frames-extract.json`。
+//      本文件改为：调用方（OpenclawGatewayKernelClient）在收到**上述任一条** `agent` 帧时，把
+//      `data.approvalId -> data.toolCallId` 的精确映射存进一个按 approvalId 为键的缓存（见
+//      `recordAgentApprovalAssociation`）；`session.approval`(phase:"pending") 到达时用
+//      `approval.id` 去查这个缓存，而不是"最近一次 toolCall"。两个交错的 pending 审批不会再互相
+//      踩，见 `mapOpenclawSessionApprovalToKernelEvent` 的新签名 `toolCallIDForApprovalID`。
+//   4. `agent` 的 `stream:"lifecycle"` 在 `data.phase` 为 "end"/"error" 时是一次 run 的终态信号
+//      （`phase:"waiting-approval"` 同样走 lifecycle，但那是上面第 3 条的审批关联帧，不是终态），
 //      `data.aborted` 是判别键：`aborted:false` 对应 evt.turn_complete（真实样本：正常回合结束）；
 //      `aborted:true` 对应 **evt.operation_completed + evt.turn_complete(stopReason:.cancelled) 两者
 //      一起**（rework 轮订正，见 F6：D1 §9.3 stop() 事件顺序保证要求"先完成该 run 的强制取消并产出
@@ -73,6 +82,11 @@
 //      构造函数保留、明确未接入 dispatch，诚实标 unsupported。
 
 import Foundation
+// `canImport` 门卫理由见 KernelClient.swift 同名注释——这个文件也被 ci.yml 的 flat swiftc
+// parity-runner 步骤直接编译，那条路径下没有独立的 D2Generated module。
+#if canImport(D2Generated)
+import D2Generated
+#endif
 
 // MARK: - JSON 取值小工具（JSONSerialization 产物的 [String: Any] 上做安全取值）
 
@@ -194,7 +208,14 @@ func mapOpenclawSessionMessageToKernelEvents(
         switch type {
         case "text":
             guard let text = jsonString(block["text"]) else { continue }
-            let deltaPayload = MessageDeltaEventMessagePayload(delta: text, index: index, role: .assistant)
+            // rounds/0012 ①' C 方案：messageID 取自本函数入参 `payload`（session.message 事件的
+            // 外层 payload，与 `message` 同级）的 `messageId` 键——**不是** `message["messageId"]`，
+            // `message` 对象本身没有任何标识字段（见 D2 schema events/message-delta.schema.json
+            // 新增字段的 description，以及 rounds/0012 evidence/item1-mechanism-localization.md
+            // §2 的实测坐实）。缺失时诚实置 nil（不编造），调用方（SessionStore）据此决定分组回退
+            // 策略。这是本函数本轮唯一的行为变化，其余映射逻辑不变。
+            let messageID = jsonString(payload["messageId"])
+            let deltaPayload = MessageDeltaEventMessagePayload(delta: text, index: index, messageID: messageID, role: .assistant)
             events.append(.messageDelta(MessageDeltaEventMessage(
                 direction: .event, payload: deltaPayload, runID: runIDHint,
                 sentAt: sentAt, seq: nextSeq(), sessionID: ourSessionID, ts: originTS, type: .evtMessageDelta
@@ -723,16 +744,29 @@ func buildCapabilityChangedEvent(
     ))
 }
 
-/// evt.approval_buffer_resolved 的构造函数——**本轮仍未接入任何真实触发路径，是诚实登记的
-/// unsupported 变体（不是遗漏）**。D1 §6.2"pending #2 缓冲策略"要求适配器自己维护一个"当前
-/// session 是否已有一条 pending 审批、第二条到达时先本地缓冲、缓冲期超时或队列溢出时才终态化"的
-/// 小状态机；respondApproval() 本身在本轮仍是 TODO 桩（见 KernelClient.swift 头注释），这个本地
-/// 缓冲状态机自然也未实现——因此没有任何代码路径会产生 reqID/reason(buffered_timeout|
-/// queue_overflow) 这两个字段的真实值。已用真实探针核实：openclaw 原生 `session.approval`
-/// phase:"terminal" 的 reason 词表（user/timeout/malformed-verdict/no-route/run-aborted/
-/// gateway-restart/storage-corrupt）与 D1 这里要求的词表完全不相交，说明这条事件本质上是纯适配器
-/// 内部状态机的产物，不是"翻译 openclaw 已有的某个 wire 事件"就能解决的——留给 respondApproval()
-/// 落地时一并实现。
+/// evt.approval_buffer_resolved 的构造函数。
+///
+/// **rounds/0015 返工①：本函数已接入真实触发路径，此前这里的整段"仍未接入/留给 respondApproval()
+/// 落地时一并实现"的注释是陈旧的（连同它里面"respondApproval() 本身在本轮仍是 TODO 桩"那句——
+/// respondApproval() 在 rounds/0015 A 块就已经实现，见 `OpenclawGatewayKernelClient.respondApproval`
+/// 的四道关卡），本轮一并订正。**
+///
+/// 现在的唯一调用点是 `OpenclawGatewayKernelClient.emitApprovalBufferResolved`，它有两个上游：
+///  - `queue_overflow`：`emitApprovalRequestIfPossible` 的准入判定发现 FIFO 缓冲队列已满
+///    （深度 `approvalBufferDefaultDepth`，D1 §6.2 要求"实现选定一个有限值并文档化"，取值依据见
+///    该常量的文档注释），按 D1 的 fail-closed 取向直接对新到的请求发强制 deny；
+///  - `buffered_timeout`：`handleApprovalTerminalSignal` 观察到一条**仍在缓冲队列里、从未被提升
+///    为 active pending**的请求被内核判定超时（openclaw `session.approval(phase:"terminal")` 的
+///    `approval.status == "expired"`，其 reason 由 schema 收窄为唯一取值 `timeout`，见
+///    `packages/gateway-protocol/src/schema/approvals.ts:59-60`）。
+///
+/// 此前那段注释里关于"词表不相交"的观察本身**没错、也仍然成立**：openclaw 原生 terminal reason
+/// 词表（user/timeout/malformed-verdict/no-route/run-aborted/gateway-restart/storage-corrupt）与
+/// 本事件的两值词表（buffered_timeout/queue_overflow）确实不相交——这条事件不是"翻译某个 wire
+/// 事件"，而是**适配器自己的缓冲状态机**的产物。错的是从这个观察推出的"所以现在没法实现"：状态机
+/// 本来就该由适配器实现（D1 §6.2 末句原文明写"这是**运行时并发分支**，不是 UI 呈现优化——即使调用
+/// 方从不构建『审批队列』UI，适配器也必须实现上述缓冲/提升/溢出规则"）。terminal 词表在这里的真实
+/// 作用是**输入信号**（`expired` ⟺ TIMED_OUT_DENY），不是输出映射。
 func buildApprovalBufferResolvedEvent(
     reqID: String,
     reason: FluffyReason,
@@ -747,6 +781,76 @@ func buildApprovalBufferResolvedEvent(
     ))
 }
 
+// MARK: - rounds/0016（T-096 第 1、4 项）：审批失败态/超时态的 evt.error 出口
+//
+// **为什么是 `evt.error` 而不是新造一个事件**：D2 的 `KernelErrorCode`
+// （`app/contracts/d2/schema/common/errors.schema.json:10-18`，生成码 `PayloadCode`）是一个
+// **七值封闭枚举**，其中 `approval_timeout` 是一个**字面对应**本场景的契约稳定取值——不是"找一个
+// 差不多的坑位塞进去"，是这个枚举本来就为审批超时留了一个坑位。这一点与 ④ 里
+// `ApprovalBufferResolvedEvent.reason` 那个两值词表的情形**恰好相反**：那里确实没有任何取值能
+// 表达 `cancelled`/`denied`，所以那里选择了如实不上报；这里有字面对应，就该用。
+//
+// 两个构造函数各自的触发点：
+//  - `makeApprovalTimeoutErrorEvent`：**active pending** 审批被内核判超时
+//    （`session.approval(phase:"terminal")` + `status:"expired"`，其 reason 由 openclaw schema
+//    收窄为唯一取值 `timeout`）。这是 T-096 第 4 项要求的"active terminal 驱动 UI 先清旧卡"的
+//    唯一契约内通道——修前这条内核信号只在适配器内部驱动 FSM，一个字节都没传给调用方，UI 因此
+//    会把一张已死的卡片一直挂在队头，把随后**提升上来的那条**挤到看不见的位置。
+//  - `makeApprovalOverflowDenyUnconfirmedErrorEvent`：D1 §6.2 缓冲溢出的 fail-closed deny
+//    **没有被内核确认**（T-096 第 1 项："失败不可吞掉，也不可提前宣称已自动拒绝"）。修前这条
+//    失败只 `prettyPrint` 一行就吞掉了，而调用方在此之前**已经**收到了一条
+//    `approval_buffer_resolved(queue_overflow)`——即"提前宣称已自动拒绝"。现在那条事件只在
+//    `applied:true + status:denied` 时才发，失败走这里如实上报。
+//    code 取 `.unknown`（这一条**没有**字面对应的枚举取值，`approval_timeout` 是超时专用，拿它
+//    冒充会把"deny 没打成"谎报成"它超时了"——如实标注为无对应，同本文件既有的 seq-gap 处置）。
+
+/// active pending 审批被内核判超时（TIMED_OUT_DENY）。`recoverable: .run`——超时只让这一次 tool
+/// call 被 fail-closed 拒绝，run 自身仍在继续（agent 会收到"被拒绝"的工具结果并往下走），
+/// 不代表整个 session 失效。`nativeCode` 放 openclaw 自己的 terminal reason 字面值（`"timeout"`），
+/// 按 D2 该字段的契约注释仅供调试，UI 不得对其分支判断。
+func makeApprovalTimeoutErrorEvent(
+    reqID: String,
+    openclawReason: String?,
+    ourSessionID: String,
+    runID: String?,
+    seq: Int
+) -> EventMessageUnion {
+    let now = Date()
+    let payload = ErrorEventMessagePayload(
+        code: .approvalTimeout,
+        message: "审批 \(reqID) 已被内核判定超时（fail-closed 拒绝），该请求不再等待人工裁决",
+        nativeCode: openclawReason,
+        recoverable: .run
+    )
+    return .error(ErrorEventMessage(
+        direction: .event, payload: payload, runID: runID,
+        sentAt: now, seq: seq, sessionID: ourSessionID, ts: now, type: .evtError
+    ))
+}
+
+/// 缓冲溢出的强制 deny 未被内核确认。message 里**逐字带上实际观察到的失败形态**（RPC 错误文本 /
+/// `applied:false` + 终态快照 / `applied:true` 但终态非 denied），这样调用方看到的是"发生了什么"
+/// 而不是一句"失败了"。`recoverable: .run` 同上。
+func makeApprovalOverflowDenyUnconfirmedErrorEvent(
+    reqID: String,
+    observedFailure: String,
+    ourSessionID: String,
+    seq: Int
+) -> EventMessageUnion {
+    let now = Date()
+    let payload = ErrorEventMessagePayload(
+        code: .unknown,
+        message: "审批 \(reqID)：等待队列已满，适配器发起的自动拒绝**未被内核确认**（\(observedFailure)）"
+            + "——这条请求在内核侧可能仍然 pending，不要当作已被拒绝",
+        nativeCode: "queue_overflow_deny_unconfirmed",
+        recoverable: .run
+    )
+    return .error(ErrorEventMessage(
+        direction: .event, payload: payload, runID: nil,
+        sentAt: now, seq: seq, sessionID: ourSessionID, ts: now, type: .evtError
+    ))
+}
+
 // MARK: - 兼容旧调用点：SG-4 遗留的单事件签名（main.swift/CLIRunner.swift 尚未升级前的过渡）
 
 /// SG-4 遗留签名的薄包装——OpenclawGatewayKernelClient 本轮已经改用
@@ -756,4 +860,389 @@ func mapOpenclawSessionMessageToKernelEvent(_ payload: JSONObject, ourSessionID:
     var counter = 0
     let nextSeq: () -> Int = { counter += 1; return counter }
     return mapOpenclawSessionMessageToKernelEvents(payload, ourSessionID: ourSessionID, runIDHint: nil, nextSeq: nextSeq).first
+}
+
+// MARK: - rounds/0014 ⑦ chat.history 消息解析（`SessionHistoryProviding` 用，见 KernelClient.swift
+// `HistoryRecord`/`SessionHistoryProviding` 协议文档注释）
+//
+// openclaw `chat.history` RPC 响应 `messages[]` 数组里的单条记录，与 `session.message` wire 事件里
+// `payload.message`（见①的 `mapOpenclawSessionMessageToKernelEvents`）是同一套 openclaw
+// "显示消息"投影形状：`{role: string, content: string | [{type:"text",text:string}, ...],
+// __openclaw?: {id, seq, ...}}`（源码 grounding：
+// kernels/openclaw/src/gateway/chat-display-projection.ts:41-43 的 `RoleContentMessage` 类型 +
+// 同文件多处 `message["__openclaw"]` 读取/写入）。但这是**历史**消息，不是 assistant-only 的流式
+// delta——role 可以是 "user"，也可能是①从未处理过的其它取值（system/工具相关标记等）——不能照抄
+// ①"非 assistant 直接丢弃整条"的策略，历史消息本来就该原样呈现双方（乃至更多角色）的完整对话。
+
+/// text 抽取规则与 `app/apps/AgentShell/repro/reconcile-history.py` 的
+/// `extract_assistant_text()`（本轮任务书唯一点名要求参考的既有对账逻辑）保持一致：`content` 是
+/// 纯字符串就直接用；是数组就只拼接 `type=="text"` 的 block（thinking/toolCall 等其它 block 类型
+/// 被忽略，不混进正文，与①对 `session.message` 的 block 分类判别同一套 `type` 字面量集合但抽取
+/// 目的不同——①要把每个 block 拆成独立事件，这里只要拼出一段可读全文）；两者都不是就诚实返回空
+/// 串，不臆造。
+func extractHistoryMessageText(from content: Any?) -> String {
+    if let text = jsonString(content) { return text }
+    if let blocks = jsonArray(content) {
+        return blocks.compactMap { block -> String? in
+            guard let obj = jsonObject(block), jsonString(obj["type"]) == "text" else { return nil }
+            return jsonString(obj["text"])
+        }.joined()
+    }
+    return ""
+}
+
+/// 把 `chat.history` `messages[]` 里的一条原始 JSON 记录解析成 `HistoryRecord`。
+///
+/// 宽容度刻意与 wire 事件解析（①「role 非 assistant 就静默丢弃整个事件」/ D1 事件流协议签名不带
+/// `throws` 时把错误封进 stream）不同：`raw` 不是 JSON 对象就返回 nil（一条格式错误的记录被跳过，
+/// 不拖垮整批历史的显示——历史回填是只读展示，`OpenclawGatewayKernelClient.fetchFullHistory` 用
+/// `compactMap` 调用本函数，nil 直接从结果里消失，不中止整页解析）；role 缺失/非字符串时退化为
+/// "unknown" 而不是跳过整条记录——一条 role 异常的历史消息仍然值得展示给用户看（配合
+/// `SessionStore` 侧对未知 role 的兜底渲染），不应该让它从历史里悄悄消失。
+func parseHistoryRecord(_ raw: Any) -> HistoryRecord? {
+    guard let obj = jsonObject(raw) else { return nil }
+    let role = jsonString(obj["role"]) ?? "unknown"
+    let text = extractHistoryMessageText(from: obj["content"])
+    let meta = jsonObject(obj["__openclaw"])
+    return HistoryRecord(id: jsonString(meta?["id"]), seq: jsonInt(meta?["seq"]), role: role, text: text)
+}
+
+// MARK: - ⑦ 审批决策映射（rounds/0015 B 块）：D2 四值 <-> openclaw 三值，显式写死
+//
+// **本节所在文件的选择不是随意的**：`.github/workflows/ci.yml` 的「Swift golden parity runner」
+// 步骤用裸 `swiftc` **逐个列出**参与编译的文件（D2.swift / DiscriminatedUnions.swift /
+// KernelClient.swift / OpenclawWire.swift / EventMapping.swift / OpenclawGatewayKernelClient.swift
+// + fixtures runner 四个），`ci.yml` 不在本轮可改范围内。因此 `OpenclawGatewayKernelClient`
+// 依赖的任何新符号都必须落在这份既有清单里的某个文件中——新建 `ApprovalDecisionMapping.swift`
+// 会让 parity runner 直接编译失败。审批决策映射本身就是"openclaw wire 值 <-> D2 契约值"的转换，
+// 与本文件既有的六节事件映射同类，放这里是语义正确的归属，不是为了迁就 CI 的将就。
+
+/// openclaw 侧 `approval.resolve` 接受的决策取值——**权威来源**是 gateway protocol schema
+/// `kernels/openclaw/packages/gateway-protocol/src/schema/approvals.ts:25-29`
+/// `ApprovalDecisionSchema = Union([Literal("allow-once"), Literal("allow-always"), Literal("deny")])`
+/// （`kernels/openclaw/src/mcp/channel-shared.ts:88` 的 `ApprovalDecision` 是同一组值的 MCP 侧
+/// 副本）。**只有三个值，没有任何 session 语义的档位**——这一条是 `allow_session` 处置决策的事实基础，
+/// 见 `openclawApprovalDecisionWire(forD2:)` 的文档注释。
+///
+/// 用枚举而不是裸字符串常量：raw value 写错一个字母（下划线/连字符是这里最容易犯的错）在
+/// `makeApprovalResolveParams` 的单测里会立刻变红（rounds/0015 反证②），而散落的字符串字面量不会。
+public enum OpenclawApprovalDecisionWire: String, CaseIterable {
+    case allowOnce = "allow-once"
+    case allowAlways = "allow-always"
+    case deny = "deny"
+}
+
+/// D2 `ApprovalDecisionKindElement`（`app/generated/swift/D2.swift:1231-1236`，四值、**下划线**）
+/// -> openclaw wire 决策（三值、**连字符**）。**逐个 case 显式写死，不做任何字符串替换**
+/// （`replacingOccurrences(of:"_",with:"-")` 这类"看起来对"的通用变换恰好会把 `allow_session`
+/// 变成一个 openclaw 根本不认识的 `allow-session`，而服务端对不认识的 decision 的处置是静默转 deny，
+/// 见 `makeApprovalResolveParams` 文档注释——碰运气的代价是用户点"允许"却被拒，且没有任何报错）。
+///
+/// **`allow_session` 返回 nil（= 明确不支持），这是本轮的核心处置决策，依据有三条：**
+///
+/// 1. **结构性证明：openclaw 的每条审批请求的 `allowedDecisions` 里，永远不可能出现 session 语义的
+///    值。** `allowedDecisions` 的 schema 是
+///    `ApprovalAllowedDecisionsSchema = Type.Array(ApprovalDecisionSchema, {minItems:1, maxItems:3,
+///    uniqueItems:true, contains: Literal("deny")})`（approvals.ts:75-82），元素类型就是上面那个
+///    三值闭合联合。也就是说这不是"目前恰好没见过"，而是**协议层面不可能取到**——三处
+///    presentation（exec/plugin/system-agent，approvals.ts:99/117/127）全部引用这同一个数组 schema
+///    （system-agent 更是硬编码成 `["allow-once","deny"]` 的二元组）。任务书要求"先去核实每条请求的
+///    `allowedDecisions` 里是否真的从不出现 session 语义的值"——核实结论是：从不，且由 schema 保证。
+/// 2. **D1 契约明文要求同步拒绝，禁止静默降级。** `app/contracts/d2/schema/methods/
+///    respond-approval.schema.json:34`（经 codegen 落到 D2.swift:1166-1167 `Decision` 的文档注释）
+///    原文："由 capabilities().approvalDecisionKinds 门控，未声明支持时实现须**同步拒绝**
+///    `unsupported_approval_decision`，**不得静默降级为 allow_once**。" 因此把 `allow_session`
+///    降级成 `allow-once`（"反正都是允许"）是被契约明确禁止的——它会把"本次运行内一直允许"
+///    悄悄变成"只允许这一次"，用户以为授了更大的权限，实际没有；反过来若降级成 `allow-always`
+///    则是用户以为只授本会话、实际被永久持久化，那是更严重的**过度授权**。两个方向都不可接受。
+/// 3. **UI 侧不提供该选项（任务书倾向，本轮采纳）**：`ApprovalPresentationSummary.allowedDecisions`
+///    只会由 `d2ApprovalDecisionKind(forOpenclawWire:)` 从该条请求真实携带的 `allowedDecisions`
+///    反向映射得出，而依据第 1 条那里面永远不会有 session 值——所以审批 UI 结构性地不可能渲染出
+///    "本会话内允许"按钮，不给内核兑现不了的承诺。第 2 条的同步拒绝是**第二道防线**：即使将来有
+///    别的调用方绕过 UI 直接用 `.allowSession` 调 `respondApproval()`，也会拿到明确的错误而不是
+///    一个被悄悄改写的决策。
+public func openclawApprovalDecisionWire(forD2 kind: ApprovalDecisionKindElement) -> OpenclawApprovalDecisionWire? {
+    switch kind {
+    case .allowOnce: return .allowOnce
+    case .allowAlways: return .allowAlways
+    case .allowSession: return nil // 见上：openclaw 无对应档位，明确不支持，不降级
+    case .deny: return .deny
+    }
+}
+
+/// 反向：openclaw wire 决策字符串 -> D2 `ApprovalDecisionKindElement`。用于把一条审批请求自带的
+/// `presentation.allowedDecisions`（openclaw 原始字符串数组）翻译成 UI 可直接渲染的 D2 枚举。
+/// 认不出的取值返回 nil——调用方（`ApprovalPresentationSummary`）把它们如实收进
+/// `unmappedAllowedDecisions` 而不是静默丢弃，见那里的文档注释。
+public func d2ApprovalDecisionKind(forOpenclawWire raw: String) -> ApprovalDecisionKindElement? {
+    switch OpenclawApprovalDecisionWire(rawValue: raw) {
+    case .allowOnce: return .allowOnce
+    case .allowAlways: return .allowAlways
+    case .deny: return .deny
+    case nil: return nil
+    }
+}
+
+/// `respondApproval()` 路径上、在**发出 RPC 之前**就能判定的失败，以及内核事后未兑现决策的判定。
+/// 不复用 `KernelClientError`（KernelClient.swift）——那是"传输层"的补充错误通道，本类型是审批
+/// 决策语义层自己的失败集合，独立命名更便于 UI 分别呈现（`SessionStore` 把它渲染成审批卡片上的
+/// 行内错误，而不是整条事件流的红色横幅）。
+public enum ApprovalDecisionError: Error, CustomStringConvertible {
+    /// D2 有、openclaw 没有的决策档位（当前唯一成员：`allow_session`）。对应 D1 §9.1 同步拒绝码
+    /// `unsupported_approval_decision`（D2.swift:4488）。
+    case unsupportedApprovalDecision(requested: ApprovalDecisionKindElement, kernelSupports: [String])
+    /// 决策本身 openclaw 认识，但**不在这条请求各自携带的 `allowedDecisions` 里**（最典型：
+    /// `ask=always` 的实例上 `allowedDecisions` 只有 `["allow-once","deny"]`，此时 `allow_always`
+    /// 就属于这一类）。这是本轮头号风险的拦截点，见 `makeApprovalResolveParams`。
+    case decisionNotAllowedForThisRequest(reqID: String, requested: String, allowed: [String])
+    /// D1 `Decision.updatedInput`（改写待执行内容后再放行）在 openclaw 的 `approval.resolve`
+    /// 参数里没有任何承载位置——见 `makeApprovalResolveParams` 文档注释。
+    case unsupportedUpdatedInput(reqID: String)
+    /// 适配器本地不认识这个 reqId（从未产出过 / 已经终态化）。
+    case approvalNotPending(reqID: String)
+    /// reqId 存在，但属于另一个 session——跨会话回应是明确的调用错误，不代打。
+    case approvalBelongsToAnotherSession(reqID: String, ownerSessionID: String, requestedSessionID: String)
+    /// RPC 成功返回了，但内核记录的终态与我们请求的决策不一致——**这正是"静默变 deny"真正发生时
+    /// 的样子**（`reason:"malformed-verdict"` 是它的签名）。绝不把这种情况当成功。
+    case kernelDidNotHonorDecision(
+        reqID: String, requested: String,
+        observedStatus: String?, observedDecision: String?, observedReason: String?, applied: Bool?
+    )
+
+    // MARK: rounds/0016（T-096 第 2、3 项）——失败态与超时态各自的**显式**错误，不复用上面任何一个
+    //
+    // 三条都刻意独立成 case 而不是塞进 `approvalNotPending`：它们的处置方式互不相同（第一条要求
+    // 调用方改选 deny 重试、第二条允许原样重试、第三条不允许任何重试），如果压成同一个错误码，
+    // UI 只能给出一句含糊的"失败了"，调用方也无从判断"我现在还能做什么"。
+
+    /// **`FORCE_DENY_PENDING_KERNEL_ACK`**（T-096 第 2 项）：这条审批曾被适配器发起过一次
+    /// **强制 deny**（`stop()` 的 M3 定序 deny，或 D1 §6.2 缓冲溢出的 fail-closed deny），而内核
+    /// **从未确认**（RPC 抛错 / `applied:false` / 终态不是 denied）。此时这条审批在内核侧的真实状态
+    /// **未知**——最坏情况它仍然 pending，一次"允许"会让一条适配器已经决定拒绝的命令真的执行。
+    /// 因此这个持久态下**只允许幂等的 deny 重试**，任何 allow 档位一律同步拒绝。
+    case forceDenyPendingKernelAck(reqID: String, requested: String, observedFailure: String)
+    /// `approval.resolve` 的**有界等待**到期（T-096 第 3 项）。修前这条 RPC 是无界 await：网关不回
+    /// 应答就永久挂起，in-flight 槽位随之永久占位，`stop()` 的 drain 收敛条件（"无在途 resolve"）
+    /// 也就永远不成立。到期后如实抛出——审批在内核侧的状态未知，不谎报成功也不谎报失败。
+    case approvalResolveTimedOut(reqID: String, waitedMS: Int)
+    /// 在这条 `approval.resolve` 往返途中，**内核自己**给出了这条审批的权威终态
+    /// （`session.approval(phase:"terminal")`，典型是 `status:"expired"/reason:"timeout"`）。
+    /// 内核的终态是权威的，我们这次在途决议已经不可能被兑现——立即结束这个 in-flight（不等它的
+    /// 响应，那个响应可能永远不来），并如实告知调用方终态是什么。
+    case approvalTerminatedByKernelWhileResolving(reqID: String, status: String?, reason: String?)
+
+    public var description: String {
+        switch self {
+        case .unsupportedApprovalDecision(let requested, let supports):
+            return "unsupported_approval_decision: 决策 '\(requested.rawValue)' 在 openclaw 侧没有对应档位"
+                + "（内核仅支持 \(supports.joined(separator: "/"))）——按 D1 §2.6 同步拒绝，不静默降级"
+        case .decisionNotAllowedForThisRequest(let reqID, let requested, let allowed):
+            return "决策 '\(requested)' 不在审批 \(reqID) 自带的 allowedDecisions \(allowed) 内——"
+                + "已在客户端拦截；若发给服务端会被 forceMalformedDeny 静默改写成 deny"
+        case .unsupportedUpdatedInput(let reqID):
+            return "审批 \(reqID)：openclaw approval.resolve 无法承载 Decision.updatedInput"
+                + "（params schema 是 closedObject{id,kind,decision}），拒绝静默丢弃改写内容"
+        case .approvalNotPending(let reqID):
+            return "approval_not_pending: 审批 \(reqID) 不在本适配器的 pending 表内（从未产出，或已终态化）"
+        case .approvalBelongsToAnotherSession(let reqID, let owner, let requested):
+            return "审批 \(reqID) 属于 session \(owner)，不是 \(requested)——拒绝跨会话回应"
+        case .kernelDidNotHonorDecision(let reqID, let requested, let status, let decision, let reason, let applied):
+            return "审批 \(reqID)：请求决策 '\(requested)'，但内核记录的终态是 status=\(status ?? "nil")"
+                + " decision=\(decision ?? "nil") reason=\(reason ?? "nil") applied=\(applied.map(String.init) ?? "nil")"
+                + "——决策未被兑现，不当作成功"
+        case .forceDenyPendingKernelAck(let reqID, let requested, let observedFailure):
+            return "FORCE_DENY_PENDING_KERNEL_ACK: 审批 \(reqID) 的强制 deny 未被内核确认"
+                + "（\(observedFailure)），内核侧真实状态未知——此状态下只允许幂等 deny 重试，"
+                + "拒绝决策 '\(requested)'"
+        case .approvalResolveTimedOut(let reqID, let waitedMS):
+            return "审批 \(reqID)：approval.resolve 超过有界等待上限 \(waitedMS)ms 仍无应答——"
+                + "已结束该 in-flight（不永久占位），内核侧状态未知，不当作成功也不当作已拒绝"
+        case .approvalTerminatedByKernelWhileResolving(let reqID, let status, let reason):
+            return "审批 \(reqID)：决议在途期间内核给出权威终态 status=\(status ?? "nil")"
+                + " reason=\(reason ?? "nil")——本次决议不可能被兑现，已结束该 in-flight"
+        }
+    }
+}
+
+/// 构造一条 `approval.resolve` 的 params，并在构造过程中完成**全部发出前校验**。这是本轮 B 块
+/// 「响应前必须在客户端侧校验」的唯一落点——`respondApproval()` 与任何未来的调用方都只能经由它拼参数。
+///
+/// **为什么必须在客户端拦（而不是"发出去让服务端把关"）**：openclaw
+/// `gateway/server-methods/approval.ts:476-486` 的判定是
+/// ```ts
+/// const decisionAllowed = requestedDecision === "deny" ||
+///   (requestedDecision !== null && record.presentation.allowedDecisions.includes(requestedDecision));
+/// const kindMatches = resolveParams?.kind === record.presentation.kind;
+/// const forceMalformedDeny = !validParams || !kindMatches || !decisionAllowed;
+/// ```
+/// 三者任一不满足 -> `forceMalformedDeny` -> `applyForcedDeny`，审批被**终态化为 denied**
+/// （`reason:"malformed-verdict"`），而这条 RPC 本身**仍然返回 `ok:true`**。也就是说：用户点的
+/// "允许"会静默变成"拒绝"，且**不可逆**（审批已经进终态，没有第二次机会重发正确的决策）。所以
+/// 这里的校验不是防御性冗余，是唯一一次机会。
+///
+/// 三项逐条对应：
+/// 1. **`allowedDecisions` 每条请求各自携带、不能硬编码**——参数 `allowedDecisionsFromRequest`
+///    要求调用方传入这条审批**自己**的那一份（适配器把它随 `approval_request` 一起缓存在
+///    `pendingApprovalsByReqID`）。实测同一个内核在不同配置下就会给出不同集合：`ask=always` 时是
+///    `["allow-once","deny"]`（`resolveExecApprovalAllowedDecisions`，
+///    `kernels/openclaw/src/infra/exec-approvals.ts:2805-2814`，因为"每次都问"与"永久放行"语义冲突），
+///    其余情况才是三值全集 `DEFAULT_EXEC_APPROVAL_DECISIONS`。硬编码成任一个都会在另一种配置下出错。
+/// 2. **`kind` 必须与该条请求的 `presentation.kind` 一致**——同样取自缓存的真实值
+///    （"exec"/"plugin"/"system-agent"，openclaw 侧原始取值；**不能**用 D2 的 `KindElement` 反推，
+///    那是个有损映射：`plugin` 与 `system-agent` 都被映射成 D2 的 `.tool`，见
+///    `mapOpenclawSessionApprovalToKernelEvent`）。
+/// 3. **params 必须恰好是 `{id, kind, decision}` 三个键**——`ApprovalResolveParamsSchema` 是
+///    `closedObject`（`closed-object.ts`：`additionalProperties: false`），多一个键就 `!validParams`，
+///    同样落进 `forceMalformedDeny`。所以这里返回的字典字面量刻意只有三项，且不接受调用方追加。
+///
+/// `Decision.updatedInput` 非 nil 时直接拒绝：openclaw 的 params 里没有承载位置，静默丢弃会让
+/// "我改写了命令再放行"变成"原样放行原始命令"——这是比静默 deny 更危险的静默 allow。
+/// `Decision.scope`/`.reason` 则是**可以**安全忽略的说明性字段（内核自己记录 resolver 归属与
+/// `reason:"user"`，不接受客户端指定），忽略它们不改变任何一侧的执行语义，故不报错。
+/// 返回 `(params, wire)` 两项而不是只返回 params：调用方在 RPC 返回后还要用 `wire` 去核对内核终态
+/// 是否兑现了这次决策（`verifyApprovalResolveHonored`）。让本函数一并交出它已经算好的那个值，
+/// 而不是让调用方再调一次映射函数——后者会在调用方那里留下一个**永远不可能命中**的 `guard ... else
+/// { throw }` 分支（本函数已经保证映射成功了），那种假装可达的死分支既误导读者也无法被测试覆盖。
+func makeApprovalResolveParams(
+    reqID: String,
+    openclawKind: String,
+    decision: Decision,
+    allowedDecisionsFromRequest: [String]
+) throws -> (params: JSONObject, wire: OpenclawApprovalDecisionWire) {
+    guard decision.updatedInput == nil else {
+        throw ApprovalDecisionError.unsupportedUpdatedInput(reqID: reqID)
+    }
+    guard let wire = openclawApprovalDecisionWire(forD2: decision.outcome) else {
+        throw ApprovalDecisionError.unsupportedApprovalDecision(
+            requested: decision.outcome,
+            kernelSupports: OpenclawApprovalDecisionWire.allCases.map(\.rawValue)
+        )
+    }
+    guard allowedDecisionsFromRequest.contains(wire.rawValue) else {
+        throw ApprovalDecisionError.decisionNotAllowedForThisRequest(
+            reqID: reqID, requested: wire.rawValue, allowed: allowedDecisionsFromRequest
+        )
+    }
+    // 恰好三个键，见文档注释第 3 条。
+    return (["id": reqID, "kind": openclawKind, "decision": wire.rawValue], wire)
+}
+
+/// `approval.resolve` 返回后，判断内核是否**真的**兑现了我们请求的决策。
+///
+/// 响应体是 `ApprovalResolveResultSchema = {applied: Bool, approval: TerminalApprovalSnapshot}`
+/// （approvals.ts:252-256）。终态快照四选一：`allowed`（带 `decision: allow-once|allow-always`）/
+/// `denied`（`decision:"deny"`，`reason` ∈ user|malformed-verdict|no-route|storage-corrupt）/
+/// `expired`（reason:timeout）/ `cancelled`（reason:run-aborted|gateway-restart）。
+///
+/// 判定规则：请求 deny 就必须看到 `denied`，请求任一 allow 档就必须看到 `allowed` **且**
+/// `decision` 与我们发出的那个值逐字相等。后半句不是多余——`forceMalformedDeny` 之外，若将来内核
+/// 把 `allow-always` 降级成 `allow-once` 落库，这里同样会揪出来。
+///
+/// 这是与 `makeApprovalResolveParams` 客户端前置校验**互补的第二道防线**：前者防我们自己发错，
+/// 后者防"发对了但内核出于别的原因没兑现"（例如审批在 RPC 在途期间超时 -> `expired`）。任务书
+/// "不得仅凭 exit 0 / 自述 success 采信"的纪律在这条 RPC 上的具体落地。
+func verifyApprovalResolveHonored(reqID: String, requested: OpenclawApprovalDecisionWire, result: JSONObject) throws {
+    let approval = jsonObject(result["approval"])
+    let status = jsonString(approval?["status"])
+    let decision = jsonString(approval?["decision"])
+    let reason = jsonString(approval?["reason"])
+    let applied = jsonBool(result["applied"])
+
+    let honored: Bool
+    switch requested {
+    case .deny:
+        honored = (status == "denied")
+    case .allowOnce, .allowAlways:
+        honored = (status == "allowed" && decision == requested.rawValue)
+    }
+    guard honored else {
+        throw ApprovalDecisionError.kernelDidNotHonorDecision(
+            reqID: reqID, requested: requested.rawValue,
+            observedStatus: status, observedDecision: decision, observedReason: reason, applied: applied
+        )
+    }
+}
+
+// MARK: - ⑧ 审批呈现摘要（rounds/0015 C 块：审批 UI 需要的字段，从 D2 事件里提炼）
+
+/// 审批 UI 要渲染的最小字段集合，从 `ApprovalRequestEventMessagePayload.payload`（`JSONAny`，
+/// 内容是 openclaw 的 `approval.presentation` 原样包装，见
+/// `mapOpenclawSessionApprovalToKernelEvent`）里提炼。
+///
+/// 不是 D1/D2 契约类型——D2 把 presentation 定义成"该 kind 下的不透明详情"（`JSONAny`），要在 UI 上
+/// 显示"到底要执行什么命令"就必须有人负责把这坨不透明详情解释成具体字段。这件事放在 kernel-client
+/// 层（而不是 `AgentShellCore`）：presentation 的字段形状是 **openclaw wire 知识**
+/// （`ExecApprovalPresentationSchema` 等三个 schema），与本文件其余六节事件映射同源；放 UI 层会让
+/// wire 知识泄漏进壳，且 `frame-replay-tests` 也更难直接覆盖。呼应 `HistoryRecord`（KernelClient.swift）
+/// 的同一条先例："UI 层需要、D1/D2 无原生对应"的最小值类型由 kernel-client 提供。
+public struct ApprovalPresentationSummary: Equatable {
+    /// openclaw 原始 kind："exec" / "plugin" / "system-agent"。保留原值而不是用 D2 的 `KindElement`
+    /// ——后者是有损的（plugin 与 system-agent 都落到 `.tool`）。
+    public let openclawKind: String?
+    /// exec 审批：待执行的命令全文（`ExecApprovalPresentationSchema.commandText`）。
+    public let commandText: String?
+    /// plugin / system-agent 审批：标题。
+    public let title: String?
+    /// plugin / system-agent 审批：说明文本。
+    public let detailText: String?
+    /// exec 审批的告警文本（如 heredoc/allowlist 计划不可用的提示）——**"请求原因"在 openclaw 的
+    /// exec presentation 里没有独立字段**，这个 `warningText` 与 `host` 是仅有的两处上下文，如实
+    /// 呈现，不编造一段"原因"。
+    public let warningText: String?
+    /// 执行宿主（"gateway"/"sandbox"/node 名）。
+    public let host: String?
+    /// 请求方 agent id。
+    public let agentID: String?
+    /// 这条请求**自己**允许的决策，已翻译成 D2 枚举供 UI 直接渲染按钮。顺序保持 openclaw 给出的原序。
+    public let allowedDecisions: [ApprovalDecisionKindElement]
+    /// `allowedDecisions` 里本适配器**认不出**的原始取值（当前 openclaw schema 下恒为空）。
+    /// 如实保留而不是静默丢弃：将来内核新增决策档位时，UI 至少能显示"有一个我不认识的选项"，
+    /// 而不是让它凭空消失、用户永远看不到一个本该可用的按钮。
+    public let unmappedAllowedDecisions: [String]
+
+    public init(
+        openclawKind: String?, commandText: String?, title: String?, detailText: String?,
+        warningText: String?, host: String?, agentID: String?,
+        allowedDecisions: [ApprovalDecisionKindElement], unmappedAllowedDecisions: [String]
+    ) {
+        self.openclawKind = openclawKind
+        self.commandText = commandText
+        self.title = title
+        self.detailText = detailText
+        self.warningText = warningText
+        self.host = host
+        self.agentID = agentID
+        self.allowedDecisions = allowedDecisions
+        self.unmappedAllowedDecisions = unmappedAllowedDecisions
+    }
+}
+
+/// 从一条 `evt.approval_request` 的 payload 提炼 `ApprovalPresentationSummary`。
+///
+/// `payload.payload` 是 `JSONAny`，其 `.value` 在 presentation 为 JSON 对象时就是 `[String: Any]`
+/// （quicktype 生成的 `JSONAny` 解码规则）。取不到对象时返回一个全 nil / 空数组的摘要——UI 侧据此
+/// 显示"这条审批没有可读详情"，而不是崩溃或伪造内容。
+public func summarizeApprovalPresentation(_ payload: ApprovalRequestEventMessagePayload) -> ApprovalPresentationSummary {
+    let presentation = jsonObject(payload.payload.value) ?? [:]
+    let rawAllowed = (jsonArray(presentation["allowedDecisions"]) ?? []).compactMap { jsonString($0) }
+    var mapped: [ApprovalDecisionKindElement] = []
+    var unmapped: [String] = []
+    for raw in rawAllowed {
+        if let kind = d2ApprovalDecisionKind(forOpenclawWire: raw) {
+            mapped.append(kind)
+        } else {
+            unmapped.append(raw)
+        }
+    }
+    return ApprovalPresentationSummary(
+        openclawKind: jsonString(presentation["kind"]),
+        commandText: jsonString(presentation["commandText"]),
+        title: jsonString(presentation["title"]),
+        detailText: jsonString(presentation["description"]),
+        warningText: jsonString(presentation["warningText"]),
+        host: jsonString(presentation["host"]),
+        agentID: jsonString(presentation["agentId"]),
+        allowedDecisions: mapped,
+        unmappedAllowedDecisions: unmapped
+    )
 }

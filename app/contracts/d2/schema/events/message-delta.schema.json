@@ -2,14 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "events/message-delta.schema.json",
   "title": "evt.message.delta (MessageDeltaEvent)",
-  "$comment": "D2 v3 §4 #1，payload 字段来源 D1 v3 正文（未受 v3.1-v3.5 修订影响）。runId 沿用 EventEnvelope 默认可选。",
+  "$comment": "D2 v3 §4 #1，payload 字段来源 D1 v3 正文（未受 v3.1-v3.5 修订影响）。runId 沿用 EventEnvelope 默认可选。2026-08-08 rounds/0012（scope-lock §①'，C 方案，user-confirmed）新增可选字段 payload.messageId——详见 MessageDeltaPayload.messageId 的字段级 description；这是本 schema 唯一一次在 D1 v3 正文转录之外新增字段，属于 rounds/0012 明文授权的定向解除（透传消息标识，替代错误的 (runId,index) 分组键），不是既有字段语义/必选性变更，不是 D1 契约本身的修改。",
   "$defs": {
     "MessageDeltaPayload": {
       "type": "object",
       "properties": {
         "role": { "const": "assistant" },
         "delta": { "type": "string" },
-        "index": { "type": "integer" }
+        "index": { "type": "integer" },
+        "messageId": {
+          "type": "string",
+          "description": "对应 wire session.message 事件外层 payload.messageId（不是 message.id——message 对象本身不带任何标识字段，见 rounds/0012 evidence/item1-mechanism-localization.md §2）。openclaw 为每条落地的消息（user/assistant）分配的全局唯一 id，每帧互异（实测样本见 rounds/0012 evidence/instrumented-run-findings.md §1.3）——是消费方做消息分组/去重的正确键，取代此前错误使用的 (runId,index) 复用键：index 只是单条 assistant 消息内的 content-block 下标，每条新消息都从 0 重新计数，同一 run 产出多条 assistant 消息时会撞出相同的 (runId,index) 组合，导致文本被错误地追加拼接（根因坐实见 rounds/0012 evidence/instrumented-run-findings.md §1.2）。可选字段（不在 required 里）：rounds/0012 新增，现存消费方（C#/TS 端、FrameReplayTests 里的历史帧）不携带该字段，不得因缺失而失败。"
+        }
       },
       "required": ["role", "delta", "index"],
       "additionalProperties": false

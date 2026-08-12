@@ -14,6 +14,11 @@
 // 再做一遍 quicktype 级别的建模——这是本文件与 D2.swift/DiscriminatedUnions.swift 分工的边界。
 
 import Foundation
+// `canImport` 门卫理由见 KernelClient.swift 同名注释——这个文件也被 ci.yml 的 flat swiftc
+// parity-runner 步骤直接编译，那条路径下没有独立的 D2Generated module。
+#if canImport(D2Generated)
+import D2Generated
+#endif
 
 typealias JSONObject = [String: Any]
 
@@ -147,6 +152,41 @@ private func isSensitiveKey(_ key: String) -> Bool {
     return false
 }
 
+/// B1（rounds/0013）：为 `OpenclawGatewayKernelClient.createSession()` 铸造 openclaw 侧会话 label。
+///
+/// **背景**：openclaw `sessions.create` 经 `session-create-service.ts:723`
+/// （`applySessionsPatchToStore`）转发进 `gateway/sessions-patch.ts:422-441`
+/// （`projectSessionsPatchEntry` 的 label 分支）——对同一 store 内**全部**会话强制 label 互不相同
+/// （`entry?.label === parsed.label` 逐条比对现有条目，`:435-437`），撞名直接
+/// `INVALID_REQUEST: label already in use: <label>`，没有重试机会（本轮逐层读过这条调用链的 openclaw
+/// 源码，不是转述任务书）。旧实现写死字面量 `"sg4-kernel-client-l1"`，同一 openclaw state 目录下第二
+/// 次 `createSession()` 必然撞上第一次留下的同名条目——本轮已 UI 侧 + CLI 侧双路径实证。
+///
+/// openclaw 侧 label 规则很宽（`sessions/session-label.ts`）：只要求非空字符串、trim 后 ≤512 字符，
+/// **无字符集限制**——设计空间不受某种转义规则约束。
+///
+/// **方案**：`"sg4-<UTC 时间戳，人眼可读到秒>-<ourSessionID>"`：
+/// - 时间戳段落让人在 openclaw 侧扫一眼会话列表就能按创建时间区分多个会话，不是一串除了自己什么都
+///   认不出的裸 UUID；
+/// - `ourSessionID` 段落是这次 `createSession()` 铸造的 `SessionHandle.sessionID` 本尊（D1 §2.1
+///   步骤 1 的预分配 id，`~/.llm-wiki/agent-app-design/kernel/d1-kernelport-spec-v3-6.md:179`）——
+///   label 与 SessionHandle 之间因此有精确的双向可查关系：openclaw 侧看到的 label 能直接反查是客户端
+///   哪一次 `createSession()` 铸造的，客户端日志/UI 里的 `sessionID` 也能直接在 openclaw 侧按 label
+///   搜到对应会话，不需要另外维护一张"两边都要记得同步"的关联表；
+/// - 唯一性直接继承 `ourSessionID`（`UUID().uuidString`）本身的低碰撞率保证——时间戳段落只是给人看，
+///   不参与唯一性判断，即便两次调用发生在同一秒（连续建会话很容易撞在这一秒）label 依然不同。
+///
+/// 独立于 actor 之外的纯函数（同款风格见 `encodeAttachmentForWire`）——不依赖任何 actor 状态，方便
+/// `FrameReplayTests.swift` 直接单测，不需要搭一个真实连接或 actor 实例。`createdAt` 显式传入（不在
+/// 函数内部调用 `Date()`）同样是为了可测试性——测试能用固定日期断言精确的格式化输出。
+func makeSessionLabel(ourSessionID: String, createdAt: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+    formatter.timeZone = TimeZone(identifier: "UTC")
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    return "sg4-\(formatter.string(from: createdAt))-\(ourSessionID)"
+}
+
 /// 递归构造一份脱敏副本，供日志/打印使用——原始 `object`/嵌套字典/数组本身不被修改（这是"打印前的
 /// 只读转换"，不影响实际发给 openclaw 的请求内容）。
 func redactedCopy(_ value: Any) -> Any {
@@ -173,4 +213,118 @@ func prettyPrint(_ label: String, _ object: JSONObject) {
     let data = (try? JSONSerialization.data(withJSONObject: safeObject, options: [.prettyPrinted, .sortedKeys])) ?? Data()
     let text = String(data: data, encoding: .utf8) ?? "<unprintable>"
     print("\n--- \(label) ---\n\(text)")
+}
+
+// MARK: - SG-10 rounds/0012 ① 临时插桩（取证工具，见
+// rounds/0012/evidence/item1-mechanism-localization.md §3/§4 与 scope-lock.md ①）
+//
+// `OpenclawGatewayKernelClient.handleSessionMessageEvent`/`handleAgentEvent`/
+// `handleSessionApprovalEvent`/`handleShutdownEvent` 四个被消费 case 现在只有映射失败/旁路才调用
+// `prettyPrint`，成功产出 D2 事件的路径完全静默——rounds/0011 的运行日志因此一条承载 assistant 文本
+// 的帧都没留下，无法判断 content 形状、`index` 取值、delta 是否重复。下面这组函数是纯粹的取证工具：
+// 只读取/摘要已经发生的映射结果，不参与、不影响任何映射决策。调用方（`OpenclawGatewayKernelClient`
+// 里的 `traceWireDispatch`）由 `AGENT_KERNEL_WIRE_TRACE` 环境变量整体开关，未设置时这组函数不会被
+// 调用，行为与插桩之前逐字节一致。
+
+/// 插桩总开关——未设置该环境变量时返回 nil，调用方必须整体跳过写入路径（这是"默认关闭"的唯一判断
+/// 点）。取值是 trace 文件的完整路径。
+func wireTraceEnabledPath() -> String? {
+    ProcessInfo.processInfo.environment["AGENT_KERNEL_WIRE_TRACE"]
+}
+
+/// 把一条 JSON 对象以 JSON Lines 形式追加写入 `path`——每次调用新开文件句柄、写完即关（这是低频的
+/// 诊断路径，跟着真实事件到达节奏走，不值得为此长期持有一个跨 actor 方法调用的文件句柄，也避免进程
+/// 异常退出时数据留在未 flush 的句柄里）。`path` 不存在时先创建空文件。写入失败（无效 JSON/无权限等）
+/// 一律诚实跳过，不抛错、不影响调用方——这是取证工具，不能反过来影响被观察的主路径。
+func appendWireTraceLine(_ record: JSONObject, toPath path: String) {
+    guard JSONSerialization.isValidJSONObject(record),
+          let data = try? JSONSerialization.data(withJSONObject: record, options: [.sortedKeys]) else {
+        return
+    }
+    var line = data
+    line.append(0x0A)
+    let fm = FileManager.default
+    if !fm.fileExists(atPath: path) {
+        fm.createFile(atPath: path, contents: nil)
+    }
+    guard let handle = FileHandle(forWritingAtPath: path) else { return }
+    defer { try? handle.close() }
+    handle.seekToEndOfFile()
+    handle.write(line)
+}
+
+/// 把一个已经产出的 D2 `EventMessageUnion` 摘成可写盘的 JSON 安全字典：11 变体共有的
+/// `wireType`/`seq`/`runID`，`messageDelta` 额外带上**完整、不截断**的 `payload.index`/
+/// `payload.delta`——这正是本轮 scope-lock ① 要查的两个字段（index 取值 + delta 文本是否重复）。
+/// 这些字段来自我们自己的 D2 映射输出（不是 wire 上的原始任意字段），契约里没有给它们留下承载凭证的
+/// 通道，因此不需要再走一次 `redactedCopy`——本文件里只有 `wireFrame`（原始 wire JSON）那一份需要
+/// 脱敏，见 `OpenclawGatewayKernelClient.buildWireTraceRecord`。
+func wireTraceEventSummary(_ event: EventMessageUnion) -> JSONObject {
+    func runIDField(_ value: String?) -> Any { value ?? NSNull() }
+    var out: JSONObject = ["wireType": event.wireType]
+    switch event {
+    case .messageDelta(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+        out["payload"] = ["index": e.payload.index, "delta": e.payload.delta,
+                       // rounds/0012 ①' 新增：分组键改用 messageID 后，trace 必须能看见它，
+                       // 否则 live 验证读不到该字段会被误判成「映射没传过来」（本轮真踩过一次）。
+                       "messageID": e.payload.messageID ?? NSNull()]
+    case .thinking(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    case .toolCall(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    case .toolResult(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    case .approvalRequest(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    case .error(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    case .turnComplete(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    case .sessionEnd(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    case .capabilityChanged(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    case .operationCompleted(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    case .approvalBufferResolved(let e):
+        out["seq"] = e.seq
+        out["runID"] = runIDField(e.runID)
+    }
+    return out
+}
+
+/// `produced` 为空时的便利摘要——只是把已经在 `payload` 里的相关字段单独摘出来，方便脚本/人眼不用
+/// 逐层展开整份帧；不是我们自己推断出的解释，帧本身才是权威来源（找不到就诚实返回 nil，不编造）。
+/// 逐 dispatch case 关注点不同：`session.message` 看 `message.role`（`EventMapping.swift:172-178`
+/// 的过滤条件——非 assistant 角色不产出事件）；`agent` 看 `stream`/`data.phase`（`handleAgentEvent`
+/// 的 `default: break` 与 `lifecycle` phase 过滤都在这两个字段上判断）；`session.approval` 看
+/// `phase`（只有 `pending` 会继续处理，`terminal` 分支已有 `prettyPrint` 记录跳过原因）；`shutdown`
+/// 没有已知的"0 事件但需要解释"场景，如实返回 nil。
+func wireTraceEmptyHint(eventName: String, payload: JSONObject?) -> JSONObject? {
+    switch eventName {
+    case "session.message":
+        guard let role = (payload?["message"] as? JSONObject)?["role"] else { return nil }
+        return ["message.role": role]
+    case "agent":
+        var hint: JSONObject = [:]
+        if let stream = payload?["stream"] { hint["stream"] = stream }
+        if let phase = (payload?["data"] as? JSONObject)?["phase"] { hint["data.phase"] = phase }
+        return hint.isEmpty ? nil : hint
+    case "session.approval":
+        guard let phase = payload?["phase"] else { return nil }
+        return ["phase": phase]
+    default:
+        return nil
+    }
 }

@@ -8,13 +8,26 @@
   进程 `node` PID 2627——与用户全局 `127.0.0.1:18789`（PID 5197）完全隔离，运行前后均确认
   18789 未受任何影响）
 - token：`sg4kernelclienttoken`（隔离测试实例专用，非生产凭证）
-- 客户端：本轮新建的 `app/kernel-client/swift/` 编译产物，命令：
+- 客户端：本轮新建的 `app/kernel-client/swift/` 编译产物。**下方命令是 2026-07-23 记录本次 live
+  运行时的原样命令（裸 swiftc，SG-4 当时的构建方式）；SG-10 起改成了 SwiftPM 包
+  （`app/Package.swift`），今天要复现同一个闭环请改用 SwiftPM 命令——旧命令因为 `main.swift` 已
+  挪到 `app/kernel-client/swift/cli/`（SwiftPM target 划分需要）而不再能跑通，保留在这里仅作历史
+  记录，不要直接复制执行**：
+
+  当时（SG-4，裸 swiftc）：
   ```
   swiftc KernelClient.swift OpenclawWire.swift EventMapping.swift \
          OpenclawGatewayKernelClient.swift CLIRunner.swift main.swift \
          ../../generated/swift/D2.swift ../../generated/swift/DiscriminatedUnions.swift \
          -o kernel-client-cli
   ./kernel-client-cli
+  ```
+
+  现在（SG-10 起，SwiftPM，从仓库根目录执行）：
+  ```
+  swift build --package-path app --product kernel-client-cli
+  SG4_KERNEL_URL=ws://127.0.0.1:18889 SG4_KERNEL_TOKEN=sg4kernelclienttoken \
+    ./app/.build/debug/kernel-client-cli
   ```
 - 退出码：`0`（闭环全程无异常，无未处理错误）
 
