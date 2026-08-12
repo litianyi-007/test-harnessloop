@@ -65,6 +65,55 @@
   chronicler 本身，chronicler 用 haiku 只管素材拉取）做一次编辑 pass，提炼进
   `~/.llm-wiki/surebeli-ip/drafts/`。
 
+## 工程侧学习/沉淀钩子（2026-08-11 加入）
+
+史官那条线一直活着（`surebeli-ip` 64+ 页、持续更新），**工程侧三条线却全停了**——
+`docs/validation-log.md` 停在 2026-07-16、工程 wiki `~/.llm-wiki/test-harnessloop` 停在
+2026-07-17、kata 在整个 rounds/0011–0012 期间**调用 0 次**。同期跑了 12 轮、三插件全审、
+统一 MIT、提了上游 PR、开了 TH-0031。
+
+**根因不是纪律，是机制**：史官有五个明写的触发节点，这三条线**一个钩子都没有**，全靠人记得。
+本节把它们补上——**有钩子的线活着，没钩子的线会停，这是本项目已经用 23 天证明过的事**。
+
+### 触发节点（与史官并列，互不替代）
+
+| 触发 | 动作 | 落点 |
+|---|---|---|
+| **轮次收盘**（写完 `decision.md`） | 把本轮「发现问题 → 改插件 → 重装 → 复验」的闭环追加一条 | `docs/validation-log.md` |
+| **插件缺陷被确认**（不论是否当轮修） | 记一条，注明属哪个插件、是否已修、未修则写明原因 | `docs/validation-log.md`；harnessloop 的另开 `evolution-issues/` |
+| **每 3 轮**（或跨轮产生了可复用的内核/工具事实） | 跑一次工程侧知识沉淀 | `~/.llm-wiki/test-harnessloop`（**kata 的主场**） |
+
+**为什么第三条要绑 kata**：kata 是三个被测插件之一，CLAUDE.md 既定的验证方式是「边用边验证」，
+**不用就等于不验**。让知识沉淀走 kata，一举两得——既留下了知识，也验了插件。
+
+### 沉淀的形式：teach-back（沿用既有学习计划的形状）
+
+`~/.llm-wiki/mahoraga/learning/` 已经确立了一套形状，工程侧沉淀沿用它，**不另发明**：
+
+- **Observed** —— 实测到的事实，带 file:line 或日志出处
+- **Inferred** —— 由事实推出的判断，**与事实分开写**
+- **Deferred to next** —— 本次没查清、明确留给下次的
+- **Mastery questions** —— 3–5 道能检验「是否真懂」的问题
+
+> `mahoraga` 是**另一个仓库**（`/Users/litianyi/Documents/Code/_ai-goods/mahoraga`，其 wiki 在
+> `~/.llm-wiki/mahoraga`），它的 M1/S1/S2 学习进度**不归本项目管**。这里只借用它的形式。
+
+### 什么值得沉淀（判据）
+
+只沉淀**跨轮复用**的事实，不搬运轮次证据：
+
+- ✅ 内核/工具的确切行为：`logging.file` 能隔离 openclaw 日志、`messageSeq` 是 transcript 计数
+  而非投递序号、targeted 帧不带 `EventFrame.seq`、`AsyncThrowingStream.makeStream()` 默认无界缓冲
+- ✅ 契约的权威条文：D2 §3.3 定义 subscribe 响应为「流已建立」
+- ✅ **踩过的坑与其根因**：搜索维度选错会把「我没找到」当成「不存在」（本项目已发生**四次**，
+  第四次的根因是工具本身——见下方「搜索工具的可靠性」）
+- ❌ 轮次的过程记录、验收结论、状态指针——那些属 `.harnessloop/`，不重复搬运
+
+### 拉取式，与史官同一原则
+
+harnessloop 协议文本**不因本节改一个字**——不在 `round-summary.md`/`decision.md` 模板里加字段。
+触发是主会话在收盘时多做一步，沉淀内容由执行方按上面的判据自己去拉。
+
 ## 凭证守门（2026-07-26 泄漏事件后强制）
 
 本仓是 **PUBLIC**，且 evidence/vendor 原始日志由子代理自动写入——真实凭证曾因此进公开历史
@@ -76,6 +125,44 @@ printf '#!/usr/bin/env bash\nexec "$(git rev-parse --show-toplevel)/scripts/chec
 
 - 轮换任何凭证后重跑 `./scripts/check-secrets.sh --update-digests`（让 CI 的 L1-digest 跟上）。
 - `.hopper/AGENTS.md` 纪律：任务 brief 里**绝不写真实凭证**，一律给参数名 + "从环境变量/channel-params 读"。
+- **但那条纪律必要而不充分**（2026-08-12 实证）：T-081 的 brief 完全合规，凭证仍进了 vendor 的输出日志——
+  codex 在评审中**读了一个本地配置文件并把内容原样回显**（`16\t"apiKey": "<64 字符>"`，行号前缀说明是读文件）。
+  **有读权限的 vendor 会自己找到并回显凭证。** 所以 handoff 产物入库前必须实跑 `--staged` 扫描，不能因为
+  "brief 里没写凭证"就跳过。
+
+### 搜索工具的可靠性：`grep` 会静默漏文件（2026-08-12 实证）
+
+**本会话因此犯错三次，两次直接影响安全结论。** 机制已坐实——本环境的 `grep` 是 Claude Code 注入的
+shell 函数（见 `type grep`），它把调用转给自带的 ugrep：
+
+```
+ARGV0=ugrep "$_cc_bin" -G --ignore-files --hidden -I --exclude-dir=.git …
+```
+
+- `--ignore-files` → **读 `.gitignore` 并跳过被忽略的文件**
+- `-I` → **跳过二进制文件**
+
+受控实验（同一探针串，一个放 gitignored 路径、一个放普通路径）：
+
+| 命令 | 命中 |
+|---|---|
+| `grep -rl`（函数版） | 只找到未被忽略的那个 |
+| `command grep -rl` | **两个都找到** |
+
+真实代价：查一个凭证的分布时，函数版报 **0 处**，`command grep` 报 **23 处**（`app/server/.env` 与 21 个
+`scratchpad/` 状态文件全部漏掉，它们恰恰都 gitignored）。**"我没找到"被当成了"不存在"——这是本项目已发生
+第四次的同一族错误**（见 `~/.llm-wiki/test-harnessloop` 的 `not-found-is-not-absent`）。
+
+**规矩**：凡是**安全性搜索、凭证排查、"某值还残留在哪"**这类判断，一律用 `command grep`、`git grep`
+（查索引）或 `git log -S`（查全历史）；**裸 `grep -r` 的空结果不构成"不存在"的证据**。日常代码搜索用函数版
+无妨——跳过 `.gitignore` 与二进制通常正是想要的。
+
+同族的两个测量陷阱（同日各栽一次，一并记住）：
+
+- **管道退出码**：`cmd | tail` 的 `$?` 是 `tail` 的，不是 `cmd` 的。差点把扫描器的 `exit=1`（拦截）
+  读成 `exit=0`（通过）。要判退出码就**直接捕获**：`cmd > /tmp/out 2>&1; EC=$?`。
+- **提取失败不报错**：从 JSON 里取凭证值的脚本没取到（返回长度 1 的单字符），后续 `grep` 拿它去匹配，
+  于是"命中"了几乎所有文件。**取到值之后先断言它的长度/形状，再拿去用。**
 
 ## 约束
 
