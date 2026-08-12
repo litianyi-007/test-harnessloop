@@ -39,8 +39,17 @@ if [ "$MODE" = "--update-digests" ]; then
   python3 - "$PARAMS" "$DIGESTS" <<'PY'
 import json,sys,hashlib,os,re
 params,out=sys.argv[1],sys.argv[2]
-SKIP={'NEWAPI_BASE_URL','NEWAPI_UPSTREAM_BASE_URL','NEWAPI_UPSTREAM_TYPE',
-      'PI_HOST','PI_USER','D3PROXY_LOCAL_PORT','D3_SEED_SESSION_ID'}
+SENSITIVE=re.compile(r'pass|pwd|secret|token|key',re.I)
+# 放行规则必须与上面 L1-exact 那份 allowed() 完全一致——2026-08-08 的迁移只改了 L1-exact，
+# 这里当时留了一份写死的 SKIP 名单没跟着改，导致「同一份 channel-params，两套判据」：
+# 新增 deepseek 线路时，L1-exact 已按 sensitivity 正确放行 DEEPSEEK_BASE_URL/
+# DEEPSEEK_DEFAULT_MODEL（均声明 internal），但这里的旧 SKIP 名单不认识它们，照样把两个
+# 公开值（endpoint URL、模型名）摘要进了 scripts/secret-digests.txt，反过来又让 L1-digest
+# 在 ~21 个引用了该模型名的文件上假阳性拦截。两处判据不一致，永远会有一处先坏——
+# 所以这里不再自己维护名单，直接复用 L1-exact 的同一条 allowed() 规则。
+def allowed(name, meta):
+    if not isinstance(meta, dict): return False
+    return meta.get('sensitivity') == 'internal' and not SENSITIVE.search(name)
 salt=None
 if os.path.exists(out):
     for ln in open(out):
@@ -52,7 +61,7 @@ for ch,cfg in (cp.get('channels') or {}).items():
     for k,v in (cfg.get('parameters') or {}).items():
         val=v.get('value','') if isinstance(v,dict) else str(v)
         # 摘要只收高熵长值：短/弱口令做成摘要有被离线爆破的风险，它们只在本地 L1-exact 覆盖
-        if val and len(val)>=16 and k not in SKIP:
+        if val and len(val)>=16 and not allowed(k, v):
             rows.append((k,hashlib.sha256((salt+val).encode()).hexdigest()))
 with open(out,'w') as f:
     f.write("# 由 scripts/check-secrets.sh --update-digests 生成；仅含加盐 SHA-256，无明文。\n")
@@ -90,14 +99,28 @@ if [ -f "$PARAMS" ]; then
   python3 - "$PARAMS" > "$TMP/secrets" <<'PY'
 import json,sys
 cp=json.load(open(sys.argv[1]))
-SKIP={'NEWAPI_BASE_URL','NEWAPI_UPSTREAM_BASE_URL','NEWAPI_UPSTREAM_TYPE',
-      'PI_HOST','PI_USER','D3PROXY_LOCAL_PORT','D3_SEED_SESSION_ID'}
 import re
 SENSITIVE=re.compile(r'pass|pwd|secret|token|key',re.I)
+# 放行规则：**发现式**，读 channel-params 自带的 `sensitivity` 声明，不再维护硬编码名单。
+#
+# 2026-08-08 改：此处原本是一份写死的 SKIP 名单
+# （NEWAPI_BASE_URL/NEWAPI_UPSTREAM_BASE_URL/NEWAPI_UPSTREAM_TYPE/PI_HOST/PI_USER/
+#  D3PROXY_LOCAL_PORT/D3_SEED_SESSION_ID）。问题是**每新增一条线路的非敏感参数都得手改这里**，
+# 漏改就把 base-url、模型名之类当成凭证误报——加 deepseek 线路时就真误报了一次
+# （`DEEPSEEK_DEFAULT_MODEL` 命中 L1-exact）。这与本仓一贯的「清单会过时，发现式守卫不会」相抵触。
+#
+# 新规则要求**两个条件同时成立**才放行，第二个是防自我声明失真的兜底：
+#   1. 显式声明 `sensitivity == "internal"`；且
+#   2. 参数名**不**像凭证（不含 pass/pwd/secret/token/key）。
+# 于是把一个真凭证误标成 internal 但名字带 KEY/TOKEN 时，它仍然被守住——fail-closed。
+# 已核对：原 7 条 SKIP 全部满足这两条，新规则完全覆盖旧名单，无放行面收缩。
+def allowed(name, meta):
+    if not isinstance(meta, dict): return False
+    return meta.get('sensitivity') == 'internal' and not SENSITIVE.search(name)
 for ch,cfg in (cp.get('channels') or {}).items():
     for k,v in (cfg.get('parameters') or {}).items():
         val=v.get('value','') if isinstance(v,dict) else str(v)
-        if not val or k in SKIP: continue
+        if not val or allowed(k, v): continue
         # 名字像凭证的把门槛降到 8：短口令（如 DB/root 密码）此前从不被检查
         floor = 8 if SENSITIVE.search(k) else 16
         if len(val) >= floor:
