@@ -1,0 +1,106 @@
+app/.gitignore
+  0000019ff7a5e052 1-3
+app/Package.swift
+  0000019ff7a5e052 1-127
+app/apps/AgentShell/README.md
+  0000019ff7a5e052 1-86
+app/apps/AgentShell/Resources/Info.plist
+  0000019ff7a5e052 1-28
+app/apps/AgentShell/Sources/AgentShell/AgentShellApp.swift
+  0000019ff7a5e052 1-42
+app/apps/AgentShell/Sources/AgentShell/ContentView.swift
+  0000019ff7a5e052 1-45
+app/apps/AgentShell/Sources/AgentShell/SessionDetailView.swift
+  0000019ff7a5e052 1-279
+app/apps/AgentShell/Sources/AgentShell/SessionListView.swift
+  0000019ff7a5e052 1-127
+app/apps/AgentShell/Sources/AgentShellCore/ApprovalModels.swift
+  0000019ff7a5e052 1-155
+app/apps/AgentShell/Sources/AgentShellCore/ChatModels.swift
+  0000019ff7a5e052 1-53
+app/apps/AgentShell/Sources/AgentShellCore/ChatSessionViewModel.swift
+  0000019ff7a5e052 1-56
+app/apps/AgentShell/Sources/AgentShellCore/KernelShellConfig.swift
+  0000019ff7a5e052 1-45
+app/apps/AgentShell/Sources/AgentShellCore/SessionPersistence.swift
+  0000019ff7a5e052 1-149
+app/apps/AgentShell/Sources/AgentShellCore/SessionStore.swift
+  0000019ff7a5e052 1-551
+app/apps/AgentShell/build-app-bundle.sh
+  0000019ff7a5e052 1-51
+app/apps/AgentShell/repro/L1-REPRO.md
+  0000019ff7a5e052 1-336
+app/apps/AgentShell/repro/reconcile-history.py
+  0000019ff7a5e052 1-873
+app/apps/AgentShell/repro/start-isolated-kernel.sh
+  0000019ff7a5e052 1-181
+app/apps/AgentShell/repro/stop-isolated-kernel.sh
+  0000019ff7a5e052 1-65
+app/contracts/d2/schema/events/message-delta.schema.json
+  0000019ff7a5e052 1-38
+app/generated/csharp/D2.cs
+  0000019ff7a5e052 1-3728
+app/generated/swift/D2.swift
+  0000019ff7a5e052 1-4870
+app/generated/ts/d2.d.ts
+  0000019ff7a5e052 1-986
+app/kernel-client/OPENCLAW-ISOLATED-RUN-RECIPE.md
+  0000019ff7a5e052 1-289
+app/kernel-client/RUN-EVIDENCE.md
+  0000019ff7a5e052 1-240
+app/kernel-client/swift/CLIRunner.swift
+  0000019ff7a5e052 1-532
+app/kernel-client/swift/EventMapping.swift
+  0000019ff7a5e052 1-1248
+app/kernel-client/swift/KernelClient.swift
+  0000019ff7a5e052 1-193
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+  0000019ff7a5e052 1-3278
+app/kernel-client/swift/OpenclawWire.swift
+  0000019ff7a5e052 1-330
+app/kernel-client/swift/frame-replay-tests/ApprovalDecisionTests.swift
+  0000019ff7a5e052 1-1193
+app/kernel-client/swift/frame-replay-tests/ApprovalFailurePathTests.swift
+  0000019ff7a5e052 1-718
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+  0000019ff7a5e052 1-2481
+app/kernel-client/swift/frame-replay-tests/SessionPersistenceTests.swift
+  0000019ff7a5e052 1-131
+app/kernel-client/swift/frame-replay-tests/SessionRestoreHistoryTests.swift
+  0000019ff7a5e052 1-241
+app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift
+  0000019ff7a5e052 1-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "8cef36b34b86719bb6affba0766610589bbbd5b3",
+  "prompts": {
+    "s_9416163677b079::t_7c45a1cfdf735e": {
+      "agent_id": {
+        "tool": "mock_ai",
+        "id": "ai-thread-1786566270785075000",
+        "model": "unknown"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "0000019ff7a5e052": {
+      "agent_id": {
+        "tool": "claude",
+        "model": "claude-opus-5",
+        "id": "ai-thread-claude-claude-opus-5-1786566271058"
+      },
+      "human_author": "litianyi",
+      "messages": [],
+      "total_additions": 23862,
+      "total_deletions": 0,
+      "accepted_lines": 23862,
+      "overriden_lines": 0
+    }
+  }
+}
