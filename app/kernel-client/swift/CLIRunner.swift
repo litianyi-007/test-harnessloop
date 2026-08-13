@@ -113,6 +113,21 @@ public func runL1CloseLoop() async throws {
     let eventStream = await client.subscribe(session: handle)
     print("\n[STEP 3] subscribe 已发起（sessions.messages.subscribe），开始观察事件…")
 
+    // rounds/0020 scope-lock v2→v3（验证阶段，2026-08-13 新增，见该文档"扩围一个文件：CLIRunner.swift"
+    // 一节）：interrupt 步骤是否启用——presence-only 判断，与 SG5_SEND_MESSAGE 靠
+    // `!sendMessage.isEmpty` 判存在同一种"presence enables"设计（任务书原话），只是这里判的是变量本身
+    // 存不存在，不看值是否能解析成合法数字（数字解析失败时的兜底默认值在 runInterruptStep 内部单独
+    // 处理，不影响这里的启用判断）。提前在这里算好存一个 `let`：下面 observeTask 循环与更下面 STEP
+    // 3.5 的分支判断共用同一个值，避免两处各自重读一次环境变量、也避免两处判断口径不小心写岔。
+    let interruptStepEnabled = ProcessInfo.processInfo.environment["SG5_INTERRUPT_AFTER_MS"] != nil
+    // interrupt 步骤专用的证据收集器——职责边界、并发模型见 InterruptStepEvidenceCollector 类文档
+    // 注释（文件末尾）。interruptStepEnabled 为 false（未设置该环境变量，即本轮改动前的全部既有用法）
+    // 时，这是一个创建了但从未被调用过任何方法的空对象，不产生任何可观察副作用——这也是下面
+    // observeTask 循环里用 `if interruptStepEnabled` 显式护住写入、而不是无条件写入的原因：让"这条
+    // 新语句不影响未设置该环境变量时的行为"这件事光读代码就能确认，不需要额外论证"反正没人读它所以
+    // 没关系"。
+    let interruptEvidence = InterruptStepEvidenceCollector()
+
     let observeTask = Task<Int, Never> {
         var count = 0
         do {
@@ -120,6 +135,11 @@ public func runL1CloseLoop() async throws {
                 count += 1
                 print("  [event #\(count)] wireType=\(event.wireType) \(describeEventFields(event))")
                 assertionCollector.record(event)
+                // 见上方 interruptEvidence 声明处注释：仅在 interrupt 步骤启用时才记账，未启用时这一
+                // 行整体是 no-op（连 if 分支都不会进入），STEP 3 的其余行为与本轮改动前逐字节相同。
+                if interruptStepEnabled {
+                    interruptEvidence.record(event)
+                }
             }
         } catch {
             print("  事件流结束时携带错误: \(error)")
@@ -162,6 +182,14 @@ public func runL1CloseLoop() async throws {
             print("\n[STEP 3.5] 提示：SG5_SEND_MESSAGE 与 SG5_SEND_MESSAGES 同时设置，本轮以复数" +
                   "（多轮模式）为准，单数被忽略。")
         }
+        // interrupt 步骤（见 runInterruptStep 文档注释）只挂在单条 SG5_SEND_MESSAGE 分支下——多轮
+        // 场景的目的（RAE-0001 条件③(b) 同一会话内多轮往返取数）与"打断一次生成、证明会话没死"是两个
+        // 不相关的验证目标，这里不静默忽略 SG5_INTERRUPT_AFTER_MS，明确告知用户它本轮不生效。
+        if interruptStepEnabled {
+            print("\n[STEP 3.5] 提示：SG5_INTERRUPT_AFTER_MS 已设置，但当前处于 SG5_SEND_MESSAGES 多轮" +
+                  "模式——interrupt 步骤只在单条 SG5_SEND_MESSAGE 模式下生效，本轮多轮发送不受影响，也" +
+                  "不会触发 interrupt。")
+        }
         let observeWindowNanos = UInt64(ProcessInfo.processInfo.environment["SG5_SEND_WAIT_MS"].flatMap { UInt64($0) } ?? 60_000) * 1_000_000
         let rounds = sendMessagesRaw.components(separatedBy: "||")
         print("\n[STEP 3.5] send()（多轮）：SG5_SEND_MESSAGES 已设置，共 \(rounds.count) 轮，依次发送…")
@@ -179,10 +207,35 @@ public func runL1CloseLoop() async throws {
         let sendResult = try await client.send(session: handle, input: input)
         sentRunID = sendResult.runID
         print("  send() 完成: runId=\(sendResult.runID)（真正的模型输出走 STEP 3 的事件流异步到达）")
-        let observeWindowNanos = UInt64(ProcessInfo.processInfo.environment["SG5_SEND_WAIT_MS"].flatMap { UInt64($0) } ?? 60_000) * 1_000_000
-        try await Task.sleep(nanoseconds: observeWindowNanos)
-        print("  send() 观察窗口结束")
+
+        // rounds/0020 scope-lock v2→v3（验证阶段新增）：SG5_INTERRUPT_AFTER_MS 一旦出现就接管本分支
+        // 剩下的流程——短暂等待 -> interrupt(mode:.cancel) -> 同一 session 上再 send() 一条 -> 打印
+        // 人可核验的断言，
+        // 取代下面 `else` 分支原有的"傻等 SG5_SEND_WAIT_MS 再打一行观察窗口结束"。两分支互斥且穷尽，
+        // 未设置该变量时严格落进 `else`，与本轮改动前逐字节相同（见 runInterruptStep 文档注释）。
+        if interruptStepEnabled {
+            // `sentRunID` 在这条分支里刻意改回 nil，不留上面刚赋的这一个 runId——理由与
+            // SG5_SEND_MESSAGES 多轮分支的同名注释完全同构（见本文件上方"`sentRunID` 在多轮分支里
+            // 刻意保持 nil"一段）：runInterruptStep 内部还会在同一 session 上再 send() 一次，真实
+            // 产生第二个合法 runId，`printFinalAssertions(expectedRunID:)` 的断言 2/3 只认单一期望
+            // 值，塞任意一个都会把另一个合法 runId 误判成 FAIL；传 nil 走既有的"无期望值"SKIP 分支，
+            // 如实报告观察到的 runId 集合——复用文件里已经验证过的同一套判断，不是新发明的处理方式。
+            sentRunID = nil
+            try await runInterruptStep(client: client, handle: handle, firstRunID: sendResult.runID, evidence: interruptEvidence)
+        } else {
+            let observeWindowNanos = UInt64(ProcessInfo.processInfo.environment["SG5_SEND_WAIT_MS"].flatMap { UInt64($0) } ?? 60_000) * 1_000_000
+            try await Task.sleep(nanoseconds: observeWindowNanos)
+            print("  send() 观察窗口结束")
+        }
     } else {
+        // interrupt 步骤（见 runInterruptStep 文档注释）需要先有一条真实 send() 才有目标可打断——本轮
+        // 既未设置 SG5_SEND_MESSAGE 也未设置 SG5_SEND_MESSAGES，不静默忽略 SG5_INTERRUPT_AFTER_MS，
+        // 明确告知用户它本轮不生效。
+        if interruptStepEnabled {
+            print("\n[STEP 3.5] 提示：SG5_INTERRUPT_AFTER_MS 已设置，但既未设置 SG5_SEND_MESSAGE 也未" +
+                  "设置 SG5_SEND_MESSAGES——interrupt 步骤需要先有一条真实 send() 才能打断，本轮没有可" +
+                  "打断的目标，interrupt 步骤不会触发。")
+        }
         // 本轮没有调用 send()（未设置 SG5_SEND_MESSAGE），观察窗口内预期不会有真实 session.message
         // 事件——这里只是证明"订阅已建立、流没有立刻报错"。
         try await Task.sleep(nanoseconds: 1_500_000_000)
@@ -529,4 +582,227 @@ final class EventAssertionCollector: @unchecked Sendable {
 
         print("=== [断言模式] 结束 ===")
     }
+}
+
+// MARK: - rounds/0020 scope-lock v2→v3（验证阶段，2026-08-13 新增）：interrupt 步骤——real-kernel 版
+// "session 存活"证据
+//
+// 背景：`interrupt(mode:.cancel)` 本轮（rounds/0020）在 OpenclawGatewayKernelClient.swift 里落地时
+// 定的红线是"中止当前 run、保留会话"——不发 sessions.delete/session_end、不 finish 事件流，
+// interrupt() 成功返回之后调用方必须还能对同一个 session 再 send() 一次（见该方法文档注释"语义"
+// 一节）。frame-replay-tests 里 InterruptTests.swift 的全部单测都 stub 了 sessions.abort——结构上
+// 不可能证明这条红线在真实 openclaw 内核上成立，只能证明"我们发的 RPC 形状对、状态机转换对"。
+// rounds/0020 scope-lock v2→v3 原话："真内核下点停止：生成中断、会话仍在、还能接着发下一句"这条红线
+// "单元测试结构性证明不了"，`kernel-client-cli` 是本项目既定的真内核 harness，"加一个同形状的开关是
+// 最小改动"——本节就是那个开关，不是重复测试已经测过的东西，是补测试结构上够不到的那一块。
+//
+// 触发方式：`SG5_INTERRUPT_AFTER_MS` 一旦出现（presence-only，见 runL1CloseLoop 里
+// `interruptStepEnabled` 声明处注释）就接管 STEP 3.5 单条 send 分支剩下的流程。只挂在单条 send
+// （`SG5_SEND_MESSAGE`）分支下，不支持多轮 `SG5_SEND_MESSAGES`——多轮场景的目的（RAE-0001 条件③(b)
+// 同一会话内多轮往返取数）与"打断一次生成、证明会话没死"是两个不相关的验证目标，硬凑在一起只会让
+// 两条分支的语义都变得模糊（未设置 SG5_SEND_MESSAGE/SG5_SEND_MESSAGES 或用了多轮模式时的提示见
+// runL1CloseLoop 对应分支）。
+
+/// interrupt 步骤专用的证据收集器：只回答任务书要的两个问题——
+///   1. interrupt 之后有没有见过 sessionEnd（期望：没有）；
+///   2. 被打断的那个 run，interrupt 前后各产生了多少 assistant delta 字符（前者 > 0 证明"生成确实在
+///      飞"，后者趋近 0 才是"生成真的停了"的证据，而不只是 RPC 返回了 200）。
+///
+/// **为什么不直接扩到 `EventAssertionCollector` 里**：那个类开头的 MARK 注释块已经把职责边界写得
+/// 很明确——seq 单调 / runId 一致 / 终态唯一 / wire messageSeq 单调非递减四条，每条都对应一个具体
+/// 历史缺陷或契约点。"interrupt 前后 delta 字符数对比""interrupt 后有没有 sessionEnd"是两个不同
+/// 维度的新问题，硬塞进那个类只会让它文档头"四条断言"的表述失真，还要为一个只有 interrupt 步骤才用
+/// 得到的状态污染一个所有分支都会实例化的类。单独一个类，最坏情况下（interrupt 步骤没启用）就是一个
+/// 创建了但从未被调用过任何方法的空对象。
+///
+/// **并发模型**：与 `EventAssertionCollector.messageSeqLock` 同构（完整论证见其声明处注释，这里不
+/// 重复）——写者是 observeTask 消费事件流的循环，读者是 `runL1CloseLoop`/`runInterruptStep` 在
+/// `interrupt()`、第二次 `send()`、以及最终打印断言这几个时间点，是两个不同的并发上下文，且读取
+/// 明确发生在 `observeTask.value` join **之前**（interrupt 之后事件流还在继续跑，没有 finish），
+/// 不能像断言 1-3 那样靠"join 之后才读"的 happens-before 论证，必须上锁。三个字段体量小、临界区极
+/// 短，直接上锁的道理与 messageSeqLock 完全相同。
+final class InterruptStepEvidenceCollector: @unchecked Sendable {
+    private let lock = NSLock()
+    private var interruptFired = false
+    private var targetRunID: String?
+    private var deltaCharsBeforeInterrupt = 0
+    private var deltaCharsAfterInterruptForTargetRun = 0
+    private var sessionEndReasonsAfterInterrupt: [String] = []
+
+    /// STEP 3 的 observeTask 循环里每条事件调用一次（仅当 `interruptStepEnabled` 时——见调用点）。
+    /// 只关心两类事件，其余一律 no-op：
+    ///   - `.messageDelta`：**只统计 `runId == targetRunID`**（被打断的那一个 run）的字符数。第二条
+    ///     消息（`runInterruptStep` 内部 interrupt 之后再发的那条）产生的是另一个合法 runId，若不按
+    ///     runId 过滤、只按"interrupt 前/后"这个时间点二分，"之后"字符数会被第二条消息自己的正常
+    ///     输出淹没——那本是期望之中的新生成，却会让人误读成"interrupt 没能让原来那个 run 停下来"。
+    ///     按 targetRunID 过滤是让这个数字只回答"被打断的那个 run 是否真的不再增长"这一个问题，不多
+    ///     测别的。
+    ///   - `.sessionEnd`：只关心 interrupt **之后**有没有出现——interrupt 之前的 sessionEnd（若真的
+    ///     发生，说明会话在走到 interrupt 这一步之前就已经结束，是另一个问题）交给
+    ///     `EventAssertionCollector` 断言 3 的"sessionEnd 唯一"照常捕获，这里不重复计。
+    func record(_ event: EventMessageUnion) {
+        switch event {
+        case .messageDelta(let e):
+            lock.lock()
+            defer { lock.unlock() }
+            guard let targetRunID = targetRunID, e.runID == targetRunID else { return }
+            if interruptFired {
+                deltaCharsAfterInterruptForTargetRun += e.payload.delta.count
+            } else {
+                deltaCharsBeforeInterrupt += e.payload.delta.count
+            }
+        case .sessionEnd(let e):
+            lock.lock()
+            defer { lock.unlock() }
+            if interruptFired {
+                sessionEndReasonsAfterInterrupt.append(e.payload.reason.rawValue)
+            }
+        default:
+            break
+        }
+    }
+
+    /// `runInterruptStep` 里第一条 send() 拿到 runId 之后立即调用一次，登记"这是要观察的目标 run"。
+    ///
+    /// 时序论证（这里不是靠 join 之后才读的 happens-before，需要单独交待）：调用方在 `client.send()`
+    /// 这次 RPC 返回、拿到 `sendResult.runID` 之后**同步**（中间没有任何 `await`）调用本方法——从
+    /// "拿到 runId"到"登记进这个收集器"之间只有微秒级的本地代码执行。而这个 run 的第一条
+    /// `messageDelta` 要抵达 observeTask 的消费循环，中间要经过：服务端处理 send RPC -> 触发一次
+    /// 真实模型调用 -> 模型产出第一个 token -> 服务端把它包成 wire 帧推回来 -> 客户端 WebSocket 收
+    /// 帧、解码、分发给 `for try await` 循环——这条链路的现实延迟（网络往返 + 模型首字延迟）在其余
+    /// 现场证据（如 RUN-EVIDENCE.md 记录的历次真实调用）里都是百毫秒到秒级，比"登记 targetRunID"的
+    /// 微秒级本地耗时高出好几个数量级，两者之间没有实际竞争窗口。这是一条基于现实延迟量级差异的工程
+    /// 论证，不是形式化的 happens-before 证明——如实标注，不假装比它本身更严格。
+    func setTargetRunID(_ runID: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        targetRunID = runID
+    }
+
+    /// `runInterruptStep` 里即将发出 `client.interrupt()` 这次 RPC **之前**调用一次，翻转"前/后"
+    /// 分界标记。选在发出前而不是返回后标记：`client.interrupt()` 本身是一次真实网络往返，等它返回
+    /// 再标记会把"RPC 已发出、内核尚未真正生效"这段窗口期到达的 delta 错记成"interrupt 前"——宁可
+    /// 把这段窗口期的 delta 计入"前"（可能低估 interrupt 的效果），也不要计入"后"（可能凭空高估
+    /// "interrupt 之后还在涨"的违例信号，误报一个其实不存在的问题）。
+    func markInterruptFired() {
+        lock.lock()
+        defer { lock.unlock() }
+        interruptFired = true
+    }
+
+    /// 供 `runInterruptStep` 读取当前状态的快照——同样过锁，理由见类文档注释"并发模型"一节。
+    func snapshot() -> (before: Int, afterForTargetRun: Int, sessionEndsAfter: [String]) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (deltaCharsBeforeInterrupt, deltaCharsAfterInterruptForTargetRun, sessionEndReasonsAfterInterrupt)
+    }
+}
+
+/// 任务书 2-5：STEP 3.5 的 send()（`sendResult`/`firstRunID`）已经完成"1. 发一条会长流式回复的消息"；
+/// 本函数接手剩下四步——短暂等待 -> `interrupt(mode:.cancel)` -> 同一 session 上发第二条消息 -> 打印
+/// 人可核验的断言。只在 `SG5_INTERRUPT_AFTER_MS` 出现时被 `runL1CloseLoop` 调用（见调用点
+/// `interruptStepEnabled` 判断），独立成函数而不是堆在 `runL1CloseLoop` 分支体内——理由与
+/// `describeEventFields` 被拆成独立函数相同：这一段本身有多个子步骤、多组打印与一次可能的 throw，
+/// 堆进已经很长的 `runL1CloseLoop` 只会让主干的 STEP 1-4 结构更难读。
+///
+/// **失败处理红线（任务书"Make the step's failures loud and honest"）**：第二次 `send()` 是本步骤要
+/// 证明的核心命题（"session 在 interrupt 之后还活着，还能用"）——它如果抛错，必须让错误清晰可见并
+/// 继续向上抛（`try`，不 catch-and-continue），不能打一行警告就滑到成功总结。上面 STEP 3.5 原有的
+/// 单条 send 分支对 `client.send()` 本来就是直接 `try await`、抛错直接向上冒泡终止整个 CLI 进程——
+/// 这里对第二次 send() 保持完全相同的"不吞错误"处理方式，只是在向上抛之前多打一行更醒目的标注，让人
+/// 在一堆事件日志里能一眼找到失败点，而不是必须去翻 FATAL 那一行反推是哪一步失败的。
+private func runInterruptStep(
+    client: OpenclawGatewayKernelClient,
+    handle: SessionHandle,
+    firstRunID: String,
+    evidence: InterruptStepEvidenceCollector
+) async throws {
+    evidence.setTargetRunID(firstRunID)
+
+    // 默认 2000ms：既要给"生成真正处于进行中"留出余量（典型首字延迟通常在数百毫秒量级，2s 有把握
+    // 已经收到至少一条 delta），又要显著短于 SG5_SEND_WAIT_MS 默认的 60000ms（那是"等一条回复完整
+    // 结束"的窗口）——太长会让第一条消息在我们发起 interrupt 之前就已经自然说完，那样就打断不到
+    // 真正在飞的生成，任务书第 2 步的"genuinely in flight"就落空了。真实内核延迟因环境而异，因此
+    // 可调，不写死。
+    let interruptAfterMs = ProcessInfo.processInfo.environment["SG5_INTERRUPT_AFTER_MS"].flatMap { UInt64($0) } ?? 2_000
+    print("\n[STEP 3.6] interrupt 步骤已启用（SG5_INTERRUPT_AFTER_MS 已设置）：等待 \(interruptAfterMs)ms，" +
+          "让 runId=\(firstRunID) 的生成真正处于进行中，再调用 interrupt(mode:.cancel)…")
+    try await Task.sleep(nanoseconds: interruptAfterMs * 1_000_000)
+
+    // 分界点必须先于 RPC 发出——见 InterruptStepEvidenceCollector.markInterruptFired 文档注释。
+    evidence.markInterruptFired()
+    let interruptOptions = InterruptRequestMessagePayload(input: nil, mode: .cancel, runID: nil)
+    let interruptResult = try await client.interrupt(session: handle, options: interruptOptions)
+
+    print("\n[STEP 3.6] interrupt(mode:.cancel) 完成，InterruptResultPayload：")
+    print("  operationId   = \(interruptResult.operationID)")
+    print("  outcome       = \(interruptResult.outcome.rawValue)")
+    print("  affectedRunId = \(interruptResult.affectedRunID ?? "<nil>")")
+    if let affectedRunID = interruptResult.affectedRunID, affectedRunID != firstRunID {
+        print("  [WARN] affectedRunId 与本步骤打断的 runId=\(firstRunID) 不一致，请核对是否打断了错误的 run")
+    } else if interruptResult.affectedRunID == nil {
+        print("  [WARN] affectedRunId 为 nil——按 D2 InterruptResultPayload 文档注释，这只在\"确有 " +
+              "active run 被 abort\"时才出现；为 nil 通常说明 SG5_INTERRUPT_AFTER_MS 等待期间这个 run " +
+              "已经自然结束，interrupt 没能真正打断一次进行中的生成，SG5_INTERRUPT_AFTER_MS 可能需要" +
+              "调小")
+    }
+
+    // 任务书第 4 步：同一 session 上发第二条消息，证明"session 没有被 interrupt 顺带杀掉"——见函数
+    // 文档注释"失败处理红线"一节，这里的 `try` 不捕获，抛错前只多打一行醒目标注。
+    let postInterruptMessageEnvSet = ProcessInfo.processInfo.environment["SG5_POST_INTERRUPT_MESSAGE"]
+    let postInterruptMessage = postInterruptMessageEnvSet ??
+        "post-interrupt ping：能看到这条回复，说明 interrupt(mode: .cancel) 之后 session 仍然存活"
+    print("\n[STEP 3.7] interrupt 之后在同一 session 上发第二条消息" +
+          "（SG5_POST_INTERRUPT_MESSAGE\(postInterruptMessageEnvSet == nil ? " 未设置，使用内置默认文案" : " 已设置")）…")
+    let postInterruptInput = Input(kind: .text, text: postInterruptMessage, parts: nil)
+    let postInterruptResult: SendResultPayload
+    do {
+        postInterruptResult = try await client.send(session: handle, input: postInterruptInput)
+    } catch {
+        print("\n  [FAIL] interrupt 之后 send() 抛出错误——这本应证明 session 存活，抛错说明红线未成立" +
+              "（或本次现场环境本身有别的问题）：\(error)")
+        throw error
+    }
+    print("  send() 完成: runId=\(postInterruptResult.runID)（真正的模型输出走 STEP 3 的事件流异步到达）")
+
+    let observeWindowNanos = UInt64(ProcessInfo.processInfo.environment["SG5_SEND_WAIT_MS"].flatMap { UInt64($0) } ?? 60_000) * 1_000_000
+    try await Task.sleep(nanoseconds: observeWindowNanos)
+    print("  interrupt 之后第二条消息的观察窗口结束")
+
+    // 断言必须在这里打印——STEP 4（runL1CloseLoop 里，本函数返回之后）如果没有 SG5_SKIP_STOP 会正常
+    // 调用 stop()，那本身会产生一条合法的 sessionEnd。若在 STEP 4 之后才读 `evidence.snapshot()`，
+    // 那条合法的 sessionEnd 会被误记成"interrupt 之后出现了 sessionEnd"，把一次正常收尾污染成假
+    // 阳性。这里在 STEP 4 开始前打印，快照读到的"interrupt 之后"只覆盖本函数自己这段窗口，不包含
+    // STEP 4。
+    let snapshot = evidence.snapshot()
+    print("\n=== [interrupt 步骤断言] ===")
+    print("  operationId=\(interruptResult.operationID) outcome=\(interruptResult.outcome.rawValue) " +
+          "affectedRunId=\(interruptResult.affectedRunID ?? "<nil>")")
+
+    if snapshot.sessionEndsAfter.isEmpty {
+        print("  [PASS] interrupt 之后未观察到任何 sessionEnd 事件（期望：无——interrupt(mode:.cancel) 不应终结会话）")
+    } else {
+        print("  [FAIL] interrupt 之后观察到 \(snapshot.sessionEndsAfter.count) 条 sessionEnd 事件：\(snapshot.sessionEndsAfter)")
+    }
+
+    if postInterruptResult.runID != firstRunID {
+        print("  [PASS] 第二条消息拿到新 runId=\(postInterruptResult.runID)，与被打断的 runId=\(firstRunID) 不同" +
+              "——session 确实存活且可以继续对话")
+    } else {
+        print("  [FAIL] 第二条消息的 runId 与被打断的 runId 相同（\(firstRunID)）——不应发生，send() 每次都应铸造新 runId")
+    }
+
+    print("  runId=\(firstRunID) 的 assistant delta 字符数：interrupt 前 \(snapshot.before) 字符，" +
+          "interrupt 后 \(snapshot.afterForTargetRun) 字符")
+    if snapshot.before == 0 {
+        print("    [WARN] interrupt 前字符数为 0——SG5_INTERRUPT_AFTER_MS=\(interruptAfterMs)ms 内还没" +
+              "收到任何该 run 的 delta，没能证明\"generation 真的在飞\"就已经打断，考虑调大这个值")
+    } else if snapshot.afterForTargetRun == 0 {
+        print("    [PASS] interrupt 后此 run 的 delta 字符数为 0——generation 确实停了，不只是 RPC 返回了 200")
+    } else {
+        print("    [WARN] interrupt 后此 run 仍收到 \(snapshot.afterForTargetRun) 个字符——可能是 RPC 往返" +
+              "期间已在途的尾帧（见 markInterruptFired 文档注释），也可能是 generation 没有真正停止，请" +
+              "结合上面各条事件的时间戳人工核对")
+    }
+    print("=== [interrupt 步骤断言] 结束 ===")
 }

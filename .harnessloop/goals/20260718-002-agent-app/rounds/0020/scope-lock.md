@@ -169,3 +169,21 @@ aborted lifecycle 帧」；②给那个函数加一个 `operationKind` 形参。
 `pendingStops[ourSessionID] == nil`，**按构造就不存在可读的发起者信息**；
 代码注释也如实写了「不是『猜它是 stop』，只是在没有信息时保持这条从未被真正观察到过的
 路径的历史输出不变」。判定成立。
+
+---
+
+## Scope-Lock 修订 v2 → v3（2026-08-13，验证阶段）
+
+**扩围一个文件：`app/kernel-client/swift/CLIRunner.swift`**（新增一个 env 开关的 interrupt 步骤）。
+
+**为什么**：本 scope-lock 的验证表要求「真内核下点停止：生成中断、会话仍在、还能接着发下一句」。
+**这条红线单元测试结构性证明不了**——123 条测试全部 stub 掉 `sessions.abort`，
+「会话在真内核侧是否还活着」在 stub 世界里没有意义。`kernel-client-cli` 是本项目既定的
+真内核 harness（`SG5_SEND_MESSAGE`/`SG5_SKIP_STOP` 等步骤全是同一形状的 env 开关），
+加一个同形状的开关是最小改动。
+
+**同时如实记录一个当下无法消除的阻断**：**实拍（截图）本轮取不到——屏幕处于锁定状态**
+（`screencapture` 拍到的是 macOS 锁屏）。用户不在机器前，GUI 自动化也无法可靠驱动。
+**不拿 CLI 证据冒充截图证据**：这两者证明的不是同一件事——
+CLI 证明适配器语义在真内核上成立，**证明不了那个按钮**（视图层结构性不可测，见下）。
+按钮的实拍留作明确的证据缺口。
