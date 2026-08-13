@@ -1,0 +1,33 @@
+docs/validation-log.md
+  s_c587ecf7bbc3e2::t_563ac7bde47d30 20-36
+  s_c587ecf7bbc3e2::t_2b40fceff88a30 37-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "bdddfdb3a1356c0137eadc7032a7ced944555b4e",
+  "prompts": {
+    "s_c587ecf7bbc3e2::t_563ac7bde47d30": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b39f5bf8-f328-41b3-b5fd-eb01a465a399",
+        "model": "claude-opus-5"
+      },
+      "human_author": "litianyi <litianyi@corp.netease.com>",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 0,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    },
+    "s_c587ecf7bbc3e2::t_2b40fceff88a30": {
+      "agent_id": null,
+      "human_author": null,
+      "messages": [],
+      "total_additions": 21,
+      "total_deletions": 0,
+      "accepted_lines": 21,
+      "overriden_lines": 0
+    }
+  }
+}
