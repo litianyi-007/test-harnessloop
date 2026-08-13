@@ -21,6 +21,11 @@
 //   + mode 门禁（steer/abort_and_resend 显式拒绝，不静默当 cancel）——
 //     testInterruptUnsupportedModeSteerRejectedNotSilentlyTreatedAsCancel /
 //     testInterruptUnsupportedModeAbortAndResendRejectedNotSilentlyTreatedAsCancel
+//   + T-113 item 1/4（grok 对抗评审，rework）：迟到的第二条 aborted 帧（pendingStop 已被 interrupt()
+//     自己的 defer 摘掉之后到达）不得冒充 operationKind:.stop 的 operation_completed——
+//     testInterruptLateSecondAbortedFrameAfterPendingStopClearedDoesNotFakeStopOperation。这是修前
+//     的验证空白：本文件此前只喂过"第一条帧"，从未复现"defer 之后的迟到第二帧"这个场景，rounds/0020
+//     实拍缺陷正是从这个空白里漏出去的。
 //
 // 复用既有测试基础设施（`freshClient`/`testHandle`/`collectUpTo`/`CallOrderLog`/`DispatchFlag`，
 // 定义均在 FrameReplayTests.swift，非 `private`，同 target 内可见），只在需要"等 transport 关闭
@@ -725,6 +730,136 @@ func testInterruptForceDeniesPendingApprovalBeforeAbort() async -> Bool {
     return pass(name, "approval.resolve 先于 sessions.abort 被调用（调用顺序=\(order)，sessions.delete 全程未出现），TurnCompleteEvent.forceResolvedApprovals=[\(approvalID)]，会话未终结（无 session_end）")
 }
 
+// MARK: - T-113 item 1/4：迟到的第二条 aborted 帧（pendingStop 已被 defer 摘掉）不得冒充 stop
+
+/// **T-113（grok 对抗评审）根因复现 + 回归钉子**——`InterruptTests.swift` 修前只喂过"第一条帧"
+/// （`phase:"end"`），从未复现"defer 之后的迟到第二帧"这个场景，这正是让 rounds/0020 实拍缺陷得以
+/// 上线的验证空白（见任务书 item 4）。
+///
+/// openclaw 对同一次 abort 常发两条 lifecycle 帧（真实样本见 `EventMapping.swift`
+/// `mapOpenclawAgentLifecycleToAbortTerminalEvents` 文档注释）：`phase:"end",aborted:true` 之后
+/// 紧跟 `phase:"error",aborted:true,error:"This operation was aborted"`。第一条帧命中
+/// `pendingStops` 匹配分支，`interrupt()` 据此 succeeded 返回；返回前，函数顶部覆盖全部出路的
+/// `defer` 会**同步**把 `pendingStops[sessionID]` 整条摘掉（标记 `terminalEmitted=true` 到函数真正
+/// 返回之间不存在任何 `await`，第二条帧不可能在这个窗口里插进来）。**第二条帧到达时，表已经空了**
+/// ——修前的实现会落进 `handleAgentEvent` 的"unowned"防御性兜底分支，把 `operationKind` 硬编码成
+/// `.stop`，在 UI 上画出一条用户从未发起过的"[操作] stop 已完成：outcome=aborted_effect_unknown"
+/// 系统行（rounds/0020 `evidence/shots/README.md` 02 号截图实拍钉住）。
+///
+/// 断言修复后的具体形状（完整推理见 `EventMapping.swift`
+/// `mapOpenclawAgentLifecycleToAbortTerminalEvents` 的 `operationID: String?`/
+/// `operationKind: OperationKind?` 一节文档注释）：第二条帧**不产出任何** `operation_completed`
+/// ——无论标成 `.stop` 还是别的取值都是在冒充一个没有身份信息支撑的操作，`OperationKind` 也没有第三个
+/// "不知道是谁"的取值可用——但仍产出一条 `turn_complete(cancelled)`：不带 `operationKind` 这类身份
+/// 声明，只诚实反映"这个 run 确实被 abort 了"，让"真正无主"（例如另一个客户端摘掉了同一个 session
+/// 的 run，我们自己从未登记过 pendingStop）的场景不会把等待中的 UI 晾在那里永远转圈。这条测试里
+/// 第二条帧其实是"迟到的、本来就属于我们自己这次 interrupt"的收尾帧，所以这条额外的 turnComplete
+/// 是幂等 no-op（isWaitingForReply 已经被第一条帧的 turnComplete 清过）——测试断言的是"产出了什么"，
+/// 不是"UI 会不会因此表现异常"（那一半由 SessionStoreInterruptTests.swift 的 `.turnComplete` 分支
+/// 覆盖）。
+func testInterruptLateSecondAbortedFrameAfterPendingStopClearedDoesNotFakeStopOperation() async -> Bool {
+    let name = "T-113 item 1/4: a second (late) aborted lifecycle frame arriving AFTER interrupt()'s own defer has cleared the pendingStop entry must NOT fabricate an operation_completed(operationKind:.stop) system line — only an honest turn_complete(cancelled) may follow"
+    let client = freshClient()
+    let sessionID = "sess-interrupt-late-second-frame"
+    let kernelKey = "kernel-key-interrupt-late-second-frame"
+    let runID = "run-interrupt-late-second-frame-1"
+    let stream = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+    let callLog = CallOrderLog()
+    await client.testSupportStubRPC(method: "sessions.abort") { _ in
+        await callLog.record("sessions.abort")
+        return ["ok": true, "abortedRunId": runID, "status": "aborted"] as JSONObject
+    }
+    await client.testSupportStubRPC(method: "sessions.delete") { _ in
+        await callLog.record("sessions.delete")
+        return ["deleted": true] as JSONObject
+    }
+    let handle = testHandle(sessionID: sessionID, kernelKey: kernelKey)
+
+    async let interruptResult = client.interrupt(
+        session: handle, options: InterruptRequestMessagePayload(input: nil, mode: .cancel, runID: nil)
+    )
+    try? await Task.sleep(nanoseconds: 60_000_000) // 足够 interrupt() 真实拿到 abortedRunId、进入等待
+    // 第一条帧——真实样本里的 phase:"end"，命中 pendingStop 匹配分支。
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": [
+            "runId": runID, "sessionKey": kernelKey, "stream": "lifecycle",
+            "data": ["phase": "end", "status": "cancelled", "aborted": true, "stopReason": "rpc"] as JSONObject,
+            "ts": 1_784_872_400_000,
+        ] as JSONObject,
+    ])
+
+    guard let result = try? await interruptResult else { return fail(name, "interrupt() unexpectedly threw") }
+    guard result.outcome == .succeeded else { return fail(name, "expected first-frame outcome=.succeeded, got \(result.outcome)") }
+
+    // interrupt() 已经返回——它顶部的 defer 已经同步把 pendingStops[sessionID] 整条摘掉（详见
+    // interrupt() 文档注释"互斥"一节：单个 defer 覆盖包括正常 return 在内的全部出路，中间不存在任何
+    // await 能被第二条帧的处理插进来）。用测试专用探针直接核实这一点，不靠猜时序。
+    guard await client.testSupportHasPendingStop(sessionID: sessionID) == false else {
+        return fail(name, "test setup invariant violated: pendingStop entry should already be gone after interrupt() returned — if this fails, the race this test targets isn't actually being exercised")
+    }
+
+    // 排空第一条帧产生的事件（operation_completed(succeeded,.interrupt) + turn_complete(cancelled)，
+    // 恰好 2 条），不让它们混进下面对"第二条帧"的断言。**maxCount 故意精确等于这里真实会产出的事件
+    // 数**，不能像别的测试那样随手给个偏大的值——`collectUpTo` 在凑不满 maxCount 时会等到
+    // timeoutMs 才放弃，而放弃的方式是取消那个还挂在 `iterator.next()` 里的子任务；这个测试后面
+    // 还要对同一个 `stream` 再调一次 `collectUpTo`（别的测试都只调一次，从未依赖"这次排空之后，这
+    // 个 stream 还能继续正常吐下一批事件"），实测发现如果第一次调用因为 maxCount 偏大而触发了这条
+    // 取消路径，`AsyncThrowingStream` 的底层存储会被那次取消永久标记成"已结束"，导致第二次调用
+    // （即便用的是全新的 iterator）立刻拿到 0 个事件——不是产品代码的缺陷，是这个测试工具在"同一个
+    // stream 上连续调用两次"这个此前没人用过的模式下的真实限制，照此精确给数即可绕开，不需要改
+    // `collectUpTo` 本身（其它测试的用法都没有踩到这个条件）。
+    let firstFrameEvents = await collectUpTo(stream, maxCount: 2, timeoutMs: 300)
+    guard firstFrameEvents.contains(where: {
+        if case .operationCompleted(let op) = $0 { return op.payload.operationKind == .interrupt && op.payload.outcome == .succeeded }
+        return false
+    }) else {
+        return fail(name, "expected the first frame to still produce operation_completed(succeeded, operationKind:.interrupt) as before, got \(firstFrameEvents.map { $0.wireType })")
+    }
+
+    // 第二条帧——真实样本里紧跟着的 phase:"error","This operation was aborted" 收尾帧。此刻
+    // pendingStops[sessionID] 已经是 nil（上面刚核实过），这是本测试要复现的确切场景。
+    await client.testSupportFeedFrame([
+        "type": "event", "event": "agent",
+        "payload": [
+            "runId": runID, "sessionKey": kernelKey, "stream": "lifecycle",
+            "data": ["phase": "error", "aborted": true, "error": "This operation was aborted"] as JSONObject,
+            "ts": 1_784_872_400_500,
+        ] as JSONObject,
+    ])
+
+    // 同理精确给数（这次期望恰好 1 条 turn_complete，见下面断言）——不是为了绕开上面那个存储限制
+    // （这是本测试最后一次 drain，没有第三次调用需要担心），只是避免无谓地等满 300ms 超时。
+    let secondFrameEvents = await collectUpTo(stream, maxCount: 1, timeoutMs: 300)
+
+    // 核心反证：不得出现任何 operationKind==.stop 的 operation_completed——这正是实拍钉住的那条虚假
+    // "[操作] stop 已完成：outcome=aborted_effect_unknown" 系统行的直接来源（SessionStore.swift
+    // handleOperationCompleted 是 evt.operation_completed 唯一的渲染点，字面拼出这行文本）。
+    guard !secondFrameEvents.contains(where: {
+        if case .operationCompleted(let op) = $0 { return op.payload.operationKind == .stop }
+        return false
+    }) else {
+        return fail(name, "RED LINE VIOLATED: the late second frame produced an operation_completed(operationKind:.stop) — this is the exact user-visible defect from rounds/0020 evidence/shots/README.md (a phantom 'stop 已完成' line after a successful interrupt), got \(secondFrameEvents.map { $0.wireType })")
+    }
+    // 更严格：不止不能标成 stop，本设计压根不应该为这条无主帧产出任何 operation_completed（没有诚实
+    // 的 operationKind 可填——见 EventMapping.swift 对应文档注释）。
+    guard !secondFrameEvents.contains(where: { if case .operationCompleted = $0 { return true }; return false }) else {
+        return fail(name, "expected the late second frame to produce NO operation_completed event at all (no honest operationKind is available for an unowned frame), got \(secondFrameEvents.map { $0.wireType })")
+    }
+    // 但不是彻底静默丢弃：真正"无主"的场景（另一个来源摘掉了这个 run，我们从未登记过 pendingStop）
+    // 仍然需要一条信号让可能仍在等待的 UI 不永久转圈——一条不带身份声明的 turn_complete(cancelled)。
+    guard secondFrameEvents.count == 1, case .turnComplete(let turn) = secondFrameEvents[0], turn.payload.stopReason == .cancelled else {
+        return fail(name, "expected exactly one turn_complete(stopReason:.cancelled) event from the late second frame (honest 'this run ended' signal with no operation-identity claim), got \(secondFrameEvents.count): \(secondFrameEvents.map { $0.wireType })")
+    }
+
+    let order = await callLog.entries
+    guard order == ["sessions.abort"] else {
+        return fail(name, "RED LINE: expected sessions.delete to never be dispatched by interrupt() (even indirectly via this late second frame), got \(order)")
+    }
+
+    return pass(name, "迟到的第二条 aborted 帧（pendingStop 已被 interrupt() 的 defer 摘空之后到达）未产出任何 operation_completed（更未伪造 operationKind:.stop），只产出一条诚实的 turn_complete(cancelled)；sessions.delete 全程未被调用")
+}
+
 // MARK: - 要求 9：订阅屏障
 
 func testInterruptWaitsForPendingSubscriptionDispatchBeforeItsOwnRpc() async -> Bool {
@@ -782,6 +917,7 @@ func runInterruptTests() async -> [Bool] {
     results.append(await testInterruptForceDenyFailureReleasesLockAndCleansPendingEntry())
     results.append(await testInterruptAbortRpcThrowReleasesLockAndEmitsRejectedMirror())
     results.append(await testInterruptForceDeniesPendingApprovalBeforeAbort())
+    results.append(await testInterruptLateSecondAbortedFrameAfterPendingStopClearedDoesNotFakeStopOperation())
     results.append(await testInterruptWaitsForPendingSubscriptionDispatchBeforeItsOwnRpc())
     return results
 }

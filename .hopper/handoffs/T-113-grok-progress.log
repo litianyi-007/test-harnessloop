@@ -1,0 +1,16 @@
+hopper-dispatch v0.58.0 — dispatching T-113-grok...
+  notice: No detailed spec section for T-113-grok in leader-tasklist.md; task content comes from queue.md Brief.
+  permission: sandbox=read-only (auto)
+  notice: model resolved from AGENTS.md Model rule (task-type 'code-review-adversarial'): verified-latest
+  notice: model sentinel 'verified-latest' → grok-4.6 (grok hopper default)
+  notice: effort resolved from AGENTS.md Effort policy (task-type 'code-review-adversarial'): high
+
+=== DISPATCH RESULT ===
+Task:     T-113-grok (code-review-adversarial)
+Vendor:   grok
+Status:   timeout
+Duration: 180029ms
+
+--- TIMEOUT ---
+adapter-timeout
+--- END ---

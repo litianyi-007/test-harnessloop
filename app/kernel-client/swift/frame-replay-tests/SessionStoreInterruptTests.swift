@@ -5,10 +5,16 @@
 // 永久卡在"等待回复…"）。
 //
 // 覆盖面（对应任务书 1-4 条）：
-//   ①（第 4 条核心）operation_completed(operationKind:.interrupt) 兜底清 isWaitingForReply——
-//     `PayloadOutcome` 里 interrupt 实际可达的三个取值（abortedRunId==nil 路径的 `.succeeded`、
-//     等待超时的 `.timedOut`、sessions.abort/force-deny 抛错的 `.rejected`，最后这条是协调者对抗式
-//     反证发现的真实覆盖缺口，同日补上）各一条，外加一条"不误伤 .stop"的 scoping 回归锁。
+//   ①（第 4 条核心）operation_completed(operationKind:.interrupt) 按 outcome 分流清/不清
+//     isWaitingForReply——`PayloadOutcome` 里 interrupt 实际可达的三个取值：abortedRunId==nil 路径的
+//     `.succeeded`（清——内核确认没有活跃 run）、等待超时的 `.timedOut`（**T-113 rework 倒转：不
+//     清**——sessions.abort 已被接受但没等到收尾帧确认，属于"不确认"而非"确认停止"）、
+//     sessions.abort/force-deny 抛错的 `.rejected`（**T-113 rework 倒转：不清**——对内核状态零确认，
+//     且与 `interruptCurrentRun` 自己的文档注释 :391-394 直接对齐）各一条，外加一条"不误伤 .stop"的
+//     scoping 回归锁。`.timedOut`/`.rejected` 两条测试修前断言的是相反的行为（当时的实现对
+//     operationKind==.interrupt 无条件清除，不看 outcome）——那正是 T-113 grok 对抗评审 item 2
+//     揪出的缺陷：与 `interruptCurrentRun` 自己的文档论证矛盾，会让"中止失败"的 UI 撒谎说"已经不在
+//     等了"。见各测试函数自己的文档注释，倒转的历史与理由都留在原地，不假装从一开始就是这样写的。
 //   ②（第 1 条）interruptCurrentRun(in:) 的 guard 语义：未知 sessionID 不误伤其它会话、
 //     `isInterrupting` 已经为 true 时不重复派发 RPC（第 3 条"中止在途窗口"的模型层半道防线）。
 //   ③（第 1 条）interruptCurrentRun(in:) 如实转发真实 throw（未知 kernelKey -> protocolMismatch）
@@ -101,15 +107,21 @@ func testSessionStoreOperationCompletedInterruptNoActiveRunClearsWaitingForReply
     return pass(name, "operation_completed(operationKind:.interrupt, outcome:.succeeded, affectedRunId:nil) correctly clears isWaitingForReply even though no turn_complete was ever emitted for this operation")
 }
 
-/// **补充场景（源码核实后新增，超出任务书原文明确点名的那一条，但同一族缺口）**：等待 aborted-run
-/// 终态**超时**同样只产出这条镜像——`waitForPendingStopTerminal` 的 `.timedOut` 分支同样只调用
-/// `emitOperationCompletedMirror`（未再调用产出 turn_complete 的路径）；迟到的 aborted lifecycle 帧
-/// 即使之后到达，也会因为 `terminalEmitted` 已被提前标记而走 `handleAgentEvent` 的防御性兜底分支，
-/// 产出的 turn_complete 会被硬编码标成 `operationKind:.stop`，不是这个 session 真正在等的那个
-/// interrupt 操作的终态。这条测试断言修复不依赖 outcome 具体取值。
+/// **T-113 rework（grok 对抗评审 item 2）倒转**：这条测试修前断言 `.timedOut` 清
+/// `isWaitingForReply`——理由是"这条路径同样从不产出 turn_complete"。那个源码事实没有错，但从它推出
+/// "所以要清"这一步是错的：`.timedOut` 意味着 `sessions.abort` **已经**被内核接受、返回了一个真实的
+/// `abortedRunId`（证明确实有一个活跃 run、内核确认接手了它的 abort），只是我们没能在本地等待窗口内
+/// 等到它的收尾帧——这与"这个 run 已经不在跑了"完全是两回事，`.timedOut` 就是字面意思：**不确认**。
+/// 现在改为断言相反的行为：`.timedOut` **不清** `isWaitingForReply`（`handleOperationCompleted` 现在
+/// 的条件是 `operationKind==.interrupt && outcome==.succeeded`，见该方法文档注释完整推理）——这不会
+/// 让 UI 永久卡死：T-113 item 1 已经修好的兜底分支意味着，只要那条迟到的终态帧真的到达（openclaw
+/// 现场行为：几乎总会到），会补发一条 `turn_complete(cancelled)`，经由本文件下面
+/// `testInterruptCurrentRunSuccessPathDispatchesCancelModeEndToEndAndClearsWaitingForReply` 覆盖的
+/// 同一条 `.turnComplete` 分支把 `isWaitingForReply` 补清；即使那条帧彻底丢失，按钮此刻仍然可点
+/// （`isWaitingForReply` 还是 true），用户可以手动再点一次"停止"来恢复。
 @MainActor
-func testSessionStoreOperationCompletedInterruptTimeoutAlsoClearsWaitingForReply() -> Bool {
-    let name = "rounds/0020: evt.operation_completed(operationKind:.interrupt, outcome:.timedOut) — the wait-for-aborted-run-terminal timeout path, which ALSO never emits turn_complete for this operation — clears session.isWaitingForReply"
+func testSessionStoreOperationCompletedInterruptTimeoutDoesNotClearWaitingForReply() -> Bool {
+    let name = "T-113 item 2 (inverted): evt.operation_completed(operationKind:.interrupt, outcome:.timedOut) does NOT clear session.isWaitingForReply — sessions.abort was accepted (real abortedRunId) but we never confirmed the run actually stopped, so the UI must not claim it isn't waiting anymore"
     let (store, session) = freshInterruptUISession(id: "sess-interrupt-timeout-ui-1", kernelKey: "kernel-key-interrupt-timeout-ui-1")
     session.isWaitingForReply = true
 
@@ -121,26 +133,25 @@ func testSessionStoreOperationCompletedInterruptTimeoutAlsoClearsWaitingForReply
         for: session
     )
 
-    guard session.isWaitingForReply == false else {
-        return fail(name, "expected isWaitingForReply to be cleared regardless of the outcome value (must not be conditioned on outcome==.succeeded) — OpenclawGatewayKernelClient.waitForPendingStopTerminal's .timedOut branch also never emits turn_complete for this operation")
+    guard session.isWaitingForReply == true else {
+        return fail(name, "expected isWaitingForReply to remain true for outcome:.timedOut — we never confirmed the run actually stopped (sessions.abort returned a real abortedRunId but no terminal frame arrived within the wait window); clearing it here would falsely tell the UI 'not waiting anymore' and flip the composer button back to 发送 while the run may still be streaming, got false")
     }
-    return pass(name, "operation_completed(operationKind:.interrupt, outcome:.timedOut) also clears isWaitingForReply — confirms the fix is not narrowly conditioned on outcome==.succeeded")
+    return pass(name, "operation_completed(operationKind:.interrupt, outcome:.timedOut) correctly leaves isWaitingForReply untouched — only a confirmed outcome:.succeeded may clear it; the 停止 button remains available for the user to retry")
 }
 
-/// **补充场景（协调者对抗式反证发现的真实覆盖缺口，同日追加）**：`outcome:.rejected`——
-/// `OpenclawGatewayKernelClient.interrupt()` 的 catch 分支（`sessions.abort` 抛错，或
-/// `forceDenyPendingApprovalsBeforeStop` 抛错）会补发一条
-/// `operation_completed(outcome:.rejected, operationKind:.interrupt)` 镜像（见该方法文档注释
-/// "互斥"一节引用的 catch 收尾逻辑），随后把原始错误重新向上抛给 `interruptCurrentRun`——这条路径
-/// 同样从不产出 turn_complete（catch 分支直接 rethrow，不会经过
-/// `waitForPendingStopTerminal`/`mapOpenclawAgentLifecycleToAbortTerminalEvents` 那条会产出
-/// turn_complete 的分支）。此前两条测试只覆盖了 `.succeeded`（无 active run）与 `.timedOut` 两种
-/// 取值，`.rejected` 是 `PayloadOutcome` 里 interrupt 实际可达的第三个取值，此前没有测试钉住——
-/// 用户可见症状是这组缺口里最糟的一种："点了停止、失败了，界面却永久卡在生成中"，恰好是这整条
-/// 修复存在的理由，也是它唯一没被验证覆盖的分支。
+/// **T-113 rework（grok 对抗评审 item 2）倒转**：这条测试修前的名字是
+/// "...RejectedAlsoClearsWaitingForReply"，断言 `.rejected` 会清 `isWaitingForReply`——那条测试的
+/// 历史需要如实记录：它是协调者（我，在更早一轮）自己要求补上的，当时只是发现 `.rejected` 这个取值
+/// 缺测试覆盖就直接补了一条钉住"当时代码实际怎么做"的测试，**没有先核对那个行为本身是否正确**。
+/// 现在核对下来它是错的——`interruptCurrentRun` 自己的文档注释（SessionStore.swift:391-394）早就
+/// 论证过"中止失败不代表这个 run 已经不在跑了，贸然清掉会让 UI 撒谎说'已经不在等了'"，而 `.rejected`
+/// 正是"中止失败"本身（`sessions.abort`/`forceDenyPendingApprovalsBeforeStop` 抛错，对内核状态
+/// **零确认**）——旧测试钉住的行为与项目自己已经写下的设计原则直接矛盾，不能因为"当时测试是绿的"
+/// 就当作正确性的证明。这里不是删掉旧测试，是倒转它断言的方向，并把这段历史留在注释里，不假装它
+/// 从一开始就是这样写的。
 @MainActor
-func testSessionStoreOperationCompletedInterruptRejectedAlsoClearsWaitingForReply() -> Bool {
-    let name = "rounds/0020: evt.operation_completed(operationKind:.interrupt, outcome:.rejected) — the sessions.abort-throws / force-deny-throws catch path, which also never emits turn_complete — clears session.isWaitingForReply"
+func testSessionStoreOperationCompletedInterruptRejectedDoesNotClearWaitingForReply() -> Bool {
+    let name = "T-113 item 2 (inverted — see comment for why the original test pinned the wrong behaviour): evt.operation_completed(operationKind:.interrupt, outcome:.rejected) does NOT clear session.isWaitingForReply — a failed abort attempt gives zero confirmation the run stopped; clearing it would make the UI lie and strand the user unable to retry 停止"
     let (store, session) = freshInterruptUISession(id: "sess-interrupt-rejected-ui-1", kernelKey: "kernel-key-interrupt-rejected-ui-1")
     session.isWaitingForReply = true
 
@@ -152,10 +163,10 @@ func testSessionStoreOperationCompletedInterruptRejectedAlsoClearsWaitingForRepl
         for: session
     )
 
-    guard session.isWaitingForReply == false else {
-        return fail(name, "expected isWaitingForReply to be cleared for outcome:.rejected too (the sessions.abort-throws / force-deny-throws catch path never emits turn_complete either) — without this, a failed interrupt attempt would leave the UI stuck showing '等待回复…' forever, the worst-case symptom this whole fix exists to prevent")
+    guard session.isWaitingForReply == true else {
+        return fail(name, "expected isWaitingForReply to remain true for outcome:.rejected — matches interruptCurrentRun's own doc comment (SessionStore.swift:391-394): a failed interrupt attempt does not mean the run isn't still going, clearing it would make the UI falsely claim 'not waiting anymore' AND flip the button back to 发送, leaving the user unable to even retry 停止, got false")
     }
-    return pass(name, "operation_completed(operationKind:.interrupt, outcome:.rejected) also clears isWaitingForReply — closes the one interrupt-reachable outcome value that previously had no dedicated test coverage")
+    return pass(name, "operation_completed(operationKind:.interrupt, outcome:.rejected) correctly leaves isWaitingForReply untouched, matching interruptCurrentRun's documented rationale — the 停止 button remains available so the user can retry")
 }
 
 /// **回归/scoping 锁**：`operationKind:.stop` 的 operation_completed 不应被这条新逻辑影响——`stop()`
@@ -317,8 +328,8 @@ func runSessionStoreInterruptTests() async -> [Bool] {
     // 函数调用需要 `await` 完成一次 actor hop（同 FrameReplayTests.swift 里对
     // testSessionStoreHandleToolCallProducesToolCallItem 等同类型函数的既有调用方式）。
     results.append(await testSessionStoreOperationCompletedInterruptNoActiveRunClearsWaitingForReply())
-    results.append(await testSessionStoreOperationCompletedInterruptTimeoutAlsoClearsWaitingForReply())
-    results.append(await testSessionStoreOperationCompletedInterruptRejectedAlsoClearsWaitingForReply())
+    results.append(await testSessionStoreOperationCompletedInterruptTimeoutDoesNotClearWaitingForReply())
+    results.append(await testSessionStoreOperationCompletedInterruptRejectedDoesNotClearWaitingForReply())
     results.append(await testSessionStoreOperationCompletedStopDoesNotClearWaitingForReplyThroughThisPath())
     results.append(await testInterruptCurrentRunOnUnknownSessionIDIsNoOpAndLeavesOtherSessionsUntouched())
     results.append(await testInterruptCurrentRunSkipsDispatchWhenAlreadyInterrupting())

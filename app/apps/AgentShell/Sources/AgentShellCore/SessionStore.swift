@@ -723,26 +723,56 @@ public final class SessionStore {
         session.messages.append(ChatMessage(role: .system, text: text, timelineSeq: session.allocateLiveTimelineSeq()))
 
         // rounds/0020（任务书第 4 条，实测核实见 `interruptCurrentRun` 文档注释）：`interrupt
-        // (mode:"cancel")` 至少两条路径**从不**产出 evt.turn_complete，只产出这一条 operation_completed
+        // (mode:"cancel")` 有两条路径**从不**产出 evt.turn_complete，只产出这一条 operation_completed
         // 镜像——
         //   ① abortedRunId==nil（run 早已自然结束）：`OpenclawGatewayKernelClient.interrupt()` 对应
         //      分支只调用 `emitOperationCompletedMirror`，没有第二次调用发 turn_complete（该方法
-        //      文档注释"abortedRunId == nil 时"一节）。
+        //      文档注释"abortedRunId == nil 时"一节）。这条路径的 outcome 恒为 `.succeeded`。
         //   ② 等待 aborted-run 终态超时：`waitForPendingStopTerminal` 的 `.timedOut` 分支同样只调用
-        //      `emitOperationCompletedMirror`；迟到的 aborted lifecycle 帧即使之后才到达，也会因为
-        //      `pendingStops[...].terminalEmitted` 已被提前标记为 true 而落进 `handleAgentEvent`
-        //      的防御性兜底分支，那条分支产出的 turn_complete 会被硬编码标注成 `operationKind:.stop`
-        //      （该分支注释原文："这不是漏改……按构造就不存在可读的发起者信息"）——不是这个 session
-        //      真正在等的那个 interrupt 操作的终态，这里不能指望它来兜底。
-        // 若只靠 `.turnComplete` 分支清 `isWaitingForReply`（本文件在本次改动之前的唯一清除点），
-        // 这两条路径会让 composer 永久卡在"等待回复…"——即使用户点了停止、操作也确实成功/诚实超时
-        // 了。这里按 operationKind 兜底清一次：仅当这条镜像由 interrupt 触发时才清（对已经被
-        // turnComplete 提前清过的情况是幂等 no-op，无副作用；不按 outcome 具体取值分支——succeeded/
-        // timedOut/其它——因为上面两条路径都不产出 turn_complete，UI 没有第二个信号来源可以依赖）。
+        //      `emitOperationCompletedMirror`（outcome=.timedOut）。
+        //
+        // **T-113 rework 订正（收 grok 对抗评审 item 3）**：上面②这一条此前写的是"迟到的 aborted
+        // lifecycle 帧会因为 `terminalEmitted` 已被提前标记为 true 而落进 `handleAgentEvent` 的防御性
+        // 兜底分支，那条分支硬编码成 operationKind:.stop"——这段机制描述是错的，把两个不同的判断条件
+        // 混成了一个。源码事实（`OpenclawGatewayKernelClient.swift` 的 lifecycle(aborted) 分支）：
+        // `pendingStops[session]` 条目仍在、且 `terminalEmitted==true` 时，迟到帧走的是**纯静默丢弃**
+        // 的 else 分支，根本不进兜底；进兜底的充要条件是 `pendingStops[session] == nil`——**整个条目
+        // 已被移除**，不是"条目还在、只是标记位变了"。`.timedOut` 路径恰好总是命中后者：
+        // `interrupt()` 顶部覆盖全部出路的 `defer` 会在函数返回前**同步**把这个条目摘掉，标记
+        // `terminalEmitted=true` 和函数实际返回之间不存在任何 `await` 能被迟到帧的处理插进来。兜底
+        // 分支本身也已经在同一轮修过（T-113 item 1，见 `EventMapping.swift`
+        // `mapOpenclawAgentLifecycleToAbortTerminalEvents` 的 `operationID: String?` 一节文档注释）：
+        // 它不再冒充 `operationKind:.stop` 发一条 `operation_completed`，只诚实补发一条不带发起者
+        // 身份声明的 `turn_complete(cancelled)`。
+        //
+        // 若只靠 `.turnComplete` 分支清 `isWaitingForReply`，上面两条路径会在**首次**收到镜像时让
+        // composer 卡在"等待回复…"，所以这里仍然需要按 operationKind 兜底清一次——但**仅当 outcome
+        // 确认成功时才清**（见下面 if 条件）。
+        //
+        // **T-113 rework 订正（收 grok 对抗评审 item 2）**：这个 if 条件此前是"只要
+        // operationKind==.interrupt 就清"，不看 outcome——与 `interruptCurrentRun` 自己的文档注释
+        // （:391-394）直接矛盾：那段注释论证"中止失败不代表这个 run 已经不在跑了，贸然清掉会让 UI
+        // 撒谎说'已经不在等了'"，但旧代码恰恰对 `.rejected`（sessions.abort/force-deny 抛错，我们对
+        // 内核状态**零确认**）也一并清掉——按钮因此翻回"发送"，用户连再点一次"停止"重试都做不到。
+        // 那条被矛盾的文档注释本身没有错，错的是这里没有照它做。
+        //
+        // 修法：只有 `outcome == .succeeded` 才清——这是 interrupt 唯一"内核侧确认这个 run 已经不在
+        // 跑了"的取值（abortedRunId==nil 分支的 succeeded 意味着"根本没有活跃 run"；等到终态帧的
+        // succeeded 意味着"亲眼观察到了 aborted 终态"）。`.rejected`（零确认）与 `.timedOut`（有
+        // abortedRunId、即内核确认接手了这个 run 的 abort，但没等到收尾帧）都**不清**——两者共同的
+        // 特征是"我们不能确认这个 run 真的已经不在跑了"，清掉都是在赌一个没有证据支持的结论。
+        // `.timedOut` 特意不当成 `.succeeded` 处理：即使 openclaw 现场行为大概率会在稍后补上迟到的
+        // 终态帧，"大概率"不是"确认"，与本文件"标签说谎比不显示更糟"的一贯取舍一致（rounds/0019）。
+        // 这不是让 UI 永久卡死——上面刚订正过的机制意味着，只要那条迟到帧真的到达（openclaw 实测行为：
+        // 几乎总会到），兜底分支产出的 `turn_complete(cancelled)` 会经由本文件的 `.turnComplete` 分支
+        // （:472-473）把 `isWaitingForReply` 补清；万一那条帧彻底丢失，用户仍然能手动再点一次"停止"
+        // 来恢复（此刻按钮仍然可点——因为 `isWaitingForReply` 还是 true），好过让 UI 在没有证据时替
+        // 用户下结论。
+        //
         // 不对 operationKind:.stop 做同样处理——`stop()` 的全部路径最终都会发 session_end（那条
         // handler 已经清过这个位，见下面 `.sessionEnd` 分支），这里重复处理不会有额外收益，保持改动
-        // 面最小，只精确对应实测坐实的这一个缺口。
-        if event.payload.operationKind == .interrupt {
+        // 面最小，只精确对应实测坐实的这个缺口。
+        if event.payload.operationKind == .interrupt, event.payload.outcome == .succeeded {
             session.isWaitingForReply = false
         }
     }

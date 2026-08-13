@@ -2802,21 +2802,42 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                     lastUsageByRunID.removeValue(forKey: runID)
                     resolvePendingStopWaiter(sessionID: ourSessionID, outcome: .terminalObserved)
                 } else if pendingStops[ourSessionID] == nil {
-                    // 理论上不会出现——stop()/interrupt()（rounds/0020 起两者都会）在发起
-                    // sessions.abort 之前必然先在 pendingStops 里登记一条条目，因此任何一条真正由
-                    // 我们自己触发的 abort 所产生的 aborted lifecycle 帧，理应总能在上面的分支里找到
-                    // 匹配的 pendingStop。这里仍然保留纯防御性兜底：自己派生一个 operationId，保持
-                    // "至少不丢事件"的旧行为，同时如实标注这是非预期路径。`operationKind` 没有任何
-                    // 发起者信息可用（既不知道是不是我们发起的、更不知道是 stop 还是 interrupt），
-                    // 延续修前唯一曾经存在过的取值 `.stop`——这不是"猜它是 stop"，只是在没有信息时
-                    // 保持这条从未被真正观察到过的路径的历史输出不变，不引入新的分支语义。
-                    let fallbackOperationID = "\(ourSessionID)-abort-\(runID)-unowned"
-                    // 这条防御性兜底路径本来就没有关联到任何 stop()/interrupt() 的 pendingStop——
-                    // 不存在"这次强制 deny 过谁"的信息可以塞，forceResolvedApprovals 如实传 nil。
+                    // T-113 rework（grok 对抗评审 item 1）**订正**：这条分支此前的注释说"理论上不会
+                    // 出现"——那个判断本身就是缺陷根源，已被 rounds/0020 实拍证伪。openclaw 对同一次
+                    // abort 常发两条收尾帧（真实样本见 EventMapping.swift 上方注释：先
+                    // `phase:"end"`，紧跟 `phase:"error","This operation was aborted"`）。第一条帧
+                    // 命中上面的匹配分支、`interrupt()`/`stop()` 据此返回，返回前顶部那个覆盖全部出路
+                    // 的 `defer` 会**同步**把 `pendingStops[sessionID]` 整条摘掉（中间不存在任何
+                    // `await` 能被第二条帧的处理插进来）——第二条帧到达时表已经空了，就落进这里。对
+                    // `stop()` 而言这条路径历史上确实几乎不可观察（session 随后即被 delete、事件流
+                    // finish，迟到帧要么发不出、要么无人订阅）；`interrupt()` 故意保留会话与事件流，
+                    // 这里第一次变成了成功路径上稳定可复现的副作用（`evidence/shots/README.md` 02 号
+                    // 截图实拍钉住："[操作] stop 已完成：outcome=aborted_effect_unknown"——用户从未
+                    // 点过 stop，`sessions.delete=0` 与代码路径吻合，唯一来源就是这里此前硬编码的
+                    // `.stop`）。
+                    //
+                    // 修法（`operationID`/`operationKind` 现在是 `String?`/`OperationKind?`，完整
+                    // 推理见 `mapOpenclawAgentLifecycleToAbortTerminalEvents` 文档注释）：两者都传
+                    // nil——`OperationKind` 只有 `.interrupt`/`.stop` 两个取值，这条分支按构造没有
+                    // 任何发起者信息（既不知道是不是我们发起的、更不知道是 stop 还是 interrupt），
+                    // 选哪个都是在冒充一次没有证据支撑的用户操作。函数据此不构造/不 yield
+                    // `operation_completed`——不再有任何"[操作] X 已完成"系统行，冒名 stop 的缺陷
+                    // 到此为止。函数仍然会返回一条 `turn_complete(stopReason:.cancelled)`：它不带
+                    // `operationKind` 这类身份声明，只诚实反映"这个 run 确实被 abort 了"（这件事从
+                    // `data.aborted==true` 本身就能确定），且 `SessionStore.handle` 的 `.turnComplete`
+                    // 分支从不产出系统行，只清 `isWaitingForReply`——不会重新引入"标签说谎"，同时
+                    // 让这条兜底分支最初存在的理由（真正"无主"的 abort：例如同一 session 被另一个
+                    // 来源摘掉了 run，我们自己从未登记过 pendingStop）不至于让等待中的 UI 永远转圈。
+                    // 这次报告里发生的是前一种情况（迟到的第二帧，本来就属于我们自己的这次
+                    // interrupt）——多出来的这条 turnComplete 是幂等 no-op（isWaitingForReply 已经被
+                    // 第一条帧的 turnComplete 清过），不会有任何可观察的副作用。
+                    //
+                    // forceResolvedApprovals 依旧如实传 nil——这条路径不掌握"这次强制 deny 过谁"的
+                    // 信息。
                     let events = mapOpenclawAgentLifecycleToAbortTerminalEvents(
-                        data, ourSessionID: ourSessionID, runID: runID, operationID: fallbackOperationID,
+                        data, ourSessionID: ourSessionID, runID: runID, operationID: nil,
                         originTS: originTS, cachedUsage: lastUsageByRunID[runID],
-                        forceResolvedApprovals: nil, operationKind: .stop, nextSeq: nextSeqForRun
+                        forceResolvedApprovals: nil, operationKind: nil, nextSeq: nextSeqForRun
                     )
                     for event in events {
                         continuation.yield(event)
@@ -2824,7 +2845,13 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                     }
                     lastUsageByRunID.removeValue(forKey: runID)
                 }
-                // else：已经为这次 stop() 发过 terminal——如实丢弃这条收尾帧，不重复产出。
+                // else：`pendingStops[ourSessionID]` 仍在但这条帧要么 run 不匹配、要么
+                // `terminalEmitted` 已经是 true——已经为这个 run 发过 terminal（或它根本不是我们在等
+                // 的那个 run），如实静默丢弃这条收尾帧，不重复产出。**不要**把这条 else 和上面的
+                // unowned 兜底分支混为一谈：进兜底的充要条件是 `pendingStops[ourSessionID] == nil`
+                // （整个条目已被移除），不是"条目还在、只是 terminalEmitted 变成了 true"——那种情况
+                // 走的正是这条 else，SessionStore.swift 曾经有一处文档注释把两者混淆了，已在同一轮
+                // 订正（见 handleOperationCompleted 文档注释）。
             } else {
                 // M3：极罕见竞态——force-deny 已经生效、sessions.abort 尚未真正让这个 run 落地
                 // aborted 状态之前，run 自己先自然完成（这条 lifecycle 帧走的是 aborted:false 分支）。

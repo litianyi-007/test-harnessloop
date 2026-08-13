@@ -465,47 +465,76 @@ func mapOpenclawAgentLifecycleToTurnComplete(
 /// （见该文件 `PendingStop.operationKind` 的文档注释），这个函数是那套机制观察到真实 aborted
 /// lifecycle 帧之后、实际构造 `operation_completed`/`turn_complete` 事件的地方——若继续硬编码
 /// `.stop`，interrupt() 触发的这次终态会被事件流的观察者误读成一次 stop 操作。调用方
-/// （`OpenclawGatewayKernelClient.handleAgentEvent`）现在按 `pendingForRun.operationKind` 传入真正
-/// 的发起者；唯一的例外是"unowned"防御性兜底分支（没有匹配上任何 pendingStop，理论上不会出现），
-/// 该分支不掌握任何发起者信息，延续修前行为传 `.stop`，见该分支自己的注释。
+/// （`OpenclawGatewayKernelClient.handleAgentEvent`）按 `pendingForRun.operationKind` 传入真正的
+/// 发起者。
+///
+/// **T-113 rework（grok 对抗评审 item 1）**：`operationID`/`operationKind` 改为 `String?`/
+/// `OperationKind?`——上一段留的"唯一的例外是 unowned 防御性兜底分支……理论上不会出现"这句判断
+/// 本身就是本次要修的缺陷根源，**已被实拍证伪**：`interrupt()` 顶部覆盖全部出路的 `defer` 会在函数
+/// 返回前把 `pendingStops[sessionID]` 整条同步摘掉（中间不存在任何 `await`），openclaw 对同一次
+/// abort 常发的第二条收尾帧（`phase:"error",aborted:true,"This operation was aborted"`，真实样本见
+/// 本文件上方注释）到达时，`pendingStops[ourSessionID]` 已经是 nil——unowned 兜底分支因此在
+/// interrupt() 成功路径上是**可预期**的，不是"理论上"。此前它把 `operationKind` 硬编码成 `.stop`
+/// 传进来，于是这里画出一条冒充 `stop()` 的 `operation_completed`（rounds/0020
+/// `evidence/shots/README.md` 02 号截图实拍钉住："[操作] stop 已完成：outcome=aborted_effect_unknown"
+/// ——用户从未点过 stop）。
+///
+/// 修法：调用方对"无主"（没有匹配上任何 pendingStop）的帧传 `operationID: nil, operationKind: nil`；
+/// 本函数据此**不构造/不返回** `operationCompleted` 事件——`OperationKind`（D2 生成类型，
+/// `app/generated/swift/D2.swift:3472-3475`）只有 `.interrupt`/`.stop` 两个取值，没有第三个"不知道是
+/// 谁"的选项，无主帧无论标成哪一个都是在冒充一次没有身份信息支撑的用户操作，而
+/// `SessionStore.handleOperationCompleted` 是 `evt.operation_completed` 唯一的渲染点，会把编造值
+/// 直接画成系统行。但**仍然返回** `turnComplete(stopReason:.cancelled)`——它不携带 `operationKind`
+/// 这类身份声明，只诚实反映"这个 run 确实被 abort 了"，这件事从 `data.aborted==true` 就能确定，与
+/// 是谁发起的无关。保留它是为了不退化掉这个兜底分支最初存在的理由：真正"无主"的场景（例如同一
+/// session 被另一个客户端/来源摘掉了 run，我们自己从未登记过 pendingStop）如果连 turnComplete 都不
+/// 发，等待中的 UI 会永远转圈——`SessionStore.handle` 的 `.turnComplete` 分支会清 `isWaitingForReply`
+/// 且不产出任何系统行，是这里能给出的最诚实的信号。
 func mapOpenclawAgentLifecycleToAbortTerminalEvents(
     _ data: JSONObject,
     ourSessionID: String,
     runID: String,
-    operationID: String,
+    operationID: String?,
     originTS: Date,
     cachedUsage: (input: Int, output: Int)?,
     forceResolvedApprovals: [String]?,
-    operationKind: OperationKind,
+    operationKind: OperationKind?,
     nextSeq: () -> Int
 ) -> [EventMessageUnion] {
-    let phase = jsonString(data["phase"])
-    let outcome: PayloadOutcome = phase == "end" ? .succeeded : .abortedEffectUnknown
-    let detail = jsonString(data["error"])
-    let opPayload = OperationCompletedEventMessagePayload(
-        affectedRunID: runID, detail: detail, newRunID: nil,
-        operationID: operationID, operationKind: operationKind, outcome: outcome
-    )
-    let operationCompletedEvent = EventMessageUnion.operationCompleted(OperationCompletedEventMessage(
-        direction: .event, payload: opPayload, runID: runID,
-        sentAt: Date(), seq: nextSeq(), sessionID: ourSessionID, ts: originTS, type: .evtOperationCompleted
-    ))
+    var events: [EventMessageUnion] = []
+
+    // seq 分配顺序刻意保持"先 operationCompleted、后 turnComplete"（与修前逐字节相同）——只在真正
+    // 构造并返回 operationCompleted 时才为它消耗一个 nextSeq() 调用，`operationID == nil` 的无主
+    // 路径不再为一个不会被返回的事件白占一个 seq 值。
+    if let operationID, let operationKind {
+        let phase = jsonString(data["phase"])
+        let outcome: PayloadOutcome = phase == "end" ? .succeeded : .abortedEffectUnknown
+        let detail = jsonString(data["error"])
+        let opPayload = OperationCompletedEventMessagePayload(
+            affectedRunID: runID, detail: detail, newRunID: nil,
+            operationID: operationID, operationKind: operationKind, outcome: outcome
+        )
+        events.append(.operationCompleted(OperationCompletedEventMessage(
+            direction: .event, payload: opPayload, runID: runID,
+            sentAt: Date(), seq: nextSeq(), sessionID: ourSessionID, ts: originTS, type: .evtOperationCompleted
+        )))
+    }
 
     let usage = cachedUsage.map { Usage(inputTokens: $0.input, outputTokens: $0.output) }
     // M3（D1 §6.2，本轮新增）：`forceResolvedApprovals` 由调用方（`stop()` 铸造的 `PendingStop.
     // forceResolvedApprovalReqIDs`，见 `OpenclawGatewayKernelClient.forceDenyPendingApprovalsBeforeStop`）
     // 传入——这个 run 被 stop() 强制取消之前，如果有 pending 审批被强制 deny 掉，reqId 就会出现在
     // 这里；上一轮这里硬编码 nil，是 SG-8.7 形式化 parity 复核揪出的缺口（D1 §6.2 M3 定序完全没有
-    // 落地）。
+    // 落地）。无主路径（见上）调用方恒传 nil——不存在"这次强制 deny 过谁"的信息可以塞。
     let turnPayload = TurnCompleteEventMessagePayload(
         degraded: nil, forceResolvedApprovals: forceResolvedApprovals, stopReason: .cancelled, usage: usage
     )
-    let turnCompleteEvent = EventMessageUnion.turnComplete(TurnCompleteEventMessage(
+    events.append(.turnComplete(TurnCompleteEventMessage(
         direction: .event, payload: turnPayload, runID: runID,
         sentAt: Date(), seq: nextSeq(), sessionID: ourSessionID, ts: originTS, type: .evtTurnComplete
-    ))
+    )))
 
-    return [operationCompletedEvent, turnCompleteEvent]
+    return events
 }
 
 // MARK: - ④ session.approval -> approvalRequest（现场实测样本 grounding；toolCallID 关联 F4 rework）
