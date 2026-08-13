@@ -27,6 +27,12 @@ struct SessionListView: View {
                     .padding(.vertical, 4)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+            // Settings UI 任务书决策③："Do not make the user wait for an opaque `transport
+            // error` to discover they never configured anything"——effective token 仍是内建
+            // 占位符时主动提示，不等用户先撞见一次连接失败才发现。
+            if store.isTokenPlaceholder {
+                tokenPlaceholderHint
+            }
 
             // rounds/0017 Change 2：这里此前没有任何自定义不透明背景（`.listStyle(.sidebar)` 已经
             // 是系统侧栏材质），符合任务书 concrete 项 1/2"chrome 让系统材质透出、标准
@@ -89,6 +95,45 @@ struct SessionListView: View {
                 Rectangle().fill(.regularMaterial)
             }
         }
+    }
+
+    /// 占位符 token 提示——用图标+加粗文字（不是纯背景色）承载"这是个警告"这层语义，`.background`
+    /// 只给 `.regularMaterial`（不是固定 alpha 的纯色），呼应本文件其它状态条同一条已经写明的
+    /// 可访问性理由（见 `connectionBanner`/`globalErrorMessage` 背景处的历史注释：rounds/0017
+    /// 把固定 alpha 纯色背景换成了标准 material，本处新增内容直接沿用结论，不重新引入旧问题）。
+    ///
+    /// 来源为环境变量时不显示"前往设置"链接——Settings 面板对这种情况没有效果（环境变量优先级
+    /// 更高，改 Settings 不会改变生效值），指错方向本身就是新的一种"改了却没用"困惑，所以改成提示
+    /// 检查/取消设置那个环境变量。
+    private var tokenPlaceholderHint: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text("尚未配置有效的内核 token")
+                    .font(.caption)
+                    .bold()
+            }
+            Group {
+                if store.tokenSource == .environmentVariable {
+                    Text("AGENT_SHELL_KERNEL_TOKEN 环境变量的值就是内建占位符——请改成真实 token（Settings 面板对此无效，环境变量优先级更高）。")
+                } else {
+                    Text("当前使用内建占位符，无法完成内核鉴权。")
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            if store.tokenSource != .environmentVariable {
+                SettingsLink {
+                    Text("前往设置…")
+                        .font(.caption2)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.regularMaterial)
     }
 
     private var connectionColor: Color {

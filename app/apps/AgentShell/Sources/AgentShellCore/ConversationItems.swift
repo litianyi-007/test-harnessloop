@@ -61,18 +61,50 @@ public struct ToolResultSummary: Equatable {
     }
 }
 
-/// 一条 thinking 呈现单元。evt.thinking 逐条独立成行——**刻意不做跨事件合并**：D2
-/// `ThinkingEventMessagePayload` 只有 `delta`/`visibility` 两个字段，没有任何类似 `messageId` 的
-/// 分组键；而这条 `delta` 的真实语义因来源不同而不同（EventMapping.swift ⑤ 与①的文档注释：
-/// `agent(stream:"thinking")` 里是"相对上一次的增量"，`session.message` 的 thinking content block
-/// 里是"这条已落地消息自带的完整推理投影"）——D2 事件本身在 UI 这一层已经无法区分两者。
-/// `SessionStore.appendAssistantDelta` 的文档注释记录过同一类教训（旧分组键 (runId,index) 撞车
-/// 导致两条不同消息的文本被错误拼接）："缺 identity 时宁可多开一条气泡，也不要瞎猜一个键去分组/
-/// 合并"。这里应用同一条原则：每条 evt.thinking 独立成一行折叠展示，代价是同一次真正的增量推理流
-/// 会显示成多个小块而不是一整段，但不会重演"猜错合并语义导致内容错误拼接/覆盖"的同构缺陷。
+/// 一条 thinking 呈现单元——**rounds/0019 修复：同一 runId 内的所有 evt.thinking 合并进同一个折叠
+/// 块**，取代上一轮（rounds/0017 Change 1）"逐条独立成行、刻意不跨事件合并"的设计。
+///
+/// **旧设计为什么错，以及为什么当时看起来合理**：旧版的理由是 D2 `ThinkingEventMessagePayload` 只有
+/// `delta`/`visibility` 两个字段，没有类似 `messageId` 的分组键；而 `delta` 的真实语义因来源不同而
+/// 不同（EventMapping.swift ⑤ 与①的文档注释：`agent(stream:"thinking")` 里是"相对上一次的增量"，
+/// `session.message` 的 thinking content block 里是"这条已落地消息自带的完整推理投影"）——D2 事件
+/// 本身在 UI 这一层无法区分两者来自哪条通道，于是套用了 `appendAssistantDelta` 那条"缺 identity 时
+/// 宁可多开一行，也不要瞎猜一个键去合并"的教训，选择了"永远不合并"这个看似最保守的选项。
+///
+/// **这个"保守"选项被 rounds/0019 现场抓包证明是更严重的缺陷**（真实 openclaw + 真实 LLM，
+/// `.harnessloop/goals/20260718-002-agent-app/rounds/0019/evidence/shots/13-approval-card.png`/
+/// `14-tool-result.png`）：一段连续推理被切成十几二十个折叠块，短则两三个字符，`TOOLROW_DEMO_OK`
+/// 这样一个单词被从中腰斩成 `_D` 和 `` `EMO_OK`.... `` 两条独立事件——真正的回复内容被挤出屏幕外，
+/// 不是"退化成多几块"的小代价，是彻底不可读。"永远不合并"回避了一个理论上的错误合并风险，却在现场
+/// 制造了一个确定发生、更糟的可读性缺陷；"缺 identity 时不要瞎猜"这条原则本身没有错，错的是
+/// "runId 也不算数"这个判断——runId 并不是猜的，见下段。
+///
+/// **合并键 = runId（不是猜的，是排除法 + 现场验证的结论）**：D2 payload 确实没有 messageId，但
+/// `ThinkingEventMessage` 信封层有 `runId`（D2.swift `ThinkingEventMessage.runID`，可选，"沿用
+/// EventEnvelope 默认可选"）——这是 D2 层面唯一现存、能标识"这是不是同一轮推理"的字段。用 runId
+/// 分组不会破坏 `SessionStoreGroupingTests` 锁死的 assistant 文本分组不变量（两条不同 messageId
+/// 共享同一个 runId 仍产生两个气泡）——那条不变量管的是完全独立存储的 `session.messages`
+/// （`messageID` 分组键），这里管的是 `session.thinkingItems`（`runID` 分组键），两个数组、两套键，
+/// 互不干扰。runId 缺失时的回退与 `appendAssistantDelta` 处理 messageId 缺失同一原则不变：不复用
+/// 任何既有分组键，直接开一条新行。
+///
+/// **合并语义 = `+=` 追加（不是 `=` 覆盖，与 assistant 文本相反）**：判定依据见
+/// `SessionStore.handleThinking` 的文档注释（EventMapping.swift ⑤ 第 616 行 `data["delta"]` 优先于
+/// `data["text"]`，且文档注释明说前者是"相对上一次已发送内容的增量"）；现场抓包的分片顺序拼接后是
+/// 连贯文本、且单词被腰斩，与"增量、需拼接"吻合，与"每帧完整全文"矛盾。
+///
+/// **已知未解决的残留问题（如实登记，不是本次修复的范围）**：EventMapping.swift ①的文档注释指出
+/// 同一次真实推理理论上可能同时经 session.message（完整投影）与 agent(stream:"thinking")（增量流）
+/// 两条通道各自广播一次，D2 payload 结构上无法区分事件来自哪条通道。若两条通道真的在同一个 run 里
+/// 都触发，`+=` 会把后到的"完整投影"当成又一段增量接在已拼好的文本后面，产生内容重复——但这不是
+/// 本次修复引入的新问题：旧实现同样会把两条通道的内容都渲染出来，只是表现成"多出几行几乎一样的
+/// 文本"而不是"一段文本里夹了一次重复"，两种实现都没有真正解决它，本次修复的目标是现场坐实、确定
+/// 发生的"逐 delta 拆行"缺陷，不是这个尚未现场观测到、协议结构上也无法可靠区分的理论场景。
 public struct ThinkingItem: Identifiable {
     public let id = UUID()
-    public let text: String
+    /// **rounds/0019：从 `let` 改为 `var`**——同一轮推理的后续 delta 需要能原地追加到已有文本上
+    /// （`SessionStore.handleThinking` 的 `+=`），不再是构造时一次性写死。
+    public var text: String
     public let visibility: Visibility
     let timelineSeq: Int
 

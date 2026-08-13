@@ -2464,7 +2464,13 @@ public func runFrameReplayTests() async -> Bool {
     // testSessionStoreHandleOrphanToolResultDoesNotSilentlyDrop 只验了"孤儿本身不丢"，验不到
     // "后续 call 到达时是否正确合并"，这条新测试补上这个顺序。
     results.append(await testSessionStoreHandleToolCallAfterOrphanResultFillsInPlaceNotADuplicateRow())
-    results.append(await testSessionStoreHandleThinkingEventsDoNotMerge())
+    // rounds/0019：live capture（真实 openclaw + 真实 LLM）坐实"逐条 evt.thinking 独立成行、不合并"
+    // 是渲染缺陷，不是设计克制——一段推理被切成十几二十个折叠块，单词被从中腰斩。上一行原是
+    // testSessionStoreHandleThinkingEventsDoNotMerge（断言不合并，锁死了这个缺陷本身），改写为断言
+    // 正确的按 runId 合并行为；新增一条现场分片序列回放测试，逐字取自 evidence/shots/
+    // 14-tool-result.png。两条测试均见 SessionStoreToolRenderingTests.swift。
+    results.append(await testSessionStoreHandleThinkingEventsMergeBySameRunID())
+    results.append(await testSessionStoreHandleThinkingMergesLiveCaptureFragmentSequence())
     results.append(await testSessionStoreHandleThinkingPreservesSummaryVisibility())
     results.append(await testSessionStoreTimelineInterleavesEventsInArrivalOrder())
     results.append(await testSessionStoreHandleOperationCompletedRendersSystemMessage())
@@ -2492,6 +2498,30 @@ public func runFrameReplayTests() async -> Bool {
     // ①溢出 deny 的成功判据 / ②FORCE_DENY_PENDING_KERNEL_ACK / ③approval.resolve 有界等待 +
     // 权威 terminal 结束 in-flight / ④active terminal 后的 UI 同步（先清旧卡再呈现提升项）。
     results.append(contentsOf: await runApprovalFailurePathTests())
+
+    // Settings UI（KernelShellSettingsTests.swift）：env > 已保存设置 > 内建默认值 精度链
+    // （endpoint 走 UserDefaults、token 走 Keychain）、来源标注与生效值的一致性、占位符判定谓词、
+    // fromEnvironment() 行为未变回归锁、Keychain/UserDefaults 存储层往返、
+    // SessionStore.reconnect(with:) 的展示态更新与会话清空。
+    results.append(testResolvedEndpointPrefersEnvironmentOverStoredAndDefault())
+    results.append(testResolvedEndpointPrefersStoredOverDefaultWhenEnvAbsent())
+    results.append(testResolvedEndpointFallsBackToBuiltInDefaultWhenNothingSet())
+    // rounds/0019 评审 Q3：env 非法时的级联行为 + source 如实标注（评审给出的直接复现构造）。
+    results.append(testResolvedEndpointCascadesToStoredSettingWhenEnvURLIsInvalid())
+    results.append(testResolvedEndpointFallsBackToDefaultWhenEnvURLIsInvalidAndNoStoredValue())
+    results.append(testResolvedTokenPrefersEnvironmentOverStoredAndDefault())
+    results.append(testResolvedTokenPrefersStoredOverDefaultWhenEnvAbsent())
+    results.append(testResolvedTokenFallsBackToBuiltInDefaultWhenNothingSet())
+    results.append(testEndpointAndTokenSourcesResolveIndependently())
+    results.append(testIsTokenPlaceholderTrueForDefaultTokenAndFalseForRealToken())
+    results.append(testFromEnvironmentBehaviorUnchangedWhenBothEnvVarsSet())
+    results.append(testFromEnvironmentBehaviorUnchangedWhenNeitherEnvVarSet())
+    results.append(testFromEnvironmentBehaviorUnchangedForInvalidURLWarningPath())
+    results.append(testKeychainTokenStoreSavesReadsUpdatesAndDeletes())
+    results.append(testKeychainTokenStoreReadReturnsNilForNeverUsedServiceAccount())
+    results.append(testKeychainTokenStoreDeleteIsIdempotentWhenNothingStored())
+    results.append(testKernelEndpointDefaultsStoreRoundTripsAndClears())
+    results.append(await testSessionStoreReconnectUpdatesDisplayStateAndResetsSessions())
 
     let passCount = results.filter { $0 }.count
     let total = results.count

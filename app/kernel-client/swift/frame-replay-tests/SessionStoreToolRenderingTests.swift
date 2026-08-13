@@ -282,27 +282,92 @@ func testSessionStoreHandleToolCallAfterOrphanResultFillsInPlaceNotADuplicateRow
     return pass(name, "evt.tool_result 先到产出占位项，随后 evt.tool_call 原地补全 name='exec'/argumentSummary（含 'sleep 1'），保留已有 result='done'；session.toolCalls 与 session.timeline 均只贡献 1 条、id 无重复")
 }
 
-/// **测试 5**：thinking 逐条独立成行，不跨事件合并——两条 evt.thinking 各自产出独立的
-/// `ThinkingItem`，第二条不覆盖/拼接第一条。理由见 `ThinkingItem` 类型定义处的文档注释（D2
-/// thinking payload 没有分组键，猜一个会重演 rounds/0011 的同构缺陷）。
+/// **测试 5（rounds/0019 修复后——取代原先断言"不合并"的同名位置测试）**：同一 runId 下的多条
+/// evt.thinking **合并**进同一个 `ThinkingItem`（`+=` 追加），不同 runId 的事件各自独立开一行。
+///
+/// **这条测试取代的是什么，为什么**：这个位置原来是
+/// `testSessionStoreHandleThinkingEventsDoNotMerge`，断言"两条 evt.thinking 各自产出独立
+/// ThinkingItem，不合并"——那条断言锁死的正是 rounds/0019 现场抓包坐实的渲染缺陷本身（真实
+/// openclaw + 真实 LLM，`.harnessloop/goals/20260718-002-agent-app/rounds/0019/evidence/shots/
+/// 13-approval-card.png`/`14-tool-result.png`：一段推理被切成十几二十个折叠块，`TOOLROW_DEMO_OK`
+/// 被腰斩成 `_D`/`` `EMO_OK`.... ``），不是需要保留的正确行为，所以直接改写而不是新增一条平行测试。
+/// 完整的判定依据（为什么合并键是 runId、为什么合并语义是 `+=`）见 `ThinkingItem` 类型定义处、
+/// `SessionStore.handleThinking` 文档注释——这里不重复，只验证行为。
 @MainActor
-func testSessionStoreHandleThinkingEventsDoNotMerge() -> Bool {
-    let name = "rounds/0017 Change 1: two evt.thinking events produce two independent ThinkingItems (no cross-event merge)"
-    let (store, session) = freshToolRenderingSession(id: "sess-thinking-1")
+func testSessionStoreHandleThinkingEventsMergeBySameRunID() -> Bool {
+    let name = "rounds/0019: evt.thinking events sharing the same runId merge into ONE ThinkingItem via += append; a different runId starts a new block"
+    let (store, session) = freshToolRenderingSession(id: "sess-thinking-merge-1")
 
-    store.handle(thinkingEvent(delta: "先看看目录结构", visibility: .raw, sessionID: session.id), for: session)
-    store.handle(thinkingEvent(delta: "再决定下一步", visibility: .raw, sessionID: session.id), for: session)
+    store.handle(thinkingEvent(delta: "先看看目录结构", visibility: .raw, runID: "run-thinking-A", sessionID: session.id), for: session)
+    store.handle(thinkingEvent(delta: "，再决定下一步", visibility: .raw, runID: "run-thinking-A", sessionID: session.id), for: session)
+    store.handle(thinkingEvent(delta: "新一轮推理", visibility: .raw, runID: "run-thinking-B", sessionID: session.id), for: session)
 
     guard session.thinkingItems.count == 2 else {
-        return fail(name, "expected 2 independent ThinkingItems, got \(session.thinkingItems.count) (texts=\(session.thinkingItems.map(\.text))) — merging would collapse them into 1")
+        return fail(name, "expected 2 ThinkingItems (one per distinct runId: A merged, B separate), got \(session.thinkingItems.count) (texts=\(session.thinkingItems.map(\.text)))")
     }
-    guard session.thinkingItems[0].text == "先看看目录结构", session.thinkingItems[1].text == "再决定下一步" else {
-        return fail(name, "expected each ThinkingItem to keep its own delta text unmodified, got \(session.thinkingItems.map(\.text))")
+    guard session.thinkingItems[0].text == "先看看目录结构，再决定下一步" else {
+        return fail(name, "expected the two run-thinking-A deltas to be concatenated in arrival order (+=, not overwrite), got '\(session.thinkingItems[0].text)'")
+    }
+    guard session.thinkingItems[1].text == "新一轮推理" else {
+        return fail(name, "expected the run-thinking-B event to start its OWN ThinkingItem (not merged onto A's), got '\(session.thinkingItems[1].text)'")
     }
     guard session.thinkingItems[0].visibility == .raw else {
-        return fail(name, "expected visibility == .raw to be threaded through from the payload, got \(session.thinkingItems[0].visibility)")
+        return fail(name, "expected visibility == .raw threaded through from the payload, got \(session.thinkingItems[0].visibility)")
     }
-    return pass(name, "两条 evt.thinking 各自产出独立 ThinkingItem（未合并/覆盖），visibility 字段正确透传")
+    guard session.inProgressThinkingItemID.count == 2,
+          session.inProgressThinkingItemID["run-thinking-A"] == session.thinkingItems[0].id,
+          session.inProgressThinkingItemID["run-thinking-B"] == session.thinkingItems[1].id else {
+        return fail(name, "expected inProgressThinkingItemID to hold 2 distinct entries keyed by runId, got \(session.inProgressThinkingItemID)")
+    }
+    return pass(name, "两条共享 runId=run-thinking-A 的 evt.thinking 合并成 1 个 ThinkingItem（文本='先看看目录结构，再决定下一步'，按到达顺序 += 拼接）；第三条 runId=run-thinking-B 独立开新行；共 2 个 ThinkingItem，inProgressThinkingItemID 记录一致")
+}
+
+/// **测试 5b（rounds/0019，任务要求的现场回放断言）**：把 round 0019 现场抓包里真实观察到的、逐字
+/// 摘录的 delta 分片序列（`.harnessloop/goals/20260718-002-agent-app/rounds/0019/evidence/shots/
+/// 14-tool-result.png` 可见的"推理"行，按截图顺序：`_D` / `` `EMO_OK`.... `` / `what` / …）原样
+/// 喂给 `SessionStore.handle`，断言产出**恰好 1 个** `ThinkingItem`、文本是这些分片按到达顺序原样
+/// 拼接的结果——不是 N 个碎片行（旧缺陷），也不是丢内容/错误覆盖（合并语义搞反的另一种错法）。
+///
+/// 这条测试同 `testSessionStoreHandleThinkingEventsMergeBySameRunID` 验证的是同一套合并逻辑，区别
+/// 是输入直接取自真实现场抓包而不是构造的示例文本——保留这份"逐字对照活证据"的可追溯性，而不是只
+/// 用合成文本证明合并逻辑本身正确。
+@MainActor
+func testSessionStoreHandleThinkingMergesLiveCaptureFragmentSequence() -> Bool {
+    let name = "rounds/0019 live capture replay: the exact delta fragment sequence from evidence/shots/14-tool-result.png merges into ONE ThinkingItem, not N fragment rows"
+    let (store, session) = freshToolRenderingSession(id: "sess-thinking-live-capture-1")
+
+    // 逐字取自 rounds/0019 evidence/shots/14-tool-result.png 可见的 6 个"推理"折叠行，按截图从上到下
+    // 的顺序——即真实 openclaw + 真实 LLM 产出的 agent(stream:"thinking") 增量序列（EventMapping.swift
+    // ⑤）。第 2 个分片 "EMO_OK`...." 逐字照抄截图（含内嵌的单个反引号 + 结尾四个点，不是 markdown
+    // 引用符号）；第 1、2 个分片拼接起来把 `TOOLROW_DEMO_OK` 这个词从中腰斩的位置重新接上
+    // （`_D` + `EMO_OK` -> `_DEMO_OK`，是 "TOOLROW_DEMO_OK" 去掉前缀 "TOOLROW" 后的尾部）。
+    let liveCaptureFragments = [
+        "_D",
+        "EMO_OK`....",
+        "what",
+        "they'd like to call me. Keep it short. The user's request is done — tell",
+        "them",
+        "the output, then do the brief bootstrap intro + name question.",
+    ]
+    let runID = "run-live-capture-14-tool-result"
+    for fragment in liveCaptureFragments {
+        store.handle(thinkingEvent(delta: fragment, visibility: .raw, runID: runID, sessionID: session.id), for: session)
+    }
+
+    guard session.thinkingItems.count == 1 else {
+        return fail(name, "expected the 6 live-capture fragments (sharing one runId) to merge into exactly 1 ThinkingItem, got \(session.thinkingItems.count) (texts=\(session.thinkingItems.map(\.text))) — this is the exact defect from rounds/0019 evidence/shots/13-approval-card.png + 14-tool-result.png")
+    }
+    let expectedJoined = liveCaptureFragments.joined()
+    guard session.thinkingItems[0].text == expectedJoined else {
+        return fail(name, "expected the merged text to be the fragments concatenated in arrival order ('\(expectedJoined)'), got '\(session.thinkingItems[0].text)' — a wrong merge direction would duplicate or drop text")
+    }
+    // `TOOLROW_DEMO_OK` 被腰斩成 "_D" + "EMO_OK`...." 两个分片是这次现场缺陷最具体的可视证据
+    // （两条独立事件里各自只有半个词）——合并后的文本必须能重新拼出这个词的后半段 "_DEMO_OK`...."，
+    // 证明拼接方向正确（前缀在前、后缀在后，不是反过来，也没有中间插入任何分隔符）。
+    guard session.thinkingItems[0].text.contains("_DEMO_OK`....") else {
+        return fail(name, "expected the merged text to reconstruct the mid-word split ('_D' + 'EMO_OK`....' -> '_DEMO_OK`....'), got '\(session.thinkingItems[0].text)'")
+    }
+    return pass(name, "6 个逐字取自现场抓包的 thinking delta 分片（共享 runId）经 SessionStore.handle() 合并成恰好 1 个 ThinkingItem，文本='\(session.thinkingItems[0].text)'，与分片按到达顺序拼接的结果逐字节一致")
 }
 
 /// **测试 6**：`visibility == .summary`（对应 redacted_thinking，见 EventMapping.swift ①）同样被

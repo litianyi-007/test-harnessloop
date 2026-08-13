@@ -52,10 +52,27 @@ public final class SessionStore {
     public var globalErrorMessage: String?
 
     /// AGENT_SHELL_KERNEL_URL 环境变量若不是合法 URL，在此透传给侧栏展示（见
-    /// KernelShellConfig.configWarning 的文档注释）。
-    public let configWarning: String?
+    /// KernelShellConfig.configWarning 的文档注释）。**Settings UI 新增**：从 `let` 改为
+    /// `private(set) var`——`reconnect(with:)` 需要在"保存并重连"时用新配置的警示信息替换旧的
+    /// （比如换了一个合法 endpoint 后，旧的"env URL 不合法"警示不该继续挂着）。外部（`AgentShell`
+    /// 视图层）依旧只读，写入权限仍然收在本文件内，封装边界没有放宽。
+    public private(set) var configWarning: String?
 
-    private let client: OpenclawGatewayKernelClient
+    /// **Settings UI 新增**：endpoint/token 的生效值展示态 + 来源标注，供 SettingsView/
+    /// SessionListView 直接读取渲染，不需要各自重新跑一遍 `KernelShellConfig.resolved()`
+    /// （避免两处判断漂移出两份不一致的"当前生效值是什么"）。`init`/`reconnect(with:)` 是这四个
+    /// 属性仅有的两处写入点，与 `configWarning` 同样的封装收紧原则。
+    public private(set) var effectiveEndpointDisplay: String
+    public private(set) var endpointSource: KernelConfigValueSource
+    public private(set) var tokenSource: KernelConfigValueSource
+    public private(set) var isTokenPlaceholder: Bool
+
+    /// **Settings UI 新增**：从 `let` 改为 `private(set) var`——`reconnect(with:)` 需要在"保存并
+    /// 重连"时换成一个指向新 endpoint/token 的全新 `OpenclawGatewayKernelClient` 实例。旧实例
+    /// background Task（`consumeEvents`）不引用 `self.client`，只持有各自 `stream` 参数（见
+    /// `consumeEvents` 签名），所以替换这个属性不会打断任何正在运行中的旧事件消费循环——那些
+    /// Task 会随旧连接自然结束（流出错/关闭），不需要显式取消。
+    private var client: OpenclawGatewayKernelClient
 
     /// rounds/0014 A 块：会话清单持久化读写入口，默认落 Application Support（见
     /// SessionPersistence.swift 文档注释）。构造器参数带默认值，本轮之前的既有调用点
@@ -74,10 +91,43 @@ public final class SessionStore {
         self.configWarning = config.configWarning
         self.client = OpenclawGatewayKernelClient(endpoint: config.endpoint, token: config.token)
         self.persistence = persistence
+        self.effectiveEndpointDisplay = config.endpoint.absoluteString
+        self.endpointSource = config.endpointSource
+        self.tokenSource = config.tokenSource
+        self.isTokenPlaceholder = config.isTokenPlaceholder
     }
 
     public func session(for id: String) -> ChatSessionViewModel? {
         sessions.first { $0.id == id }
+    }
+
+    /// Settings 面板"保存并重连"动作的落点——针对新的 `config`（调用方已经把用户刚保存的
+    /// endpoint/token 揉进 `KernelShellConfig.resolved()` 的结果）重建底层连接，让用户不需要
+    /// 重启整个 app 就能应用新设置。调用序列复用 `connectIfNeeded()`/
+    /// `restorePersistedSessionsIfNeeded()`——与应用冷启动时 `ContentView.task` 走的完全同一套
+    /// 逻辑，不另发明一套"重连专用"的连接/恢复实现。
+    ///
+    /// **为什么清空 `sessions`/`selectedSessionID`/`persistedKernelKeyBySessionID`**：这三者是
+    /// 绑定在*旧* `client`（旧 endpoint/token 所指向的那个内核连接）上的状态——旧内核可能压根不是
+    /// 同一个进程，继续用旧 `SessionHandle` 发消息/收流没有意义。持久化文件本身**不删**（这不是
+    /// 破坏性操作）：`restorePersistedSessionsIfNeeded()` 会在清空后的空列表上重新尝试按盘上记录
+    /// 找回会话——如果新目标其实是同一个内核（最常见场景：用户只是把打错的 token 改对），会话能
+    /// 找回来；如果新目标是真正不同的内核，每条记录按既有的失败路径独立标 `streamError`，不会让
+    /// 整个 app crash 或卡死（与本文件一贯的"失败可见、不致命"原则一致）。
+    public func reconnect(with config: KernelShellConfig) async {
+        client = OpenclawGatewayKernelClient(endpoint: config.endpoint, token: config.token)
+        connectionStatus = .notConnected
+        globalErrorMessage = nil
+        configWarning = config.configWarning
+        effectiveEndpointDisplay = config.endpoint.absoluteString
+        endpointSource = config.endpointSource
+        tokenSource = config.tokenSource
+        isTokenPlaceholder = config.isTokenPlaceholder
+        sessions = []
+        selectedSessionID = nil
+        persistedKernelKeyBySessionID = [:]
+        await connectIfNeeded()
+        await restorePersistedSessionsIfNeeded()
     }
 
     /// 应用启动时（ContentView 的 .task）调用一次；已连接或正在连接时直接返回，不重复握手。
@@ -555,14 +605,44 @@ public final class SessionStore {
         }
     }
 
-    /// evt.thinking -> 追加一条新的折叠态 thinking 行。不合并、不追加到已有行——理由见 `ThinkingItem`
-    /// 类型定义处的文档注释。
+    /// evt.thinking -> 按 runId 把同一轮推理的所有 delta 追加进同一个折叠块。
+    ///
+    /// **rounds/0019 修复，取代上一轮"逐条独立成行、刻意不合并"的实现**——现场抓包（真实 openclaw +
+    /// 真实 LLM，`.harnessloop/goals/20260718-002-agent-app/rounds/0019/evidence/shots/
+    /// 13-approval-card.png`/`14-tool-result.png`）坐实旧实现在真实场景下产出的是彻底不可读的噪音：
+    /// 一段推理被切成十几二十个折叠块，`TOOLROW_DEMO_OK` 这样一个单词被腰斩成 `_D`/
+    /// `` `EMO_OK`.... `` 分落两条独立事件。完整的判定依据（为什么是 runId、为什么是 `+=`、有什么
+    /// 已知未解决的残留问题）见 `ThinkingItem` 类型定义处的文档注释，这里不重复。
+    ///
+    /// **合并语义判定（不是猜的）**：EventMapping.swift ⑤ `mapOpenclawAgentThinkingToKernelEvent`
+    /// 第 616 行 `let delta = jsonString(data["delta"]) ?? jsonString(data["text"]) ?? ""`——
+    /// `data.delta` 优先于 `data.text`，同函数文档注释明说"`data.delta` 是相对上一次已发送内容的
+    /// 增量"。这与 assistant 文本相反：`appendAssistantDelta` 文档注释坐实"session.message 层不做
+    /// 增量投递……delta 携带的是完整全文"，所以那边用 `=` 覆盖。两者的 wire 语义本就不同，不能共用
+    /// 同一套合并逻辑——这里特意不抽取共享 helper，逐字对称但方向相反的两段代码各自独立存在，避免把
+    /// "键不同、语义也不同"的两件事强行拧成一个参数化函数掩盖这个差异。
+    ///
+    /// 实现形状照抄 `appendAssistantDelta`（assistant 文本按 messageID 分组 + `=` 覆盖）的查表/回退
+    /// 结构：命中同一 runId 的进行中折叠块就原地 `+=` 追加；runId 缺失、或缺失/未命中已有记录时，
+    /// 直接开一条新行，不复用任何既有分组键去瞎猜——"缺 identity 时宁可多开一行"这条原则与
+    /// `appendAssistantDelta` 完全一致，改变的只是"有 runId 这个 identity 时该不该用它"这个判断
+    /// （旧版答"不"，这里答"是"，理由见 `ThinkingItem` 文档注释）。
     private func handleThinking(_ event: ThinkingEventMessage, for session: ChatSessionViewModel) {
-        session.thinkingItems.append(ThinkingItem(
-            text: event.payload.delta,
-            visibility: event.payload.visibility,
-            timelineSeq: session.allocateLiveTimelineSeq()
-        ))
+        if let runID = event.runID,
+           let existingID = session.inProgressThinkingItemID[runID],
+           let idx = session.thinkingItems.firstIndex(where: { $0.id == existingID }) {
+            session.thinkingItems[idx].text += event.payload.delta
+        } else {
+            let item = ThinkingItem(
+                text: event.payload.delta,
+                visibility: event.payload.visibility,
+                timelineSeq: session.allocateLiveTimelineSeq()
+            )
+            session.thinkingItems.append(item)
+            if let runID = event.runID {
+                session.inProgressThinkingItemID[runID] = item.id
+            }
+        }
     }
 
     /// evt.operation_completed -> 一条系统行。见 `handle(_:for:)` 里这个 case 分支上方的文档注释

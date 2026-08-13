@@ -58,6 +58,28 @@ open app/.build/AgentShell.app --env AGENT_SHELL_KERNEL_URL=ws://127.0.0.1:18889
 不设置这两个变量时，壳会尝试连接 `ws://127.0.0.1:18889`——如果没有本项目的隔离 openclaw 实例在
 监听，连接会失败，侧栏顶部状态条会变红并显示失败原因（这是"失败可见"要求的预期行为，不是 bug）。
 
+## Settings 面板（⌘,）——无需环境变量的配置方式
+
+上表两个环境变量仍然是**最高优先级**（脚本化/repro 场景不受影响），但**日常双击打开 app 的用户**
+现在不再需要环境变量：⌘,（或 app 菜单"设置…"）打开标准 macOS Settings 面板，可以直接填写
+endpoint、粘贴 token，点"保存并重连"立即生效，不需要重启整个 app。
+
+**生效值精度：环境变量 > 已保存设置 > 内建默认值**——三层来源，面板上每个字段下方都标注当前生效值
+来自哪一层；来源是环境变量时会额外提示"在此保存的值当前不会生效"，避免用户改了设置却摸不清为什么
+没反应。
+
+**token 只进 Keychain，endpoint 进 UserDefaults**——token 是凭证，本仓是 PUBLIC 仓库，不落任何
+明文（`security find-generic-password -s dev.test-harnessloop.agent-shell.kernel-token`
+可查，`defaults read dev.test-harnessloop.agent-shell` 不会包含它）。Keychain 条目属性：
+`kSecClassGenericPassword` + `kSecAttrAccessibleWhenUnlocked`，不启用 iCloud 同步。
+
+**尚未配置任何设置时**（全新安装、没有环境变量、Keychain 里也没存过）：内建占位符 token
+（`agentshell-local-placeholder-token`）无法通过真实内核鉴权——侧栏会主动提示"尚未配置有效的内核
+token"并给出前往设置的链接，不需要先撞见一次连接失败才发现。
+
+实现细节、Keychain 选型理由、精度链解析逻辑见 `Sources/AgentShellCore/KernelShellSettingsStorage.swift`；
+入库回归测试见 `app/kernel-client/swift/frame-replay-tests/KernelShellSettingsTests.swift`。
+
 ## L1 UI 说明
 
 - 左侧栏顶部一条彩色状态条：灰=未连接、黄=连接中、绿=已连接、红=失败（附错误文本）。

@@ -58,6 +58,14 @@ public final class ChatSessionViewModel: Identifiable {
     /// 依据与回退策略见 SessionStore.appendAssistantDelta 的文档注释。
     var inProgressDeltaMessageID: [String: UUID] = [:]
 
+    /// evt.thinking 按 runId 分组用的映射：key -> 对应折叠块的 `ThinkingItem.id`。**rounds/0019
+    /// 新增**（修复"一条 delta 拆一行"的渲染缺陷，见 `ThinkingItem` 类型定义处的文档注释）——形状
+    /// 与 `inProgressDeltaMessageID` 完全对称，只是键换成了 runId、追加语义是 `+=` 而不是 `=`
+    /// （理由见 `SessionStore.handleThinking` 的文档注释）。同样维持 internal 可见性：只有
+    /// `SessionStore.swift`（同模块）与 `frame-replay-tests`（`@testable import`）需要读它，
+    /// `AgentShell` 视图层不触碰。
+    var inProgressThinkingItemID: [String: UUID] = [:]
+
     /// rounds/0017 Change 1：`messages`/`toolCalls`/`thinkingItems` 三个独立存储的数组按
     /// `timelineSeq` 合并排序后的统一呈现视图——`SessionDetailView` 只需要对着这一个数组做一次
     /// `ForEach`，不必自己操心三类事件的交叉时序。

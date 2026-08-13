@@ -1268,3 +1268,88 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 > 该信号由 `fail` 转为 **`warn`**：模型侧已可验证，effort 侧是不可消除的机制局限而非未做的功课。
 > 遗留：`state/control-contract.md` 的 `Model/effort mismatch` 仍是 `TODO (owner: user)`——
 > 与本次已填的 `Environment mismatch` 是同族字段，撞上时同样无规则可依，**待用户裁决**。
+
+## AUDIT-20260805-ROUND0011-OPEN
+
+- Audited at: 2026-08-05
+- Trigger: `$harnessloop-continue` 判定 allowed 后开 `goals/20260718-002-agent-app/rounds/0011`（SG-10 Mac UI 壳 L1）
+- Scope: 开轮动作本身 + 两处遗留「待定」定案 + 机械门复跑
+
+### Deterministic Signals
+
+- `check_setup.py`: complete=True / gate_blocking=False / field_todo=10 / selfcheck_todo=0
+- `verify_protocol.py`: exit 0 / violations 0
+- `loop_autocontinue_anomaly`: **0** —— 无需致谢行（本轮不触发 §4.2 致谢义务）
+- `loop_anomaly_skipped_unparsable`: 开轮前 **2** → 开轮后 **1**（见下方「主动核查」，此下降**非改善**）
+- RAE registry: present=1 / evals_with_system=1 / evals_system_undeclared=0
+- Delegation model/effort verified: **warn**（模型侧已由实跑探针证实=`claude-sonnet-5`；effort 侧原理上不可由被调方观测，期望值 `xhigh` 只能由调用方单方面保证并每次显式传参）
+
+### 主动核查：一个「变好的数字」其实是被遮住的
+
+`loop_anomaly_skipped_unparsable` 在我写完 `rounds/0011/scope-lock.md` 后从 2 降到 1。**没有把它当作进展记下**，而是去读了 `verify_protocol.py` 的实现：该指标按 goal 迭代、只看最新一轮，`_latest_round_decision_text` 在最新轮缺 `decision.md` 时返回 None → 整个 goal 被 `continue` 跳过、两个桶都不计。rounds/0011 目前只有 scope-lock、尚无 decision.md，所以 goal 002 是**退出了计数**，不是**变得可判定**了。0011 收口后该值大概率回到 2。
+
+已登记为 **TH-0031**（P3，open，不阻断本轮）。与 TH-0011 / TH-0026 同族：门是绿的、数字是好看的，而好看的原因不是它看起来的那个原因。
+
+### 两处「待定」的定案纪律
+
+`goal-breakdown.md` SG-10 行与 `data-sources.md` RAE-0001 Pass 栏，当初都刻意写死「首轮 scope-lock 时定」并附了理由（「避免把未定的验收标准写成已定」）。本轮即那个「首轮」。**这两项是验收判据，属 `human-decision-required`，没有自行填写**——经 AskUserQuestion 取得用户裁决（2026-08-05）后才写入，三处落点（scope-lock / data-sources / goal-breakdown）措辞一致。
+
+`evals.json` **未动**：其 schema 顶层只允许 `evals` 键，无 `pass_condition` 字段，Pass 条件的设计落点本就是 `data-sources.md`。没有为了「让判据看起来更正式」而往 registry 里塞非法字段。
+
+### 委派边界
+
+写码将派 claude-sonnet-5 子代理（须每次显式传 `effort: "xhigh"`）。但 **scope-lock / goal-breakdown / 验收判定本身未委派**——`$harnessloop-delegation` 安全规则明文禁止委派 scope-lock 变更、goal breakdown 批准与 human-required 决策。此处与本机 memory 里记的「写入全交 Sonnet」默认习惯冲突，**以协议规则为准**。
+
+### 账实不符（查出，未粉饰）
+
+`.hopper/queue.md` 7 行（T-061~T-066、T-079）状态仍写 `pending`，但七者均有完整产出、且都未进 `evidence-index.md`；对照 T-005~T-057/T-060 确已进索引，排除「索引不记 T-ID」的假信号。判定为**账本滞后**（全属 harnessloop 插件侧评审，不在 goal 002 轮次链内），不构成 open handoff 阻塞，已如实写入 `state/current.md` 的 Open handoffs 栏而非略去。
+
+### 判断
+
+- Create upstream evolution issue: **yes**
+- Issue path: `.harnessloop/meta/evolution-issues/0031-open-round-silently-suppresses-anomaly-metric.md`
+- Redaction notes: 无涉密内容（仅文件路径、字段名、任务号、模型 id）
+- 遗留（与前条相同，仍待用户）：`control-contract.md` 的 `Model/effort mismatch`、`Missing evidence`、`Contract cannot be evaluated` 仍为 `TODO (owner: user)`；`cost-context-policy.md` 的 `Acceptance testing` 同。
+
+## AUDIT-20260805-ROUND0011-CLOSE
+
+- Audited at: 2026-08-05
+- Trigger: rounds/0011 收盘（SG-10 L1）
+- Scope: 对抗审 REWORK 的处置、主会话自身错误的归位
+
+### Deterministic Signals
+
+- `verify_protocol.py`: exit 0 / violations 0（两次红过：`review-path-not-found` 与 `acceptance-eval-declaration-unparsable`，均因我在严格解析字段后加了括号注解，**守卫是对的**，已改为裸值 + 另起注解行）
+- `check_setup.py`: complete=True / gate_blocking=False
+- ★审查闸: codex T-080，**REWORK**，digest `a785b315…`
+- RAE-0001: outcome=**fail**
+- 本轮 `Accepted: no` / `Feedback: negative` —— goal 002 **首次**出现 not-accepted 轮
+
+### 我在本轮犯的错误（逐条，不合并、不淡化）
+
+1. **把一条空断言当证据。** 我拿 `seq 单调递增` 支撑「无丢帧、无乱序」。`nextSeq()`（`OpenclawGatewayKernelClient.swift:825-833`）是 kernel-client **自己的本地计数器**，结构上不可能失败。这是本项目挂在嘴边的「绿灯≠真守门」，而我是引用它的人。**是 codex 先指出来，不是我自己发现的。**
+
+2. **把既成缺陷记成待验假设。** `(runID,index)` 分组——`EventMapping.swift:197` 的 `index` 是单条 message 内 block 下标、每条新消息从 0 重启。`l1-injected-failure-midchain.png` 里两条完整错误被无缝拼接，**那是缺陷的现场照片**，我却写成「假设的粗糙边缘」。看着证据把它定性成了推测。
+
+3. **无新证据自我改判。** `live-roundtrip-attempt.md` §4 我写「UI 层尚未跑，整体只能记为部分」，§12 却写「达成」。中间没加任何 UI 层断言。**这是自我放水**，且发生在同一份文件里、相隔几十行。
+
+4. **按自己写的字面标准不合格。** scope-lock 是我写的，条件②写「**全程**未触碰」——首次 send 解析并读取了 `~/.openclaw/workspace`（错误文本证明它检查了目录内容，不止拼了路径串）。我的辩护是「没有写入」，但条件写的是触碰。同理条件①要求「**录屏**可见」，我只交了静态截图（`video=0`）。**自己定的标准自己没照着验。**
+
+5. **修「清单会过时」的毛病时，又犯了一次同形错误。** recipe §1 补了 `OPENCLAW_WORKSPACE_DIR` 并写了长警告，**文末「回主会话摘要」那条供复制的一行命令却没改**（`:250-251`），至今仍能复现已知越界。整场我都在引用「清单会过时，发现式守卫不会」。
+
+6. **证据不自足。** CLI 断言输出、openclaw 日志、D3-proxy 日志全留在 gitignored scratchpad，evidence 目录 `raw_log=0`。换个会话就复核不了——**而「可复核」正是 evidence 目录存在的唯一理由。**
+
+### 做对的部分（不因 REWORK 一并否认，也不用来抵消上面）
+
+- 阻断（Pi Postgres 写入）被正确识别为 `write-safety-required` 并上报用户，**没有绕过去**。
+- 隔离证明的原方法（整树指纹）被自己实测证伪后**如实换法并登记**，没有用「大概是用户自己写的」糊过去。
+- 子代理**自承没跑**的两项（`verify-type-fidelity-swift`、CI 平价 runner）由主会话补跑坐实。
+- codex 的指控**逐条自验后才采纳**，没有照单全收——`seq`、`index`、recipe 文末三条我都自己打开源码确认过。
+- 开轮时记的 TH-0031，其中一句预测（「收口后回到 2」）**没兑现**，已补后记说明原因，而不是让它留在那里像已被证实。
+
+### 判断
+
+- Create upstream evolution issue: no —— 本轮问题全在**项目自身的执行与取证**，不是 harnessloop 框架缺陷。TH-0031（开轮时记的）与本轮失败无关。
+- Redaction notes: 无涉密内容。评审全文 `T-080-output-full.txt`（494KB）已过 `check-secrets.sh`。
+- **不适用「处方级收残不 gate」先例**（T-030 / T-060）：那两次 MUST-FIX 是引用精度、行号漂移一类机械问题；本轮是两处真实代码缺陷 + 一处空断言 + 一次自我放水，性质不同。
+- 遗留（多轮未决，仍待用户）：`control-contract.md` 的 `Model/effort mismatch`、`Missing evidence`、`Contract cannot be evaluated`；`cost-context-policy.md` 的 `Acceptance testing`。**本轮 aggregate 那次真实模型调用正好落在最后这项的空白里**，是它第一次真的咬人。
