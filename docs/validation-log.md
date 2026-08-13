@@ -17,6 +17,44 @@
 
 ---
 
+## 2026-08-13 kata 2.16.3 闭环：两个缺陷一起修，第二个是复核这件事本身挖出来的
+
+- **场景**：修上一条记的 `wiki-lint` 假发现。**修完复核时，跑测试套件的动作本身炸出了第二个缺陷**
+- **缺陷一（假发现）现象与根因**：见下一条。**修法比我交代的更好**——我说「别搞三份排除表」，实施方查出 **`wiki_lib.py:55` 早就有规范定义 `is_structural_page()`，而且 `graph_query.py:150-155` 一直在用它做完全相同的豁免**。所以 `lint_naive.py` 的 orphans 检查是**同一逻辑的第二份实现，只是从没跟上那次修复**。它没造第四份表，而是把三处都接到那个既有定义上。另外**刻意没有**把豁免下沉到 `discover_pages()`：`size`/`stale` 检查看见 `SCHEMA.md` 是**真信号**（膨胀或陈旧的 schema 文件该报），下沉会把这两个检查一起弄瞎
+- **缺陷二（自我下毒）现象**：`tests/run_smoke.py` 的 `_windows_safe_rmtree` 在 POSIX 上**亲手制造它随后被噎死的那个状态**，且永久：
+  ```python
+  os.chmod(p, _stat.S_IWRITE)   # S_IWRITE == 0o200，整体覆盖 mode
+  func(p)                        # POSIX 上 func 可能是 os.open，需要第二个 flags 参数
+  except OSError: pass           # 抓不到 TypeError
+  ```
+  ① `chmod` 把目录 mode 覆盖成 `0o200`，剥掉 `r` 与 `x`——**反而更删不掉**（Windows 那套「清只读属性」的写法 translate 不到 POSIX 权限位）；② `shutil.rmtree` 在 POSIX 走 `_rmtree_safe_fd`，传进 `onerror` 的 `func` 包括 `os.scandir`/`os.lstat`/**`os.open`**/`os.rmdir`/`os.unlink`，其中 `os.open` 需要 `flags`，于是抛 `TypeError`；③ `except OSError` 抓不到它，**炸穿整个测试运行**，还把原始的 `PermissionError` 盖掉。实测影响：**269 ok / exit 0 → 此后每次都在 70/269 处 exit 1**，报一句跟权限毫无关系的 `TypeError`
+- **预期**：清理助手不应把可恢复的权限错误升级成致命错误，更不应制造它自己处理不了的状态；测试套件必须可重复运行
+- **实施方自己抓住的一次假修**：它的第一版只是给 `os.open` 补上缺失的 `flags` 参数——`TypeError` 消失了，**但目录压根没被删掉**（`onerror` 是 fire-and-forget，shutil 不会重试原调用）。它靠自己写的「是否真的删掉了」这条断言抓住了，而不是靠「没抛异常」。**「异常没了」不等于「事情做成了」**
+- **插件改动**：kata **2.16.3**（`plugin/scripts/lint_naive.py` 接既有 `is_structural_page`；`tests/run_smoke.py` 的 `_onerror` 改为 `os.stat(p).st_mode | stat.S_IRWXU`**只加不减**权限位、并按 `p` 现在到底是什么自己收尾而不是重放 shutil 给的 `func`；Test 14 断言由 `>= 1` 收紧成精确集合相等 + 显式断言无脚手架文件；新增 Test 66 `T-rmtree-selfpoison-1`，且它自己的清理放在 `try/finally` 里——**一个测「不可重跑」的测试不能自己把树弄成不可重跑**）
+- **复验结果**：✅ **全部由主会话独立复跑**。`lint --check all`：**7 → 0**，26 个内容页仍零漏报。自造毒化态调修复后的 helper：**无异常抛出且 `parent` 真被删除**（第二条断言正是假修会挂的地方）。测试套件**连跑三次，每次 270 ok / exit 0**，中间不清理，全仓 `0200` 目录残留 **0**。版本 4 处 + CHANGELOG 停在 2.16.3，未被二次 bump
+- **遗留**：①**未查清是哪一次运行首先触发底层那个瞬时错误**——handler 的缺陷机制可独立证明、与触发时机无关，但触发条件本身没查清，如实标注为「未确定」而非「与修复无关」；②实施方主动点出一处它没解决的窄边界：Windows 上「指向目录的 symlink」有时需要 `os.rmdir` 而非 `os.unlink`，修前也没处理对，**不是回归**，但它选择说出来而不是默认没事；③本机 `~/.git-ai/bin/git` 会遮蔽真 git，任何重定向 `HOME` 的测试都会因此误报——**不是 kata 的问题**，但顺带发现 `wiki_sync.py` 的 `preflight()` 把 `git remote get-url` 的任何非零退出都当成「没配 remote」，**分不清「git 自己跑不起来」**，与本项目「空结果不等于不存在」同族
+
+## 2026-08-13 kata：`wiki-lint` 对每个 kata wiki 恒报 7 条假发现，而它自己的测试**不可能失败**
+
+- **场景**：按 CLAUDE.md「每 3 轮跑一次工程侧知识沉淀（kata 的主场）」的钩子，用 `/kata:wiki-ingest` 沉淀 rounds/0017–0020 与 hopper 0.55.1–0.57.0，收尾时跑 `wiki-lint` 体检
+- **现象**：`lint_naive.py --check all` 在 26 页内容的 wiki 上报 **7 条 MEDIUM，全部落在 wiki 自己的脚手架三件套**（`SCHEMA.md` / `index.md` / `log.md`）上，**26 个内容页零发现**。退出码 1
+  ```
+  index       | SCHEMA.md                    | page not referenced in index.md
+  orphans     | SCHEMA.md / log.md / index.md | true orphan: no inbound or outbound wikilinks
+  frontmatter | SCHEMA.md / log.md / index.md | missing required field(s): ['title','type',...]
+  ```
+- **根因（读源码坐实，非推测）**：`kata/plugin/scripts/lint_naive.py` 的 `discover_pages()` 把这三个文件**当成内容页扫进来**。三个检查里**只有 `_check_index`（`:219`）做了排除，而且排得不全**——它排 `index.md` 与 `log.md`，**漏了 `SCHEMA.md`**；`orphans` 与 `frontmatter` 两个检查**一点排除都没有**。而这三个文件是 `wiki-init` 给**每个** kata wiki 无条件生成的（skill 步骤 ⑥⑦⑧），所以**这是每个 kata wiki、每次运行都会发生的恒定假发现**
+- **更值得记的一层：它自己的测试为什么抓不到**。`kata/tests/run_smoke.py` Test 14 的 fixture **本身就复现了这个 bug**（`_lint/SCHEMA.md`、`_lint/index.md` 都在，实跑得到 `frontmatter=3`，其中 **2 条是假的**、只有 1 条真）。但断言写的是：
+  ```python
+  assert by_check.get("frontmatter", 0) >= 1
+  assert by_check.get("links", 0) >= 1
+  ```
+  **`>= 1` 分不清「抓到了那条真的」和「抓到两条假的外加一条真的」，甚至分不清「只抓到假的」。** 如果 frontmatter 检查退化成只报脚手架、真的那条漏掉，`2 >= 1` 依然绿。另外 `orphans` **根本没进这个测试的 `--check` 列表**，`index=2` 算出来了却从不断言
+- **预期**：体检工具的发现应当指向内容问题；脚手架文件不是内容页。测试断言应当能因「该抓的没抓到」而变红
+- **插件改动**：见下一条闭环记录
+- **复验结果**：见下一条
+- **遗留**：**这是本项目那条老规律的又一例，而且是最锋利的一例**——不是「没有守卫」，是**守卫在跑、断言在绿、而它结构性地无法因为要防的那件事失败**。与 rounds/0019 的「测试把错误的 thinking 行为钉死」、hopper 的「三个绿灯全亮而任务没送到」同族。`>= 1` 这种下界断言是这个失效形状的典型载体
+
 ## 2026-08-13 rounds/0019 收盘：实拍抓到了单元测试不但没抓、还把它钉死的缺陷
 
 - **场景**：goal 002 第 2 件（token 可填）+ 第 1 件（真实 LLM 往返的内容态实拍）。评审派 codex（T-112，单路，按 scope-lock）
