@@ -42,6 +42,21 @@ public final class ChatSessionViewModel: Identifiable {
     /// 等细分属于 L2 才需要的精细化）。
     public var isWaitingForReply = false
 
+    /// rounds/0020：`SessionStore.interruptCurrentRun(in:)` 已发起、尚未拿到 `client.interrupt(...)`
+    /// 的结果（无论成功/超时/失败）期间为 true。存在的唯一理由是**互斥矩阵的 UI 侧镜像**——
+    /// `OpenclawGatewayKernelClient` 在这整段时间里把这个 session 的锁置为 `.interruptInProgress`，
+    /// 此刻任何 send()/stop()/第二个 interrupt() 都会被内核层拒绝 `session_locked`（scope-lock
+    /// rounds/0020 §五个必须先定死的取舍）。`SessionDetailView` 据此在这段窗口内把 composer 的动作
+    /// 按钮钉死成禁用态（见该文件 `composerActionButton` 的文档注释），让"正常 UI 交互"结构性地
+    /// 不可能产出这个错误——不是靠用户自觉不乱点，是靠按钮本身在这段时间不可点。
+    ///
+    /// **与 `isWaitingForReply` 是两个独立的位，不是互斥的两态**——中止请求在途期间，被中止的那个
+    /// run 有可能恰好在这一刻自然结束（`evt.turn_complete` 抢在 `client.interrupt()` 自己的 await
+    /// 返回之前先被处理），此时会出现 `isInterrupting==true && isWaitingForReply==false` 这个组合；
+    /// UI 判断这段窗口是否要保持"不可交互"时必须看 `isInterrupting`（或两者的或），不能只看
+    /// `isWaitingForReply`——完整推理见 `SessionDetailView.composerActionButton` 文档注释。
+    public var isInterrupting = false
+
     /// subscribe() 返回的事件流本身（而非某一条 evt.error 消息）中断时记录在这里——和消息流里插入
     /// 的"[错误]"系统行是两回事：这是"整条事件流管道断了"，那是"agent 在这次 run 里报了个错但
     /// 事件流还活着"。两者都要在 UI 上可见（scope-lock RAE-0001 条件④"失败可诊断"）。

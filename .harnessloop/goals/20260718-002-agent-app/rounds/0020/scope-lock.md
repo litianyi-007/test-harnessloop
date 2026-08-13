@@ -90,6 +90,7 @@ D1 §6.2 M3 的定序理由对 interrupt 一字不差地成立：审批还在 pe
 | --- | --- | --- |
 | `app/kernel-client/swift/OpenclawGatewayKernelClient.swift` | 改 | 实现 `interrupt()`；新增 `interruptInProgress` 锁态与互斥判定；**不改 `stop()` 既有行为** |
 | `app/kernel-client/swift/KernelClient.swift` | 改 | 只更新过时注释（`interrupt` 不再是 TODO 桩） |
+| `app/kernel-client/swift/EventMapping.swift` | 改 | **v2 扩围，见下方「Scope-Lock 修订」**——只加一个 `operationKind` 形参并透传 |
 | `app/apps/AgentShell/Sources/AgentShellCore/` | 改/写 | 运行态跟踪 + `interruptCurrentRun` 入口 |
 | `app/apps/AgentShell/Sources/AgentShell/SessionDetailView.swift` | 改 | 发送/停止按钮切换 |
 | `app/kernel-client/swift/frame-replay-tests/` | 写 | 回归测试 |
@@ -134,3 +135,37 @@ D1 §6.2 M3 的定序理由对 interrupt 一字不差地成立：审批还在 pe
 改动完成后派只读评审，重点问：①会话是否真的存活（而不只是没调 delete）
 ②互斥矩阵的失败路径是否都释放锁 ③强制 deny 定序是否与 `stop()` 等价
 ④有没有新的静默失败路径。
+
+---
+
+## Scope-Lock 修订 v1 → v2（2026-08-13，实施中）
+
+**扩围一个文件：`app/kernel-client/swift/EventMapping.swift`。**
+
+走的是 `control-contract.md` 既定的「Scope-lock mutation: main session 自主（版本递增留痕）」
+授权路径，**不是事后追认**——实施方在报告里主动点名了这处越界并给了理由，
+主会话复核后判定成立，在此留痕。
+
+**为什么必须动它**：v1 的第 2 条取舍要求复用 `stop()` 的等待机制而不是复制一份。
+但复用的那条路径上，`handleAgentEvent` 产出中止终态事件是靠
+`mapOpenclawAgentLifecycleToAbortTerminalEvents`（在 `EventMapping.swift` 里），
+而它**把 `operationKind: .stop` 写死了**——照原样复用，interrupt 触发的每一条终态事件
+都会被标成 `stop`，**标签说谎**（rounds/0019 刚判过一次「标签说谎比不显示更糟」）。
+
+两条路：①在 `OpenclawGatewayKernelClient.swift` 里复制约 30 行「怎么解读 openclaw 的
+aborted lifecycle 帧」；②给那个函数加一个 `operationKind` 形参。**选 ②**——
+①会造出两份同一语义的解读逻辑、日后必然漂移，而「两份会漂移的清单」正是本项目
+反复在修的那类缺陷。
+
+**改动幅度**：`EventMapping.swift` 的实际代码 diff 只有 3 行——加一个形参、把写死的
+`.stop` 换成该形参。`stop()` 侧全部调用点显式传 `.stop`，**值不变**。
+
+**复核结论**：`stop()` 的可观察行为逐处核对为**未变**——落在 `stop()` 函数体内的代码
+改动全部是「原先隐式的 `.stop` 变成显式的 `.stop`」，无一处语义变化；
+帧回放 **115/115**（102 基线一条不红）。
+
+**一处特别核对**：`:2819` 把 `operationKind` 写死成 `.stop` 而没有像 `:2793` 那样读
+`pendingForRun.operationKind`——**这不是漏改**。该分支的进入条件是
+`pendingStops[ourSessionID] == nil`，**按构造就不存在可读的发起者信息**；
+代码注释也如实写了「不是『猜它是 stop』，只是在没有信息时保持这条从未被真正观察到过的
+路径的历史输出不变」。判定成立。

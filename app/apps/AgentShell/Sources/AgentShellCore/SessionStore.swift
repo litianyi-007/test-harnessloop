@@ -21,10 +21,15 @@
 // 的 for-try-await 循环（没有天然终点）还留在背景 Task 里，见 createNewSession()/consumeEvents()
 // 的文档注释。
 //
-// L1 明确不调用的三个 TODO 桩方法（interrupt/respondApproval/capabilities）——见
-// app/kernel-client/swift/KernelClient.swift 头注释，本壳同样不碰。也不调用 stop()：L1 UI 最低
-// 要求里没有"关闭会话"这个动作（stop 按钮明确归 L2），本壳的会话从创建到进程退出都保持开着，这是
-// 有意的 scope 决定，不是遗漏——见交付报告"没做完的地方"一节。
+// **本节如实订正（rounds/0020）**：上一版这里写"L1 明确不调用的三个 TODO 桩方法（interrupt/
+// respondApproval/capabilities）"——那句话早在 rounds/0015 respondApproval 落地时就已经部分过时
+// （`respondToApproval` 一直在调用它），本轮 interrupt 落地（`interruptCurrentRun`）后彻底不再
+// 成立，一并订正：本壳现在调用 interrupt（本节）与 respondApproval（rounds/0015，见
+// `respondToApproval`）；capabilities 仍是唯一未调用的 TODO 桩，见
+// app/kernel-client/swift/KernelClient.swift 头注释。也不调用 stop()：L1 UI 最低要求里没有"关闭
+// 会话"这个动作（stop 按钮明确归 L2），本壳的会话从创建到进程退出都保持开着——这是有意的 scope
+// 决定，不是遗漏（见交付报告"没做完的地方"一节）；interrupt 不受这条约束，因为"中止生成但保留会话"
+// 与"关闭会话"是两个不同的动作，见 `interruptCurrentRun` 文档注释。
 
 import Foundation
 import Observation
@@ -72,7 +77,21 @@ public final class SessionStore {
     /// background Task（`consumeEvents`）不引用 `self.client`，只持有各自 `stream` 参数（见
     /// `consumeEvents` 签名），所以替换这个属性不会打断任何正在运行中的旧事件消费循环——那些
     /// Task 会随旧连接自然结束（流出错/关闭），不需要显式取消。
-    private var client: OpenclawGatewayKernelClient
+    ///
+    /// **可见性变更（rounds/0020，为测试新增）**：从 `private var` 放宽到 `private(set) var`——
+    /// getter 变成 internal（不是 public），setter 仍然只对本文件开放。理由与 `handle(_:for:)` 的
+    /// 先例（rounds/0013 B2 该方法上方文档注释）完全相同：只为了让 `frame-replay-tests` 能用
+    /// `@testable import AgentShellCore` 读到这个属性，再用 `@testable import KernelClient`
+    /// （同一个文件可以同时做两个 `@testable import`，`frame-replay-tests` target 对两个模块都开了
+    /// `-enable-testing`，见 app/Package.swift）直接调用 `OpenclawGatewayKernelClient` 已有的
+    /// `testSupportRegisterSession`/`testSupportStubRPC` 等方法——让 `interruptCurrentRun(in:)` 的
+    /// 测试能够驱动一次真实的 `client.interrupt(...)` 调用（含真实的 kernelKey 查找、真实的锁
+    /// 获取/释放、真实的事件产出），而不是脱离 `SessionStore` 单独测 `OpenclawGatewayKernelClient`
+    /// （那部分已经在 InterruptTests.swift 里覆盖）。`AgentShell` 视图层的可见性不变——它是普通
+    /// `import AgentShellCore`（不是 `@testable import`），`internal` 符号跨 module 对它依然不可见，
+    /// 原文"外部（AgentShell 视图层）不触碰"这条约束没有被破坏；`private(set)` 也保证测试只能读它、
+    /// 不能重新赋值替换实例（写入仍然收在本文件内）。
+    private(set) var client: OpenclawGatewayKernelClient
 
     /// rounds/0014 A 块：会话清单持久化读写入口，默认落 Application Support（见
     /// SessionPersistence.swift 文档注释）。构造器参数带默认值，本轮之前的既有调用点
@@ -350,6 +369,54 @@ public final class SessionStore {
             session.isWaitingForReply = false
             session.messages.append(ChatMessage(
                 role: .system, text: "[发送失败] \(describeError(error))", timelineSeq: session.allocateLiveTimelineSeq()
+            ))
+        }
+    }
+
+    /// 对应 scope-lock rounds/0020「让用户能中止正在生成的回复，而会话继续留着」——D1 §2.4
+    /// interrupt 的 UI 入口，本轮只发起 `mode:"cancel"`（`steer`/`abort_and_resend` 两种 mode 本壳
+    /// 没有任何触发它们的 UI，也就不需要在这一层重复适配器已经做过的 `unsupported_interrupt_mode`
+    /// 拒绝——那个拒绝本身仍然存在于 `client.interrupt()` 内部，只是这一层永远不会传出会触发它的
+    /// mode）。
+    ///
+    /// **不手动置位 `isWaitingForReply`**——与 `sendMessage` 对称但方向相反：`sendMessage` 是"发起
+    /// 一个新的等待"，它自己就是那个状态的权威来源（成功置 true，dispatch 失败时撤回置 false）；
+    /// `interruptCurrentRun` 是"尝试结束一个已经存在的等待"，它不是那个状态的权威来源——真正让
+    /// 等待结束的信号（evt.turn_complete，或本轮为"没有 turn_complete 的路径"新增的
+    /// evt.operation_completed(operationKind:.interrupt) 兜底，见 `handleOperationCompleted`）都
+    /// 来自事件流。这个方法只负责发起请求 + 把请求本身的失败如实转成一条系统消息，不在这里替事件流
+    /// "预判"结果，成功时也不在这里重复 append 第二条系统行——`handleOperationCompleted` 已经把
+    /// evt.operation_completed 渲成一条系统消息了。
+    ///
+    /// 失败（`catch`）时同样不碰 `isWaitingForReply`：中止失败不代表这个 run 已经不在跑了，贸然
+    /// 清掉会让 UI 撒谎说"已经不在等了"。这与 `sendMessage` 失败时清掉 `isWaitingForReply` 并不矛盾
+    /// ——那里清是因为它自己刚刚才把这个位置置 true（撤销自己的动作）；这里从未置过它，没有对称的
+    /// "撤销"可做。
+    ///
+    /// **`isInterrupting`（scope-lock 要求 3：中止请求本身的在途窗口）**：见
+    /// `ChatSessionViewModel.isInterrupting` 的文档注释。这里是唯一手动管理它的地方，`defer` 保证
+    /// 无论成功/失败/提前 return 都会释放，不会有任何一条出路漏掉复位。
+    public func interruptCurrentRun(in sessionID: String) async {
+        guard let session = session(for: sessionID) else { return }
+        // 防御性 guard——正常 UI 流程下 SessionDetailView 已经在按钮层面把这段窗口钉成不可点（见该
+        // 文件 composerActionButton 的文档注释），这里不依赖调用方守规矩，把"同一个 session 不会有
+        // 两个并发 interruptCurrentRun"这条不变量在模型层也钉一遍。命中时静默返回而不是报错——第二
+        // 次调用本就不该经由正常 UI 发生；即使真发生了，底层 `client.interrupt()` 也只会以
+        // `session_locked` 拒绝，这里提前拦下等价于自己模拟了同一个结果，不需要真的再打一次注定被
+        // 拒的 RPC，也不需要为一条"调用方没守规矩"的路径再造一条系统消息。
+        guard !session.isInterrupting else { return }
+
+        session.isInterrupting = true
+        defer { session.isInterrupting = false }
+
+        do {
+            _ = try await client.interrupt(
+                session: session.handle,
+                options: InterruptRequestMessagePayload(input: nil, mode: .cancel, runID: nil)
+            )
+        } catch {
+            session.messages.append(ChatMessage(
+                role: .system, text: "[停止失败] \(describeError(error))", timelineSeq: session.allocateLiveTimelineSeq()
             ))
         }
     }
@@ -646,13 +713,38 @@ public final class SessionStore {
     }
 
     /// evt.operation_completed -> 一条系统行。见 `handle(_:for:)` 里这个 case 分支上方的文档注释
-    /// （为什么渲染、为什么当前实际不会命中但仍然保留）。
+    /// （为什么渲染——**rounds/0020 起不再是"当前实际不会命中但仍然保留"**，`interruptCurrentRun`
+    /// 是这个变体现在唯一真实存在的触发路径）。
     private func handleOperationCompleted(_ event: OperationCompletedEventMessage, for session: ChatSessionViewModel) {
         var text = "[操作] \(event.payload.operationKind.rawValue) 已完成：outcome=\(event.payload.outcome.rawValue)"
         if let detail = event.payload.detail, !detail.isEmpty {
             text += "，\(detail)"
         }
         session.messages.append(ChatMessage(role: .system, text: text, timelineSeq: session.allocateLiveTimelineSeq()))
+
+        // rounds/0020（任务书第 4 条，实测核实见 `interruptCurrentRun` 文档注释）：`interrupt
+        // (mode:"cancel")` 至少两条路径**从不**产出 evt.turn_complete，只产出这一条 operation_completed
+        // 镜像——
+        //   ① abortedRunId==nil（run 早已自然结束）：`OpenclawGatewayKernelClient.interrupt()` 对应
+        //      分支只调用 `emitOperationCompletedMirror`，没有第二次调用发 turn_complete（该方法
+        //      文档注释"abortedRunId == nil 时"一节）。
+        //   ② 等待 aborted-run 终态超时：`waitForPendingStopTerminal` 的 `.timedOut` 分支同样只调用
+        //      `emitOperationCompletedMirror`；迟到的 aborted lifecycle 帧即使之后才到达，也会因为
+        //      `pendingStops[...].terminalEmitted` 已被提前标记为 true 而落进 `handleAgentEvent`
+        //      的防御性兜底分支，那条分支产出的 turn_complete 会被硬编码标注成 `operationKind:.stop`
+        //      （该分支注释原文："这不是漏改……按构造就不存在可读的发起者信息"）——不是这个 session
+        //      真正在等的那个 interrupt 操作的终态，这里不能指望它来兜底。
+        // 若只靠 `.turnComplete` 分支清 `isWaitingForReply`（本文件在本次改动之前的唯一清除点），
+        // 这两条路径会让 composer 永久卡在"等待回复…"——即使用户点了停止、操作也确实成功/诚实超时
+        // 了。这里按 operationKind 兜底清一次：仅当这条镜像由 interrupt 触发时才清（对已经被
+        // turnComplete 提前清过的情况是幂等 no-op，无副作用；不按 outcome 具体取值分支——succeeded/
+        // timedOut/其它——因为上面两条路径都不产出 turn_complete，UI 没有第二个信号来源可以依赖）。
+        // 不对 operationKind:.stop 做同样处理——`stop()` 的全部路径最终都会发 session_end（那条
+        // handler 已经清过这个位，见下面 `.sessionEnd` 分支），这里重复处理不会有额外收益，保持改动
+        // 面最小，只精确对应实测坐实的这一个缺口。
+        if event.payload.operationKind == .interrupt {
+            session.isWaitingForReply = false
+        }
     }
 
     /// rounds/0015 C：把用户在审批卡片上点的决策回传给内核（D1 §2.6 `respondApproval`）。
@@ -771,5 +863,20 @@ public final class SessionStore {
             return approvalError.description
         }
         return "\(error)"
+    }
+
+    // MARK: - Test-only 支持面（frame-replay 单测用；生产路径不调用）
+    //
+    // 命名/风格照抄 OpenclawGatewayKernelClient.swift 的"MARK: - Test-only 支持面"分区——同一类
+    // 东西，同一条纪律：只服务 `@testable import AgentShellCore` 的测试，`AgentShell` 视图层永不
+    // 调用（普通 `import` 看不到 internal 符号，天然做不到）。
+
+    /// 把一个已经构造好的 `ChatSessionViewModel` 直接注册进 `sessions`，不走真实
+    /// `createSession()`/`connect()`（测试环境没有真实内核可连接，见 `client` 属性上方可见性变更
+    /// 的文档注释同一批理由）。`sessions` 是 `public private(set)`，setter 只对本文件内代码开放——
+    /// 这个方法本身就在本文件内，因此可以直接 `append`；方法自己标 internal（不是 public），同
+    /// `handle(_:for:)` 的先例，只为测试服务。
+    func testSupportRegisterSession(_ session: ChatSessionViewModel) {
+        sessions.append(session)
     }
 }

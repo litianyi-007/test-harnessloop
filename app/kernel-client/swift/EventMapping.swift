@@ -459,6 +459,15 @@ func mapOpenclawAgentLifecycleToTurnComplete(
 /// outcome 判别（同上一轮，未改判）：真实样本里 phase=="end" 时 status=="cancelled"（sessions.abort
 /// 的 RPC 结果本身也确认了 outcome:"aborted"）记 succeeded（"这次 abort 操作成功执行了"）；
 /// phase=="error" 那条后续帧语义不够确定，保守记 abortedEffectUnknown。
+///
+/// **rounds/0020**：新增 `operationKind` 参数（此前硬编码 `.stop`）——`interrupt()`（D1 §2.4，
+/// `mode:"cancel"`）与 `stop()` 共享同一个 `OpenclawGatewayKernelClient.pendingStops` 等待/去重机制
+/// （见该文件 `PendingStop.operationKind` 的文档注释），这个函数是那套机制观察到真实 aborted
+/// lifecycle 帧之后、实际构造 `operation_completed`/`turn_complete` 事件的地方——若继续硬编码
+/// `.stop`，interrupt() 触发的这次终态会被事件流的观察者误读成一次 stop 操作。调用方
+/// （`OpenclawGatewayKernelClient.handleAgentEvent`）现在按 `pendingForRun.operationKind` 传入真正
+/// 的发起者；唯一的例外是"unowned"防御性兜底分支（没有匹配上任何 pendingStop，理论上不会出现），
+/// 该分支不掌握任何发起者信息，延续修前行为传 `.stop`，见该分支自己的注释。
 func mapOpenclawAgentLifecycleToAbortTerminalEvents(
     _ data: JSONObject,
     ourSessionID: String,
@@ -467,6 +476,7 @@ func mapOpenclawAgentLifecycleToAbortTerminalEvents(
     originTS: Date,
     cachedUsage: (input: Int, output: Int)?,
     forceResolvedApprovals: [String]?,
+    operationKind: OperationKind,
     nextSeq: () -> Int
 ) -> [EventMessageUnion] {
     let phase = jsonString(data["phase"])
@@ -474,7 +484,7 @@ func mapOpenclawAgentLifecycleToAbortTerminalEvents(
     let detail = jsonString(data["error"])
     let opPayload = OperationCompletedEventMessagePayload(
         affectedRunID: runID, detail: detail, newRunID: nil,
-        operationID: operationID, operationKind: .stop, outcome: outcome
+        operationID: operationID, operationKind: operationKind, outcome: outcome
     )
     let operationCompletedEvent = EventMessageUnion.operationCompleted(OperationCompletedEventMessage(
         direction: .event, payload: opPayload, runID: runID,

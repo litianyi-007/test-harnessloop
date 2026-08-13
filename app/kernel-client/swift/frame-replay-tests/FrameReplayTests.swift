@@ -2523,6 +2523,17 @@ public func runFrameReplayTests() async -> Bool {
     results.append(testKernelEndpointDefaultsStoreRoundTripsAndClears())
     results.append(await testSessionStoreReconnectUpdatesDisplayStateAndResetsSessions())
 
+    // rounds/0020（D1 §2.4）：InterruptTests.swift —— interrupt(mode:"cancel") 的完整实现：会话存活
+    // 红线、从不 delete 红线、强制 deny 定序、权威 abortedRunId 判定、无 active run/超时/transport
+    // 关闭三条终态镜像、互斥矩阵（新增 interruptInProgress 锁态）、订阅屏障、mode 门禁。
+    results.append(contentsOf: await runInterruptTests())
+
+    // rounds/0020（app 层）：SessionStoreInterruptTests.swift —— 「停止生成」按钮的 SessionStore
+    // 落点：interruptCurrentRun(in:) 的 guard 语义/失败转发/端到端成功路径，以及
+    // handleOperationCompleted 对 operationKind:.interrupt 的兜底清 isWaitingForReply（任务书第 4
+    // 条：abortedRunId==nil/超时两条路径从不产出 turn_complete，只靠 .turnComplete 清会永久卡住）。
+    results.append(contentsOf: await runSessionStoreInterruptTests())
+
     let passCount = results.filter { $0 }.count
     let total = results.count
     print("=== 结果: \(passCount)/\(total) PASS ===")

@@ -49,7 +49,17 @@ struct SessionDetailView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
-            if session.isWaitingForReply {
+            // rounds/0020：`isInterrupting` 优先于 `isWaitingForReply` 判断——理由同
+            // `composerActionButton` 文档注释「为什么外层判断条件」一节：中止在途窗口内
+            // `isWaitingForReply` 有可能已经提前变回 false（被中止的 run 恰好在这一刻自然结束），
+            // 若这里仍只按它判断，这行指示会在 composer 的按钮还显示"停止中…"的同时先一步消失，
+            // 两处状态互相矛盾——用户会看到"composer 说还在停，标题栏却什么都不说了"。
+            if session.isInterrupting {
+                HStack(spacing: 4) {
+                    ProgressView().controlSize(.small)
+                    Text("正在停止…").font(.caption).foregroundStyle(.secondary)
+                }
+            } else if session.isWaitingForReply {
                 HStack(spacing: 4) {
                     ProgressView().controlSize(.small)
                     Text("等待回复…").font(.caption).foregroundStyle(.secondary)
@@ -157,18 +167,72 @@ struct SessionDetailView: View {
                 .lineLimit(1...5)
                 .focused($inputFocused)
                 .onSubmit(send)
+            composerActionButton
+        }
+        .padding(10)
+    }
+
+    /// rounds/0020 取舍 #5（scope-lock「有 active run 时替换发送按钮，而不是并排多一个」）：这个
+    /// HStack 槽位始终只有一个 `Button`，按会话状态切换它的内容/可用性——不是"发送旁边再摆一个
+    /// 停止"，用户不需要判断此刻该点哪一个。
+    ///
+    /// **为什么外层判断条件是 `isWaitingForReply || session.isInterrupting`，不是只判
+    /// `isWaitingForReply`**——中止请求本身也有一段在途窗口（`session.isInterrupting`，见该属性
+    /// 文档注释）：从 `interruptCurrentRun` 发起到 `client.interrupt(...)` 真正返回之间，
+    /// `OpenclawGatewayKernelClient` 把这个 session 的锁钉在 `.interruptInProgress`，这段时间里
+    /// 任何 send()/第二个 interrupt() 都会被内核拒绝 `session_locked`。而 `isWaitingForReply` 有
+    /// 可能在这段窗口**内部**提前变回 false——例如被中止的 run 恰好在这一刻自然结束，
+    /// `evt.turn_complete` 抢在 `client.interrupt()` 自己的 await 返回之前就被 `handle()` 处理掉
+    /// （两者是并发的：一个在 `SessionStore.consumeEvents` 的背景 Task 里，一个在
+    /// `interruptCurrentRun` 自己的 Task 里，完整推理见 `SessionStore.interruptCurrentRun` 文档
+    /// 注释）。若只按 `isWaitingForReply` 二态切换，按钮会在中止调用还没返回之前就提前跳回"发送"态
+    /// 且可点——用户这时点下去会撞上仍然持有的 `session_locked`，这正是任务书要求"不可能通过正常
+    /// UI 交互产出 session_locked"要堵的那个洞。用 `||` 而不是只信 `isWaitingForReply`，把这段窗口
+    /// 也钉死成不可交互，这个洞在 UI 层被结构性地堵死，不依赖"用户手速不够快点不到"这种运气。
+    ///
+    /// 三种可见状态：
+    ///  - 空闲（两个条件都不成立）——"发送"，可点性只取决于输入框是否为空。
+    ///  - 等待回复、中止未发起——"停止"（`stop.fill`），可点，点击调用 `interruptCurrentRun`。
+    ///  - 中止在途（`isInterrupting`，不论此刻 `isWaitingForReply` 读到什么）——同一个按钮换成
+    ///    进度指示、`.disabled(true)`：不接受任何点击。双保险——`SessionStore.interruptCurrentRun`
+    ///    自己也有一道等价的 guard（见其文档注释），这里是 UI 层不依赖那道 guard 的独立防线，两层
+    ///    任何一层单独失效都不会真的产出 `session_locked`。
+    @ViewBuilder
+    private var composerActionButton: some View {
+        if session.isWaitingForReply || session.isInterrupting {
+            Button(action: interruptCurrentRun) {
+                if session.isInterrupting {
+                    HStack(spacing: 4) {
+                        ProgressView().controlSize(.small)
+                        Text("停止中…")
+                    }
+                } else {
+                    Label("停止", systemImage: "stop.fill")
+                }
+            }
+            .disabled(session.isInterrupting)
+            .prominentActionButtonStyle()
+        } else {
             Button("发送", action: send)
                 .disabled(draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .prominentActionButtonStyle()
         }
-        .padding(10)
     }
 
     private func send() {
         let text = draftText
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // rounds/0020：中止在途窗口内不派发新的 send()——理由见 `composerActionButton` 文档注释
+        // 「为什么外层判断条件」一节。这道 guard 挡的是 TextField 的 `.onSubmit(send)` 这条独立
+        // 触发路径（此刻按钮本身已经不再调用 `send`，见上方三态分支），双保险不依赖用户只从按钮
+        // 触发提交。
+        guard !session.isInterrupting else { return }
         draftText = ""
         Task { await store.sendMessage(text, in: session.id) }
+    }
+
+    private func interruptCurrentRun() {
+        Task { await store.interruptCurrentRun(in: session.id) }
     }
 }
 

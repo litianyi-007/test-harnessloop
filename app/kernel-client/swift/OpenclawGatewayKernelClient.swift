@@ -24,12 +24,23 @@
 //        error（见 EventMapping.swift）。
 //   F7 — prettyPrint 统一递归脱敏 auth/token 等凭证字段，不再明文打印。
 //   F8 — shutdown/transportClosed/stop 三条 sessionEnd 路径共享一个"已产出 terminal"标记，去重。
-// interrupt/capabilities 仍是 TODO 桩，理由见 KernelClient.swift 头注释——本轮未触碰这两个方法体，
-// 只在需要它们才能修的地方记 blocker（见交付报告）。
+// capabilities 仍是 TODO 桩，理由见 KernelClient.swift 头注释；interrupt() 见下方 rounds/0020 段——
+// 只在需要它才能修的地方记 blocker（见交付报告）。
 //
 // rounds/0015 A/B：`respondApproval()`（D1 §2.6）**不再是桩**——适配到 openclaw `approval.resolve`
 // RPC，含决策映射（D2 下划线四值 <-> openclaw 连字符三值，EventMapping.swift ⑦）、发出前的
 // `allowedDecisions` 成员校验、以及返回后的终态兑现核对。方法签名一字未动。
+//
+// rounds/0020：`interrupt()`（D1 §2.4）**不再是桩**——本轮只实现 `mode:"cancel"`：适配到 openclaw
+// `sessions.abort`，与 stop() 共享 `forceDenyPendingApprovalsBeforeStop`/`waitForPendingStopTerminal`/
+// `emitOperationCompletedMirror` 三个部件（`PendingStop`/`emitOperationCompletedMirror`/
+// `mapOpenclawAgentLifecycleToAbortTerminalEvents` 因此各新增一个 `operationKind` 字段/参数，使等待
+// 与镜像机制对 stop()/interrupt() 通用而不必各写一份；`stop()` 的全部既有调用点显式传 `.stop`，其
+// 可观察行为逐字节未变）——但**从不**发 `sessions.delete`/`session_end`、不 finish 事件流，这是
+// interrupt 与 stop 的唯一本质区别（保留会话，用户能在同一 session 上继续 `send()`）。`mode:"steer"`/
+// `"abort_and_resend"` 仍显式拒绝 `unsupported_interrupt_mode`，不静默当 cancel 处理。新增
+// `SessionLockState.interruptInProgress` 锁态。方法签名一字未动，完整推理见 interrupt() 自己的文档
+// 注释。
 
 import Foundation
 // `canImport` 门卫理由见 KernelClient.swift 同名注释——这个文件也被 ci.yml 的 flat swiftc
@@ -56,21 +67,26 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     private var kernelKeyBySessionID: [String: String] = [:]
     private var eventContinuations: [String: AsyncThrowingStream<EventMessageUnion, Error>.Continuation] = [:]
 
-    // MARK: F1 — send/stop 的 session 级互斥锁（D1 v3.1 §9.3，v3.6 继承）
+    // MARK: F1 — send/stop/interrupt 的 session 级互斥锁（D1 v3.1 §9.3，v3.6 继承）
     //
-    // interrupt() 本轮仍是 TODO 桩，因此完整互斥矩阵里涉及 interrupt_in_progress 的分支（stop 优先
-    // 仲裁等）本轮不适用——这里只需要覆盖 send()/stop() 两两互斥：任一方法执行时若锁不是 idle，
-    // 一律 reject(session_locked)，不做特殊仲裁。
+    // rounds/0020：interrupt() 不再是桩，`interrupt_in_progress` 从此是真实可达的锁态——**这条注释
+    // 此前说这个分支"本轮不适用"，那个前提随本轮改动失效**（原文见 git blame，此处不再复述）。三个
+    // 方法两两互斥：任一方法执行时若锁不是 idle，一律 reject(session_locked)，**不做优先级仲裁**
+    // （例如"stop 请求到达时抢占正在进行的 interrupt"）——D1 v3.1 §9.3 本身没有定义任何仲裁语义，
+    // 这把锁存在的唯一目的是"同一时刻只有一个方法在真正操作这个 session 的 run 生命周期"，后到者
+    // 除了排队等锁释放之外唯一的选择就是被拒绝，不做抢占，与 send()/stop() 已有的既成实现一致。
     private enum SessionLockState: Equatable, CustomStringConvertible {
         case idle
         case sendPending
         case stopInProgress
+        case interruptInProgress
 
         var description: String {
             switch self {
             case .idle: return "idle"
             case .sendPending: return "send_pending"
             case .stopInProgress: return "stop_in_progress"
+            case .interruptInProgress: return "interrupt_in_progress"
             }
         }
     }
@@ -106,12 +122,31 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         // `TurnCompleteEvent.forceResolvedApprovals`。空数组（没有 pending approval 需要强制处理）是
         // 绝大多数 stop() 调用的常态，不是遗漏。
         var forceResolvedApprovalReqIDs: [String] = []
+        // rounds/0020：这张表（`pendingStops`）现在被 stop()/interrupt() 共享——`waitForPendingStopTerminal`
+        // 与 `handleAgentEvent` 的 lifecycle(aborted) 分支都只按 sessionID/`affectedRunID` 匹配，不
+        // 区分"这次等待是谁发起的"（两者需要的等待/去重/强制 deny 定序语义逐字相同，见 interrupt()
+        // 文档注释"与 stop() 的关系"一节）。这个字段记下真正的发起者，供
+        // `emitOperationCompletedMirror`/`mapOpenclawAgentLifecycleToAbortTerminalEvents` 正确标注
+        // `OperationCompletedEventMessagePayload.operationKind`——D2 v3 §3.4/§3.5 明确区分
+        // interrupt/stop 两种 operationKind，只订阅事件流的观察者不该被一律告知"stop"，即使这次
+        // 等待其实是 interrupt() 发起的。`stop()` 的唯一构造点（见其方法体）恒传 `.stop`，因此这个
+        // 字段的引入不改变 stop() 任何一次调用的取值，不影响其既有行为。
+        let operationKind: OperationKind
     }
     private var pendingStops: [String: PendingStop] = [:]
 
     /// M3：测试专用的 stop() 等待超时覆盖（秒）——生产默认 5 秒（D1 v3 §9.3），测试用一个短得多的
     /// 值验证"超时"这条路径，不用真的等 5 秒。`nil` 时 stop() 使用生产默认值。
     private var testSupportStopTimeoutSecondsOverride: Int?
+
+    /// rounds/0020：interrupt() 专用的等待超时覆盖——与上面的 `testSupportStopTimeoutSecondsOverride`
+    /// **刻意分开**（不是合用一个变量）：两者控制的是同一个 `waitForPendingStopTerminal` 辅助函数，
+    /// 但调用方各自把自己的超时值作为参数传入，函数本身并不读任何一个覆盖变量——分开是为了不让
+    /// "覆盖 stop() 的测试超时"这个动作意外影响一个恰好并发存在的 interrupt() 调用（反之亦然），
+    /// 测试的可读性上也更直接：一条 interrupt() 测试里出现 `testSupportSetInterruptTimeoutSeconds`
+    /// 而不是名字带着"Stop"字样的 setter，不需要读者停下来确认"这个名字虽然叫 Stop 但其实对
+    /// interrupt() 也生效"。生产默认同为 5 秒（D1 v3 §9.3 的等待预算对 interrupt/stop 没有区分）。
+    private var testSupportInterruptTimeoutSecondsOverride: Int?
 
     /// NOTE-A（T-049 grok 对抗审复核揪出的中等竞态，本轮修复）：`forceDenyPendingApprovalsBeforeStop`
     /// 现在是一个 drain 循环（见该函数文档注释）——每轮结束后重新检查该 session 是否有新到的 pending
@@ -837,8 +872,182 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         return stream
     }
 
+    /// D1 §2.4 interrupt —— rounds/0020 起完整实现 `mode:"cancel"`（`steer`/`abort_and_resend` 显式
+    /// 拒绝 `unsupported_interrupt_mode`，不静默当 cancel 处理，见下方"支持的 mode"一节）。
+    ///
+    /// **语义（scope-lock rounds/0020 §Round Objective/红线）**：中止当前 active run，**保留会话**。
+    /// 这与 `stop()` 唯一的本质区别——`stop()` 是 `sessions.abort` **+** `sessions.delete`，还会发
+    /// `SessionEndEvent(reason:'stopped')` 并 finish 掉事件流（`emitStopSessionEndAndFinish`）：会话
+    /// 被销毁了。`interrupt(mode:"cancel")` 只做第一步：中止 run，`sessions.delete`/`session_end`/
+    /// finish continuation 三者**一个都不做**——调用方在这次 interrupt 成功之后必须还能对同一个
+    /// `session` 再次 `send()`。这条边界是本轮红线，破了就退化成了 `stop()`，本轮等于什么都没做。
+    ///
+    /// **与 `stop()` 的关系（scope-lock §五个必须先定死的取舍 ①）：各走各的路，不复用 `stop()` 的
+    /// 函数体**——`stop()` 的方法体与 `sessions.delete`/`session_end`/事件流 finish 强耦合，硬塞一个
+    /// `skipDelete` 布尔进去只会让一个已经很复杂、被几十条测试钉住的函数再长一个分支。这里新写
+    /// `interrupt()`，只复用 `stop()` 下面的**部件**：
+    ///   - `forceDenyPendingApprovalsBeforeStop`——D1 §6.2 M3 的强制 deny 定序对 interrupt 一字不差
+    ///     地成立：审批还在 pending 时直接 abort，会留下"run 已中止、审批却还挂着"的不一致。
+    ///   - `waitForPendingStopTerminal` / `PendingStop`（`pendingStops` 表）——等待 aborted-run 终态
+    ///     确认的有界等待机制。**这里选择了"复用同一份共享状态"而不是"引入独立机制"**：`PendingStop`
+    ///     新增了一个 `operationKind` 字段（见该 struct 文档注释），`handleAgentEvent` 的
+    ///     aborted-lifecycle 分支因此对 stop()/interrupt() 触发的等待一视同仁——包括"transport 在
+    ///     等待窗口内关闭"这条 `resolvePendingStopForTransportClose` 路径也是**免费**继承来的（不需要
+    ///     为 interrupt() 单独重新实现一遍"transport 关闭时怎么办"，避免了独立机制之间未来行为漂移
+    ///     的风险）。代价是 `emitOperationCompletedMirror`/`mapOpenclawAgentLifecycleToAbortTerminalEvents`
+    ///     都要多接收一个 `operationKind` 参数——两处改动都已确认对 `stop()` 的既有调用点是逐字节不变
+    ///     的（它们现在显式传 `.stop`，取值与修前硬编码的 `.stop` 完全相同）。
+    ///
+    /// **强制 deny 审批（scope-lock §取舍 ②）**：照做，一步不省——见上面对
+    /// `forceDenyPendingApprovalsBeforeStop` 的引用，`approval.resolve` 必须严格先于 `sessions.abort`
+    /// 被 dispatch（与 `stop()` 完全相同的定序保证，D1 §6.2 M3）。
+    ///
+    /// **`abortedRunId == nil` 时（scope-lock §取舍 ④）**：沿用 `stop()` 已经实证过的判定（见
+    /// `stop()` 文档注释"M3"一节引用的现场证据，`scratchpad/openclaw-iso3` 隔离环境实测）——
+    /// `sessions.abort` 诚实回报 `abortedRunId:null` 说明这个 run 早已自然结束，用户点了"中止"而它
+    /// 已经停了，**目的达成即 succeeded**，不是错误；但仍要补一条 `operation_completed` 镜像，否则
+    /// 只订阅事件流、不等 Promise 的观察者看不到这次操作的终态。**是否需要等待终态，由
+    /// `sessions.abort` 自己的返回值（`abortResult["abortedRunId"]`）判断，绝不是本地缓存的
+    /// `lastRunIDBySessionID`**——现场证据见 `stop()` 同一段文档注释，这里逐字沿用同一条判定，不重新
+    /// 论证一遍。
+    ///
+    /// **支持的 mode（scope-lock §Scope for this round）**：本轮只实现 `mode:"cancel"`。`"steer"` 与
+    /// `"abort_and_resend"` 必须显式拒绝 `unsupported_interrupt_mode`（D2 interrupt.schema.json 失败
+    /// 通道点名的取值）——不静默当 cancel 处理，那正是本项目一直在修的"看起来支持、其实做了别的事"。
+    /// 这个检查刻意放在**拿锁之前**：它是纯粹的输入校验，与"这个 session 此刻是否忙"无关，客户端传了
+    /// 一个本轮压根不支持的 mode，不该逼它等到 session 恰好空闲才收到这个"你传的 mode 不支持"的答复。
+    ///
+    /// **订阅屏障（scope-lock §取舍 ⑨，`stop()` 文档注释原来"interrupt 因为是桩所以不需要"的理由
+    /// 已随本轮失效，需要重新推导，不能直接继承结论）**：**需要**，且理由与 `stop()` 完全相同（不是
+    /// "因为 stop() 需要所以照抄"，是同一条底层机制成立的必然结果）——`send()`/`stop()` 文档注释已经
+    /// 论证过：`sessions.messages.subscribe` 与 `sessions.send`/`sessions.abort` 的 handler 在
+    /// openclaw 服务端 `void runWithDiagnosticTraceContext(...)`（fire-and-forget）下并发处理，谁先
+    /// 抵达 dispatch 无序化保证；若我们自己的 `sessions.abort` 先于 `sessions.messages.subscribe`
+    /// 抵达服务端，这次 abort 立即触发的 aborted lifecycle 帧就可能在订阅登记生效之前被服务端发出，
+    /// 永远收不到。`interrupt(mode:"cancel")` 同样会发 `sessions.abort`、同样要等它触发的 aborted
+    /// lifecycle 帧（见上面"与 stop() 的关系"一节），因此面对的是与 `stop()` 完全相同的风险，必须
+    /// 共享同一道屏障。
+    ///
+    /// **互斥（本轮要求 8）**：新增 `SessionLockState.interruptInProgress`——`send()`/`stop()`/
+    /// `interrupt()` 三者两两互斥，任一方法执行时若锁不是 idle 一律 reject(session_locked)，不做
+    /// 优先级仲裁（见 `SessionLockState` 上方注释）。**每条失败/成功出路都必须释放锁 + 清理
+    /// pendingStop 条目**——`stop()` 文档注释"M3 ③"一节记录过一个真实 bug：一次抛错的 RPC 让锁永久
+    /// 卡在 in-progress，第二次调用被误判成"另一个操作正在进行"而拒绝。这里用**单个 `defer`**
+    /// （而不是像 `stop()` 那样在成功尾声与 catch 块分别手写一遍）覆盖全部出路——`stop()` 的成功
+    /// 尾声能把这一步交给 `emitStopSessionEndAndFinish` -> `clearSessionDerivedCaches` 顺带做掉，
+    /// `interrupt()` **不能**调用那条链路（那会把整个 session 拆掉，直接违反本轮红线），所以两条
+    /// 路径的收尾在这里必须自己承担；`defer` 保证不会像"两处手写"那样漏掉其中一条。
     public func interrupt(session: SessionHandle, options: InterruptRequestMessagePayload) async throws -> InterruptResultPayload {
-        throw KernelClientError.notImplemented("interrupt() 本轮 TODO 桩——L1 闭环没有 active run 需要 interrupt")
+        await awaitSubscriptionRpcDispatchIfPending(sessionID: session.sessionID)
+        guard let kernelKey = kernelKeyBySessionID[session.sessionID] else {
+            throw KernelClientError.protocolMismatch("unknown session \(session.sessionID)")
+        }
+
+        guard options.mode == .cancel else {
+            throw KernelClientError.rpcRejected(
+                code: "unsupported_interrupt_mode",
+                message: "interrupt() rejected: mode '\(options.mode.rawValue)' is not implemented this round " +
+                    "(scope-lock rounds/0020 — only mode:\"cancel\" is supported this round); steer/" +
+                    "abort_and_resend must not be silently treated as cancel"
+            )
+        }
+
+        let currentLock = lockStateBySessionID[session.sessionID] ?? .idle
+        guard currentLock == .idle else {
+            throw KernelClientError.rpcRejected(
+                code: "session_locked",
+                message: "interrupt() rejected: session \(session.sessionID) lock state is \(currentLock), expected idle (D1 v3.1 §9.3)"
+            )
+        }
+        lockStateBySessionID[session.sessionID] = .interruptInProgress
+
+        let operationID = "op-interrupt-\(UUID().uuidString)"
+        let affectedRunIDBeforeAbort = lastRunIDBySessionID[session.sessionID]
+        pendingStops[session.sessionID] = PendingStop(
+            operationID: operationID, affectedRunID: affectedRunIDBeforeAbort, operationKind: .interrupt
+        )
+        // 覆盖每一条出路（正常 return、任意一种 throw）——见函数文档注释"互斥"一节：为什么这里用
+        // 单个 defer，而不是像 stop() 那样在成功尾声与 catch 块分别手写一遍锁/pendingStop 清理。
+        defer {
+            pendingStops.removeValue(forKey: session.sessionID)
+            lockStateBySessionID[session.sessionID] = .idle
+        }
+
+        do {
+            let forceResolvedApprovalReqIDs = try await forceDenyPendingApprovalsBeforeStop(sessionID: session.sessionID)
+            pendingStops[session.sessionID]?.forceResolvedApprovalReqIDs = forceResolvedApprovalReqIDs
+
+            let abortResult = try await request(method: "sessions.abort", params: ["key": kernelKey])
+            prettyPrint("RECV sessions.abort result (interrupt cancel)", abortResult)
+
+            // 与 stop() 逐字相同的判定：是否需要等待终态，由这次 sessions.abort 自己的权威返回值
+            // 判断，不是本地缓存的 lastRunIDBySessionID——见函数文档注释"abortedRunId == nil 时"
+            // 一节引用的现场证据。
+            let actuallyAbortedRunID = abortResult["abortedRunId"] as? String
+            var timedOut = false
+            if let actuallyAbortedRunID = actuallyAbortedRunID {
+                pendingStops[session.sessionID]?.affectedRunID = actuallyAbortedRunID
+                let timeoutSeconds = testSupportInterruptTimeoutSecondsOverride ?? 5
+                let waitOutcome = await waitForPendingStopTerminal(sessionID: session.sessionID, timeoutSeconds: timeoutSeconds)
+                switch waitOutcome {
+                case .transportClosed:
+                    // 与 stop() 同款诚实处理（见其文档注释"NOTE-1"一节）：`resolvePendingStopForTransportClose`
+                    // 已经代发 operation_completed(aborted_effect_unknown) 镜像、标记 terminalEmitted，
+                    // 并清理了这个 session 的全部派生状态（含本函数的锁与 pendingStop）。这里绝不能
+                    // 假装 succeeded/timed_out 继续往下走——如实抛错，交给下面的 catch 统一收尾（此时
+                    // pendingStop/lock 已经是空的，catch 与本函数顶部的 defer 都会是安全的 no-op）。
+                    throw KernelClientError.transport("interrupt() aborted: transport closed while waiting for aborted-run terminal confirmation")
+                case .timedOut:
+                    emitOperationCompletedMirror(
+                        sessionID: session.sessionID, operationID: operationID,
+                        affectedRunID: actuallyAbortedRunID, outcome: .timedOut, operationKind: .interrupt
+                    )
+                    // 与 stop() 的"NOTE-2"同款防御性标记：即使本函数当前实现在这之后不再发起任何会
+                    // 让出 actor 隔离的 await（没有 sessions.delete 这一步，函数体到这里已经只剩同步
+                    // 代码），提前标记 terminalEmitted 仍然让"迟到的 aborted lifecycle 帧被
+                    // handleAgentEvent 误判成尚未发过 terminal"这类问题，不会被未来在这之后新增的
+                    // await 悄悄重新引入。
+                    pendingStops[session.sessionID]?.terminalEmitted = true
+                    timedOut = true
+                case .terminalObserved:
+                    timedOut = false
+                }
+            } else {
+                // sessions.abort 诚实回报 abortedRunId:null——这次 run 早已自然结束，没有可等待的
+                // 终态，但 Promise 即将报 succeeded，必须同时给事件流补一条 operation_completed 镜像。
+                emitOperationCompletedMirror(
+                    sessionID: session.sessionID, operationID: operationID,
+                    affectedRunID: nil, outcome: .succeeded, operationKind: .interrupt
+                )
+            }
+
+            // 红线：到这里为止，本函数从未 dispatch 过 sessions.delete，也从未调用
+            // emitStopSessionEndAndFinish/finishEventContinuation——会话继续存活，事件流的
+            // continuation 仍然打开，调用方可以在这次 interrupt() 返回之后对同一个 session 再次
+            // send()。这正是 interrupt(mode:"cancel") 与 stop() 的唯一本质区别。
+            let outcome: PayloadOutcome = timedOut ? .timedOut : .succeeded
+            return InterruptResultPayload(
+                affectedRunID: actuallyAbortedRunID, detail: nil, interruptedActiveRun: nil, newRunID: nil,
+                operationID: operationID, outcome: outcome,
+                status: makeJSONAny(abortResult["status"] ?? NSNull())
+            )
+        } catch {
+            // 与 stop() 同款收尾（见其文档注释"M3 ③"一节）：sessions.abort 或
+            // forceDenyPendingApprovalsBeforeStop 抛错——补一条 operation_completed(rejected) 镜像
+            // （除非某条路径已经先发过别的终态镜像，例如上面 transportClosed 分支——那种情况下
+            // pendingStops[session.sessionID] 早已被清空，`?? true` 会让这里正确判定"已经发过了"，
+            // 不再重复），再把原始错误重新抛给调用方。锁与 pendingStop 的释放交给函数顶部的
+            // defer，不在这里重复处理。
+            let alreadyTerminalEmitted = pendingStops[session.sessionID]?.terminalEmitted ?? true
+            let affectedRunID = pendingStops[session.sessionID]?.affectedRunID ?? affectedRunIDBeforeAbort
+            if !alreadyTerminalEmitted {
+                emitOperationCompletedMirror(
+                    sessionID: session.sessionID, operationID: operationID,
+                    affectedRunID: affectedRunID, outcome: .rejected, operationKind: .interrupt
+                )
+            }
+            throw error
+        }
     }
 
     /// D1 §2.5 stop()。**M3 rework（收 T-045 codex 确认性再审 MUST-FIX，在 F6 基础上第二次收残）**：
@@ -872,7 +1081,9 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// 只记为什么 `stop()` 也要等：`stop()` 会在有 active run 时产出 `turn_complete(cancelled)` 等
     /// 事件（见下方 `waitForPendingStopTerminal`），这些事件同样要经过已建立的订阅才能被调用方观察
     /// 到，与 `send()` 面对的是同一类"订阅是否已经登记"的风险，理应共享同一道屏障。`interrupt()`
-    /// 仍是 TODO 桩、函数体第一行就 `throw .notImplemented`，从不触达任何 RPC，没有屏障可加。
+    /// （rounds/0020 起完整实现 `mode:"cancel"`）出于**同一条理由**同样需要这道屏障——它同样会在
+    /// 发起 `sessions.abort` 后经由 `waitForPendingStopTerminal` 产出 `operation_completed`/
+    /// `turn_complete(cancelled)`，完整推理见 interrupt() 自己的文档注释，不在这里重复。
     /// `respondApproval()`（rounds/0015 已实现）同样不需要这道屏障，但理由不同、不是"因为它是桩"：
     /// 它只有在**已经收到过** `approval_request` 事件之后才可能被调用，而那条事件只能经由已经建立
     /// 的订阅到达——"订阅已就绪"是它被调用的前提条件，不是需要它自己去等的东西。
@@ -893,7 +1104,9 @@ public actor OpenclawGatewayKernelClient: KernelClient {
 
         let operationID = "op-stop-\(UUID().uuidString)"
         let affectedRunIDBeforeAbort = lastRunIDBySessionID[session.sessionID]
-        pendingStops[session.sessionID] = PendingStop(operationID: operationID, affectedRunID: affectedRunIDBeforeAbort)
+        pendingStops[session.sessionID] = PendingStop(
+            operationID: operationID, affectedRunID: affectedRunIDBeforeAbort, operationKind: .stop
+        )
 
         do {
             // D1 §6.2 M3（强制定序，rework）：取消当前 run 之前，若该 session 名下存在 pending
@@ -945,7 +1158,7 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                     // 知道超时了，只订阅事件流的观察者永远看不到这个 run 的终态。
                     emitOperationCompletedMirror(
                         sessionID: session.sessionID, operationID: operationID,
-                        affectedRunID: actuallyAbortedRunID, outcome: .timedOut
+                        affectedRunID: actuallyAbortedRunID, outcome: .timedOut, operationKind: .stop
                     )
                     // NOTE-2：超时路径也要标记 terminalEmitted——否则迟到的 aborted lifecycle 帧仍
                     // 可能在 clearSessionDerivedCaches 清缓存前，被 handleAgentEvent 的
@@ -963,7 +1176,7 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                 pendingStops.removeValue(forKey: session.sessionID)
                 emitOperationCompletedMirror(
                     sessionID: session.sessionID, operationID: operationID,
-                    affectedRunID: nil, outcome: .succeeded
+                    affectedRunID: nil, outcome: .succeeded, operationKind: .stop
                 )
             }
 
@@ -1002,7 +1215,7 @@ public actor OpenclawGatewayKernelClient: KernelClient {
             if !alreadyTerminalEmitted {
                 emitOperationCompletedMirror(
                     sessionID: session.sessionID, operationID: operationID,
-                    affectedRunID: affectedRunID, outcome: .rejected
+                    affectedRunID: affectedRunID, outcome: .rejected, operationKind: .stop
                 )
             }
             pendingStops.removeValue(forKey: session.sessionID)
@@ -1683,17 +1896,24 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         }
     }
 
-    /// M3：为 stop() 不会经过 `handleAgentEvent` 真实 aborted lifecycle 帧的路径（无 active run、
-    /// 等待超时、RPC 抛错）补一条 `operation_completed` 镜像——D1 §9.3 要求 Promise 结果与
-    /// `subscribe()` 流里的 `operation_completed` 必须是同一个 `{operationId,outcome}`，不能让只
-    /// 订阅事件流的观察者完全看不到这次 stop 操作的终态。
+    /// M3：为 stop()/interrupt() 不会经过 `handleAgentEvent` 真实 aborted lifecycle 帧的路径（无
+    /// active run、等待超时、RPC 抛错）补一条 `operation_completed` 镜像——D1 §9.3 要求 Promise 结果
+    /// 与 `subscribe()` 流里的 `operation_completed` 必须是同一个 `{operationId,outcome}`，不能让只
+    /// 订阅事件流的观察者完全看不到这次操作的终态。
+    ///
+    /// rounds/0020：`operationKind` 改为调用方显式传入（此前硬编码 `.stop`）——本函数现在同时服务
+    /// stop() 与 interrupt() 两个调用方，若继续硬编码会让 interrupt() 触发的镜像被错误标注成
+    /// `operationKind:"stop"`，即"看起来是 stop 其实是 interrupt"的这类静默错标，正是本项目一直在
+    /// 防的那一类问题。`stop()` 的全部既有调用点都显式传 `.stop`，取值与修前逐字节相同，不影响其
+    /// 既有行为。
     private func emitOperationCompletedMirror(
-        sessionID: String, operationID: String, affectedRunID: String?, outcome: PayloadOutcome
+        sessionID: String, operationID: String, affectedRunID: String?, outcome: PayloadOutcome,
+        operationKind: OperationKind
     ) {
         guard let continuation = eventContinuations[sessionID] else { return }
         let opPayload = OperationCompletedEventMessagePayload(
             affectedRunID: affectedRunID, detail: nil, newRunID: nil,
-            operationID: operationID, operationKind: .stop, outcome: outcome
+            operationID: operationID, operationKind: operationKind, outcome: outcome
         )
         continuation.yield(.operationCompleted(OperationCompletedEventMessage(
             direction: .event, payload: opPayload, runID: affectedRunID,
@@ -1764,6 +1984,11 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// 超时任务 `resolvePendingStopWaiter` 发现条目已经不在，`guard` 提前 return，continuation
     /// 永不 resume）。调用方（`handleTransportClosed`）必须保证本方法先于该 session 的
     /// continuation 被 `finish` 调用。
+    ///
+    /// **rounds/0020**：`pendingStops` 现在被 stop()/interrupt() 共享，下面 (a) 步读
+    /// `pending.operationKind` 而不再硬编码 `.stop`——transport 在 interrupt() 的等待窗口内关闭时，
+    /// 镜像必须如实标注 `operationKind:"interrupt"`，不能因为共享了同一套等待机制就被错报成
+    /// stop。本方法其余逻辑（何时唤醒、如何唤醒）对两个调用方完全相同，不需要按来源分支。
     private func resolvePendingStopForTransportClose(sessionID: String) {
         guard let pending = pendingStops[sessionID], let waiter = pending.waiter else {
             // 没有正在等待的 stop()——多半是终态已经被 handleAgentEvent 观察到，或者超时定时器已经
@@ -1774,7 +1999,8 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         pendingStops[sessionID]?.terminalEmitted = true // 先标记再唤醒——resolve 与 remove 之间不留竞态窗口。
         emitOperationCompletedMirror(
             sessionID: sessionID, operationID: pending.operationID,
-            affectedRunID: pending.affectedRunID, outcome: .abortedEffectUnknown
+            affectedRunID: pending.affectedRunID, outcome: .abortedEffectUnknown,
+            operationKind: pending.operationKind
         )
         waiter.resume(returning: .transportClosed)
     }
@@ -2550,18 +2776,22 @@ public actor OpenclawGatewayKernelClient: KernelClient {
             let aborted = jsonBool(data["aborted"]) ?? false
             if aborted {
                 if var pendingForRun = pendingStops[ourSessionID], pendingForRun.affectedRunID == runID, !pendingForRun.terminalEmitted {
-                    // F6：单个 operation_completed + turn_complete(cancelled)，用 stop() 铸造的
-                    // 唯一 operationId，且对同一次 pendingStop 只做一次（后续同 run 的收尾帧，如
+                    // F6：单个 operation_completed + turn_complete(cancelled)，用 stop()/interrupt()
+                    // 铸造的唯一 operationId，且对同一次 pendingStop 只做一次（后续同 run 的收尾帧，如
                     // 真实样本里 phase:"end" 之后常跟的 phase:"error","This operation was
                     // aborted" 帧，被下面 else 分支丢弃）。
-                    // M3：这次 stop() 在发起 sessions.abort 之前强制 deny 掉的 reqId（如有）——D1
-                    // §6.2 M3 要求同步列进这个 run 的 TurnCompleteEvent.forceResolvedApprovals。
+                    // M3：这次 stop()/interrupt() 在发起 sessions.abort 之前强制 deny 掉的 reqId
+                    // （如有）——D1 §6.2 M3 要求同步列进这个 run 的 TurnCompleteEvent.forceResolvedApprovals。
                     let forceResolvedApprovals = pendingForRun.forceResolvedApprovalReqIDs.isEmpty
                         ? nil : pendingForRun.forceResolvedApprovalReqIDs
+                    // rounds/0020：`operationKind` 按这次 pendingStop 真正的发起者传（stop()/
+                    // interrupt() 共享同一张表，见 `PendingStop.operationKind` 文档注释），不再
+                    // 隐式全部标注成 stop。
                     let events = mapOpenclawAgentLifecycleToAbortTerminalEvents(
                         data, ourSessionID: ourSessionID, runID: runID, operationID: pendingForRun.operationID,
                         originTS: originTS, cachedUsage: lastUsageByRunID[runID],
-                        forceResolvedApprovals: forceResolvedApprovals, nextSeq: nextSeqForRun
+                        forceResolvedApprovals: forceResolvedApprovals, operationKind: pendingForRun.operationKind,
+                        nextSeq: nextSeqForRun
                     )
                     for event in events {
                         continuation.yield(event)
@@ -2572,16 +2802,21 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                     lastUsageByRunID.removeValue(forKey: runID)
                     resolvePendingStopWaiter(sessionID: ourSessionID, outcome: .terminalObserved)
                 } else if pendingStops[ourSessionID] == nil {
-                    // 理论上不会出现——interrupt() 本轮未实现，没有别的方法会产生 aborted:true 且
-                    // 没有对应 pendingStop 的 lifecycle 帧。防御性兜底：自己派生一个 operationId，
-                    // 保持"至少不丢事件"的旧行为，同时如实标注这是非预期路径。
+                    // 理论上不会出现——stop()/interrupt()（rounds/0020 起两者都会）在发起
+                    // sessions.abort 之前必然先在 pendingStops 里登记一条条目，因此任何一条真正由
+                    // 我们自己触发的 abort 所产生的 aborted lifecycle 帧，理应总能在上面的分支里找到
+                    // 匹配的 pendingStop。这里仍然保留纯防御性兜底：自己派生一个 operationId，保持
+                    // "至少不丢事件"的旧行为，同时如实标注这是非预期路径。`operationKind` 没有任何
+                    // 发起者信息可用（既不知道是不是我们发起的、更不知道是 stop 还是 interrupt），
+                    // 延续修前唯一曾经存在过的取值 `.stop`——这不是"猜它是 stop"，只是在没有信息时
+                    // 保持这条从未被真正观察到过的路径的历史输出不变，不引入新的分支语义。
                     let fallbackOperationID = "\(ourSessionID)-abort-\(runID)-unowned"
-                    // 这条防御性兜底路径本来就没有关联到任何 stop() 的 pendingStop——不存在"这次
-                    // stop() 强制 deny 过谁"的信息可以塞，forceResolvedApprovals 如实传 nil。
+                    // 这条防御性兜底路径本来就没有关联到任何 stop()/interrupt() 的 pendingStop——
+                    // 不存在"这次强制 deny 过谁"的信息可以塞，forceResolvedApprovals 如实传 nil。
                     let events = mapOpenclawAgentLifecycleToAbortTerminalEvents(
                         data, ourSessionID: ourSessionID, runID: runID, operationID: fallbackOperationID,
                         originTS: originTS, cachedUsage: lastUsageByRunID[runID],
-                        forceResolvedApprovals: nil, nextSeq: nextSeqForRun
+                        forceResolvedApprovals: nil, operationKind: .stop, nextSeq: nextSeqForRun
                     )
                     for event in events {
                         continuation.yield(event)
@@ -3137,6 +3372,12 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// 真的等 5 秒。
     func testSupportSetStopTimeoutSeconds(_ seconds: Int) {
         testSupportStopTimeoutSecondsOverride = seconds
+    }
+
+    /// rounds/0020：同上，缩短的是 interrupt() 自己的等待超时（见
+    /// `testSupportInterruptTimeoutSecondsOverride` 文档注释，为什么这是一个独立于 stop() 的变量）。
+    func testSupportSetInterruptTimeoutSeconds(_ seconds: Int) {
+        testSupportInterruptTimeoutSecondsOverride = seconds
     }
 
     /// NOTE-A：缩短 force-deny drain 循环的迭代轮次上限（生产默认 50），供"超过上限如实 throw、不

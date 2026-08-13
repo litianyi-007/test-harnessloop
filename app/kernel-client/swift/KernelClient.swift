@@ -10,8 +10,12 @@
 //                       Pi Postgres/new-api 现场验证，见 OpenclawGatewayKernelClient.swift send()
 //                       的文档注释）
 //   subscribe       -> §2.3（SG-4 完整实现；SG-5 补充 includeApprovals:true）
-//   interrupt       -> §2.4（TODO 桩，仍 defer——本轮 send() 用的是"一次性 send 到完"的场景，
-//                       没有构造"发送中途 interrupt"的现场）
+//   interrupt       -> §2.4（rounds/0020 起完整实现 `mode:"cancel"`：适配为 openclaw
+//                       `sessions.abort`，语义是"中止当前 run、保留会话"——与 stop() 的关键区别是
+//                       不发 sessions.delete/session_end、不 finish 事件流，见
+//                       OpenclawGatewayKernelClient.swift interrupt() 的文档注释。`steer`/
+//                       `abort_and_resend` 两种 mode 仍未实现，显式拒绝 unsupported_interrupt_mode，
+//                       不静默当 cancel 处理）
 //   stop            -> §2.5（SG-4 完整实现：适配为 openclaw 的 sessions.abort + sessions.delete，
 //                       见 recipe §3 "建议 kernel-client 把 stop 实现为…" 一段）
 //   respondApproval -> §2.6（rounds/0015 A/B 完整实现：适配为 openclaw `approval.resolve`，含
@@ -90,7 +94,8 @@ public protocol KernelClient: AnyObject {
     /// D1 §2.3 subscribe。
     func subscribe(session: SessionHandle) async -> AsyncThrowingStream<EventMessageUnion, Error>
 
-    /// D1 §2.4 interrupt —— 本轮 TODO 桩。
+    /// D1 §2.4 interrupt —— rounds/0020 起完整实现 `mode:"cancel"`（其余两种 mode 显式拒绝
+    /// `unsupported_interrupt_mode`）。见 `OpenclawGatewayKernelClient.interrupt()` 的文档注释。
     func interrupt(session: SessionHandle, options: InterruptRequestMessagePayload) async throws -> InterruptResultPayload
 
     /// D1 §2.5 stop。
