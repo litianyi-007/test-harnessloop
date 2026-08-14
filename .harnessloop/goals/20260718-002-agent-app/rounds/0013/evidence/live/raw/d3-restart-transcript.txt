@@ -1,0 +1,32 @@
+# rounds/0013 D-3 重启探查 —— 原始查询 transcript
+# 采集: 2026-08-10T19:48:53Z
+
+$ sqlite3 <隔离 per-agent 库> "SELECT count(*) FROM sessions;"   # 内核侧会话数
+5
+exit=0
+
+$ sqlite3 <同上> "SELECT substr(key,1,52) FROM sessions;"   # 会话 key 列表
+Error: in prepare, no such column: key
+  SELECT substr(key,1,52) FROM sessions;
+                ^--- error here
+exit=1
+
+# 重启后 app 的 wire trace 文件（AGENT_KERNEL_WIRE_TRACE 指向 ui-wire-trace-2.jsonl）
+$ ls -l $SP/ui-wire-trace-2.jsonl
+ls: /private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/ui-wire-trace-2.jsonl: No such file or directory
+exit=1
+# → 文件不存在 = 重启后的 app 从未产生任何会话相关 wire 流量，即从不尝试拉取已有会话
+
+# 对照：重启前那次运行的 trace 是有内容的
+$ wc -l $SP/ui-wire-trace.jsonl
+     234
+exit=0
+
+# 源码依据：SessionStore.sessions 是纯内存数组，启动路径只 connect、无 list/history 恢复
+$ grep -n 'var sessions' app/apps/AgentShell/Sources/AgentShellCore/SessionStore.swift
+44:    public private(set) var sessions: [ChatSessionViewModel] = []
+exit=0
+$ grep -n 'connectIfNeeded\|\.task {' app/apps/AgentShell/Sources/AgentShell/ContentView.swift
+24:        .task {
+28:            await store.connectIfNeeded()
+exit=0

@@ -1,0 +1,2526 @@
+=== SG-4 kernel-client L1 闭环：createSession -> subscribe -> stop ===
+endpoint: ws://127.0.0.1:63814
+timestamp: 2026-08-10T19:18:32Z
+
+--- RECV connect.challenge ---
+{
+  "nonce" : "ae84a104-8ff5-4fe3-a235-d5aa0cacee94",
+  "ts" : 1786389512450
+}
+
+--- SEND req connect ---
+{
+  "id" : "r1",
+  "method" : "connect",
+  "params" : {
+    "auth" : "***REDACTED***",
+    "caps" : [
+
+    ],
+    "client" : {
+      "id" : "cli",
+      "mode" : "cli",
+      "platform" : "darwin",
+      "version" : "0.0.1"
+    },
+    "maxProtocol" : 4,
+    "minProtocol" : 3,
+    "role" : "operator",
+    "scopes" : [
+      "operator.admin"
+    ]
+  },
+  "type" : "req"
+}
+
+--- RECV hello-ok (connect response payload) ---
+{
+  "auth" : "***REDACTED***",
+  "features" : {
+    "capabilities" : [
+      "board-widget-put-canvas-doc",
+      "chat-send-routing-contract",
+      "openclaw-setup-model-ref"
+    ],
+    "events" : [
+      "connect.challenge",
+      "agent",
+      "chat",
+      "ui.command",
+      "session.approval",
+      "session.message",
+      "session.observer",
+      "session.operation",
+      "session.tool",
+      "sessions.changed",
+      "presence",
+      "tick",
+      "talk.mode",
+      "talk.event",
+      "shutdown",
+      "health",
+      "heartbeat",
+      "cron",
+      "task",
+      "task.suggestion",
+      "node.pair.requested",
+      "node.pair.resolved",
+      "node.presence",
+      "node.invoke.cancel",
+      "node.invoke.input",
+      "node.invoke.request",
+      "device.pair.requested",
+      "device.pair.resolved",
+      "voicewake.changed",
+      "voicewake.routing.changed",
+      "exec.approval.requested",
+      "exec.approval.resolved",
+      "question.requested",
+      "question.resolved",
+      "plugin.approval.requested",
+      "plugin.approval.resolved",
+      "openclaw.approval.requested",
+      "openclaw.approval.resolved",
+      "terminal.data",
+      "terminal.exit",
+      "update.available"
+    ],
+    "methods" : [
+      "health",
+      "diagnostics.stability",
+      "doctor.memory.status",
+      "doctor.memory.dreamDiary",
+      "doctor.memory.backfillDreamDiary",
+      "doctor.memory.resetDreamDiary",
+      "doctor.memory.resetGroundedShortTerm",
+      "doctor.memory.repairDreamingArtifacts",
+      "doctor.memory.dedupeDreamDiary",
+      "doctor.memory.remHarness",
+      "logs.tail",
+      "channels.status",
+      "channels.start",
+      "channels.stop",
+      "channels.logout",
+      "status",
+      "usage.status",
+      "usage.cost",
+      "tts.status",
+      "tts.providers",
+      "tts.personas",
+      "tts.enable",
+      "tts.disable",
+      "tts.convert",
+      "tts.setProvider",
+      "tts.setPersona",
+      "config.get",
+      "config.set",
+      "config.apply",
+      "config.patch",
+      "config.schema",
+      "config.schema.lookup",
+      "exec.approvals.get",
+      "exec.approvals.set",
+      "exec.approvals.node.get",
+      "exec.approvals.node.set",
+      "exec.approval.get",
+      "exec.approval.list",
+      "exec.approval.request",
+      "exec.approval.waitDecision",
+      "exec.approval.resolve",
+      "question.request",
+      "question.waitAnswer",
+      "question.resolve",
+      "question.get",
+      "question.list",
+      "plugin.approval.list",
+      "plugin.approval.request",
+      "plugin.approval.waitDecision",
+      "plugin.approval.resolve",
+      "plugins.uiDescriptors",
+      "plugins.sessionAction",
+      "openclaw.chat",
+      "openclaw.chat.history",
+      "openclaw.changes.list",
+      "openclaw.approval.list",
+      "openclaw.setup.detect",
+      "openclaw.setup.activate",
+      "openclaw.setup.auth.start",
+      "openclaw.setup.prepare.start",
+      "wizard.start",
+      "wizard.next",
+      "wizard.cancel",
+      "wizard.status",
+      "talk.catalog",
+      "talk.config",
+      "talk.client.create",
+      "talk.client.transcript",
+      "talk.client.close",
+      "talk.client.toolCall",
+      "talk.client.steer",
+      "talk.session.create",
+      "talk.session.join",
+      "talk.session.appendAudio",
+      "talk.session.startTurn",
+      "talk.session.endTurn",
+      "talk.session.cancelTurn",
+      "talk.session.cancelOutput",
+      "talk.session.acknowledgeMark",
+      "talk.session.submitToolResult",
+      "talk.session.steer",
+      "talk.session.close",
+      "talk.speak",
+      "talk.mode",
+      "commands.list",
+      "models.list",
+      "models.authStatus",
+      "models.authLogout",
+      "tools.catalog",
+      "tools.effective",
+      "tools.invoke",
+      "mcp.app.view",
+      "mcp.app.listTools",
+      "mcp.app.listResources",
+      "mcp.app.listResourceTemplates",
+      "mcp.app.readResource",
+      "mcp.app.callTool",
+      "mcp.app.updateModelContext",
+      "board.get",
+      "board.update",
+      "board.widget.put",
+      "board.widget.grant",
+      "board.widget.appView",
+      "board.event",
+      "audit.list",
+      "audit.activity.list",
+      "users.list",
+      "users.self",
+      "users.linkEmail",
+      "users.setDisplayName",
+      "users.setAvatar",
+      "tasks.list",
+      "tasks.get",
+      "tasks.cancel",
+      "taskSuggestions.list",
+      "taskSuggestions.create",
+      "taskSuggestions.accept",
+      "taskSuggestions.dismiss",
+      "environments.list",
+      "environments.status",
+      "worktrees.list",
+      "worktrees.branches",
+      "fs.listDir",
+      "worktrees.create",
+      "worktrees.remove",
+      "worktrees.restore",
+      "worktrees.gc",
+      "agents.list",
+      "agents.create",
+      "agents.update",
+      "agents.delete",
+      "agents.files.list",
+      "agents.files.get",
+      "agents.files.set",
+      "sessions.files.list",
+      "sessions.files.get",
+      "sessions.files.set",
+      "sessions.files.reveal",
+      "artifacts.list",
+      "artifacts.get",
+      "artifacts.download",
+      "skills.status",
+      "skills.search",
+      "skills.detail",
+      "skills.securityVerdicts",
+      "skills.skillCard",
+      "skills.bins",
+      "skills.upload.begin",
+      "skills.upload.chunk",
+      "skills.upload.commit",
+      "skills.install",
+      "skills.update",
+      "skills.curator.status",
+      "skills.curator.pin",
+      "skills.curator.unpin",
+      "skills.curator.restore",
+      "skills.proposals.list",
+      "skills.proposals.inspect",
+      "skills.proposals.historyStatus",
+      "skills.proposals.historyScan",
+      "skills.proposals.create",
+      "skills.proposals.update",
+      "skills.proposals.revise",
+      "skills.proposals.requestRevision",
+      "skills.proposals.apply",
+      "skills.proposals.reject",
+      "skills.proposals.quarantine",
+      "update.status",
+      "update.run",
+      "voicewake.get",
+      "voicewake.set",
+      "secrets.reload",
+      "secrets.resolve",
+      "voicewake.routing.get",
+      "voicewake.routing.set",
+      "sessions.list",
+      "sessions.subscribe",
+      "sessions.unsubscribe",
+      "sessions.messages.subscribe",
+      "sessions.messages.unsubscribe",
+      "sessions.preview",
+      "sessions.describe",
+      "sessions.compaction.list",
+      "sessions.compaction.get",
+      "sessions.compaction.branch",
+      "sessions.compaction.restore",
+      "sessions.branches.list",
+      "sessions.branches.switch",
+      "sessions.rewind",
+      "sessions.fork",
+      "sessions.create",
+      "sessions.send",
+      "sessions.abort",
+      "sessions.patch",
+      "sessions.pluginPatch",
+      "sessions.cleanup",
+      "sessions.reset",
+      "sessions.delete",
+      "sessions.compact",
+      "sessions.groups.list",
+      "sessions.groups.put",
+      "sessions.groups.rename",
+      "sessions.groups.delete",
+      "last-heartbeat",
+      "set-heartbeats",
+      "wake",
+      "node.pair.list",
+      "node.pair.approve",
+      "node.pair.reject",
+      "node.pair.remove",
+      "device.pair.list",
+      "device.pair.approve",
+      "device.pair.reject",
+      "device.pair.remove",
+      "device.pair.rename",
+      "device.token.rotate",
+      "device.token.revoke",
+      "node.rename",
+      "node.list",
+      "node.describe",
+      "node.pluginSurface.refresh",
+      "node.pluginTools.update",
+      "node.skills.update",
+      "node.pending.drain",
+      "node.pending.enqueue",
+      "node.invoke",
+      "node.pending.pull",
+      "node.pending.ack",
+      "node.invoke.progress",
+      "node.invoke.result",
+      "node.event",
+      "cron.get",
+      "cron.list",
+      "cron.status",
+      "cron.add",
+      "cron.update",
+      "cron.remove",
+      "cron.run",
+      "cron.runs",
+      "gateway.identity.get",
+      "gateway.restart.preflight",
+      "gateway.restart.request",
+      "system-presence",
+      "system-event",
+      "message.action",
+      "conversations.send",
+      "conversations.turn",
+      "conversations.turn.cancel",
+      "send",
+      "agent",
+      "agent.identity.get",
+      "agent.wait",
+      "chat.history",
+      "chat.startup",
+      "chat.metadata",
+      "chat.message.get",
+      "chat.abort",
+      "chat.send",
+      "terminal.open",
+      "terminal.input",
+      "terminal.resize",
+      "terminal.close",
+      "channels.pairing.list",
+      "channels.pairing.approve",
+      "channels.pairing.dismiss",
+      "attach.grant",
+      "attach.revoke",
+      "terminal.attach",
+      "terminal.list",
+      "terminal.text",
+      "controlUi.githubPreview",
+      "system.info",
+      "agents.workspace.list",
+      "agents.workspace.get",
+      "tts.speak",
+      "plugins.list",
+      "plugins.search",
+      "plugins.install",
+      "plugins.setEnabled",
+      "plugins.uninstall",
+      "plugins.refresh",
+      "controlUi.sessionPullRequests",
+      "gateway.suspend.prepare",
+      "gateway.suspend.status",
+      "gateway.suspend.resume",
+      "chat.toolTitles",
+      "sessions.diff",
+      "openclaw.setup.verify",
+      "sessions.catalog.list",
+      "sessions.catalog.read",
+      "terminal.upload",
+      "sessions.catalog.continue",
+      "sessions.catalog.archive",
+      "approval.get",
+      "approval.resolve",
+      "sessions.search",
+      "models.probe",
+      "migrations.memory.plan",
+      "migrations.memory.apply",
+      "ui.command",
+      "approval.history",
+      "plugin.surface.refresh",
+      "conversations.list",
+      "session.discussion.info",
+      "session.discussion.open",
+      "board.prompt.authorize",
+      "board.data.read",
+      "board.action",
+      "sessions.observer.ask",
+      "sessions.observer.visibility",
+      "browser.request"
+    ]
+  },
+  "pluginSurfaceUrls" : {
+    "canvas" : "http:\/\/127.0.0.1:63814\/__openclaw__\/cap\/J22hZJVMI53LIQR7Wm53uBrc"
+  },
+  "policy" : {
+    "maxBufferedBytes" : 52428800,
+    "maxPayload" : 26214400,
+    "tickIntervalMs" : 30000
+  },
+  "protocol" : 4,
+  "server" : {
+    "connId" : "abd7b0f0-55f6-415a-9786-ea9a2a1d2ef8",
+    "version" : "2026.7.2"
+  },
+  "snapshot" : {
+    "appliedConfigHash" : "J5Y0ym155l6Fnpn4K_hxEtriCujfD9TSUGdscEveStU",
+    "authMode" : "***REDACTED***",
+    "configPath" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-repro\/state\/openclaw.json",
+    "health" : {
+      "agents" : [
+        {
+          "agentId" : "main",
+          "heartbeat" : {
+            "ackMaxChars" : 300,
+            "enabled" : true,
+            "every" : "30m",
+            "everyMs" : 1800000,
+            "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+            "target" : "none"
+          },
+          "isDefault" : true,
+          "sessions" : {
+            "count" : 3,
+            "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-repro\/state\/agents\/main\/sessions\/sessions.json",
+            "recent" : [
+              {
+                "age" : 124306,
+                "key" : "agent:main:dashboard:4f8a4f98-036b-4a16-a426-8c9346ce273e",
+                "updatedAt" : 1786389386543
+              },
+              {
+                "age" : 253602,
+                "key" : "agent:main:dashboard:af04fc6a-6873-405c-b855-7a91a4ca363c",
+                "updatedAt" : 1786389257247
+              },
+              {
+                "age" : 292432,
+                "key" : "agent:main:dashboard:d8b057fb-07a6-4813-aeef-014c419c99aa",
+                "updatedAt" : 1786389218417
+              }
+            ]
+          }
+        }
+      ],
+      "channelLabels" : {
+        "qqbot" : "QQ Bot"
+      },
+      "channelOrder" : [
+        "qqbot"
+      ],
+      "channels" : {
+        "qqbot" : {
+          "accountId" : "default",
+          "accounts" : {
+            "default" : {
+              "accountId" : "default",
+              "configured" : false,
+              "connected" : false,
+              "enabled" : true,
+              "lastConnectedAt" : null,
+              "lastError" : null,
+              "lastInboundAt" : null,
+              "lastOutboundAt" : null,
+              "running" : false,
+              "tokenSource" : "***REDACTED***"
+            }
+          },
+          "configured" : false,
+          "connected" : false,
+          "enabled" : true,
+          "lastConnectedAt" : null,
+          "lastError" : null,
+          "lastInboundAt" : null,
+          "lastOutboundAt" : null,
+          "running" : false,
+          "tokenSource" : "***REDACTED***"
+        }
+      },
+      "configReload" : {
+        "hotReloadStatus" : "active"
+      },
+      "defaultAgentId" : "main",
+      "durationMs" : 189,
+      "eventLoop" : {
+        "cpuCoreRatio" : 0.0060000000000000001,
+        "degraded" : false,
+        "delayMaxMs" : 27.899999999999999,
+        "delayP99Ms" : 22.100000000000001,
+        "intervalMs" : 60001,
+        "reasons" : [
+
+        ],
+        "utilization" : 0.0070000000000000001
+      },
+      "heartbeatSeconds" : 1800,
+      "modelPricing" : {
+        "sources" : [
+
+        ],
+        "state" : "ok"
+      },
+      "ok" : true,
+      "plugins" : {
+        "errors" : [
+
+        ],
+        "loaded" : [
+          "acpx",
+          "alibaba",
+          "amazon-bedrock",
+          "amazon-bedrock-mantle",
+          "anthropic",
+          "anthropic-vertex",
+          "arcee",
+          "azure-speech",
+          "baseten",
+          "bonjour",
+          "browser",
+          "byteplus",
+          "canvas",
+          "cerebras",
+          "chutes",
+          "clawrouter",
+          "cloudflare-ai-gateway",
+          "cohere",
+          "comfy",
+          "copilot-proxy",
+          "deepgram",
+          "deepinfra",
+          "deepseek",
+          "device-pair",
+          "document-extract",
+          "elevenlabs",
+          "fal",
+          "featherless",
+          "file-transfer",
+          "fireworks",
+          "github-copilot",
+          "gmi",
+          "google",
+          "groq",
+          "huggingface",
+          "inworld",
+          "kilocode",
+          "kimi",
+          "linux-canvas",
+          "linux-node",
+          "litellm",
+          "llama-cpp",
+          "lmstudio",
+          "longcat",
+          "memory-core",
+          "meta",
+          "microsoft",
+          "microsoft-foundry",
+          "minimax",
+          "mistral",
+          "moonshot",
+          "novita",
+          "nvidia",
+          "ollama",
+          "openai",
+          "opencode",
+          "opencode-go",
+          "openrouter",
+          "phone-control",
+          "pixverse",
+          "qianfan",
+          "qqbot",
+          "qwen",
+          "runway",
+          "senseaudio",
+          "sglang",
+          "stepfun",
+          "synthetic",
+          "talk-voice",
+          "tencent",
+          "together",
+          "tts-local-cli",
+          "venice",
+          "vercel-ai-gateway",
+          "vllm",
+          "volcengine",
+          "voyage",
+          "vydra",
+          "web-readability",
+          "xai",
+          "xiaomi",
+          "zai"
+        ],
+        "unavailable" : [
+
+        ]
+      },
+      "sessions" : {
+        "count" : 3,
+        "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-repro\/state\/agents\/main\/sessions\/sessions.json",
+        "recent" : [
+          {
+            "age" : 124306,
+            "key" : "agent:main:dashboard:4f8a4f98-036b-4a16-a426-8c9346ce273e",
+            "updatedAt" : 1786389386543
+          },
+          {
+            "age" : 253602,
+            "key" : "agent:main:dashboard:af04fc6a-6873-405c-b855-7a91a4ca363c",
+            "updatedAt" : 1786389257247
+          },
+          {
+            "age" : 292432,
+            "key" : "agent:main:dashboard:d8b057fb-07a6-4813-aeef-014c419c99aa",
+            "updatedAt" : 1786389218417
+          }
+        ]
+      },
+      "ts" : 1786389511038
+    },
+    "presence" : [
+      {
+        "deviceFamily" : "Mac",
+        "host" : "MacBook-Pro-2.local",
+        "instanceId" : "3fef4424-ee0b-4199-b008-ee80a88c726c",
+        "ip" : "10.242.128.116",
+        "mode" : "gateway",
+        "modelIdentifier" : "MacBookPro18,2",
+        "platform" : "macos 26.6",
+        "reason" : "self",
+        "text" : "Gateway: MacBook-Pro-2.local (10.242.128.116) · app 2026.7.2 · mode gateway · reason self",
+        "ts" : 1786389512478,
+        "version" : "2026.7.2"
+      }
+    ],
+    "sessionDefaults" : {
+      "defaultAgentId" : "main",
+      "mainKey" : "main",
+      "mainSessionKey" : "agent:main:main",
+      "scope" : "per-sender"
+    },
+    "stateDir" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-repro\/state",
+    "stateVersion" : {
+      "health" : 23,
+      "presence" : 1
+    },
+    "uptimeMs" : 1213044
+  },
+  "type" : "hello-ok"
+}
+
+[STEP 1] connect 完成，hello-ok scopes = ["operator.admin"]
+
+--- SEND req sessions.create ---
+{
+  "id" : "r2",
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14"
+  },
+  "type" : "req"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 3,
+          "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-repro\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 125937,
+              "key" : "agent:main:dashboard:4f8a4f98-036b-4a16-a426-8c9346ce273e",
+              "updatedAt" : 1786389386543
+            },
+            {
+              "age" : 255233,
+              "key" : "agent:main:dashboard:af04fc6a-6873-405c-b855-7a91a4ca363c",
+              "updatedAt" : 1786389257247
+            },
+            {
+              "age" : 294063,
+              "key" : "agent:main:dashboard:d8b057fb-07a6-4813-aeef-014c419c99aa",
+              "updatedAt" : 1786389218417
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+      "qqbot" : "QQ Bot"
+    },
+    "channelOrder" : [
+      "qqbot"
+    ],
+    "channels" : {
+      "qqbot" : {
+        "accountId" : "default",
+        "accounts" : {
+          "default" : {
+            "accountId" : "default",
+            "configured" : false,
+            "connected" : false,
+            "enabled" : true,
+            "lastConnectedAt" : null,
+            "lastError" : null,
+            "lastInboundAt" : null,
+            "lastOutboundAt" : null,
+            "running" : false,
+            "tokenSource" : "***REDACTED***"
+          }
+        },
+        "configured" : false,
+        "connected" : false,
+        "enabled" : true,
+        "lastConnectedAt" : null,
+        "lastError" : null,
+        "lastInboundAt" : null,
+        "lastOutboundAt" : null,
+        "running" : false,
+        "tokenSource" : "***REDACTED***"
+      }
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 145,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.12,
+      "degraded" : false,
+      "delayMaxMs" : 21.100000000000001,
+      "delayP99Ms" : 21.100000000000001,
+      "intervalMs" : 1631,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.13700000000000001
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "alibaba",
+        "amazon-bedrock",
+        "amazon-bedrock-mantle",
+        "anthropic",
+        "anthropic-vertex",
+        "arcee",
+        "azure-speech",
+        "baseten",
+        "bonjour",
+        "browser",
+        "byteplus",
+        "canvas",
+        "cerebras",
+        "chutes",
+        "clawrouter",
+        "cloudflare-ai-gateway",
+        "cohere",
+        "comfy",
+        "copilot-proxy",
+        "deepgram",
+        "deepinfra",
+        "deepseek",
+        "device-pair",
+        "document-extract",
+        "elevenlabs",
+        "fal",
+        "featherless",
+        "file-transfer",
+        "fireworks",
+        "github-copilot",
+        "gmi",
+        "google",
+        "groq",
+        "huggingface",
+        "inworld",
+        "kilocode",
+        "kimi",
+        "linux-canvas",
+        "linux-node",
+        "litellm",
+        "llama-cpp",
+        "lmstudio",
+        "longcat",
+        "memory-core",
+        "meta",
+        "microsoft",
+        "microsoft-foundry",
+        "minimax",
+        "mistral",
+        "moonshot",
+        "novita",
+        "nvidia",
+        "ollama",
+        "openai",
+        "opencode",
+        "opencode-go",
+        "openrouter",
+        "phone-control",
+        "pixverse",
+        "qianfan",
+        "qqbot",
+        "qwen",
+        "runway",
+        "senseaudio",
+        "sglang",
+        "stepfun",
+        "synthetic",
+        "talk-voice",
+        "tencent",
+        "together",
+        "tts-local-cli",
+        "venice",
+        "vercel-ai-gateway",
+        "vllm",
+        "volcengine",
+        "voyage",
+        "vydra",
+        "web-readability",
+        "xai",
+        "xiaomi",
+        "zai"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 3,
+      "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-repro\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+        {
+          "age" : 125937,
+          "key" : "agent:main:dashboard:4f8a4f98-036b-4a16-a426-8c9346ce273e",
+          "updatedAt" : 1786389386543
+        },
+        {
+          "age" : 255233,
+          "key" : "agent:main:dashboard:af04fc6a-6873-405c-b855-7a91a4ca363c",
+          "updatedAt" : 1786389257247
+        },
+        {
+          "age" : 294063,
+          "key" : "agent:main:dashboard:d8b057fb-07a6-4813-aeef-014c419c99aa",
+          "updatedAt" : 1786389218417
+        }
+      ]
+    },
+    "ts" : 1786389512625
+  },
+  "seq" : 1,
+  "stateVersion" : {
+    "health" : 24,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- RECV sessions.create result ---
+{
+  "entry" : {
+    "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "parentSessionKey" : "agent:main:main",
+    "sessionFile" : "sqlite:main:8f0a808f-673f-4c5a-9248-25ab3025e021:\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-repro\/state\/agents\/main\/sessions\/sessions.json",
+    "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+    "spawnDepth" : 0,
+    "updatedAt" : 1786389512628
+  },
+  "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+  "ok" : true,
+  "resolved" : {
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek"
+  },
+  "runStarted" : false,
+  "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021"
+}
+
+[STEP 2] createSession 完成
+  our sessionId (D1 §2.1 步骤 1 预分配)      = 7B94428D-6D31-4616-A7AE-84EF57838D14
+  kernelSessionId (openclaw 原生 key)         = 8f0a808f-673f-4c5a-9248-25ab3025e021
+  kernel                                     = openclaw
+  billing.tokenRef (占位，本轮未铸造真 newapi token) = TODO-sg4-no-newapi-token-minted
+[C] SESSION_KEY=agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798
+[C] NOTE: SESSION_KEY（openclaw `key` 字段，history 查询要用这个）与上面打印的 kernelSessionID（openclaw `sessionId` 字段，值=8f0a808f-673f-4c5a-9248-25ab3025e021）不是同一个值——GET /sessions/<key>/history 对账请认准 SESSION_KEY，用 kernelSessionID 会查错会话。
+
+[STEP 3] subscribe 已发起（sessions.messages.subscribe），开始观察事件…
+
+--- SEND req sessions.messages.subscribe ---
+{
+  "id" : "r3",
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798"
+  },
+  "type" : "req"
+}
+
+[STEP 3.5] send()（多轮）：SG5_SEND_MESSAGES 已设置，共 3 轮，依次发送…
+
+--- SEND req sessions.send ---
+{
+  "id" : "r4",
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "message" : "Reply with exactly: ALPHA",
+    "timeoutMs" : 0
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "approvalReplay" : {
+    "approvals" : [
+
+    ],
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "truncated" : false,
+    "updatedAtMs" : 1786389512636
+  },
+  "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+  "subscribed" : true
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4",
+  "status" : "started"
+}
+  [round 1/3] send() 完成: runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 1000000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "effectiveResponseUsage" : "off",
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "kind" : "direct",
+    "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "faf39ba3-7447-48bc-9ca0-5bf0b107a58a",
+        "idempotencyKey" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4:user",
+        "senderIsOwner" : true,
+        "seq" : 1
+      },
+      "content" : "Reply with exactly: ALPHA",
+      "idempotencyKey" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4:user",
+      "role" : "user",
+      "timestamp" : 1786389512640
+    },
+    "messageId" : "faf39ba3-7447-48bc-9ca0-5bf0b107a58a",
+    "messageSeq" : 1,
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 1000000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+      "kind" : "direct",
+      "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1786389512660,
+      "model" : "deepseek-v4-flash",
+      "modelProvider" : "deepseek",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+      "spawnDepth" : 0,
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokensFresh" : false,
+      "unread" : false,
+      "updatedAt" : 1786389512729
+    },
+    "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "spawnDepth" : 0,
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokensFresh" : false,
+    "unread" : false,
+    "updatedAt" : 1786389512729
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4",
+    "seq" : 1,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 2,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4",
+    "seq" : 2,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 4,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4",
+    "seq" : 3,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 6,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4",
+    "seq" : 4,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 8,
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 1000000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "effectiveResponseUsage" : "off",
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "kind" : "direct",
+    "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "97510627",
+        "idempotencyKey" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4:user",
+        "senderIsOwner" : true,
+        "seq" : 1
+      },
+      "content" : "Reply with exactly: ALPHA",
+      "idempotencyKey" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4:user",
+      "role" : "user",
+      "timestamp" : 1786389512640
+    },
+    "messageId" : "97510627",
+    "messageSeq" : 1,
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 1000000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+      "kind" : "direct",
+      "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1786389512660,
+      "model" : "deepseek-v4-flash",
+      "modelProvider" : "deepseek",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+      "spawnDepth" : 0,
+      "startedAt" : 1786389513092,
+      "status" : "running",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokensFresh" : false,
+      "unread" : false,
+      "updatedAt" : 1786389513096
+    },
+    "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "spawnDepth" : 0,
+    "startedAt" : 1786389513092,
+    "status" : "running",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokensFresh" : false,
+    "unread" : false,
+    "updatedAt" : 1786389513096
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "starting_model",
+    "runId" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4",
+    "seq" : 6,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 11,
+  "type" : "event"
+}
+  [event #1] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=1 ts=2026-08-10 19:18:34 +0000 visibility=raw delta="The"
+  [event #2] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=2 ts=2026-08-10 19:18:34 +0000 visibility=raw delta=" user"
+  [event #3] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=3 ts=2026-08-10 19:18:34 +0000 visibility=raw delta="\'s message is in the context of the OpenClaw environment"
+  [event #4] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=4 ts=2026-08-10 19:18:34 +0000 visibility=raw delta="."
+  [event #5] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=5 ts=2026-08-10 19:18:34 +0000 visibility=raw delta=" There\'s a BOOTSTRAP.md pending, but the user is asking for "
+  [event #6] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=6 ts=2026-08-10 19:18:34 +0000 visibility=raw delta=" specific"
+  [event #7] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=7 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=" reply: \"Reply with exactly: ALPHA\".\n\nWait, but the system p"
+  [event #8] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=8 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=".md"
+  [event #9] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=9 ts=2026-08-10 19:18:35 +0000 visibility=raw delta="; no generic greeting.\" However, the user has given a specif"
+  [event #10] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=10 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=" says I need"
+  [event #11] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=11 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=" to complete three beats before normal replies. But the user"
+  [event #12] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=12 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=" explicit"
+  [event #13] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=13 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=": \"Reply with exactly: ALPHA\".\n\nHmm, there\'s tension. The sy"
+  [event #14] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=14 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=" BOOT"
+  [event #15] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=15 ts=2026-08-10 19:18:35 +0000 visibility=raw delta="STRAP.md here: do it.\" But the user explicitly asks for a sp"
+  [event #16] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=16 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=","
+  [event #17] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=17 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=" there\'s a note in HEARTBEAT.md: \"exec approval-pending: sen"
+  [event #18] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=18 ts=2026-08-10 19:18:35 +0000 visibility=raw delta=" like"
+  [event #19] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=19 ts=2026-08-10 19:18:36 +0000 visibility=raw delta=" a leftover.\n\nActually the user message \"Reply with exactly:"
+  [event #20] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=20 ts=2026-08-10 19:18:36 +0000 visibility=raw delta=" is"
+  [event #21] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=21 ts=2026-08-10 19:18:36 +0000 visibility=raw delta=" a test/instruction. The instruction hierarchy: user instruc"
+  [event #22] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=22 ts=2026-08-10 19:18:36 +0000 visibility=raw delta="OT"
+  [event #23] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=23 ts=2026-08-10 19:18:36 +0000 visibility=raw delta="STRAP says to introduce myself and ask for a name, but the u"
+  [event #24] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=24 ts=2026-08-10 19:18:36 +0000 visibility=raw delta=" a"
+  [event #25] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=25 ts=2026-08-10 19:18:36 +0000 visibility=raw delta=" specific reply.\n\nGiven the user explicitly demands \"Reply w"
+  [event #26] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=26 ts=2026-08-10 19:18:36 +0000 visibility=raw delta=" with"
+  [event #27] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=27 ts=2026-08-10 19:18:36 +0000 visibility=raw delta=" exactly that. The bootstrap sequence seems to be part of on"
+  [event #28] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=28 ts=2026-08-10 19:18:36 +0000 visibility=raw delta=" for"
+  [event #29] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=29 ts=2026-08-10 19:18:36 +0000 visibility=raw delta=" this turn. However, the system prompt says \"No generic gree"
+  [event #30] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=30 ts=2026-08-10 19:18:36 +0000 visibility=raw delta="/n"
+  [event #31] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=31 ts=2026-08-10 19:18:37 +0000 visibility=raw delta="ormal reply before BOOTSTRAP.md handling.\"\n\nThis is tricky. "
+  [event #32] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=32 ts=2026-08-10 19:18:37 +0000 visibility=raw delta=" to reply"
+  [event #33] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=33 ts=2026-08-10 19:18:37 +0000 visibility=raw delta=" with exactly \"ALPHA\". The bootstrap says to not do a generi"
+  [event #34] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=34 ts=2026-08-10 19:18:37 +0000 visibility=raw delta=" reply"
+  [event #35] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=35 ts=2026-08-10 19:18:37 +0000 visibility=raw delta=". But the user\'s direct instruction should win — it\'s a dire"
+  [event #36] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=36 ts=2026-08-10 19:18:37 +0000 visibility=raw delta=","
+  [event #37] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=37 ts=2026-08-10 19:18:37 +0000 visibility=raw delta=" unambiguous command. Responding \"ALPHA\" exactly is what the"
+  [event #38] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=38 ts=2026-08-10 19:18:37 +0000 visibility=raw delta=" want"
+  [event #39] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=39 ts=2026-08-10 19:18:37 +0000 visibility=raw delta=".\n\nI\'ll reply with exactly ALPHA."
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "AL",
+    "message" : {
+      "content" : [
+        {
+          "text" : "AL",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786389517594
+    },
+    "runId" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4",
+    "seq" : 262,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "delta"
+  },
+  "seq" : 53,
+  "type" : "event"
+}
+  [event #40] wireType=evt.thinking runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=40 ts=2026-08-10 19:18:33 +0000 visibility=raw delta="The user\'s message is in the context of the OpenClaw environ"
+  [event #41] wireType=evt.message.delta runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=41 ts=2026-08-10 19:18:33 +0000 delta="ALPHA"
+  [event #42] wireType=evt.turn_complete runId=9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4 seq=42 ts=2026-08-10 19:18:37 +0000 stopReason=completed usage=in=6968,out=385 degraded=- forceResolvedApprovals=-
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "PHA",
+    "message" : {
+      "content" : [
+        {
+          "text" : "ALPHA",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786389517652
+    },
+    "runId" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4",
+    "seq" : 267,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "delta"
+  },
+  "seq" : 58,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "message" : {
+      "content" : [
+        {
+          "text" : "ALPHA",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786389517652
+    },
+    "runId" : "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4",
+    "seq" : 267,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "final",
+    "stopReason" : "stop"
+  },
+  "seq" : 59,
+  "type" : "event"
+}
+  [round 1/3] 观察窗口结束
+
+--- SEND req sessions.send ---
+{
+  "id" : "r5",
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "message" : "Reply with exactly: BRAVO",
+    "timeoutMs" : 0
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 3,
+  "runId" : "a95294c8-f08b-461d-b479-5cdd1f9f4905",
+  "status" : "started"
+}
+  [round 2/3] send() 完成: runId=a95294c8-f08b-461d-b479-5cdd1f9f4905
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "a95294c8-f08b-461d-b479-5cdd1f9f4905"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 1000000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "effectiveResponseUsage" : "off",
+    "endedAt" : 1786389517649,
+    "estimatedCostUsd" : 0.0010955056000000001,
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "inputTokens" : 6968,
+    "kind" : "direct",
+    "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "08ba5ced-3c4c-409d-a085-635ce98ed994",
+        "idempotencyKey" : "a95294c8-f08b-461d-b479-5cdd1f9f4905:user",
+        "senderIsOwner" : true,
+        "seq" : 3
+      },
+      "content" : "Reply with exactly: BRAVO",
+      "idempotencyKey" : "a95294c8-f08b-461d-b479-5cdd1f9f4905:user",
+      "role" : "user",
+      "timestamp" : 1786389538561
+    },
+    "messageId" : "08ba5ced-3c4c-409d-a085-635ce98ed994",
+    "messageSeq" : 3,
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "outputTokens" : 385,
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "runtimeMs" : 4557,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "a95294c8-f08b-461d-b479-5cdd1f9f4905"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 1000000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "endedAt" : 1786389517649,
+      "estimatedCostUsd" : 0.0010955056000000001,
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "inputTokens" : 6968,
+      "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+      "kind" : "direct",
+      "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1786389538585,
+      "model" : "deepseek-v4-flash",
+      "modelProvider" : "deepseek",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "outputTokens" : 385,
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "runtimeMs" : 4557,
+      "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+      "spawnDepth" : 0,
+      "startedAt" : 1786389513092,
+      "status" : "done",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokens" : 11320,
+      "totalTokensFresh" : true,
+      "unread" : false,
+      "updatedAt" : 1786389538586
+    },
+    "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "spawnDepth" : 0,
+    "startedAt" : 1786389513092,
+    "status" : "done",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokens" : 11320,
+    "totalTokensFresh" : true,
+    "unread" : false,
+    "updatedAt" : 1786389538586
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "a95294c8-f08b-461d-b479-5cdd1f9f4905",
+    "seq" : 1,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 60,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "a95294c8-f08b-461d-b479-5cdd1f9f4905",
+    "seq" : 2,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 62,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "a95294c8-f08b-461d-b479-5cdd1f9f4905",
+    "seq" : 3,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 64,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "a95294c8-f08b-461d-b479-5cdd1f9f4905",
+    "seq" : 4,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 66,
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "a95294c8-f08b-461d-b479-5cdd1f9f4905"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 1000000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "effectiveResponseUsage" : "off",
+    "estimatedCostUsd" : 0.0010955056000000001,
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "inputTokens" : 6968,
+    "kind" : "direct",
+    "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "da589634",
+        "idempotencyKey" : "a95294c8-f08b-461d-b479-5cdd1f9f4905:user",
+        "senderIsOwner" : true,
+        "seq" : 3
+      },
+      "content" : "Reply with exactly: BRAVO",
+      "idempotencyKey" : "a95294c8-f08b-461d-b479-5cdd1f9f4905:user",
+      "role" : "user",
+      "timestamp" : 1786389538561
+    },
+    "messageId" : "da589634",
+    "messageSeq" : 3,
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "outputTokens" : 385,
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "a95294c8-f08b-461d-b479-5cdd1f9f4905"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 1000000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "estimatedCostUsd" : 0.0010955056000000001,
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "inputTokens" : 6968,
+      "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+      "kind" : "direct",
+      "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1786389538585,
+      "model" : "deepseek-v4-flash",
+      "modelProvider" : "deepseek",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "outputTokens" : 385,
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+      "spawnDepth" : 0,
+      "startedAt" : 1786389538965,
+      "status" : "running",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokens" : 11320,
+      "totalTokensFresh" : true,
+      "unread" : false,
+      "updatedAt" : 1786389538971
+    },
+    "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "spawnDepth" : 0,
+    "startedAt" : 1786389538965,
+    "status" : "running",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokens" : 11320,
+    "totalTokensFresh" : true,
+    "unread" : false,
+    "updatedAt" : 1786389538971
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "starting_model",
+    "runId" : "a95294c8-f08b-461d-b479-5cdd1f9f4905",
+    "seq" : 6,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 69,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "BRA",
+    "message" : {
+      "content" : [
+        {
+          "text" : "BRA",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786389539851
+    },
+    "runId" : "a95294c8-f08b-461d-b479-5cdd1f9f4905",
+    "seq" : 7,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "delta"
+  },
+  "seq" : 72,
+  "type" : "event"
+}
+  [event #43] wireType=evt.message.delta runId=a95294c8-f08b-461d-b479-5cdd1f9f4905 seq=1 ts=2026-08-10 19:18:58 +0000 delta="BRAVO"
+  [event #44] wireType=evt.turn_complete runId=a95294c8-f08b-461d-b479-5cdd1f9f4905 seq=2 ts=2026-08-10 19:18:59 +0000 stopReason=completed usage=in=84,out=3 degraded=- forceResolvedApprovals=-
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "VO",
+    "message" : {
+      "content" : [
+        {
+          "text" : "BRAVO",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786389539990
+    },
+    "runId" : "a95294c8-f08b-461d-b479-5cdd1f9f4905",
+    "seq" : 11,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "delta"
+  },
+  "seq" : 77,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "message" : {
+      "content" : [
+        {
+          "text" : "BRAVO",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786389539990
+    },
+    "runId" : "a95294c8-f08b-461d-b479-5cdd1f9f4905",
+    "seq" : 11,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "final",
+    "stopReason" : "stop"
+  },
+  "seq" : 78,
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1786389541153
+  },
+  "seq" : 79,
+  "type" : "event"
+}
+  [round 2/3] 观察窗口结束
+
+--- SEND req sessions.send ---
+{
+  "id" : "r6",
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "message" : "Reply with exactly: CHARLIE",
+    "timeoutMs" : 0
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 5,
+  "runId" : "c7ee4c77-0da6-487d-b176-41ce4a254151",
+  "status" : "started"
+}
+  [round 3/3] send() 完成: runId=c7ee4c77-0da6-487d-b176-41ce4a254151
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "c7ee4c77-0da6-487d-b176-41ce4a254151"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 1000000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "effectiveResponseUsage" : "off",
+    "endedAt" : 1786389539986,
+    "estimatedCostUsd" : 4.5214399999999999e-05,
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "inputTokens" : 84,
+    "kind" : "direct",
+    "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "2118e3c0-4287-448f-b49a-0ec23bff0538",
+        "idempotencyKey" : "c7ee4c77-0da6-487d-b176-41ce4a254151:user",
+        "senderIsOwner" : true,
+        "seq" : 5
+      },
+      "content" : "Reply with exactly: CHARLIE",
+      "idempotencyKey" : "c7ee4c77-0da6-487d-b176-41ce4a254151:user",
+      "role" : "user",
+      "timestamp" : 1786389565175
+    },
+    "messageId" : "2118e3c0-4287-448f-b49a-0ec23bff0538",
+    "messageSeq" : 5,
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "outputTokens" : 3,
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "runtimeMs" : 1021,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "c7ee4c77-0da6-487d-b176-41ce4a254151"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 1000000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "endedAt" : 1786389539986,
+      "estimatedCostUsd" : 4.5214399999999999e-05,
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "inputTokens" : 84,
+      "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+      "kind" : "direct",
+      "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1786389565196,
+      "model" : "deepseek-v4-flash",
+      "modelProvider" : "deepseek",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "outputTokens" : 3,
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "runtimeMs" : 1021,
+      "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+      "spawnDepth" : 0,
+      "startedAt" : 1786389538965,
+      "status" : "done",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokens" : 11732,
+      "totalTokensFresh" : true,
+      "unread" : false,
+      "updatedAt" : 1786389565196
+    },
+    "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "spawnDepth" : 0,
+    "startedAt" : 1786389538965,
+    "status" : "done",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokens" : 11732,
+    "totalTokensFresh" : true,
+    "unread" : false,
+    "updatedAt" : 1786389565196
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "c7ee4c77-0da6-487d-b176-41ce4a254151",
+    "seq" : 1,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 80,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "c7ee4c77-0da6-487d-b176-41ce4a254151",
+    "seq" : 2,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 82,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "c7ee4c77-0da6-487d-b176-41ce4a254151",
+    "seq" : 3,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 84,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "c7ee4c77-0da6-487d-b176-41ce4a254151",
+    "seq" : 4,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 86,
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "c7ee4c77-0da6-487d-b176-41ce4a254151"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 1000000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "effectiveResponseUsage" : "off",
+    "estimatedCostUsd" : 4.5214399999999999e-05,
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "inputTokens" : 84,
+    "kind" : "direct",
+    "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "fd7d1646",
+        "idempotencyKey" : "c7ee4c77-0da6-487d-b176-41ce4a254151:user",
+        "senderIsOwner" : true,
+        "seq" : 5
+      },
+      "content" : "Reply with exactly: CHARLIE",
+      "idempotencyKey" : "c7ee4c77-0da6-487d-b176-41ce4a254151:user",
+      "role" : "user",
+      "timestamp" : 1786389565175
+    },
+    "messageId" : "fd7d1646",
+    "messageSeq" : 5,
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "outputTokens" : 3,
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "c7ee4c77-0da6-487d-b176-41ce4a254151"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 1000000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "estimatedCostUsd" : 4.5214399999999999e-05,
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "inputTokens" : 84,
+      "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+      "kind" : "direct",
+      "label" : "sg4-20260810T191832Z-7B94428D-6D31-4616-A7AE-84EF57838D14",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1786389565196,
+      "model" : "deepseek-v4-flash",
+      "modelProvider" : "deepseek",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "outputTokens" : 3,
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+      "spawnDepth" : 0,
+      "startedAt" : 1786389565590,
+      "status" : "running",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokens" : 11732,
+      "totalTokensFresh" : true,
+      "unread" : false,
+      "updatedAt" : 1786389565596
+    },
+    "sessionId" : "8f0a808f-673f-4c5a-9248-25ab3025e021",
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "spawnDepth" : 0,
+    "startedAt" : 1786389565590,
+    "status" : "running",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokens" : 11732,
+    "totalTokensFresh" : true,
+    "unread" : false,
+    "updatedAt" : 1786389565596
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "starting_model",
+    "runId" : "c7ee4c77-0da6-487d-b176-41ce4a254151",
+    "seq" : 6,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "status"
+  },
+  "seq" : 89,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "CHAR",
+    "message" : {
+      "content" : [
+        {
+          "text" : "CHAR",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786389566472
+    },
+    "runId" : "c7ee4c77-0da6-487d-b176-41ce4a254151",
+    "seq" : 7,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "delta"
+  },
+  "seq" : 92,
+  "type" : "event"
+}
+  [event #45] wireType=evt.message.delta runId=c7ee4c77-0da6-487d-b176-41ce4a254151 seq=1 ts=2026-08-10 19:19:25 +0000 delta="CHARLIE"
+  [event #46] wireType=evt.turn_complete runId=c7ee4c77-0da6-487d-b176-41ce4a254151 seq=2 ts=2026-08-10 19:19:26 +0000 stopReason=completed usage=in=115,out=4 degraded=- forceResolvedApprovals=-
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "LIE",
+    "message" : {
+      "content" : [
+        {
+          "text" : "CHARLIE",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786389566539
+    },
+    "runId" : "c7ee4c77-0da6-487d-b176-41ce4a254151",
+    "seq" : 12,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "delta"
+  },
+  "seq" : 97,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "message" : {
+      "content" : [
+        {
+          "text" : "CHARLIE",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786389566539
+    },
+    "runId" : "c7ee4c77-0da6-487d-b176-41ce4a254151",
+    "seq" : 12,
+    "sessionKey" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+    "state" : "final",
+    "stopReason" : "stop"
+  },
+  "seq" : 98,
+  "type" : "event"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 4,
+          "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-repro\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 4281,
+              "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+              "updatedAt" : 1786389566568
+            },
+            {
+              "age" : 184306,
+              "key" : "agent:main:dashboard:4f8a4f98-036b-4a16-a426-8c9346ce273e",
+              "updatedAt" : 1786389386543
+            },
+            {
+              "age" : 313602,
+              "key" : "agent:main:dashboard:af04fc6a-6873-405c-b855-7a91a4ca363c",
+              "updatedAt" : 1786389257247
+            },
+            {
+              "age" : 352432,
+              "key" : "agent:main:dashboard:d8b057fb-07a6-4813-aeef-014c419c99aa",
+              "updatedAt" : 1786389218417
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+      "qqbot" : "QQ Bot"
+    },
+    "channelOrder" : [
+      "qqbot"
+    ],
+    "channels" : {
+      "qqbot" : {
+        "accountId" : "default",
+        "accounts" : {
+          "default" : {
+            "accountId" : "default",
+            "configured" : false,
+            "connected" : false,
+            "enabled" : true,
+            "lastConnectedAt" : null,
+            "lastError" : null,
+            "lastInboundAt" : null,
+            "lastOutboundAt" : null,
+            "running" : false,
+            "tokenSource" : "***REDACTED***"
+          }
+        },
+        "configured" : false,
+        "connected" : false,
+        "enabled" : true,
+        "lastConnectedAt" : null,
+        "lastError" : null,
+        "lastInboundAt" : null,
+        "lastOutboundAt" : null,
+        "running" : false,
+        "tokenSource" : "***REDACTED***"
+      }
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 136,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.058000000000000003,
+      "degraded" : false,
+      "delayMaxMs" : 242.59999999999999,
+      "delayP99Ms" : 24.800000000000001,
+      "intervalMs" : 58369,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.048000000000000001
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "alibaba",
+        "amazon-bedrock",
+        "amazon-bedrock-mantle",
+        "anthropic",
+        "anthropic-vertex",
+        "arcee",
+        "azure-speech",
+        "baseten",
+        "bonjour",
+        "browser",
+        "byteplus",
+        "canvas",
+        "cerebras",
+        "chutes",
+        "clawrouter",
+        "cloudflare-ai-gateway",
+        "cohere",
+        "comfy",
+        "copilot-proxy",
+        "deepgram",
+        "deepinfra",
+        "deepseek",
+        "device-pair",
+        "document-extract",
+        "elevenlabs",
+        "fal",
+        "featherless",
+        "file-transfer",
+        "fireworks",
+        "github-copilot",
+        "gmi",
+        "google",
+        "groq",
+        "huggingface",
+        "inworld",
+        "kilocode",
+        "kimi",
+        "linux-canvas",
+        "linux-node",
+        "litellm",
+        "llama-cpp",
+        "lmstudio",
+        "longcat",
+        "memory-core",
+        "meta",
+        "microsoft",
+        "microsoft-foundry",
+        "minimax",
+        "mistral",
+        "moonshot",
+        "novita",
+        "nvidia",
+        "ollama",
+        "openai",
+        "opencode",
+        "opencode-go",
+        "openrouter",
+        "phone-control",
+        "pixverse",
+        "qianfan",
+        "qqbot",
+        "qwen",
+        "runway",
+        "senseaudio",
+        "sglang",
+        "stepfun",
+        "synthetic",
+        "talk-voice",
+        "tencent",
+        "together",
+        "tts-local-cli",
+        "venice",
+        "vercel-ai-gateway",
+        "vllm",
+        "volcengine",
+        "voyage",
+        "vydra",
+        "web-readability",
+        "xai",
+        "xiaomi",
+        "zai"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 4,
+      "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-repro\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+        {
+          "age" : 4281,
+          "key" : "agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798",
+          "updatedAt" : 1786389566568
+        },
+        {
+          "age" : 184306,
+          "key" : "agent:main:dashboard:4f8a4f98-036b-4a16-a426-8c9346ce273e",
+          "updatedAt" : 1786389386543
+        },
+        {
+          "age" : 313602,
+          "key" : "agent:main:dashboard:af04fc6a-6873-405c-b855-7a91a4ca363c",
+          "updatedAt" : 1786389257247
+        },
+        {
+          "age" : 352432,
+          "key" : "agent:main:dashboard:d8b057fb-07a6-4813-aeef-014c419c99aa",
+          "updatedAt" : 1786389218417
+        }
+      ]
+    },
+    "ts" : 1786389570985
+  },
+  "seq" : 99,
+  "stateVersion" : {
+    "health" : 25,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1786389571154
+  },
+  "seq" : 100,
+  "type" : "event"
+}
+  [round 3/3] 观察窗口结束
+
+[STEP 4] SG5_SKIP_STOP=1，跳过 stop()（sessions.abort + sessions.delete）——会话在 openclaw 侧保留存活，事后可用上面的 SESSION_KEY 查 GET /sessions/<key>/history。
+  事件流已停止观察（SG5_SKIP_STOP=1：未调用 stop()，不会有 sessionEnd；本地主动 cancel 观察任务后干净退出），观察窗口内共收到 46 条 session.message 事件
+
+=== [断言模式] 字段级不变量校验（共 46 条 D2 事件；另有 messageSeq 独立计数，见断言 4） ===
+  [PASS] seq 单调：所有 run/session 作用域内 seq 严格递增，无倒退/重复（3 个作用域）
+  [SKIP] runId 一致：本轮未调用 send()（无期望 runId），仅报告观察到的集合：["9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4", "a95294c8-f08b-461d-b479-5cdd1f9f4905", "c7ee4c77-0da6-487d-b176-41ce4a254151"]
+  [SKIP] turnComplete 唯一：无期望 runId，跳过（观察到 3 个 run 各自的 turnComplete 计数：["a95294c8-f08b-461d-b479-5cdd1f9f4905": 1, "9471e2c1-dfb9-4c3a-a27d-a21b1d22f4a4": 1, "c7ee4c77-0da6-487d-b176-41ce4a254151": 1]）
+  [PASS] operationCompleted 唯一：未见重复 operationId（共 0 个）
+  [FAIL] sessionEnd 唯一：全程未收到 sessionEnd 事件（stop() 后预期恰好 1 条）
+  [FAIL] 终态唯一（综合，见上方明细）
+  [PASS] wire messageSeq 单调非递减：9 次观察全部非递减，无倒退
+=== [断言模式] 结束 ===
+
+=== L1 闭环 OPEN（SG5_SKIP_STOP=1，会话未 stop，可事后查 history）: connect -> createSession -> subscribe -> (send) ===

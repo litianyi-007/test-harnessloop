@@ -1,0 +1,100 @@
+[
+ {
+  "event": "session.approval",
+  "payload": {
+   "approval": {
+    "createdAtMs": 1786476738788,
+    "expiresAtMs": 1786478538788,
+    "id": "d09b3b34-874e-4c95-b363-8680c1fb6b20",
+    "presentation": {
+     "agentId": "main",
+     "allowedDecisions": [
+      "allow-once",
+      "deny"
+     ],
+     "commandPreview": null,
+     "commandText": "echo APPROVAL_GATE_OK",
+     "host": "gateway",
+     "kind": "exec",
+     "nodeId": null,
+     "warningText": null
+    },
+    "status": "pending",
+    "urlPath": "/approve/d09b3b34-874e-4c95-b363-8680c1fb6b20"
+   },
+   "phase": "pending",
+   "sessionKey": "agent:main:dashboard:5f25e610-69b4-4cc6-af3b-fd2d65f0c8ff",
+   "sourceSessionKey": "agent:main:dashboard:5f25e610-69b4-4cc6-af3b-fd2d65f0c8ff",
+   "updatedAtMs": 1786476738788
+  },
+  "produced": []
+ },
+ {
+  "event": "session.approval",
+  "payload": {
+   "approval": {
+    "createdAtMs": 1786476738934,
+    "expiresAtMs": 1786478538934,
+    "id": "3eb1d5fc-f3a2-415f-99ac-f0386bb770c2",
+    "presentation": {
+     "agentId": "main",
+     "allowedDecisions": [
+      "allow-once",
+      "deny"
+     ],
+     "commandPreview": null,
+     "commandText": "openclaw onboard recommendations --json",
+     "host": "gateway",
+     "kind": "exec",
+     "nodeId": null,
+     "warningText": null
+    },
+    "status": "pending",
+    "urlPath": "/approve/3eb1d5fc-f3a2-415f-99ac-f0386bb770c2"
+   },
+   "phase": "pending",
+   "sessionKey": "agent:main:dashboard:5f25e610-69b4-4cc6-af3b-fd2d65f0c8ff",
+   "sourceSessionKey": "agent:main:dashboard:5f25e610-69b4-4cc6-af3b-fd2d65f0c8ff",
+   "updatedAtMs": 1786476738934
+  },
+  "produced": []
+ },
+ {
+  "event": "agent",
+  "payload": {
+   "agentId": "main",
+   "data": {
+    "approvalId": "d09b3b34-874e-4c95-b363-8680c1fb6b20",
+    "phase": "waiting-approval",
+    "toolCallId": "call_00_hcUZ27OoJFUsBDkJ08M47382"
+   },
+   "isHeartbeat": false,
+   "runId": "6208dd06-d45c-4f46-b146-b1a6164f3675",
+   "seq": 623,
+   "sessionId": "fb677311-e166-4f60-9ca9-8748b5990594",
+   "sessionKey": "agent:main:dashboard:5f25e610-69b4-4cc6-af3b-fd2d65f0c8ff",
+   "stream": "lifecycle",
+   "ts": 1786476738938
+  },
+  "produced": []
+ },
+ {
+  "event": "agent",
+  "payload": {
+   "agentId": "main",
+   "data": {
+    "approvalId": "3eb1d5fc-f3a2-415f-99ac-f0386bb770c2",
+    "phase": "waiting-approval",
+    "toolCallId": "call_01_Z5lbn3D44pDrMhzevbWN4678"
+   },
+   "isHeartbeat": false,
+   "runId": "6208dd06-d45c-4f46-b146-b1a6164f3675",
+   "seq": 624,
+   "sessionId": "fb677311-e166-4f60-9ca9-8748b5990594",
+   "sessionKey": "agent:main:dashboard:5f25e610-69b4-4cc6-af3b-fd2d65f0c8ff",
+   "stream": "lifecycle",
+   "ts": 1786476738944
+  },
+  "produced": []
+ }
+]

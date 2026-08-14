@@ -1,0 +1,4 @@
+FATAL: transport error: Error Domain=NSURLErrorDomain Code=-1004 "Could not connect to the server." UserInfo={NSErrorFailingURLStringKey=http://127.0.0.1:1/, NSLocalizedDescription=Could not connect to the server., NSErrorFailingURLKey=http://127.0.0.1:1/}
+=== SG-4 kernel-client L1 闭环：createSession -> subscribe -> stop ===
+endpoint: ws://127.0.0.1:1
+timestamp: 2026-08-10T19:23:02Z

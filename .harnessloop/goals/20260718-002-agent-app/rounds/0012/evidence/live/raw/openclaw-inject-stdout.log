@@ -1,0 +1,48 @@
+2026-08-08T23:08:40.071+08:00 [gateway] loading configuration…
+2026-08-08T23:08:40.379+08:00 [gateway] resolving authentication…
+2026-08-08T23:08:40.389+08:00 [gateway] starting...
+2026-08-08T23:08:40.764+08:00 [gateway] auto-enabled plugins for this runtime without writing config:
+- deepseek/deepseek-v4-flash model configured, enabled automatically.
+2026-08-08T23:08:41.424+08:00 [gateway] starting HTTP server...
+2026-08-08T23:08:42.146+08:00 [gateway] agent model: deepseek/deepseek-v4-flash (thinking=high, fast=off)
+2026-08-08T23:08:42.147+08:00 [gateway] http server listening (14 plugins: acpx, anthropic, bonjour, browser, canvas, device-pair, file-transfer, linux-canvas, linux-node, memory-core, ollama, opencode, phone-control, talk-voice; 1.6s)
+2026-08-08T23:08:42.149+08:00 [gateway] log file: /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/scratchpad/round0012-inject/logs/openclaw-isolated.log
+2026-08-08T23:08:42.237+08:00 [gateway] ready
+2026-08-08T23:08:42.337+08:00 [gateway] starting channels and sidecars...
+2026-08-08T23:08:45.826+08:00 [gateway/channels] skipping channel start (OPENCLAW_SKIP_CHANNELS=1 or OPENCLAW_SKIP_PROVIDERS=1)
+2026-08-08T23:08:45.829+08:00 [plugins] embedded acpx runtime backend registered lazily
+2026-08-08T23:08:45.844+08:00 [gateway] startup outcomes: internal-hooks=skipped (not-configured); internal-startup-hook=skipped (no-handlers-loaded); gateway-start-hooks=scheduled; memory-qmd=skipped (not-configured); gmail-watcher=skipped (hooks-disabled); gmail-model=skipped (not-configured)
+2026-08-08T23:08:45.851+08:00 [heartbeat] started
+2026-08-08T23:08:46.305+08:00 [gateway] agent runtime plugins pre-warmed in 125ms
+2026-08-08T23:08:46.828+08:00 [plugins] bonjour: advertised gateway fqdn=MacBook Pro (2) (OpenClaw)._openclaw-gw._tcp.local. host=MacBook-Pro-2.local. port=18959 state=announcing
+2026-08-08T23:09:09.244+08:00 [ws] ⇄ res ✓ sessions.create 120ms conn=7a165f24…33d6 id=r2
+2026-08-08T23:09:20.060+08:00 [agent/embedded] tool-search: cataloged 41 tools behind compact prompt surface
+2026-08-08T23:09:20.170+08:00 [agent/embedded] Removed already-queued orphaned user message to prevent consecutive user turns. runId=5c989156-34c5-4d79-a8c6-2380f41def11 sessionId=c90e93b9-6b85-4507-b4a1-819e6e407cf1 trigger=user
+2026-08-08T23:09:20.224+08:00 [provider-transport-fetch] [model-fetch] start provider=deepseek api=openai-completions model=deepseek-v4-flash method=POST url=http://127.0.0.1:59999/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-08T23:09:20.246+08:00 [provider-transport-fetch] [model-fetch] error provider=deepseek api=openai-completions model=deepseek-v4-flash elapsedMs=23 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-08T23:09:20.705+08:00 [provider-transport-fetch] [model-fetch] start provider=deepseek api=openai-completions model=deepseek-v4-flash method=POST url=http://127.0.0.1:59999/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-08T23:09:20.709+08:00 [provider-transport-fetch] [model-fetch] error provider=deepseek api=openai-completions model=deepseek-v4-flash elapsedMs=4 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-08T23:09:21.603+08:00 [provider-transport-fetch] [model-fetch] start provider=deepseek api=openai-completions model=deepseek-v4-flash method=POST url=http://127.0.0.1:59999/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-08T23:09:21.608+08:00 [provider-transport-fetch] [model-fetch] error provider=deepseek api=openai-completions model=deepseek-v4-flash elapsedMs=6 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-08T23:09:21.642+08:00 [agent/embedded] embedded run agent end: runId=5c989156-34c5-4d79-a8c6-2380f41def11 isError=true model=deepseek-v4-flash provider=deepseek error=LLM request failed: network connection error. rawError=Connection error.
+2026-08-08T23:09:21.692+08:00 [agent/embedded] embedded run failover decision: runId=5c989156-34c5-4d79-a8c6-2380f41def11 stage=assistant decision=surface_error reason=timeout from=deepseek/deepseek-v4-flash profile=- rawError=Connection error.
+2026-08-08T23:09:21.694+08:00 [diagnostic] lane task error: lane=main durationMs=3523 error="FailoverError: LLM request failed: network connection error."
+2026-08-08T23:09:21.695+08:00 [diagnostic] lane task error: lane=session:agent:main:dashboard:c75fdff6-e170-48f6-91ef-9375dd9e4f57 durationMs=3527 error="FailoverError: LLM request failed: network connection error."
+2026-08-08T23:09:21.698+08:00 [model-fallback/decision] model fallback decision: decision=candidate_failed requested=deepseek/deepseek-v4-flash candidate=deepseek/deepseek-v4-flash reason=timeout next=none detail=Connection error.
+2026-08-08T23:09:21.701+08:00 Transient HTTP provider error before reply (LLM request failed: network connection error.). Retrying once in 2500ms.
+2026-08-08T23:09:26.130+08:00 [agent/embedded] tool-search: cataloged 41 tools behind compact prompt surface
+2026-08-08T23:09:26.217+08:00 [provider-transport-fetch] [model-fetch] start provider=deepseek api=openai-completions model=deepseek-v4-flash method=POST url=http://127.0.0.1:59999/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-08T23:09:26.222+08:00 [provider-transport-fetch] [model-fetch] error provider=deepseek api=openai-completions model=deepseek-v4-flash elapsedMs=6 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-08T23:09:26.690+08:00 [provider-transport-fetch] [model-fetch] start provider=deepseek api=openai-completions model=deepseek-v4-flash method=POST url=http://127.0.0.1:59999/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-08T23:09:26.693+08:00 [provider-transport-fetch] [model-fetch] error provider=deepseek api=openai-completions model=deepseek-v4-flash elapsedMs=4 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-08T23:09:27.517+08:00 [provider-transport-fetch] [model-fetch] start provider=deepseek api=openai-completions model=deepseek-v4-flash method=POST url=http://127.0.0.1:59999/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-08T23:09:27.520+08:00 [provider-transport-fetch] [model-fetch] error provider=deepseek api=openai-completions model=deepseek-v4-flash elapsedMs=3 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-08T23:09:27.534+08:00 [agent/embedded] embedded run agent end: runId=5c989156-34c5-4d79-a8c6-2380f41def11 isError=true model=deepseek-v4-flash provider=deepseek error=LLM request failed: network connection error. rawError=Connection error.
+2026-08-08T23:09:27.559+08:00 [agent/embedded] embedded run failover decision: runId=5c989156-34c5-4d79-a8c6-2380f41def11 stage=assistant decision=surface_error reason=timeout from=deepseek/deepseek-v4-flash profile=- rawError=Connection error.
+2026-08-08T23:09:27.560+08:00 [diagnostic] lane task error: lane=main durationMs=3258 error="FailoverError: LLM request failed: network connection error."
+2026-08-08T23:09:27.561+08:00 [diagnostic] lane task error: lane=session:agent:main:dashboard:c75fdff6-e170-48f6-91ef-9375dd9e4f57 durationMs=3259 error="FailoverError: LLM request failed: network connection error."
+2026-08-08T23:09:27.564+08:00 [model-fallback/decision] model fallback decision: decision=candidate_failed requested=deepseek/deepseek-v4-flash candidate=deepseek/deepseek-v4-flash reason=timeout next=none detail=Connection error.
+2026-08-08T23:09:27.568+08:00 Embedded agent failed before reply: LLM request failed: network connection error.
+2026-08-08T23:10:36.526+08:00 [gateway] received SIGTERM; shutting down
+2026-08-08T23:10:37.182+08:00 [gmail-watcher] gmail watcher stopped
+2026-08-08T23:10:37.190+08:00 [shutdown] completed cleanly in 130ms

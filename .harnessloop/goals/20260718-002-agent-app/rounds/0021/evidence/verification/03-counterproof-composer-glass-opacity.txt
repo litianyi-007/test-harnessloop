@@ -1,0 +1,88 @@
+T-114 rework — destructive counter-proof for Finding 2 (macOS 26 composer glass drops slider
+intensity), the testable portion: ComposerGlassLayerOpacity.resolve(intensity:) in
+app/apps/AgentShell/Sources/AgentShellCore/AppearanceSettings.swift.
+
+Method: checksum-based revert, NOT `git checkout --` — this file has uncommitted round-0021
+changes already in the working tree (predates this rework pass), so `git checkout -- <file>` would
+discard ALL of that prior work, not just my injected defect. CLAUDE.md also explicitly documents
+`git checkout --` as a silent no-op on this round's untracked files. shasum-based before/after
+comparison is the only way to prove a byte-exact revert here.
+
+=== STEP 1: checksum before injection ===
+$ shasum -a 256 app/apps/AgentShell/Sources/AgentShellCore/AppearanceSettings.swift
+adc125fba6ea2188160d4d44268b046313b0d82ec126d6dd9191941c9b059c7c  AppearanceSettings.swift
+
+=== STEP 2: sites matched (grep for the exact code to be injected) ===
+$ grep -n "maxOpacity - (maxOpacity - minOpacity) \* intensity" AppearanceSettings.swift
+115:        maxOpacity - (maxOpacity - minOpacity) * intensity
+
+Sites matched = 1 (the single real call site — not 0, so the injection target is valid).
+
+=== STEP 3: injection ===
+Changed:
+    public static func resolve(intensity: Double) -> Double {
+        maxOpacity - (maxOpacity - minOpacity) * intensity
+    }
+to:
+    public static func resolve(intensity: Double) -> Double {
+        maxOpacity // INJECTED DEFECT: ignores intensity, reproducing T-114 Finding 2's bug class
+    }
+
+This reproduces the exact class of the real pre-fix bug (LiquidGlassSupport.swift's composer
+.translucent branch ignoring `intensity` and always rendering the same fixed glass).
+
+=== STEP 4: build with defect (must check exit code before trusting test count) ===
+$ swift build --package-path app
+BUILD_EXIT_CODE=0   (logic bug, not a compile error — expected)
+
+=== STEP 5: run tests — RED ===
+$ app/.build/arm64-apple-macosx/debug/frame-replay-tests
+TEST_EXIT_CODE=1
+=== 结果: 160/163 PASS ===
+
+--- FAIL lines (exactly the 3 new tests for this fix, no collateral damage) ---
+[FAIL] 外观设置 composer 玻璃: ComposerGlassLayerOpacity.resolve(intensity:) 对不同 intensity 返回不同的不透明度（不是修前那种恒定值）: intensity=0.1/0.5/1.0 应该产出三个互不相同的不透明度，实际得到 1.0/1.0/1.0
+[FAIL] 外观设置 composer 玻璃: ComposerGlassLayerOpacity.resolve(intensity:) 随 intensity 增大单调递减（intensity 越大越透明，玻璃层不透明度应越低）: intensity=0.2 的不透明度 1.0 应该严格小于上一个采样点的 1.0，方向搞反了
+[FAIL] 外观设置 composer 玻璃: ComposerGlassLayerOpacity.resolve(intensity:) 在 intensity 两个极值附近，返回值落在 [minOpacity, maxOpacity] 内: intensity=1.0 期望约等于 minOpacity=0.35，实际得到 1.0
+
+163 - 160 = 3 failing tests = exactly the 3 tests added for this fix. 0 unrelated collateral
+failures — confirms the injected defect's blast radius matches expectations precisely.
+
+=== STEP 6: revert (Edit tool, restoring exact original text) ===
+Changed back to:
+    public static func resolve(intensity: Double) -> Double {
+        maxOpacity - (maxOpacity - minOpacity) * intensity
+    }
+
+=== STEP 7: checksum after revert ===
+$ shasum -a 256 app/apps/AgentShell/Sources/AgentShellCore/AppearanceSettings.swift
+adc125fba6ea2188160d4d44268b046313b0d82ec126d6dd9191941c9b059c7c  AppearanceSettings.swift
+
+MATCHES STEP 1 EXACTLY — byte-exact revert confirmed, no residue.
+
+=== STEP 8: build + test — GREEN ===
+$ swift build --package-path app
+BUILD_EXIT_CODE=0
+$ app/.build/arm64-apple-macosx/debug/frame-replay-tests
+TEST_EXIT_CODE=0
+=== 结果: 163/163 PASS ===
+
+VERDICT: counter-proof complete. The 3 new tests genuinely exercise the fix (they fail when the
+fix is undone, in exactly the predicted way, with zero collateral failures) and the file was
+restored to a byte-identical state afterward.
+
+Known coverage gap, stated plainly: this counter-proof exercises the pure numeric mapping
+(ComposerGlassLayerOpacity.resolve), which is the part I moved into AgentShellCore specifically to
+make it testable. It does NOT exercise the actual view-layer wiring in LiquidGlassSupport.swift
+(composerChromeBackground's .translucent branch calling this function inside a real
+Color.clear.glassEffect(...).opacity(...) background, on a real macOS 26 Glass render). That
+wiring is structurally unreachable from frame-replay-tests (AgentShell is an executableTarget;
+frame-replay-tests cannot import it — same limitation documented in AppearanceSettings.swift's own
+header comment for every other resolver in this file). It is verified only by: (a) the clean build
+succeeding against the real macOS 26.5 SDK's actual Glass/glassEffect signatures (see
+01-build-clean.txt) — a real compile-time check against real API surface, not a guess; and (b) the
+SDK swiftinterface search recorded in this directory's index file. It was NOT verified by a live
+pixel/screenshot capture of the running composer at different slider positions — the machine's
+screen was locked for the duration of this session (see 06-probe-window-census.swift.txt's
+companion log), which blocked all screenshot-based visual verification, not just this one. Stating
+this gap explicitly rather than implying screenshot-level coverage that wasn't obtained.

@@ -1,0 +1,1449 @@
+
+--- RECV connect.challenge ---
+{
+  "nonce" : "4be684a3-3cef-4529-bc01-9685d3bb7c27",
+  "ts" : 1786201524602
+}
+
+--- SEND req connect ---
+{
+  "id" : "r1",
+  "method" : "connect",
+  "params" : {
+    "auth" : "***REDACTED***",
+    "caps" : [
+
+    ],
+    "client" : {
+      "id" : "cli",
+      "mode" : "cli",
+      "platform" : "darwin",
+      "version" : "0.0.1"
+    },
+    "maxProtocol" : 4,
+    "minProtocol" : 3,
+    "role" : "operator",
+    "scopes" : [
+      "operator.admin"
+    ]
+  },
+  "type" : "req"
+}
+
+--- RECV hello-ok (connect response payload) ---
+{
+  "auth" : "***REDACTED***",
+  "features" : {
+    "capabilities" : [
+      "board-widget-put-canvas-doc",
+      "chat-send-routing-contract",
+      "openclaw-setup-model-ref"
+    ],
+    "events" : [
+      "connect.challenge",
+      "agent",
+      "chat",
+      "ui.command",
+      "session.approval",
+      "session.message",
+      "session.observer",
+      "session.operation",
+      "session.tool",
+      "sessions.changed",
+      "presence",
+      "tick",
+      "talk.mode",
+      "talk.event",
+      "shutdown",
+      "health",
+      "heartbeat",
+      "cron",
+      "task",
+      "task.suggestion",
+      "node.pair.requested",
+      "node.pair.resolved",
+      "node.presence",
+      "node.invoke.cancel",
+      "node.invoke.input",
+      "node.invoke.request",
+      "device.pair.requested",
+      "device.pair.resolved",
+      "voicewake.changed",
+      "voicewake.routing.changed",
+      "exec.approval.requested",
+      "exec.approval.resolved",
+      "question.requested",
+      "question.resolved",
+      "plugin.approval.requested",
+      "plugin.approval.resolved",
+      "openclaw.approval.requested",
+      "openclaw.approval.resolved",
+      "terminal.data",
+      "terminal.exit",
+      "update.available"
+    ],
+    "methods" : [
+      "health",
+      "diagnostics.stability",
+      "doctor.memory.status",
+      "doctor.memory.dreamDiary",
+      "doctor.memory.backfillDreamDiary",
+      "doctor.memory.resetDreamDiary",
+      "doctor.memory.resetGroundedShortTerm",
+      "doctor.memory.repairDreamingArtifacts",
+      "doctor.memory.dedupeDreamDiary",
+      "doctor.memory.remHarness",
+      "logs.tail",
+      "channels.status",
+      "channels.start",
+      "channels.stop",
+      "channels.logout",
+      "status",
+      "usage.status",
+      "usage.cost",
+      "tts.status",
+      "tts.providers",
+      "tts.personas",
+      "tts.enable",
+      "tts.disable",
+      "tts.convert",
+      "tts.setProvider",
+      "tts.setPersona",
+      "config.get",
+      "config.set",
+      "config.apply",
+      "config.patch",
+      "config.schema",
+      "config.schema.lookup",
+      "exec.approvals.get",
+      "exec.approvals.set",
+      "exec.approvals.node.get",
+      "exec.approvals.node.set",
+      "exec.approval.get",
+      "exec.approval.list",
+      "exec.approval.request",
+      "exec.approval.waitDecision",
+      "exec.approval.resolve",
+      "question.request",
+      "question.waitAnswer",
+      "question.resolve",
+      "question.get",
+      "question.list",
+      "plugin.approval.list",
+      "plugin.approval.request",
+      "plugin.approval.waitDecision",
+      "plugin.approval.resolve",
+      "plugins.uiDescriptors",
+      "plugins.sessionAction",
+      "openclaw.chat",
+      "openclaw.chat.history",
+      "openclaw.changes.list",
+      "openclaw.approval.list",
+      "openclaw.setup.detect",
+      "openclaw.setup.activate",
+      "openclaw.setup.auth.start",
+      "openclaw.setup.prepare.start",
+      "wizard.start",
+      "wizard.next",
+      "wizard.cancel",
+      "wizard.status",
+      "talk.catalog",
+      "talk.config",
+      "talk.client.create",
+      "talk.client.transcript",
+      "talk.client.close",
+      "talk.client.toolCall",
+      "talk.client.steer",
+      "talk.session.create",
+      "talk.session.join",
+      "talk.session.appendAudio",
+      "talk.session.startTurn",
+      "talk.session.endTurn",
+      "talk.session.cancelTurn",
+      "talk.session.cancelOutput",
+      "talk.session.acknowledgeMark",
+      "talk.session.submitToolResult",
+      "talk.session.steer",
+      "talk.session.close",
+      "talk.speak",
+      "talk.mode",
+      "commands.list",
+      "models.list",
+      "models.authStatus",
+      "models.authLogout",
+      "tools.catalog",
+      "tools.effective",
+      "tools.invoke",
+      "mcp.app.view",
+      "mcp.app.listTools",
+      "mcp.app.listResources",
+      "mcp.app.listResourceTemplates",
+      "mcp.app.readResource",
+      "mcp.app.callTool",
+      "mcp.app.updateModelContext",
+      "board.get",
+      "board.update",
+      "board.widget.put",
+      "board.widget.grant",
+      "board.widget.appView",
+      "board.event",
+      "audit.list",
+      "audit.activity.list",
+      "users.list",
+      "users.self",
+      "users.linkEmail",
+      "users.setDisplayName",
+      "users.setAvatar",
+      "tasks.list",
+      "tasks.get",
+      "tasks.cancel",
+      "taskSuggestions.list",
+      "taskSuggestions.create",
+      "taskSuggestions.accept",
+      "taskSuggestions.dismiss",
+      "environments.list",
+      "environments.status",
+      "worktrees.list",
+      "worktrees.branches",
+      "fs.listDir",
+      "worktrees.create",
+      "worktrees.remove",
+      "worktrees.restore",
+      "worktrees.gc",
+      "agents.list",
+      "agents.create",
+      "agents.update",
+      "agents.delete",
+      "agents.files.list",
+      "agents.files.get",
+      "agents.files.set",
+      "sessions.files.list",
+      "sessions.files.get",
+      "sessions.files.set",
+      "sessions.files.reveal",
+      "artifacts.list",
+      "artifacts.get",
+      "artifacts.download",
+      "skills.status",
+      "skills.search",
+      "skills.detail",
+      "skills.securityVerdicts",
+      "skills.skillCard",
+      "skills.bins",
+      "skills.upload.begin",
+      "skills.upload.chunk",
+      "skills.upload.commit",
+      "skills.install",
+      "skills.update",
+      "skills.curator.status",
+      "skills.curator.pin",
+      "skills.curator.unpin",
+      "skills.curator.restore",
+      "skills.proposals.list",
+      "skills.proposals.inspect",
+      "skills.proposals.historyStatus",
+      "skills.proposals.historyScan",
+      "skills.proposals.create",
+      "skills.proposals.update",
+      "skills.proposals.revise",
+      "skills.proposals.requestRevision",
+      "skills.proposals.apply",
+      "skills.proposals.reject",
+      "skills.proposals.quarantine",
+      "update.status",
+      "update.run",
+      "voicewake.get",
+      "voicewake.set",
+      "secrets.reload",
+      "secrets.resolve",
+      "voicewake.routing.get",
+      "voicewake.routing.set",
+      "sessions.list",
+      "sessions.subscribe",
+      "sessions.unsubscribe",
+      "sessions.messages.subscribe",
+      "sessions.messages.unsubscribe",
+      "sessions.preview",
+      "sessions.describe",
+      "sessions.compaction.list",
+      "sessions.compaction.get",
+      "sessions.compaction.branch",
+      "sessions.compaction.restore",
+      "sessions.branches.list",
+      "sessions.branches.switch",
+      "sessions.rewind",
+      "sessions.fork",
+      "sessions.create",
+      "sessions.send",
+      "sessions.abort",
+      "sessions.patch",
+      "sessions.pluginPatch",
+      "sessions.cleanup",
+      "sessions.reset",
+      "sessions.delete",
+      "sessions.compact",
+      "sessions.groups.list",
+      "sessions.groups.put",
+      "sessions.groups.rename",
+      "sessions.groups.delete",
+      "last-heartbeat",
+      "set-heartbeats",
+      "wake",
+      "node.pair.list",
+      "node.pair.approve",
+      "node.pair.reject",
+      "node.pair.remove",
+      "device.pair.list",
+      "device.pair.approve",
+      "device.pair.reject",
+      "device.pair.remove",
+      "device.pair.rename",
+      "device.token.rotate",
+      "device.token.revoke",
+      "node.rename",
+      "node.list",
+      "node.describe",
+      "node.pluginSurface.refresh",
+      "node.pluginTools.update",
+      "node.skills.update",
+      "node.pending.drain",
+      "node.pending.enqueue",
+      "node.invoke",
+      "node.pending.pull",
+      "node.pending.ack",
+      "node.invoke.progress",
+      "node.invoke.result",
+      "node.event",
+      "cron.get",
+      "cron.list",
+      "cron.status",
+      "cron.add",
+      "cron.update",
+      "cron.remove",
+      "cron.run",
+      "cron.runs",
+      "gateway.identity.get",
+      "gateway.restart.preflight",
+      "gateway.restart.request",
+      "system-presence",
+      "system-event",
+      "message.action",
+      "conversations.send",
+      "conversations.turn",
+      "conversations.turn.cancel",
+      "send",
+      "agent",
+      "agent.identity.get",
+      "agent.wait",
+      "chat.history",
+      "chat.startup",
+      "chat.metadata",
+      "chat.message.get",
+      "chat.abort",
+      "chat.send",
+      "terminal.open",
+      "terminal.input",
+      "terminal.resize",
+      "terminal.close",
+      "channels.pairing.list",
+      "channels.pairing.approve",
+      "channels.pairing.dismiss",
+      "attach.grant",
+      "attach.revoke",
+      "terminal.attach",
+      "terminal.list",
+      "terminal.text",
+      "controlUi.githubPreview",
+      "system.info",
+      "agents.workspace.list",
+      "agents.workspace.get",
+      "tts.speak",
+      "plugins.list",
+      "plugins.search",
+      "plugins.install",
+      "plugins.setEnabled",
+      "plugins.uninstall",
+      "plugins.refresh",
+      "controlUi.sessionPullRequests",
+      "gateway.suspend.prepare",
+      "gateway.suspend.status",
+      "gateway.suspend.resume",
+      "chat.toolTitles",
+      "sessions.diff",
+      "openclaw.setup.verify",
+      "sessions.catalog.list",
+      "sessions.catalog.read",
+      "terminal.upload",
+      "sessions.catalog.continue",
+      "sessions.catalog.archive",
+      "approval.get",
+      "approval.resolve",
+      "sessions.search",
+      "models.probe",
+      "migrations.memory.plan",
+      "migrations.memory.apply",
+      "ui.command",
+      "approval.history",
+      "plugin.surface.refresh",
+      "conversations.list",
+      "session.discussion.info",
+      "session.discussion.open",
+      "board.prompt.authorize",
+      "board.data.read",
+      "board.action",
+      "sessions.observer.ask",
+      "sessions.observer.visibility",
+      "browser.request"
+    ]
+  },
+  "pluginSurfaceUrls" : {
+    "canvas" : "http:\/\/127.0.0.1:18949\/__openclaw__\/cap\/e-DyS-sKOZM6Pt92oLgtnIaP"
+  },
+  "policy" : {
+    "maxBufferedBytes" : 52428800,
+    "maxPayload" : 26214400,
+    "tickIntervalMs" : 30000
+  },
+  "protocol" : 4,
+  "server" : {
+    "connId" : "5be3b421-8154-4ce0-8b63-8e940cc5ee6f",
+    "version" : "2026.7.2"
+  },
+  "snapshot" : {
+    "appliedConfigHash" : "5kfWzJYyik2c3TJEzNeCq567NultmshcV4vehab5q94",
+    "authMode" : "***REDACTED***",
+    "configPath" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/openclaw.json",
+    "health" : {
+      "agents" : [
+        {
+          "agentId" : "main",
+          "heartbeat" : {
+            "ackMaxChars" : 300,
+            "enabled" : true,
+            "every" : "30m",
+            "everyMs" : 1800000,
+            "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+            "target" : "none"
+          },
+          "isDefault" : true,
+          "sessions" : {
+            "count" : 0,
+            "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+            "recent" : [
+
+            ]
+          }
+        }
+      ],
+      "channelLabels" : {
+
+      },
+      "channelOrder" : [
+
+      ],
+      "channels" : {
+
+      },
+      "configReload" : {
+        "hotReloadStatus" : "active"
+      },
+      "defaultAgentId" : "main",
+      "durationMs" : 175,
+      "eventLoop" : {
+        "cpuCoreRatio" : 1.069,
+        "degraded" : true,
+        "delayMaxMs" : 3202.4000000000001,
+        "delayP99Ms" : 3202.4000000000001,
+        "intervalMs" : 4495,
+        "reasons" : [
+          "event_loop_delay",
+          "event_loop_utilization",
+          "cpu"
+        ],
+        "utilization" : 0.98899999999999999
+      },
+      "heartbeatSeconds" : 1800,
+      "modelPricing" : {
+        "sources" : [
+
+        ],
+        "state" : "ok"
+      },
+      "ok" : true,
+      "plugins" : {
+        "errors" : [
+
+        ],
+        "loaded" : [
+          "acpx",
+          "anthropic",
+          "bonjour",
+          "browser",
+          "canvas",
+          "device-pair",
+          "file-transfer",
+          "linux-canvas",
+          "linux-node",
+          "memory-core",
+          "ollama",
+          "opencode",
+          "phone-control",
+          "talk-voice"
+        ],
+        "unavailable" : [
+
+        ]
+      },
+      "sessions" : {
+        "count" : 0,
+        "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+        "recent" : [
+
+        ]
+      },
+      "ts" : 1786201510531
+    },
+    "presence" : [
+      {
+        "deviceFamily" : "Mac",
+        "host" : "MacBook-Pro-2.local",
+        "instanceId" : "3c766eaf-0355-431f-9b1b-14de02911a22",
+        "ip" : "10.242.128.116",
+        "mode" : "gateway",
+        "modelIdentifier" : "MacBookPro18,2",
+        "platform" : "macos 26.6",
+        "reason" : "self",
+        "text" : "Gateway: MacBook-Pro-2.local (10.242.128.116) · app 2026.7.2 · mode gateway · reason self",
+        "ts" : 1786201524624,
+        "version" : "2026.7.2"
+      }
+    ],
+    "sessionDefaults" : {
+      "defaultAgentId" : "main",
+      "mainKey" : "main",
+      "mainSessionKey" : "agent:main:main",
+      "scope" : "per-sender"
+    },
+    "stateDir" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state",
+    "stateVersion" : {
+      "health" : 2,
+      "presence" : 1
+    },
+    "uptimeMs" : 26427
+  },
+  "type" : "hello-ok"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 0,
+          "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+
+    },
+    "channelOrder" : [
+
+    ],
+    "channels" : {
+
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 136,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.043999999999999997,
+      "degraded" : false,
+      "delayMaxMs" : 133.90000000000001,
+      "delayP99Ms" : 23.100000000000001,
+      "intervalMs" : 14289,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.040000000000000001
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "anthropic",
+        "bonjour",
+        "browser",
+        "canvas",
+        "device-pair",
+        "file-transfer",
+        "linux-canvas",
+        "linux-node",
+        "memory-core",
+        "ollama",
+        "opencode",
+        "phone-control",
+        "talk-voice"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 0,
+      "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+
+      ]
+    },
+    "ts" : 1786201524762
+  },
+  "seq" : 1,
+  "stateVersion" : {
+    "health" : 3,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- SEND req sessions.create ---
+{
+  "id" : "r2",
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.create result ---
+{
+  "entry" : {
+    "label" : "sg4-kernel-client-l1",
+    "parentSessionKey" : "agent:main:main",
+    "sessionFile" : "sqlite:main:26a67bc4-8ad3-4f69-b641-1584e50aa330:\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+    "sessionId" : "26a67bc4-8ad3-4f69-b641-1584e50aa330",
+    "spawnDepth" : 0,
+    "updatedAt" : 1786201535975
+  },
+  "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+  "ok" : true,
+  "resolved" : {
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek"
+  },
+  "runStarted" : false,
+  "sessionId" : "26a67bc4-8ad3-4f69-b641-1584e50aa330"
+}
+
+--- SEND req sessions.messages.subscribe ---
+{
+  "id" : "r3",
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679"
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "approvalReplay" : {
+    "approvals" : [
+
+    ],
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "truncated" : false,
+    "updatedAtMs" : 1786201536088
+  },
+  "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+  "subscribed" : true
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1786201540240
+  },
+  "seq" : 2,
+  "type" : "event"
+}
+
+--- SEND req sessions.send ---
+{
+  "id" : "r4",
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "message" : "Reply with exactly two words: FIX VERIFIED",
+    "timeoutMs" : 0
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "e140ad2e-fc15-4755-adb3-86aaf935d336",
+  "status" : "started"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "e140ad2e-fc15-4755-adb3-86aaf935d336"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 1000000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-kernel-client-l1",
+    "effectiveResponseUsage" : "off",
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "kind" : "direct",
+    "label" : "sg4-kernel-client-l1",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "d6b89482-878b-4de3-bf7e-9647930674bd",
+        "idempotencyKey" : "e140ad2e-fc15-4755-adb3-86aaf935d336:user",
+        "senderIsOwner" : true,
+        "seq" : 1
+      },
+      "content" : "Reply with exactly two words: FIX VERIFIED",
+      "idempotencyKey" : "e140ad2e-fc15-4755-adb3-86aaf935d336:user",
+      "role" : "user",
+      "timestamp" : 1786201544052
+    },
+    "messageId" : "d6b89482-878b-4de3-bf7e-9647930674bd",
+    "messageSeq" : 1,
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "e140ad2e-fc15-4755-adb3-86aaf935d336"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 1000000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-kernel-client-l1",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+      "kind" : "direct",
+      "label" : "sg4-kernel-client-l1",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1786201544275,
+      "model" : "deepseek-v4-flash",
+      "modelProvider" : "deepseek",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "26a67bc4-8ad3-4f69-b641-1584e50aa330",
+      "spawnDepth" : 0,
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokensFresh" : false,
+      "unread" : false,
+      "updatedAt" : 1786201544516
+    },
+    "sessionId" : "26a67bc4-8ad3-4f69-b641-1584e50aa330",
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "spawnDepth" : 0,
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokensFresh" : false,
+    "unread" : false,
+    "updatedAt" : 1786201544516
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "e140ad2e-fc15-4755-adb3-86aaf935d336",
+    "seq" : 1,
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "state" : "status"
+  },
+  "seq" : 3,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "e140ad2e-fc15-4755-adb3-86aaf935d336",
+    "seq" : 2,
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "state" : "status"
+  },
+  "seq" : 5,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "e140ad2e-fc15-4755-adb3-86aaf935d336",
+    "seq" : 3,
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "state" : "status"
+  },
+  "seq" : 7,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "e140ad2e-fc15-4755-adb3-86aaf935d336",
+    "seq" : 4,
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "state" : "status"
+  },
+  "seq" : 9,
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "e140ad2e-fc15-4755-adb3-86aaf935d336"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 1000000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-kernel-client-l1",
+    "effectiveResponseUsage" : "off",
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "kind" : "direct",
+    "label" : "sg4-kernel-client-l1",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "e5cf7c39",
+        "idempotencyKey" : "e140ad2e-fc15-4755-adb3-86aaf935d336:user",
+        "senderIsOwner" : true,
+        "seq" : 1
+      },
+      "content" : "Reply with exactly two words: FIX VERIFIED",
+      "idempotencyKey" : "e140ad2e-fc15-4755-adb3-86aaf935d336:user",
+      "role" : "user",
+      "timestamp" : 1786201544052
+    },
+    "messageId" : "e5cf7c39",
+    "messageSeq" : 1,
+    "model" : "deepseek-v4-flash",
+    "modelProvider" : "deepseek",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "e140ad2e-fc15-4755-adb3-86aaf935d336"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 1000000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-kernel-client-l1",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+      "kind" : "direct",
+      "label" : "sg4-kernel-client-l1",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1786201544275,
+      "model" : "deepseek-v4-flash",
+      "modelProvider" : "deepseek",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "26a67bc4-8ad3-4f69-b641-1584e50aa330",
+      "spawnDepth" : 0,
+      "startedAt" : 1786201547141,
+      "status" : "running",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokensFresh" : false,
+      "unread" : false,
+      "updatedAt" : 1786201547148
+    },
+    "sessionId" : "26a67bc4-8ad3-4f69-b641-1584e50aa330",
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "spawnDepth" : 0,
+    "startedAt" : 1786201547141,
+    "status" : "running",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokensFresh" : false,
+    "unread" : false,
+    "updatedAt" : 1786201547148
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "starting_model",
+    "runId" : "e140ad2e-fc15-4755-adb3-86aaf935d336",
+    "seq" : 6,
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "state" : "status"
+  },
+  "seq" : 12,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "F",
+    "message" : {
+      "content" : [
+        {
+          "text" : "F",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786201551219
+    },
+    "runId" : "e140ad2e-fc15-4755-adb3-86aaf935d336",
+    "seq" : 228,
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "state" : "delta"
+  },
+  "seq" : 47,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "IX VERIFIED",
+    "message" : {
+      "content" : [
+        {
+          "text" : "FIX VERIFIED",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786201551316
+    },
+    "runId" : "e140ad2e-fc15-4755-adb3-86aaf935d336",
+    "seq" : 234,
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "state" : "delta"
+  },
+  "seq" : 52,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "message" : {
+      "content" : [
+        {
+          "text" : "FIX VERIFIED",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1786201551316
+    },
+    "runId" : "e140ad2e-fc15-4755-adb3-86aaf935d336",
+    "seq" : 234,
+    "sessionKey" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+    "state" : "final",
+    "stopReason" : "stop"
+  },
+  "seq" : 53,
+  "type" : "event"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 1,
+          "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 19039,
+              "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+              "updatedAt" : 1786201551349
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+
+    },
+    "channelOrder" : [
+
+    ],
+    "channels" : {
+
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 142,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.124,
+      "degraded" : true,
+      "delayMaxMs" : 1840.3,
+      "delayP99Ms" : 25.399999999999999,
+      "intervalMs" : 45760,
+      "reasons" : [
+        "event_loop_delay"
+      ],
+      "utilization" : 0.10100000000000001
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "anthropic",
+        "bonjour",
+        "browser",
+        "canvas",
+        "device-pair",
+        "file-transfer",
+        "linux-canvas",
+        "linux-node",
+        "memory-core",
+        "ollama",
+        "opencode",
+        "phone-control",
+        "talk-voice"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 1,
+      "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+        {
+          "age" : 19039,
+          "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+          "updatedAt" : 1786201551349
+        }
+      ]
+    },
+    "ts" : 1786201570530
+  },
+  "seq" : 54,
+  "stateVersion" : {
+    "health" : 4,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1786201570531
+  },
+  "seq" : 55,
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1786201600530
+  },
+  "seq" : 56,
+  "type" : "event"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 1,
+          "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 78900,
+              "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+              "updatedAt" : 1786201551349
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+
+    },
+    "channelOrder" : [
+
+    ],
+    "channels" : {
+
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 168,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.0060000000000000001,
+      "degraded" : false,
+      "delayMaxMs" : 24.600000000000001,
+      "delayP99Ms" : 21.899999999999999,
+      "intervalMs" : 59861,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.0070000000000000001
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "anthropic",
+        "bonjour",
+        "browser",
+        "canvas",
+        "device-pair",
+        "file-transfer",
+        "linux-canvas",
+        "linux-node",
+        "memory-core",
+        "ollama",
+        "opencode",
+        "phone-control",
+        "talk-voice"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 1,
+      "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+        {
+          "age" : 78900,
+          "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+          "updatedAt" : 1786201551349
+        }
+      ]
+    },
+    "ts" : 1786201630417
+  },
+  "seq" : 57,
+  "stateVersion" : {
+    "health" : 5,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1786201630535
+  },
+  "seq" : 58,
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1786201660537
+  },
+  "seq" : 59,
+  "type" : "event"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 1,
+          "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 138899,
+              "key" : "agent:main:dashboard:54a1f3fe-de68-44a9-9f0a-500b41693679",
+              "updatedAt" : 1786201551349
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+
+    },
+    "channelOrder" : [
+
+    ],
+    "channels" : {
+
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 170,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.0060000000000000001,
+      "degraded" : false,
+      "delayMaxMs" : 24.699999999999999,
+      "delayP99Ms" : 21.899999999999999,
+      "intervalMs" : 60000,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.0080000000000000002
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "anthropic",
+        "bonjour",
+        "browser",
+        "canvas",
+        "device-pair",
+        "file-transfer",
+        "linux-canvas",
+        "linux-node",
+        "memory-core",
+        "ollama",
+        "opencode",
+        "phone-control",
+        "talk-voice"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 1,
+      "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-live2\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" 

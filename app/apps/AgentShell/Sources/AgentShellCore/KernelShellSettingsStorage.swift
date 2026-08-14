@@ -177,6 +177,63 @@ public enum KernelEndpointDefaultsStore {
     }
 }
 
+/// rounds/0021：外观偏好——chrome 透明度滑块的 UserDefaults 读写封装。持久化机制与
+/// `KernelEndpointDefaultsStore` 逐条一致（同一个 UserDefaults 实例、键名同样带 bundle id
+/// 前缀、同样显式 `synchronize()`）——任务书原文点名"follow its established pattern"，这里就是
+/// 照抄那个模式，不另起一套。
+///
+/// **不是凭证**：透明度偏好只是视觉呈现设置，UserDefaults/plist 明文落盘对它是安全的（凭证只走
+/// `KernelTokenKeychainStore`，见该类型文档注释与本仓根 CLAUDE.md 凭证守门纪律）——这也是任务书
+/// 明确要求"UserDefaults is right, not Keychain"的落地。
+public enum ChromeTransparencyDefaultsStore {
+    public static let userDefaultsKey = "\(SessionPersistenceStore.bundleIdentifier).chromeTransparencyPreference"
+
+    /// 滑块从未保存过时的默认位置——0.5，不是极值。**选这个值不是随意的**：本轮之前 chrome 各处
+    /// 已经在用固定的 `.regularMaterial`（`SessionListView`/`SessionDetailView` 几处状态横幅
+    /// rounds/0017 就在用的既有选择），0.5 落在 `materialForChromeIntensity` 强度分级（见
+    /// LiquidGlassSupport.swift）的 `.regularMaterial` 那一档——该函数五档全部是"上界不含"的半开
+    /// 区间（`case ..<0.2`/`..<0.4`/`..<0.6`/`..<0.8`/`default`），`.regularMaterial` 对应的区间
+    /// 因此是 `[0.4, 0.6)`，0.5 稳稳落在区间中点，不贴任何边界。
+    ///
+    /// **rework（2026-08-14，T-114 codex 对抗评审阻断项②附带发现，已核实）：这个常量此前是
+    /// 0.6，本段注释也曾经这样写，但两者都错——0.6 不满足 `0.6 < 0.6`，命中的不是
+    /// `case ..<0.6: return .regularMaterial`，而是下一档 `case ..<0.8: return .thinMaterial`。**
+    /// 旧注释把"0.6 是 `.regularMaterial` 档位的数值上界"误读成了"0.6 是这个半开区间包含的最后一个
+    /// 值"——半开区间 `[0.4, 0.6)` 包含的是所有严格小于 0.6 的值（如 0.5999…），不包含 0.6 本身；
+    /// 上界本身从不属于以它为右端点的半开区间，这是半开区间定义本身的性质，不是这个具体函数的特例。
+    /// 换算成实际后果：修前的默认值会让全新安装、从未碰过这个滑块的用户第一次启动看到的 composer
+    /// 材质其实是 `.thinMaterial`，比本段最后一句要求的"贴近这个 app 一直以来的样子"更透明，与那句
+    /// 要求直接矛盾（且矛盾是可验证的：`0.6 < 0.6` 恒假）。改成 0.5（区间中点）修正这个矛盾，不改
+    /// `materialForChromeIntensity` 的五档划分本身——五档划分覆盖的是全部五个 `Material` 级别，动它
+    /// 的影响面是全部 chrome 表面而不只是"默认值该是多少"这一件事，不是这里要修的问题。
+    ///
+    /// 从未碰过这个新滑块的用户，第一次升级后看到的默认外观应当尽量贴近"这个 app 一直以来的样子"，
+    /// 而不是被动跳到滑块的某个极端（1.0 会落进 `.ultraThinMaterial`，比历史基线明显更透明，等于
+    /// 替用户做了一个他们没有主动要求过的视觉决定）。调用方（`AppearanceSettingsStore.init`）在
+    /// `load()` 返回 nil（从未保存过）时套用它，`resolve()` 本身不知道"默认值"这个概念，只处理
+    /// "当前有效的滑块值是多少"。
+    public static let defaultSliderValue: Double = 0.5
+
+    public static func save(_ value: Double, userDefaults: UserDefaults = .standard) {
+        userDefaults.set(value, forKey: userDefaultsKey)
+        userDefaults.synchronize()
+    }
+
+    public static func clear(userDefaults: UserDefaults = .standard) {
+        userDefaults.removeObject(forKey: userDefaultsKey)
+        userDefaults.synchronize()
+    }
+
+    /// 从未保存过时返回 `nil`（不是 `defaultSliderValue`）——与 `KernelEndpointDefaultsStore.load()`
+    /// 同样的"未设置返回 nil，由调用方决定默认值"约定，不在存储层里悄悄引入一个调用方看不见的默认
+    /// 值决策。用 `object(forKey:) != nil` 判断"是否存在过"（不能直接用 `double(forKey:)`——
+    /// 从未写过的 key 上它会返回 `0.0`，与"用户主动把滑块拖到 0"这个合法保存值无法区分）。
+    public static func load(userDefaults: UserDefaults = .standard) -> Double? {
+        guard userDefaults.object(forKey: userDefaultsKey) != nil else { return nil }
+        return userDefaults.double(forKey: userDefaultsKey)
+    }
+}
+
 extension KernelShellConfig {
     /// endpoint 精度链的级联实现——**rounds/0019 评审 Q3 修复**。
     ///

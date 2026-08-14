@@ -1,0 +1,294 @@
+[
+ {
+  "event": "session.approval",
+  "produced": [],
+  "payload": {
+   "approval": {
+    "createdAtMs": 1786477770011,
+    "expiresAtMs": 1786479570011,
+    "id": "0de8c0c4-a69b-4f0c-befa-aa18783bb136",
+    "presentation": {
+     "agentId": "main",
+     "allowedDecisions": [
+      "allow-once",
+      "deny"
+     ],
+     "commandPreview": null,
+     "commandText": "echo APPROVAL_GATE_OK",
+     "host": "gateway",
+     "kind": "exec",
+     "nodeId": null,
+     "warningText": null
+    },
+    "status": "pending",
+    "urlPath": "/approve/0de8c0c4-a69b-4f0c-befa-aa18783bb136"
+   },
+   "phase": "pending",
+   "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "sourceSessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "updatedAtMs": 1786477770011
+  }
+ },
+ {
+  "event": "exec.approval.requested",
+  "produced": [
+   "evt.approval_request"
+  ],
+  "payload": {
+   "createdAtMs": 1786477770011,
+   "expiresAtMs": 1786479570011,
+   "id": "0de8c0c4-a69b-4f0c-befa-aa18783bb136",
+   "request": {
+    "agentId": "main",
+    "allowedDecisions": [
+     "allow-once",
+     "deny"
+    ],
+    "ask": "always",
+    "command": "echo APPROVAL_GATE_OK",
+    "commandAnalysis": {
+     "commandCount": 1,
+     "nestedCommandCount": 0,
+     "riskKinds": [],
+     "warningLines": []
+    },
+    "cwd": "/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-r15c/workspace",
+    "host": "gateway",
+    "nodeId": null,
+    "resolvedPath": "/bin/echo",
+    "runId": "8bd5816b-d435-4ebf-95f6-d73412910659",
+    "security": "full",
+    "sessionId": "fe155ffe-df29-4cfb-9f2e-81d1e7366a68",
+    "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+    "systemRunBinding": null,
+    "systemRunPlan": null,
+    "toolCallId": "call_00_tbNqWNUYJMEPa9RV4CA13555",
+    "turnSourceAccountId": null,
+    "turnSourceChannel": "webchat",
+    "turnSourceThreadId": null,
+    "turnSourceTo": null,
+    "unavailableDecisions": [
+     "allow-always"
+    ],
+    "warningText": null
+   }
+  }
+ },
+ {
+  "event": "agent",
+  "produced": [],
+  "payload": {
+   "agentId": "main",
+   "data": {
+    "approvalId": "0de8c0c4-a69b-4f0c-befa-aa18783bb136",
+    "phase": "waiting-approval",
+    "toolCallId": "call_00_tbNqWNUYJMEPa9RV4CA13555"
+   },
+   "isHeartbeat": false,
+   "runId": "8bd5816b-d435-4ebf-95f6-d73412910659",
+   "seq": 31,
+   "sessionId": "fe155ffe-df29-4cfb-9f2e-81d1e7366a68",
+   "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "stream": "lifecycle",
+   "ts": 1786477770020
+  }
+ },
+ {
+  "event": "session.approval",
+  "produced": [],
+  "payload": {
+   "approval": {
+    "createdAtMs": 1786477770011,
+    "decision": "allow-once",
+    "expiresAtMs": 1786479570011,
+    "id": "0de8c0c4-a69b-4f0c-befa-aa18783bb136",
+    "presentation": {
+     "agentId": "main",
+     "allowedDecisions": [
+      "allow-once",
+      "deny"
+     ],
+     "commandPreview": null,
+     "commandText": "echo APPROVAL_GATE_OK",
+     "host": "gateway",
+     "kind": "exec",
+     "nodeId": null,
+     "warningText": null
+    },
+    "reason": "user",
+    "resolvedAtMs": 1786477866984,
+    "status": "allowed",
+    "urlPath": "/approve/0de8c0c4-a69b-4f0c-befa-aa18783bb136"
+   },
+   "phase": "terminal",
+   "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "sourceSessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "updatedAtMs": 1786477866984
+  }
+ },
+ {
+  "event": "agent",
+  "produced": [],
+  "payload": {
+   "agentId": "main",
+   "data": {
+    "approvalId": "0de8c0c4-a69b-4f0c-befa-aa18783bb136",
+    "phase": "approval-resolved",
+    "toolCallId": "call_00_tbNqWNUYJMEPa9RV4CA13555"
+   },
+   "isHeartbeat": false,
+   "runId": "8bd5816b-d435-4ebf-95f6-d73412910659",
+   "seq": 32,
+   "sessionId": "fe155ffe-df29-4cfb-9f2e-81d1e7366a68",
+   "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "stream": "lifecycle",
+   "ts": 1786477866992
+  }
+ },
+ {
+  "event": "session.approval",
+  "produced": [],
+  "payload": {
+   "approval": {
+    "createdAtMs": 1786477946511,
+    "expiresAtMs": 1786479746511,
+    "id": "0e392da8-7767-4f1d-a649-0a138359087e",
+    "presentation": {
+     "agentId": "main",
+     "allowedDecisions": [
+      "allow-once",
+      "deny"
+     ],
+     "commandPreview": null,
+     "commandText": "echo SHOULD_NOT_RUN_DENY",
+     "host": "gateway",
+     "kind": "exec",
+     "nodeId": null,
+     "warningText": null
+    },
+    "status": "pending",
+    "urlPath": "/approve/0e392da8-7767-4f1d-a649-0a138359087e"
+   },
+   "phase": "pending",
+   "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "sourceSessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "updatedAtMs": 1786477946511
+  }
+ },
+ {
+  "event": "exec.approval.requested",
+  "produced": [
+   "evt.approval_request"
+  ],
+  "payload": {
+   "createdAtMs": 1786477946511,
+   "expiresAtMs": 1786479746511,
+   "id": "0e392da8-7767-4f1d-a649-0a138359087e",
+   "request": {
+    "agentId": "main",
+    "allowedDecisions": [
+     "allow-once",
+     "deny"
+    ],
+    "ask": "always",
+    "command": "echo SHOULD_NOT_RUN_DENY",
+    "commandAnalysis": {
+     "commandCount": 1,
+     "nestedCommandCount": 0,
+     "riskKinds": [],
+     "warningLines": []
+    },
+    "cwd": "/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-r15c/workspace",
+    "host": "gateway",
+    "nodeId": null,
+    "resolvedPath": "/bin/echo",
+    "runId": "e4c424d6-7dfb-4b65-bbfa-87e4ab3008d3",
+    "security": "full",
+    "sessionId": "fe155ffe-df29-4cfb-9f2e-81d1e7366a68",
+    "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+    "systemRunBinding": null,
+    "systemRunPlan": null,
+    "toolCallId": "call_00_ptzaQcjABLIQC0tB2ApK4459",
+    "turnSourceAccountId": null,
+    "turnSourceChannel": "webchat",
+    "turnSourceThreadId": null,
+    "turnSourceTo": null,
+    "unavailableDecisions": [
+     "allow-always"
+    ],
+    "warningText": null
+   }
+  }
+ },
+ {
+  "event": "agent",
+  "produced": [],
+  "payload": {
+   "agentId": "main",
+   "data": {
+    "approvalId": "0e392da8-7767-4f1d-a649-0a138359087e",
+    "phase": "waiting-approval",
+    "toolCallId": "call_00_ptzaQcjABLIQC0tB2ApK4459"
+   },
+   "isHeartbeat": false,
+   "runId": "e4c424d6-7dfb-4b65-bbfa-87e4ab3008d3",
+   "seq": 678,
+   "sessionId": "fe155ffe-df29-4cfb-9f2e-81d1e7366a68",
+   "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "stream": "lifecycle",
+   "ts": 1786477946516
+  }
+ },
+ {
+  "event": "session.approval",
+  "produced": [],
+  "payload": {
+   "approval": {
+    "createdAtMs": 1786477946511,
+    "decision": "deny",
+    "expiresAtMs": 1786479746511,
+    "id": "0e392da8-7767-4f1d-a649-0a138359087e",
+    "presentation": {
+     "agentId": "main",
+     "allowedDecisions": [
+      "allow-once",
+      "deny"
+     ],
+     "commandPreview": null,
+     "commandText": "echo SHOULD_NOT_RUN_DENY",
+     "host": "gateway",
+     "kind": "exec",
+     "nodeId": null,
+     "warningText": null
+    },
+    "reason": "user",
+    "resolvedAtMs": 1786477960766,
+    "status": "denied",
+    "urlPath": "/approve/0e392da8-7767-4f1d-a649-0a138359087e"
+   },
+   "phase": "terminal",
+   "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "sourceSessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "updatedAtMs": 1786477960766
+  }
+ },
+ {
+  "event": "agent",
+  "produced": [],
+  "payload": {
+   "agentId": "main",
+   "data": {
+    "approvalId": "0e392da8-7767-4f1d-a649-0a138359087e",
+    "phase": "approval-resolved",
+    "toolCallId": "call_00_ptzaQcjABLIQC0tB2ApK4459"
+   },
+   "isHeartbeat": false,
+   "runId": "e4c424d6-7dfb-4b65-bbfa-87e4ab3008d3",
+   "seq": 679,
+   "sessionId": "fe155ffe-df29-4cfb-9f2e-81d1e7366a68",
+   "sessionKey": "agent:main:dashboard:ff6d8f14-fbcf-4373-9a2c-99e29a83df57",
+   "stream": "lifecycle",
+   "ts": 1786477960771
+  }
+ }
+]

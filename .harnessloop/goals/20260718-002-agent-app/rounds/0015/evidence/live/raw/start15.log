@@ -1,0 +1,3 @@
+gateway ready (pid 36718), port 51601
+隔离目录 /private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-r15；日志已确认落在隔离目录内
+./app/apps/AgentShell/repro/start-isolated-kernel.sh: line 175: EXEC_ASK�: unbound variable

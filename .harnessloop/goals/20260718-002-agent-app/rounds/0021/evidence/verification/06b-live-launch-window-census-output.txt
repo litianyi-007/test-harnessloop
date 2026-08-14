@@ -1,0 +1,83 @@
+T-114 rework — live-launch check for the hardening changes in AgentShellApp.swift (WindowGroup ->
+Window scene switch, MenuBarExtra isInserted). This is view/scene-layer code, structurally
+unreachable from frame-replay-tests (same limitation as the rest of this codebase's view layer —
+AgentShell is an executableTarget, frame-replay-tests cannot import it). What follows is what I
+could and could not verify live.
+
+=== Build the real .app bundle ===
+$ app/apps/AgentShell/build-app-bundle.sh
+BUNDLE_BUILD_EXIT=0
+==> swift build --package-path .../app --product AgentShell -c debug
+Build of product 'AgentShell' complete! (0.16s)
+==> 组装 bundle: .../app/.build/AgentShell.app
+==> ad-hoc 签名整个 bundle
+.../app/.build/AgentShell.app: replacing existing signature
+OK: .../app/.build/AgentShell.app
+
+=== Launch and confirm no crash ===
+$ open .../app/.build/AgentShell.app
+$ sleep 3; pgrep -f "AgentShell.app/Contents/MacOS/AgentShell"
+LAUNCHED_PID=30045
+  PID STAT ELAPSED COMMAND
+30045 S      00:03 .../AgentShell.app/Contents/MacOS/AgentShell
+(process alive 3s after launch, no crash)
+
+=== Window census via CGWindowListCopyWindowInfo (NOT System Events) ===
+Why CGWindowListCopyWindowInfo and not System Events: this repo's own scope-lock history
+(rounds/0021/scope-lock.md, "Scope-Lock 修订 v2 -> v3") documents a real prior incident where
+System Events window enumeration returned 0 for EVERY app including Finder under a constrained
+screen state, and that empty result was wrongly read as "the app has no window" — the corrective
+finding recorded there is that CGWindowListCopyWindowInfo is not affected by that same screen
+state. Reusing the established, corrected technique here instead of repeating the mistake.
+
+$ T114-window-census 30045   (source: 06-probe-window-census.swift.txt)
+RESULT totalOnScreenWindows=23
+RESULT windowsOwnedByPID(30045)=1
+  - windowNumber=7493 layer=0 name="Agent Shell" bounds=Optional(["X": 193, "Width": 1400, "Y": 74, "Height": 900])
+
+Interpretation: exactly ONE on-screen, layer-0 (standard window layer) window is owned by the
+AgentShell process immediately after launch — consistent with the `Window("Agent Shell", id:
+MenuBarWindowFocus.mainWindowID)` single-instance scene creating exactly one window, no more. The
+window's on-screen title is "Agent Shell" — the static title string I supplied to the `Window`
+scene initializer — which is expected at this moment: on fresh launch with no session selected yet,
+ContentView's detail pane shows `emptyDetail` (no explicit `.navigationTitle`), so the window falls
+back to the Window scene's own static title rather than a dynamic one from SessionDetailView /
+SessionListView. This confirms the required title parameter is not a cosmetic no-op — it renders,
+non-blank — without needing to touch SessionListView's existing `.navigationTitle("会话")`, which
+remains untouched and will take over once a session is selected (unchanged from before this fix).
+23 total on-screen windows system-wide were visible to the query, confirming
+CGWindowListCopyWindowInfo is actually returning real data in this session (not silently empty).
+
+=== IMPORTANT CAVEAT: screen was locked — screenshot-based checks are NOT valid this session ===
+I attempted a `screencapture -x` to visually confirm the MenuBarExtra icon renders and follows
+dark/light menu bar inversion. The resulting image was NOT the live desktop — it was the macOS lock
+screen (visible clock "Fri Aug 14, 11:56", account avatar "李天意", "Touch ID or Enter Password"
+prompt). This is a live recurrence of the exact class of confound this task's own brief warns
+about: a screenshot taken while the screen is locked does not show background app windows or their
+menu bar items, and the only status icons visible on a lock screen (input source / battery / Wi-Fi)
+are macOS's own lock-screen-level indicators, not third-party MenuBarExtra items. Concluding
+"the menu bar icon isn't showing" from that image would be exactly as invalid as the original
+Reduce-Transparency screenshot conflation this rework exists to fix, so I am explicitly NOT drawing
+that conclusion. I stopped pursuing screenshot- or UI-automation-based verification for the rest of
+this session once this was discovered, rather than manufacture further readings from an
+environment I now know cannot be trusted for that purpose.
+
+What this means for what's actually verified vs not, stated plainly:
+  VERIFIED (real, live, this session):
+    - build-app-bundle.sh produces a valid, ad-hoc-signed .app
+    - the app launches and stays alive (no crash) with the new Window/MenuBarExtra(isInserted:)
+      scene declarations
+    - exactly one main window is created at the WindowServer level (CGWindowListCopyWindowInfo,
+      immune to the lock-screen confound per this repo's own established finding)
+  NOT VERIFIED this session (say so rather than imply coverage):
+    - MenuBarExtra icon actually rendering / template dark-light inversion (screen locked)
+    - clicking "显示主窗口" from the menu bar, deminiaturize-then-front behavior, or rapid
+      double-click duplicate-window behavior (all require UI interaction, which is unreliable to
+      attempt against a locked screen and was not attempted for that reason)
+    - Increase Contrast / Reduce Transparency live toggle-and-observe (same reason)
+  These gaps existed before this rework pass too (the T-114 review's own "NOT VERIFIED" section
+  already listed live captures as incomplete); this pass did not close them, and does not claim to.
+
+=== Cleanup ===
+$ kill 30045
+cleanly terminated (confirmed via pgrep returning empty)

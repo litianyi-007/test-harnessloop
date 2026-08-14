@@ -1,0 +1,22 @@
+rounds/0014 翻页反证 —— 主会话独立复验（不采信子代理自述）
+
+变异（逐字 diff）：
+  1894a1895,1896
+  > 
+  >             break // [MAIN-SESSION RED CHECK] 强制只取第一页——翻页反证若有效，此处必须变红
+
+即在 fetchFullHistory 收集完第一页后强制 break，使其只取一页。
+
+红（变异后）：
+  [FAIL] rounds/0014 C / 反证2: fetchFullHistory() follows hasMore/nextOffset across multiple
+         chat.history pages, not just the first page: expected chat.history to be called twice
+         with offsets [nil, 5], got [nil]
+  [FAIL] rounds/0014 C: fetchFullHistory() throws instead of looping forever when chat.history
+         returns a non-advancing (repeated) nextOffset: expected fetchFullHistory to throw on a
+         repeated nextOffset, but it returned 1 records without error
+  === 结果: 48/50 PASS ===
+
+绿（恢复后）：
+  === 结果: 50/50 PASS ===
+
+结论：翻页断言真守门。两条同时变红是合理的——游标不推进的守卫本身也依赖翻页循环执行到第二页。

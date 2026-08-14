@@ -14,6 +14,9 @@ import AgentShellCore
 
 struct SessionListView: View {
     @Environment(SessionStore.self) private var store
+    // rounds/0021：侧栏内三条状态横幅（connectionBanner 的 failed 态背景/globalErrorMessage/
+    // tokenPlaceholderHint）都要读同一份已解析的 `ChromeMaterialStyle`。
+    @Environment(AppearanceSettingsStore.self) private var appearance
 
     var body: some View {
         @Bindable var store = store
@@ -34,9 +37,17 @@ struct SessionListView: View {
                 tokenPlaceholderHint
             }
 
-            // rounds/0017 Change 2：这里此前没有任何自定义不透明背景（`.listStyle(.sidebar)` 已经
-            // 是系统侧栏材质），符合任务书 concrete 项 1/2"chrome 让系统材质透出、标准
-            // NavigationSplitView 侧栏"——不需要改动。
+            // rounds/0017 Change 2：这里没有任何自定义不透明背景（`.listStyle(.sidebar)` 已经是
+            // 系统侧栏材质），符合任务书 concrete 项 1/2"chrome 让系统材质透出、标准
+            // NavigationSplitView 侧栏"。
+            //
+            // 视觉/交互打磨任务（2026-08-14）：熊头水印曾经短暂画在这里（`.background` 叠一层
+            // `.scrollContentBackground(.hidden)` 关掉系统侧栏材质,好让水印的矢量边缘不被材质高斯
+            // 模糊糊掉),后续任务书裁定把水印搬去右侧详情面板、贴右下角、旋转,不再贴在侧栏——见
+            // `SessionDetailView.swift` 的 `watermarkBackground`。侧栏因此恢复成搬迁前的样子：
+            // 系统 `.sidebar` 材质原样保留,不需要再关掉它。`BearWatermark.swift` 里的形状定义本身
+            // 没有跟着搬迁改变（熊长什么样与它被画在哪个视图里结构上无关,见该文件头注释),只是这个
+            // 文件不再是它的调用点。
             List(store.sessions, selection: $store.selectedSessionID) { session in
                 SessionRow(session: session)
             }
@@ -46,7 +57,7 @@ struct SessionListView: View {
                 HStack(alignment: .top, spacing: 6) {
                     Text(error)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.semanticDanger)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Button {
                         store.globalErrorMessage = nil
@@ -59,9 +70,13 @@ struct SessionListView: View {
                 .padding(8)
                 // rounds/0017 Change 2 concrete 项 8：此前是不透明度固定的 `Color.red.opacity(0.12)`
                 // ——换成标准 material（跟随 Dark Mode/Increase Contrast/Reduce Transparency 自动
-                // 适配），颜色只留在文字/图标上（上面的 `.foregroundStyle(.red)` 本来就是语义色，
-                // 不用改）。
-                .background(.regularMaterial)
+                // 适配），颜色只留在文字/图标上。
+                // rounds/0021：两处再各进一步——背景固定的 `.regularMaterial` 换成
+                // `chromeMaterialBackground(appearance.resolvedStyle)`（用户滑块 + 无障碍红线的解析
+                // 结果，与侧栏其它横幅/composer 共享同一个已解析状态，"coherent"，见 ContentView.swift
+                // 该行注释）；文字前景色字面量 `.red` 换成 `.semanticDanger`（与 accentColor 结构性
+                // 独立的固定语义色，AppearanceEnvironment.swift）。
+                .chromeMaterialBackground(appearance.resolvedStyle)
             }
         }
         .frame(minWidth: 240)
@@ -79,6 +94,10 @@ struct SessionListView: View {
     /// 用文字写出"连接失败：…"（内容本身就说明了状态，不依赖颜色）。failed 态额外给一层标准
     /// material 只是让这一行在侧栏里稍微"抬"一点视觉权重，不是唯一的状态信号，因此可以老实换成
     /// material 而不必纠结"颜色该编码在哪"。
+    /// rounds/0021：failed 态背景从固定 `.regularMaterial` 换成 `chromeShapeStyle(appearance
+    /// .resolvedStyle)`——这里是在一个条件性的 `.background { if … }` 闭包里手写 `Rectangle().fill`
+    /// （不是 `.chromeMaterialBackground(_:)` modifier 调用），用免费函数版本
+    /// （LiquidGlassSupport.swift `chromeShapeStyle`）就是为了覆盖这种调用形状。
     private var connectionBanner: some View {
         HStack(spacing: 6) {
             Circle().fill(connectionColor).frame(width: 8, height: 8)
@@ -92,24 +111,25 @@ struct SessionListView: View {
         .padding(.vertical, 6)
         .background {
             if case .failed = store.connectionStatus {
-                Rectangle().fill(.regularMaterial)
+                Rectangle().fill(chromeShapeStyle(appearance.resolvedStyle))
             }
         }
     }
 
-    /// 占位符 token 提示——用图标+加粗文字（不是纯背景色）承载"这是个警告"这层语义，`.background`
-    /// 只给 `.regularMaterial`（不是固定 alpha 的纯色），呼应本文件其它状态条同一条已经写明的
-    /// 可访问性理由（见 `connectionBanner`/`globalErrorMessage` 背景处的历史注释：rounds/0017
-    /// 把固定 alpha 纯色背景换成了标准 material，本处新增内容直接沿用结论，不重新引入旧问题）。
+    /// 占位符 token 提示——用图标+加粗文字（不是纯背景色）承载"这是个警告"这层语义。
     ///
     /// 来源为环境变量时不显示"前往设置"链接——Settings 面板对这种情况没有效果（环境变量优先级
     /// 更高，改 Settings 不会改变生效值），指错方向本身就是新的一种"改了却没用"困惑，所以改成提示
     /// 检查/取消设置那个环境变量。
+    ///
+    /// rounds/0021：图标颜色字面量 `.orange` 换成 `.semanticWarning`；背景固定 `.regularMaterial`
+    /// 换成 `chromeMaterialBackground(appearance.resolvedStyle)`——与 `connectionBanner`/
+    /// `globalErrorMessage` 同一套已解析 chrome 状态（"coherent"，见 ContentView.swift 该行注释）。
     private var tokenPlaceholderHint: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 4) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.semanticWarning)
                 Text("尚未配置有效的内核 token")
                     .font(.caption)
                     .bold()
@@ -133,15 +153,20 @@ struct SessionListView: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial)
+        .chromeMaterialBackground(appearance.resolvedStyle)
     }
 
+    // rounds/0021：`.connected`/`.failed` 是真正的成功/危险语义状态，字面量换成
+    // `.semanticSuccess`/`.semanticDanger`。`.notConnected`（中性）/`.connecting`（进行中，不是
+    // "警告"）刻意保留原样——不是每个非中性颜色都属于 success/warning/danger 语义三元组之一，见
+    // AppearanceSettings.swift `SemanticColorRole` 文档注释；把它们也塞进三色语义系统会是滥用而
+    // 不是覆盖。
     private var connectionColor: Color {
         switch store.connectionStatus {
         case .notConnected: return .gray
         case .connecting: return .yellow
-        case .connected: return .green
-        case .failed: return .red
+        case .connected: return .semanticSuccess
+        case .failed: return .semanticDanger
         }
     }
 

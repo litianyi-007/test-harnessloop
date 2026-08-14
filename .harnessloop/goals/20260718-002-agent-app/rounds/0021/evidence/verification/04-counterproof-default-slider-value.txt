@@ -1,0 +1,76 @@
+T-114 rework — destructive counter-proof for the KernelShellSettingsStorage.swift:191 default-value
+claim ("0.6 restores .regularMaterial") that the reviewer flagged as possibly untrue.
+
+Independent verification of the claim (done BEFORE writing any fix):
+materialForChromeIntensity (LiquidGlassSupport.swift) buckets are:
+    case ..<0.2: .ultraThickMaterial
+    case ..<0.4: .thickMaterial
+    case ..<0.6: .regularMaterial
+    case ..<0.8: .thinMaterial
+    default:     .ultraThinMaterial
+All five cases are half-open, upper-bound-EXCLUSIVE ranges. The .regularMaterial bucket is
+therefore [0.4, 0.6) — it does NOT include 0.6 itself, because `0.6 < 0.6` is false. A slider value
+of exactly 0.6 falls through to `case ..<0.8`, i.e. .thinMaterial. The old comment's claim ("0.6
+精确落在 .regularMaterial 分档的上边界，即分级函数里 case ..<0.6: return .regularMaterial 命中的
+最后一个值") is mathematically wrong: it conflates "0.6 is the bucket's numeric upper bound" with
+"0.6 is included in the half-open range ending at that bound" — those are not the same thing.
+
+VERDICT: the CODE was wrong (defaultSliderValue = 0.6), not the comment's general intent (wanting
+the default to look like the historical .regularMaterial). Fixed by changing the constant to 0.5
+(the bucket's midpoint, not touching materialForChromeIntensity's bucket boundaries themselves,
+since that function's blast radius is every chrome surface, not just "what's the default").
+
+=== STEP 1: checksum before injection ===
+$ shasum -a 256 app/apps/AgentShell/Sources/AgentShellCore/KernelShellSettingsStorage.swift
+c340db6f1d02adb41c06e8ea0eb4b34a340b4cc3b6d67a8d889ed113a5432522  KernelShellSettingsStorage.swift
+
+=== STEP 2: sites matched ===
+$ grep -n "public static let defaultSliderValue: Double = 0.5" KernelShellSettingsStorage.swift
+215:    public static let defaultSliderValue: Double = 0.5
+
+Sites matched = 1 (the single definition site).
+
+=== STEP 3: injection — revert to the original bug value ===
+    public static let defaultSliderValue: Double = 0.6 // INJECTED DEFECT: reverts to T-114's bug value
+
+=== STEP 4: build with defect ===
+$ swift build --package-path app
+BUILD_EXIT_CODE=0   (a wrong constant value, not a compile error — expected)
+
+=== STEP 5: run tests — RED ===
+$ app/.build/arm64-apple-macosx/debug/frame-replay-tests
+TEST_EXIT_CODE=1
+=== 结果: 161/163 PASS ===
+
+--- FAIL lines (exactly the 2 new tests for this fix, no collateral damage) ---
+[FAIL] 外观设置: ChromeTransparencyDefaultsStore.defaultSliderValue 落在 materialForChromeIntensity 的 .regularMaterial 半开区间 [0.4, 0.6) 内（T-114 阻断项②：此前的 0.6 不满足这一点）: defaultSliderValue=0.6 不小于分档上界 0.6（半开区间不含上界本身），会落进更薄的档位（.thinMaterial 或更薄）——这正是 T-114 阻断项②附带发现的那个 bug：旧值 0.6 精确落在这个失败条件上
+[FAIL] 外观设置: ChromeTransparencyDefaultsStore.defaultSliderValue 精确等于 0.5: expected 0.5, got 0.6
+
+163 - 161 = 2 failing tests = exactly the 2 tests added for this fix. 0 unrelated collateral
+failures.
+
+=== STEP 6: revert ===
+    public static let defaultSliderValue: Double = 0.5
+
+=== STEP 7: checksum after revert ===
+$ shasum -a 256 app/apps/AgentShell/Sources/AgentShellCore/KernelShellSettingsStorage.swift
+c340db6f1d02adb41c06e8ea0eb4b34a340b4cc3b6d67a8d889ed113a5432522  KernelShellSettingsStorage.swift
+
+MATCHES STEP 1 EXACTLY — byte-exact revert confirmed, no residue.
+
+=== STEP 8: build + test — GREEN ===
+$ swift build --package-path app
+BUILD_EXIT_CODE=0
+$ app/.build/arm64-apple-macosx/debug/frame-replay-tests
+TEST_EXIT_CODE=0
+=== 结果: 163/163 PASS ===
+
+Known coverage gap, stated plainly: the "0.5 lands inside [0.4,0.6)" test independently re-derives
+the bucket boundaries as literal constants inside the test, because materialForChromeIntensity
+itself is `private` and lives in the AgentShell (view-layer) target, unreachable from
+frame-replay-tests — the same structural limitation as everywhere else in this codebase. If someone
+changes materialForChromeIntensity's boundaries in the future without updating this test's
+duplicated boundary constants, this test would give a false sense of safety. This is the same class
+of risk that let the original 0.6-vs-0.5999... bug go unnoticed in the first place (two facts that
+should stay in sync living in two different files, with nothing forcing them to move together).
+Recording this honestly rather than claiming the gap is closed.

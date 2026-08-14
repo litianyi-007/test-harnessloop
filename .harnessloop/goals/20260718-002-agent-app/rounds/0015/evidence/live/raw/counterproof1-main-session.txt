@@ -1,0 +1,26 @@
+rounds/0015 反证① —— 主会话独立复验（不采信子代理自述）
+
+被移除的守卫（逐字，位于 EventMapping.swift 的 makeApprovalResolveParams）：
+
+    guard allowedDecisionsFromRequest.contains(wire.rawValue) else {
+        throw ApprovalDecisionError.decisionNotAllowedForThisRequest(
+            reqID: reqID, requested: wire.rawValue, allowed: allowedDecisionsFromRequest
+        )
+    }
+
+红（移除后，build errors: 0，即确为真实代码移除而非语法破坏）：
+
+  [FAIL] rounds/0015 B: allowedDecisions 逐请求判定——同一个 allow_always 在 ask=always 下非法、
+         在默认配置下合法: ask=always 场景下 allow_always 本应被拒绝，却通过了校验
+  [FAIL] rounds/0015 反证①: 决策不在该请求 allowedDecisions 内时，客户端拦下并报错，且一个
+         approval.resolve RPC 都不发出: 期望 .decisionNotAllowedForThisRequest，实际 审批
+         approval-guard-1：请求决策 'allow-always'，但内核记录的终态是
+         status=denied decision=deny reason=malformed-verdict applied=true
+  === 结果: 59/61 PASS ===
+
+绿（恢复后）：
+  === 结果: 61/61 PASS ===
+
+结论：守卫真守门。第二条失败文本本身就是本轮要防的事故形状——
+守卫缺席时请求发出去，内核以 forceMalformedDeny 把「允许」静默改写成「拒绝」，
+且 RPC 仍返回 applied=true。**「不信 exit 0」在这里是硬需求，不是洁癖。**

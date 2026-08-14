@@ -1,0 +1,12 @@
+# 隔离性基线 —— 采集于起任何服务之前
+timestamp_utc: 2026-08-05T07:50:33Z
+
+## 用户全局 gateway（:18789）
+COMMAND   PID     USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+node    29071 litianyi   18u  IPv4 0x4a82a12b33c05fbf      0t0  TCP 127.0.0.1:18789 (LISTEN)
+node    29071 litianyi   19u  IPv6 0x79ec02447a68a65d      0t0  TCP [::1]:18789 (LISTEN)
+
+## 用户全局 openclaw 状态目录：文件数 + 内容指纹
+dir: /Users/litianyi/.openclaw
+file_count: 493
+tree_digest: 7fda8f62c4ec88f3a7a3de455cf3eb81b686085bbe2426f4fa3710202f5f7357

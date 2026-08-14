@@ -7,6 +7,8 @@ import AgentShellCore
 
 struct ContentView: View {
     @Environment(SessionStore.self) private var store
+    // rounds/0021：窗口背景——四个既定 chrome 表面（窗口背景/工具栏/侧栏/输入区容器）之一。
+    @Environment(AppearanceSettingsStore.self) private var appearance
 
     var body: some View {
         NavigationSplitView {
@@ -21,6 +23,16 @@ struct ContentView: View {
                 emptyDetail
             }
         }
+        // rounds/0021：窗口整体背景——`NavigationSplitView` 本身没有自定义过背景（侧栏材质由系统
+        // 自动处理，`SessionListView` 头注释已经论证过"不需要改动"），但侧栏/详情区的系统材质都是
+        // **半透明**、要跟"它背后是什么"合成显色——此前"背后"是 SwiftUI 隐式的窗口默认背景，本轮
+        // 把它换成显式的、跟随用户滑块与无障碍红线解析出的 `ChromeMaterialStyle`，让侧栏的系统
+        // 玻璃材质有一个"确定是什么"的背衬,而不是隐式继承一个我们自己没有声明过的系统默认值。
+        // 详情区（消息列表）没有自己的不透明背景（见 SessionDetailView.messageList），这层背景会在
+        // 消息气泡之间的空隙透出来——但每个气泡自己仍然是 `contentCardBackground()`（标准
+        // material，内容层不受这个滑块支配，见该方法文档注释），文字可读性不受这层窗口背景变化
+        // 影响，只是气泡之间的空白区域呈现出 chrome 该有的材质/不透明度。
+        .background(chromeShapeStyle(appearance.resolvedStyle))
         // rounds/0017 Change 2 concrete 项 3："Add a real Toolbar with grouped actions; primary
         // action as a prominent glass button where available." ——"新建会话"从此前侧栏底部的
         // 通栏按钮（SessionListView 旧版）搬到这里：现代 macOS 原生 app（Notes/Mail/Reminders）

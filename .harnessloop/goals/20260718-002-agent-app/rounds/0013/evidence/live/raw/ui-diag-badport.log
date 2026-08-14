@@ -1,0 +1,7 @@
+# 【说明文件，非原始日志】原始采集结果是 **0 字节**——壳向 stdout/stderr 写了零字节。
+# 为免读者把空文件误读成「采集失败」，此处以说明替代空内容；原始事实即：无输出。
+# 把 AgentShell 指向死端口 ws://127.0.0.1:1 启动时，壳**不向 stdout/stderr 写任何东西**，
+# 连接失败只呈现在 UI 上（见 ../shots/ui-shot-06-diag-ui-layer.png 的红色横幅
+# `● 连接失败: transport error: Error Domain=NSURLErrorDomain Code=-1...`）。
+# 因此条件④ 的 UI 层证据完全由截图承担。
+# 这本身也是一条可用性观察：**壳没有可供事后排查的本地日志**（记入 D-4）。

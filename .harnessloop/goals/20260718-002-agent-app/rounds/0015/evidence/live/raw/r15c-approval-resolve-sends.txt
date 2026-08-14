@@ -1,0 +1,21 @@
+--- SEND req approval.resolve ---
+{
+  "id" : "r5",
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "allow-once",
+    "id" : "0de8c0c4-a69b-4f0c-befa-aa18783bb136",
+    "kind" : "exec"
+  },
+  "type" : "req"
+--
+--- SEND req approval.resolve ---
+{
+  "id" : "r7",
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "0e392da8-7767-4f1d-a649-0a138359087e",
+    "kind" : "exec"
+  },
+  "type" : "req"

@@ -28,6 +28,8 @@ private enum TokenKeychainReadStatus: Equatable {
 
 struct SettingsView: View {
     @Environment(SessionStore.self) private var store
+    // rounds/0021：透明度滑块的读写、以及"无障碍设置正在覆盖滑块"的提示文案都读这个环境对象。
+    @Environment(AppearanceSettingsStore.self) private var appearance
 
     @State private var endpointText: String = ""
     @State private var tokenText: String = ""
@@ -67,13 +69,16 @@ struct SettingsView: View {
                 }
                 Text(tokenStatusText)
                     .font(.caption)
-                    .foregroundStyle(store.isTokenPlaceholder ? .orange : .secondary)
+                    // rounds/0021：字面量 `.orange` 换成 `.semanticWarning`——占位符 token 是一条
+                    // "还没配置好"的警示,不是危险状态。
+                    .foregroundStyle(store.isTokenPlaceholder ? .semanticWarning : .secondary)
                 sourceCaption(for: store.tokenSource, envVarName: "AGENT_SHELL_KERNEL_TOKEN")
                 // rounds/0019 评审 Q4a：读取错误单独一行、红色——不与"未保存"共用同一句灰色文字。
+                // rounds/0021：字面量 `.red` 换成 `.semanticDanger`。
                 if case .readError(let message) = tokenKeychainStatus {
                     Text("读取 Keychain 中是否已保存 token 时出错：\(message)")
                         .font(.caption2)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.semanticDanger)
                 }
                 Text("留空并保存 = 不修改已保存的 token（不会清空 Keychain 里已有的值）。")
                     .font(.caption2)
@@ -98,11 +103,13 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                // rounds/0021：字面量 `.green`/`.red` 换成语义色常量——两处都是真正的成功/危险
+                // 状态通知（保存成功 vs. 保存或连接失败），不是装饰性用色。
                 if let statusMessage {
-                    Text(statusMessage).font(.caption).foregroundStyle(.green)
+                    Text(statusMessage).font(.caption).foregroundStyle(.semanticSuccess)
                 }
                 if let errorMessage {
-                    Text(errorMessage).font(.caption).foregroundStyle(.red)
+                    Text(errorMessage).font(.caption).foregroundStyle(.semanticDanger)
                 }
                 HStack {
                     Spacer()
@@ -115,6 +122,43 @@ struct SettingsView: View {
                     .keyboardShortcut(.defaultAction)
                     .disabled(isBusy)
                 }
+            }
+
+            // rounds/0021：外观——透明度滑块，红线要求"系统无障碍设置永远赢"。这里不直接绑定
+            // `appearance.sliderValue`（它是 `private(set)`——写入必须经 `updateSlider(_:)`，保证
+            // "改状态"与"落盘"原子地一起发生，见 AppearanceEnvironment.swift 该属性文档注释），改用
+            // 一个读写都转发到 `appearance` 的自定义 `Binding`。
+            Section {
+                Slider(
+                    value: Binding(
+                        get: { appearance.sliderValue },
+                        set: { appearance.updateSlider($0) }
+                    ),
+                    in: 0...1
+                ) {
+                    Text("透明度")
+                } minimumValueLabel: {
+                    Image(systemName: "circle.fill").font(.caption2)
+                } maximumValueLabel: {
+                    Image(systemName: "circle.dotted").font(.caption2)
+                }
+                Text("拖动调整窗口背景/工具栏/侧栏/输入框等界面外框（chrome）的透明程度；消息内容本身不受这个设置影响。")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                // **红线的可见落点**：无障碍设置生效时明确告诉用户"为什么滑块现在看起来没用"——
+                // 不让用户以为自己的设置丢了或者这个功能坏了，而是如实说明是哪个系统设置在起作用、
+                // 该去哪里关掉它（如果确实想要透明效果的话）。
+                if appearance.accessibilityOverrideActive {
+                    Label {
+                        Text(accessibilityOverrideMessage)
+                    } icon: {
+                        Image(systemName: "accessibility")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.semanticWarning)
+                }
+            } header: {
+                Text("外观：Chrome 透明度")
             }
         }
         .padding(20)
@@ -156,9 +200,12 @@ struct SettingsView: View {
     private func sourceCaption(for source: KernelConfigValueSource, envVarName: String) -> some View {
         switch source {
         case .environmentVariable:
+            // rounds/0021：字面量 `.orange` 换成 `.semanticWarning`——提醒"这里保存的值当前不生效"
+            // 是一条警示,不是纯信息（下面两个 case 保持 `.secondary`，因为它们只是平铺事实,不带
+            // 警示语气）。
             Text("生效值来自环境变量 \(envVarName)——在此保存的值要等该环境变量被取消设置后才会生效。")
                 .font(.caption2)
-                .foregroundStyle(.orange)
+                .foregroundStyle(.semanticWarning)
         case .savedSetting:
             Text("生效值来自已保存的设置。")
                 .font(.caption2)
@@ -170,12 +217,32 @@ struct SettingsView: View {
         }
     }
 
+    // rounds/0021：与 SessionListView.connectionColor 同一条理由——`.connected`/`.failed` 换成
+    // 语义色常量，`.notConnected`/`.connecting` 不属于 success/warning/danger 语义三元组，保留原样。
     private var connectionColor: Color {
         switch store.connectionStatus {
         case .notConnected: return .gray
         case .connecting: return .yellow
-        case .connected: return .green
-        case .failed: return .red
+        case .connected: return .semanticSuccess
+        case .failed: return .semanticDanger
+        }
+    }
+
+    /// rounds/0021：透明度设置区的无障碍覆盖提示文案——区分只开 Reduce Transparency、只开
+    /// Increase Contrast、两者都开三种情况，让用户知道具体是哪个系统设置在生效（不是笼统一句"有
+    /// 什么东西覆盖了你的设置"）。
+    private var accessibilityOverrideMessage: String {
+        switch (appearance.reduceTransparency, appearance.increaseContrast) {
+        case (true, true):
+            return "系统「降低透明度」与「增强对比度」均已开启：无论上方滑块在哪，界面都会使用不透明材质。"
+        case (true, false):
+            return "系统「降低透明度」已开启：无论上方滑块在哪，界面都会使用不透明材质。"
+        case (false, true):
+            return "系统「增强对比度」已开启：无论上方滑块在哪，界面都会使用不透明材质。"
+        case (false, false):
+            // accessibilityOverrideActive 为 true 时才会调用到这里，两者皆 false 结构上不会发生；
+            // 给出一个诚实的兜底文案而不是让调用方 force-unwrap 一个"不可能"的分支。
+            return "系统无障碍设置已覆盖上方滑块。"
         }
     }
 

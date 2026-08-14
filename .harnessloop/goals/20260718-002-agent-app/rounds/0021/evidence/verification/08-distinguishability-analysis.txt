@@ -1,0 +1,81 @@
+T-114 rework — answer to the brief's question: "think about how anything could ever distinguish
+'our resolver produced the opaque style' from 'the system made the material opaque anyway.' ...
+If you conclude it is not distinguishable by screenshot, say so plainly."
+
+Short answer: two separate claims are being conflated in the original ("R=G=B=25.0") proof, and
+they need to be pulled apart. One of them is fully settled. The other I could not settle this
+session, and I'm saying so rather than guessing.
+
+=== Claim A: "our resolver DECIDES correctly" — fully settled, independent of any pixel ===
+ChromeTransparencyResolver.resolve(sliderValue:accessibility:) is a pure function, and the three
+red-line tests already in the suite (testResolverReduceTransparencyForcesOpaqueAtEverySliderValueIncludingExtremes,
+...IncreaseContrastAlone..., ...BothAccessibilityFlagsOn...) deterministically prove it returns
+.opaque for every slider value, including both extremes, whenever either accessibility flag is on.
+This claim was never actually in doubt and does not need a screenshot — it's proven the same way
+any pure-function unit test proves anything. This part of the original round's verification was
+solid.
+
+=== Claim B: "the RENDERED PIXEL proves our code path (vs. the system's own Material adaptation)
+    caused what's on screen" — this is what the original proof actually needed, and couldn't
+    deliver, and this pass could not fully deliver either ===
+
+Why pixel comparison is weak evidence for this specific claim, in principle: Apple documents that
+Material "automatically adapts to Reduce Transparency" but does not publicly specify the exact
+fallback color/algorithm used per material level when Reduce Transparency is on. That means we
+cannot rule out, from documentation alone, that an UNMODIFIED (bug-still-present) build would have
+rendered visually identical or near-identical pixels purely from Material's own OS-level
+adaptation, with our resolver's code path never having engaged at all. A single before/after
+pixel measurement (toggle Reduce Transparency, screenshot, compare) cannot tell these two causes
+apart, because both predict the same observable outcome (chrome goes from translucent-looking to
+opaque-looking) — this was exactly the flaw in the original "R=45.3/43.3/40.8 -> R=G=B=25.0" proof,
+and it remains a flaw of that experimental design regardless of who runs it or how many times.
+
+A better-designed (though still imperfect) experiment, proposed here for the record even though I
+could not run it this session (see below): hold Reduce Transparency ON throughout, and vary the
+TRANSPARENCY SLIDER across its full range while taking a screenshot at each position.
+  - If our resolver is correctly wired (the fixed state), sliderValue is irrelevant once either
+    accessibility flag is on — resolve() always returns .opaque regardless of the slider (see the
+    red-line tests) — so the rendered pixel MUST be slider-invariant: identical at every slider
+    position, because it's always rendering the exact same Color(nsColor: .windowBackgroundColor).
+  - If our resolver were bypassed (reverted to always return .translucent(intensity: slider)) and
+    only Material's own OS-level Reduce-Transparency adaptation were responsible for the
+    "looks opaque" appearance, whether the pixel stays slider-invariant depends on something Apple
+    doesn't document: whether each Material level's (.ultraThinMaterial vs .thickMaterial etc.)
+    "reduced transparency" fallback rendering is itself level-dependent (in which case dragging the
+    slider WOULD still visibly change the pixel even with RT on, revealing the bypass) or whether
+    Apple's adaptation converges every level to one universal solid appearance regardless of which
+    level was requested (in which case the pixel would look slider-invariant either way, and this
+    experiment would fail to distinguish the two causes after all).
+  This is a real, executable experiment — I have already established the code-injection technique
+  needed to produce a "bypassed" build for comparison (see 03- and 04- in this directory) — but it
+  requires two things I did not have this session: an unlocked screen for screenshot capture, and a
+  way to toggle the real system Reduce Transparency setting and confirm the app picked it up live
+  (which additionally depends on Finding 1's fix, itself only probe-verified this session, not
+  screenshot-verified — see 05b). I am not fabricating a result for an experiment I did not run.
+
+One genuine, structural (not pixel) difference I DID verify, offered honestly as partial but not
+conclusive evidence: Color(nsColor: .windowBackgroundColor) (used by the .opaque branch, see
+LiquidGlassSupport.swift chromeShapeStyle) and Material (used by the .translucent branch) are
+different SwiftUI types with different composition semantics at the API level — confirmed by
+reading their real declarations in the macOS 26.5 SDK (see 07-sdk-glass-api-research.txt for the
+same technique applied to Glass). Color(nsColor:) wraps a fixed NSColor value with no dependency on
+"which material level was originally requested"; Material is a distinct blur/vibrancy compositing
+primitive. This is real evidence that the two code paths are NOT the same construct — but it is a
+source-level/type-level fact, not proof about final composited pixel output, and I am deliberately
+not leaping from "these are different types" to "therefore the screen looks different" the way the
+original proof leapt from "the screen looks different" to "therefore our code ran". Those are the
+same conflation in opposite directions, and both are unsound on their own.
+
+=== Plain conclusion ===
+I did not establish, this session, whether our resolver's .opaque output is distinguishable by
+screenshot from the system's own Material Reduce-Transparency adaptation. I identified why the
+original single-measurement proof could not have established this either way, and I designed a
+more diagnostic experiment (slider-invariance under Reduce-Transparency-on, comparing a real build
+against a code-injected bypassed build) that could settle it, but I could not run it because the
+screen was locked for this entire session (see 06b-live-launch-window-census-output.txt for the
+discovery of that constraint). What IS fully proven, independent of this question: the resolver's
+DECISION logic is correct in all cases (Claim A, unit-tested), and the subscription that lets the
+app learn about live accessibility changes at all now targets the channel Apple documents as
+authoritative (05b). Whether a screenshot can tell "our resolver" apart from "Material's own
+adaptation" remains open, and I am reporting it as open rather than resolving it either way without
+having actually looked.

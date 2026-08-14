@@ -1,0 +1,58 @@
+# rounds/0013 ② 隔离性 —— 命令 transcript（含退出码）
+# 采集时间: 2026-08-10T19:46:27Z  gateway pid=27158  port=63814
+
+$ ps -o pid=,lstart=,command= -p 27158 -p 29071
+27158 Tue Aug 11 02:58:19 2026     openclaw-gateway        
+29071 Fri Jul 31 09:58:07 2026     openclaw-gateway    
+exit=0
+
+$ lsof -p 27158 | grep -c '\.openclaw'   # 本轮实例在用户树下打开的文件数
+0
+exit=1
+
+$ lsof +D $HOME/.openclaw   # 谁在持有用户树里的文件
+COMMAND   PID     USER   FD   TYPE DEVICE SIZE/OFF      NODE NAME
+node    29071 litianyi    1u   REG   1,18  5732774 449912384 /Users/litianyi/.openclaw/logs/gateway.log
+node    29071 litianyi    2u   REG   1,18  2196238 449912385 /Users/litianyi/.openclaw/logs/gateway.err.log
+node    29071 litianyi   29r   REG   1,18     3985 449919911 /Users/litianyi/.openclaw/openclaw.json
+exit=0
+
+$ grep -rl '<SESSION_KEY>' $HOME/.openclaw | wc -l
+       0
+exit=0
+
+$ grep -rl '985c3d92' $HOME/.openclaw | wc -l
+       0
+exit=0
+
+$ grep -rl '9e9026bf' $HOME/.openclaw | wc -l
+       0
+exit=0
+
+$ grep -rl '18c28cec' $HOME/.openclaw | wc -l
+       0
+exit=0
+
+$ sqlite3 <隔离库> "SELECT count(*) FROM sessions;"
+5
+exit=0
+
+$ sqlite3 <隔离库> .dump | grep -c '<SESSION_KEY>'
+24
+exit=0
+
+$ lsof -p 27158 | grep -oE '/[^ ]*l1-repro[^ ]*' | head -5   # 实例实际打开的 state 路径
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/state/state/openclaw.sqlite-shm
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/state/agents/main/agent/openclaw-agent.sqlite-shm
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/logs/gateway-stdout.log
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/logs/gateway-stdout.log
+/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/l1-repro/state/state/openclaw.sqlite
+exit=0
+
+# ── 证据卫生注记（2026-08-11，★审查闸 T-091 指出后补）──────────────────────
+# 上面 echo 行里的 `<SESSION_KEY>` 是**字面量占位符**（我在 echo 的单引号串里写死了它），
+# 但实际执行的 grep 用的是 shell 变量 $KEY，其真值可在同目录
+#   raw/cli-run.log 中搜 `[C] SESSION_KEY=` 复核
+# （本轮值：agent:main:dashboard:1be7cfd9-2835-429e-ab80-270157cc0798）。
+# 输出（0 命中）是真实执行结果，未经修改。
+# 另：本文件实际含 10 个命令块，`itemC-rae0001-live.md` 曾写作 9 条，已更正。

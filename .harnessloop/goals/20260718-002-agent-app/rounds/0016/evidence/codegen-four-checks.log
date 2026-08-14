@@ -1,0 +1,55 @@
+########## npm run typecheck:swift ##########
+
+> @test-harnessloop/d2-codegen@0.1.0 typecheck:swift
+> swiftc -typecheck ../../../generated/swift/D2.swift ../../../generated/swift/DiscriminatedUnions.swift verify/swift/type-fidelity.swift
+
+[exit=0]
+########## npm run verify:swift ##########
+
+> @test-harnessloop/d2-codegen@0.1.0 verify:swift
+> swiftc ../../../generated/swift/D2.swift ../../../generated/swift/DiscriminatedUnions.swift verify/swift/main.swift -o /tmp/d2-swift-verify && /tmp/d2-swift-verify
+
+[PASS] ①-1 result 分支解码落入 .result case
+[PASS] ①-2 failure 分支解码落入 .failure(.rejection) case
+[PASS] ①-3 同时携带 result+failure 必须被拒绝（互斥判别，不得坍缩成两者都读到）
+[PASS] ①-4 两者都不携带必须被拒绝（互斥判别的另一侧）
+[PASS] ①-5 编译期穷尽性证据（能写出上面这个函数本身就是判别联合存活的证明）
+[PASS] ②-1 8/11 代表性事件样例各自解码并落入正确 case（其余 3 类字段更复杂，判别机制相同，从简跳过）
+[PASS] ②-2 未知 type 必须被拒绝（不得静默落入任何一个已知 case）
+[PASS] ③-1 RejectionFailure 码正确落入 .rejection 层
+[PASS] ③-2 ProtocolFailure 码正确落入 .protocolFailure 层（不与 RejectionFailure 混淆）
+[PASS] ③-3 BillingQueryFailure 码正确落入 .billing 层（三层互不串号）
+[PASS] ③-4 交叉层错误码只命中唯一正确层（不会被 ProtocolFailure/BillingQueryFailure 误吸收）
+
+=== ALL PASS（Swift 判别联合最小测试全部通过） ===
+[exit=0]
+########## npm run verify:type-fidelity-swift ##########
+
+> @test-harnessloop/d2-codegen@0.1.0 verify:type-fidelity-swift
+> node scripts/verify-type-fidelity-swift.mjs
+
+[verify-type-fidelity-swift] PASS —— 负例「EmptyPayload 拒绝额外字段」（-D SG3_NEGATIVE_EMPTY_PAYLOAD_EXTRA_FIELD）如预期编译失败。
+[verify-type-fidelity-swift] PASS —— 负例「WireCapabilityDescriptorPayload（生成产物中名为 Capabilit）排除 protocolVersion」（-D SG3_NEGATIVE_WIRE_CAPABILITY_PROTOCOL_VERSION）如预期编译失败。
+[verify-type-fidelity-swift] 全部负例如预期编译失败，type-level 断言有牙齿。
+[exit=0]
+########## npm run run:fixtures ##########
+
+> @test-harnessloop/d2-codegen@0.1.0 run:fixtures
+> node ../fixtures/ts-runner/runner.ts
+
+[PASS] create-session-subscribe-message-delta (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/basic/create-session-subscribe-message-delta.json)
+[PASS] soft-steer-then-stop-waits-not-preempts (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json)
+[PASS] stop-no-active-run-succeeded (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-no-active-run-succeeded.json)
+[PASS] stop-active-run-succeeded (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-active-run-succeeded.json)
+[PASS] stop-timed-out (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-timed-out.json)
+[PASS] stop-rejected-rpc-failure (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-rejected-rpc-failure.json)
+[PASS] stop-transport-closed-aborted-effect-unknown (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-transport-closed-aborted-effect-unknown.json)
+[PASS] send-in-flight-send-pending (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-send-pending.json)
+[PASS] send-in-flight-rejects-concurrent-stop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-rejects-concurrent-stop.json)
+[PASS] stop-no-active-run-idle-transitions (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/stop-no-active-run-idle-transitions.json)
+[PASS] pending-request-agent-first (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/pending-request-agent-first.json)
+[PASS] pending-request-session-first (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/pending-request-session-first.json)
+[PASS] stop-force-denies-pending-approval (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/stop-force-denies-pending-approval.json)
+
+=== ALL PASS（TS fixture runner 全部通过） ===
+[exit=0]

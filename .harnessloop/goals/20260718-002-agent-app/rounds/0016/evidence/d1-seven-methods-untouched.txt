@@ -1,0 +1,37 @@
+=== D1 七法签名未动的自证（rounds/0016） ===
+
+--- (1) git diff HEAD -- app/kernel-client/swift/KernelClient.swift 中是否有任何 func 行增删 ---
++    func restoreSession(sessionID: String, kernelKey: String) async -> AsyncThrowingStream<EventMessageUnion, Error>
++    func currentKernelKey(sessionID: String) async -> String?
++    func fetchFullHistory(kernelKey: String, pageLimit: Int) async throws -> [HistoryRecord]
+
+--- (2) 上面三条 + 号 func 属于哪个 protocol（不是 D1 七法，是 rounds/0014 新增的旁路协议） ---
++public protocol SessionRestoring: AnyObject {
+
+--- (3) D1 七法当前签名（protocol KernelClient 正文，逐行） ---
+    func createSession(config: Config) async throws -> SessionHandle
+    func send(session: SessionHandle, input: Input) async throws -> SendResultPayload
+    func subscribe(session: SessionHandle) async -> AsyncThrowingStream<EventMessageUnion, Error>
+    func interrupt(session: SessionHandle, options: InterruptRequestMessagePayload) async throws -> InterruptResultPayload
+    func stop(session: SessionHandle) async throws -> StopResultPayload
+    func respondApproval(session: SessionHandle, reqID: String, decision: Decision) async throws
+    func capabilities(session: SessionHandle?) async throws -> CapabilityDescriptorPayload
+
+--- (4) 本轮从未改动该文件（mtime 早于 rounds/0016 scope-lock 的写入时刻 Aug 12 10:17） ---
+-rw-r--r--@ 1 litianyi  staff  14317 Aug 12 01:53 app/kernel-client/swift/KernelClient.swift
+
+--- (5) 本轮实际改动的文件清单 ---
+-rw-r--r--@ 1 litianyi  staff   13701 Aug 12 10:37 app/apps/AgentShell/Sources/AgentShell/SessionDetailView.swift
+-rw-r--r--@ 1 litianyi  staff   41143 Aug 12 10:51 app/apps/AgentShell/Sources/AgentShellCore/SessionStore.swift
+-rw-r--r--@ 1 litianyi  staff   39257 Aug 11 03:13 app/kernel-client/swift/CLIRunner.swift
+-rw-r--r--@ 1 litianyi  staff   86045 Aug 12 10:39 app/kernel-client/swift/EventMapping.swift
+-rw-r--r--@ 1 litianyi  staff   14317 Aug 12 01:53 app/kernel-client/swift/KernelClient.swift
+-rw-r--r--@ 1 litianyi  staff  234770 Aug 12 10:58 app/kernel-client/swift/OpenclawGatewayKernelClient.swift
+-rw-r--r--@ 1 litianyi  staff   19827 Aug 11 02:02 app/kernel-client/swift/OpenclawWire.swift
+-rw-r--r--@ 1 litianyi  staff   70957 Aug 12 04:26 app/kernel-client/swift/frame-replay-tests/ApprovalDecisionTests.swift
+-rw-r--r--@ 1 litianyi  staff   36684 Aug 12 10:54 app/kernel-client/swift/frame-replay-tests/ApprovalFailurePathTests.swift
+-rw-r--r--@ 1 litianyi  staff    1034 Aug  9 15:34 app/kernel-client/swift/frame-replay-tests/FrameReplayTestMain.swift
+-rw-r--r--@ 1 litianyi  staff  154245 Aug 12 10:42 app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+-rw-r--r--@ 1 litianyi  staff    7772 Aug 11 15:02 app/kernel-client/swift/frame-replay-tests/SessionPersistenceTests.swift
+-rw-r--r--@ 1 litianyi  staff   15637 Aug 11 15:06 app/kernel-client/swift/frame-replay-tests/SessionRestoreHistoryTests.swift
+-rw-r--r--@ 1 litianyi  staff    7583 Aug 11 02:34 app/kernel-client/swift/frame-replay-tests/SessionStoreGroupingTests.swift

@@ -1,0 +1,5 @@
+# 0012 隔离对照（收尾后）
+ts_utc: 2026-08-05T10:41:53Z
+user_gateway_pid: 29071
+openclaw_file_count: 493
+tmp_openclaw_digest: 96dbbe3dd9d02b3689e64f5745e74c8f259f455b09d26edc6d8c4f5d5c9efb56

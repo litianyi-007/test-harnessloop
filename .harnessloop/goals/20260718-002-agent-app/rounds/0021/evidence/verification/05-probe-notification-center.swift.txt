@@ -1,0 +1,70 @@
+// T-114 rework — standalone dynamic probe for Finding 1 (accessibility notification center).
+//
+// AppearanceSettingsStore (app/apps/AgentShell/Sources/AgentShell/AppearanceEnvironment.swift) is
+// structurally unreachable from frame-replay-tests (AgentShell is an executableTarget; the test
+// binary only imports AgentShellCore/KernelClient/D2Generated — see that file's own header
+// comment). This probe empirically reproduces the exact subscription mechanism in isolation,
+// outside the app, to get real dynamic evidence rather than relying on source-reading alone.
+//
+// It registers TWO observers for NSWorkspace.accessibilityDisplayOptionsDidChangeNotification:
+//   - one on NotificationCenter.default   (the pre-fix, buggy subscription)
+//   - one on NSWorkspace.shared.notificationCenter (the post-fix subscription)
+// then posts the notification on the real, Apple-documented channel
+// (NSWorkspace.shared.notificationCenter, object: NSWorkspace.shared — confirmed via the official
+// doc JSON for NSWorkspace.accessibilityDisplayOptionsDidChangeNotification: "The notification
+// object is the shared NSWorkspace instance... To receive this notification, use
+// NSWorkspace.notificationCenter to register for it. If you use a different notification center to
+// register, you won't receive the notification.") and reports which observer(s) actually fired.
+
+import AppKit
+import Foundation
+
+var defaultCenterFired = false
+var workspaceCenterFired = false
+
+let obsDefault = NotificationCenter.default.addObserver(
+    forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+    object: NSWorkspace.shared,
+    queue: .main
+) { _ in
+    defaultCenterFired = true
+}
+
+let obsWorkspace = NSWorkspace.shared.notificationCenter.addObserver(
+    forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+    object: NSWorkspace.shared,
+    queue: .main
+) { _ in
+    workspaceCenterFired = true
+}
+
+print("Posting NSWorkspace.accessibilityDisplayOptionsDidChangeNotification on NSWorkspace.shared.notificationCenter (the real, documented channel)...")
+NSWorkspace.shared.notificationCenter.post(
+    name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+    object: NSWorkspace.shared
+)
+
+// queue: .main enqueues delivery onto the main OperationQueue; pump the run loop briefly so the
+// enqueued block actually executes before we read the flags.
+RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+
+print("RESULT defaultCenterFired=\(defaultCenterFired)")
+print("RESULT workspaceCenterFired=\(workspaceCenterFired)")
+
+if defaultCenterFired {
+    print("UNEXPECTED: NotificationCenter.default received the notification — this would contradict Apple's documented contract.")
+} else {
+    print("CONFIRMED: NotificationCenter.default (the pre-fix subscription) never receives this notification — reproduces T-114 Finding 1's bug in isolation.")
+}
+
+if workspaceCenterFired {
+    print("CONFIRMED: NSWorkspace.shared.notificationCenter (the post-fix subscription) receives the notification — matches the fix in AppearanceEnvironment.swift.")
+} else {
+    print("UNEXPECTED: NSWorkspace.shared.notificationCenter did not receive its own posted notification.")
+}
+
+NotificationCenter.default.removeObserver(obsDefault)
+NSWorkspace.shared.notificationCenter.removeObserver(obsWorkspace)
+
+let verdict = (!defaultCenterFired && workspaceCenterFired) ? "PROBE PASS" : "PROBE FAIL"
+print(verdict)

@@ -1,0 +1,50 @@
+2026-08-05T18:38:00.750+08:00 [gateway] loading configuration…
+2026-08-05T18:38:00.845+08:00 [gateway] resolving authentication…
+2026-08-05T18:38:00.938+08:00 [gateway] starting...
+2026-08-05T18:38:03.742+08:00 [gateway] starting HTTP server...
+2026-08-05T18:38:04.599+08:00 [gateway] agent model: d3proxy/kimi-for-coding (thinking=off, fast=off)
+2026-08-05T18:38:04.602+08:00 [gateway] http server listening (14 plugins: acpx, anthropic, bonjour, browser, canvas, device-pair, file-transfer, linux-canvas, linux-node, memory-core, ollama, opencode, phone-control, talk-voice; 1.7s)
+2026-08-05T18:38:04.603+08:00 [gateway] log file: /tmp/openclaw/openclaw-2026-08-05.log
+2026-08-05T18:38:04.733+08:00 [gateway] ready
+2026-08-05T18:38:04.767+08:00 [gateway] starting channels and sidecars...
+2026-08-05T18:38:11.182+08:00 [gateway/channels] skipping channel start (OPENCLAW_SKIP_CHANNELS=1 or OPENCLAW_SKIP_PROVIDERS=1)
+2026-08-05T18:38:11.186+08:00 [plugins] embedded acpx runtime backend registered lazily
+2026-08-05T18:38:11.204+08:00 [gateway] startup outcomes: internal-hooks=skipped (not-configured); internal-startup-hook=skipped (no-handlers-loaded); gateway-start-hooks=scheduled; memory-qmd=skipped (not-configured); gmail-watcher=skipped (hooks-disabled); gmail-model=skipped (not-configured)
+2026-08-05T18:38:11.214+08:00 [heartbeat] started
+2026-08-05T18:38:11.259+08:00 [gateway] agent runtime plugins pre-warmed in 6ms
+2026-08-05T18:38:12.010+08:00 [plugins] bonjour: advertised gateway fqdn=MacBook Pro (2) (OpenClaw)._openclaw-gw._tcp.local. host=MacBook-Pro-2.local. port=18909 state=announcing
+2026-08-05T18:38:44.895+08:00 [ws] ⇄ res ✓ sessions.create 129ms conn=bbe65670…e1f9 id=r2
+2026-08-05T18:38:56.523+08:00 [agent/embedded] tool-search: cataloged 41 tools behind compact prompt surface
+2026-08-05T18:38:57.530+08:00 [agent/embedded] Removed already-queued orphaned user message to prevent consecutive user turns. runId=b53d403a-5467-420e-a96b-6dc3598fdc3d sessionId=0752d742-d5fe-456a-9476-4816f7106f11 trigger=user
+2026-08-05T18:38:57.589+08:00 [provider-transport-fetch] [model-fetch] start provider=d3proxy api=openai-completions model=kimi-for-coding method=POST url=http://localhost:3001/api/d3/v1/session-proxy/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-05T18:39:00.377+08:00 [provider-transport-fetch] [model-fetch] response provider=d3proxy api=openai-completions model=kimi-for-coding status=200 elapsedMs=2787 contentType=text/event-stream
+2026-08-05T18:40:22.826+08:00 [agent/embedded] tool-search: cataloged 41 tools behind compact prompt surface
+2026-08-05T18:40:23.692+08:00 [agent/embedded] Removed already-queued orphaned user message to prevent consecutive user turns. runId=0700f2fb-e71c-4f49-aac5-09313b1f0042 sessionId=0752d742-d5fe-456a-9476-4816f7106f11 trigger=user
+2026-08-05T18:40:23.742+08:00 [provider-transport-fetch] [model-fetch] start provider=d3proxy api=openai-completions model=kimi-for-coding method=POST url=http://localhost:3001/api/d3/v1/session-proxy/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-05T18:40:23.770+08:00 [provider-transport-fetch] [model-fetch] error provider=d3proxy api=openai-completions model=kimi-for-coding elapsedMs=29 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-05T18:40:24.225+08:00 [provider-transport-fetch] [model-fetch] start provider=d3proxy api=openai-completions model=kimi-for-coding method=POST url=http://localhost:3001/api/d3/v1/session-proxy/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-05T18:40:24.229+08:00 [provider-transport-fetch] [model-fetch] error provider=d3proxy api=openai-completions model=kimi-for-coding elapsedMs=5 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-05T18:40:25.117+08:00 [provider-transport-fetch] [model-fetch] start provider=d3proxy api=openai-completions model=kimi-for-coding method=POST url=http://localhost:3001/api/d3/v1/session-proxy/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-05T18:40:25.121+08:00 [provider-transport-fetch] [model-fetch] error provider=d3proxy api=openai-completions model=kimi-for-coding elapsedMs=4 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-05T18:40:25.161+08:00 [agent/embedded] embedded run agent end: runId=0700f2fb-e71c-4f49-aac5-09313b1f0042 isError=true model=kimi-for-coding provider=d3proxy error=LLM request failed: network connection error. rawError=Connection error.
+2026-08-05T18:40:25.189+08:00 [agent/embedded] embedded run failover decision: runId=0700f2fb-e71c-4f49-aac5-09313b1f0042 stage=assistant decision=surface_error reason=timeout from=d3proxy/kimi-for-coding profile=- rawError=Connection error.
+2026-08-05T18:40:25.191+08:00 [diagnostic] lane task error: lane=main durationMs=3164 error="FailoverError: LLM request failed: network connection error."
+2026-08-05T18:40:25.193+08:00 [diagnostic] lane task error: lane=session:agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3 durationMs=3166 error="FailoverError: LLM request failed: network connection error."
+2026-08-05T18:40:25.199+08:00 [model-fallback/decision] model fallback decision: decision=candidate_failed requested=d3proxy/kimi-for-coding candidate=d3proxy/kimi-for-coding reason=timeout next=none detail=Connection error.
+2026-08-05T18:40:25.201+08:00 Transient HTTP provider error before reply (LLM request failed: network connection error.). Retrying once in 2500ms.
+2026-08-05T18:40:28.670+08:00 [agent/embedded] tool-search: cataloged 41 tools behind compact prompt surface
+2026-08-05T18:40:29.518+08:00 [provider-transport-fetch] [model-fetch] start provider=d3proxy api=openai-completions model=kimi-for-coding method=POST url=http://localhost:3001/api/d3/v1/session-proxy/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-05T18:40:29.524+08:00 [provider-transport-fetch] [model-fetch] error provider=d3proxy api=openai-completions model=kimi-for-coding elapsedMs=5 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-05T18:40:30.015+08:00 [provider-transport-fetch] [model-fetch] start provider=d3proxy api=openai-completions model=kimi-for-coding method=POST url=http://localhost:3001/api/d3/v1/session-proxy/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-05T18:40:30.021+08:00 [provider-transport-fetch] [model-fetch] error provider=d3proxy api=openai-completions model=kimi-for-coding elapsedMs=7 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-05T18:40:30.984+08:00 [provider-transport-fetch] [model-fetch] start provider=d3proxy api=openai-completions model=kimi-for-coding method=POST url=http://localhost:3001/api/d3/v1/session-proxy/chat/completions timeoutMs=undefined proxy=none policy=custom
+2026-08-05T18:40:30.992+08:00 [provider-transport-fetch] [model-fetch] error provider=d3proxy api=openai-completions model=kimi-for-coding elapsedMs=7 name=TypeError code=undefined causeName=Error causeCode=ECONNREFUSED message=fetch failed
+2026-08-05T18:40:31.009+08:00 [agent/embedded] embedded run agent end: runId=0700f2fb-e71c-4f49-aac5-09313b1f0042 isError=true model=kimi-for-coding provider=d3proxy error=LLM request failed: network connection error. rawError=Connection error.
+2026-08-05T18:40:31.036+08:00 [agent/embedded] embedded run failover decision: runId=0700f2fb-e71c-4f49-aac5-09313b1f0042 stage=assistant decision=surface_error reason=timeout from=d3proxy/kimi-for-coding profile=- rawError=Connection error.
+2026-08-05T18:40:31.038+08:00 [diagnostic] lane task error: lane=main durationMs=3096 error="FailoverError: LLM request failed: network connection error."
+2026-08-05T18:40:31.039+08:00 [diagnostic] lane task error: lane=session:agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3 durationMs=3097 error="FailoverError: LLM request failed: network connection error."
+2026-08-05T18:40:31.042+08:00 [model-fallback/decision] model fallback decision: decision=candidate_failed requested=d3proxy/kimi-for-coding candidate=d3proxy/kimi-for-coding reason=timeout next=none detail=Connection error.
+2026-08-05T18:40:31.045+08:00 Embedded agent failed before reply: LLM request failed: network connection error.
+2026-08-05T18:41:49.518+08:00 [gateway] received SIGTERM; shutting down
+2026-08-05T18:41:52.307+08:00 [gmail-watcher] gmail watcher stopped
+2026-08-05T18:41:52.313+08:00 [shutdown] completed cleanly in 423ms

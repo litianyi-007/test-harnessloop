@@ -42,6 +42,18 @@ cp "$SHELL_DIR/Resources/Info.plist" "$APP_ROOT/Contents/Info.plist"
 cp "$BIN_PATH" "$APP_ROOT/Contents/MacOS/$PRODUCT"
 chmod +x "$APP_ROOT/Contents/MacOS/$PRODUCT"
 
+# 图标资产（round 0021）——来源见 Resources/icon-source/generate-icons.sh，本脚本只管拷贝，
+# 不重新生成。CFBundleIconFile（Info.plist）指向 AppIcon（不带扩展名，经典 .icns 约定），
+# 缺文件在这里直接报错比"打出一个没有图标的 bundle 然后事后才发现"更早暴露问题。
+for ICON_ASSET in AppIcon.icns MenuBarIconTemplate.png "MenuBarIconTemplate@2x.png"; do
+  SRC="$SHELL_DIR/Resources/$ICON_ASSET"
+  if [[ ! -f "$SRC" ]]; then
+    echo "ERROR: 图标资产缺失: $SRC (先跑 Resources/icon-source/generate-icons.sh)" >&2
+    exit 1
+  fi
+  cp "$SRC" "$APP_ROOT/Contents/Resources/$ICON_ASSET"
+done
+
 if command -v codesign >/dev/null 2>&1; then
   echo "==> ad-hoc 签名整个 bundle（SwiftPM 产出的裸二进制签名在拼装后已失效，需要对整个 bundle 重签）"
   codesign --force --deep --sign - "$APP_ROOT"

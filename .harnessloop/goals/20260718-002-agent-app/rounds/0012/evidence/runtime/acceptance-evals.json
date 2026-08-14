@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "eval_id": "RAE-0001",
+      "attempt_id": "0012-a1",
+      "outcome": "fail",
+      "evidence": "evidence/live/live-closure.md",
+      "frozen_due_set": ["RAE-0001"],
+      "frozen_system": "openclaw-isolated"
+    }
+  ]
+}

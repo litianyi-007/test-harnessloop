@@ -1,0 +1,13 @@
+# 0012 隔离基线（起服务前）
+ts_utc: 2026-08-05T10:37:32Z
+## 用户全局 gateway
+node    29071 litianyi   18u  IPv4 0x4a82a12b33c05fbf      0t0  TCP 127.0.0.1:18789 (LISTEN)
+node    29071 litianyi   19u  IPv6 0x79ec02447a68a65d      0t0  TCP [::1]:18789 (LISTEN)
+## ~/.openclaw 指纹
+file_count: 493
+## /tmp/openclaw（recipe 自承不受 STATE_DIR 控制的全局路径）
+drwx------@   4 litianyi  wheel     128 Aug  5 04:28 .
+drwxrwxrwt  132 root      wheel    4224 Aug  5 18:37 ..
+-rw-------@   1 litianyi  wheel  759732 Aug  5 18:28 openclaw-2026-07-31.log
+-rw-------@   1 litianyi  wheel  136118 Aug  5 16:16 openclaw-2026-08-05.log
+tmp_openclaw_digest: 1276c93fe545622745d7ca3885984657706f8979e2b5247ec5e1208c71383ea0

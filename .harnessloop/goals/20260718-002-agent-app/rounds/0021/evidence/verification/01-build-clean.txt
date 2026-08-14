@@ -1,0 +1,210 @@
+Building for debugging...
+[0/19] Write sources
+[2/19] Write kernel-client-cli-entitlement.plist
+[2/19] Write sources
+[2/19] Write AgentShell-entitlement.plist
+[2/19] Write sources
+[2/19] Write frame-replay-tests-entitlement.plist
+[9/19] Write swift-version--58304C5D6DBC2206.txt
+[11/22] Emitting module D2Generated
+[12/22] Compiling D2Generated DiscriminatedUnions.swift
+[13/22] Compiling D2Generated D2.swift
+[14/28] Compiling KernelClient KernelClient.swift
+[15/28] Compiling KernelClient OpenclawGatewayKernelClient.swift
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawGatewayKernelClient.swift:838:35: warning: no 'async' operations occur within 'await' expression
+ 836 | 
+ 837 |         Task {
+ 838 |             guard let kernelKey = await self.kernelKey(for: ourSessionID) else {
+     |                                   `- warning: no 'async' operations occur within 'await' expression
+ 839 |                 // 这条 RPC 根本不会被发起——照样标记 dispatch，否则等待中的 send()/stop() 会永久
+ 840 |                 // 卡住（它们自己紧随其后的 kernelKey 查找也会独立失败，这里只是不让它们死在屏障上）。
+
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawGatewayKernelClient.swift:841:17: warning: no 'async' operations occur within 'await' expression
+ 839 |                 // 这条 RPC 根本不会被发起——照样标记 dispatch，否则等待中的 send()/stop() 会永久
+ 840 |                 // 卡住（它们自己紧随其后的 kernelKey 查找也会独立失败，这里只是不让它们死在屏障上）。
+ 841 |                 await self.markSubscriptionRpcDispatched(sessionID: ourSessionID)
+     |                 `- warning: no 'async' operations occur within 'await' expression
+ 842 |                 continuation.finish(throwing: KernelClientError.protocolMismatch("unknown session \(ourSessionID)"))
+ 843 |                 return
+
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawGatewayKernelClient.swift:845:39: warning: no 'async' operations occur within 'await' expression
+ 843 |                 return
+ 844 |             }
+ 845 |             if let delayNanoseconds = await self.subscribeDispatchDelayNanosecondsForTesting() {
+     |                                       `- warning: no 'async' operations occur within 'await' expression
+ 846 |                 // Test-only（见 `testSupportSetSubscribeDispatchDelay` 文档注释）——生产路径这里
+ 847 |                 // 恒为 nil，下面这行不会被执行到。
+
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawGatewayKernelClient.swift:850:13: warning: no 'async' operations occur within 'await' expression
+ 848 |                 try? await Task.sleep(nanoseconds: delayNanoseconds)
+ 849 |             }
+ 850 |             await self.markSubscriptionRpcDispatched(sessionID: ourSessionID)
+     |             `- warning: no 'async' operations occur within 'await' expression
+ 851 |             do {
+ 852 |                 // includeApprovals:true——不带这个 flag 收不到 session.approval 事件
+
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawGatewayKernelClient.swift:865:21: warning: no 'async' operations occur within 'await' expression
+ 863 |                     // M1：消费 subscribe 响应里的 `approvalReplay`（authoritative 的当前 pending
+ 864 |                     // 审批快照，见下方 consumeApprovalReplay 文档注释）。
+ 865 |                     await self.consumeApprovalReplay(result, kernelKey: kernelKey)
+     |                     `- warning: no 'async' operations occur within 'await' expression
+ 866 |                 }
+ 867 |             } catch {
+
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawGatewayKernelClient.swift:1528:17: warning: no 'async' operations occur within 'await' expression
+1526 |             do {
+1527 |                 let result = try await self.request(method: "approval.resolve", params: params)
+1528 |                 await self.settleApprovalResolve(reqID: reqID, epoch: epoch, result: .success(result))
+     |                 `- warning: no 'async' operations occur within 'await' expression
+1529 |             } catch {
+1530 |                 await self.settleApprovalResolve(reqID: reqID, epoch: epoch, result: .failure(error))
+
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawGatewayKernelClient.swift:1530:17: warning: no 'async' operations occur within 'await' expression
+1528 |                 await self.settleApprovalResolve(reqID: reqID, epoch: epoch, result: .success(result))
+1529 |             } catch {
+1530 |                 await self.settleApprovalResolve(reqID: reqID, epoch: epoch, result: .failure(error))
+     |                 `- warning: no 'async' operations occur within 'await' expression
+1531 |             }
+1532 |         }
+
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawGatewayKernelClient.swift:1965:17: warning: no 'async' operations occur within 'await' expression
+1963 |             Task {
+1964 |                 try? await Task.sleep(nanoseconds: UInt64(timeoutSeconds) * 1_000_000_000)
+1965 |                 await self.resolvePendingStopWaiter(sessionID: sessionID, outcome: .timedOut)
+     |                 `- warning: no 'async' operations occur within 'await' expression
+1966 |             }
+1967 |         }
+[16/28] Emitting module KernelClient
+[17/28] Compiling KernelClient OpenclawWire.swift
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/OpenclawWire.swift:272:37: warning: expression implicitly coerced from 'Any?' to 'Any'
+270 |                        // rounds/0012 ①' 新增：分组键改用 messageID 后，trace 必须能看见它，
+271 |                        // 否则 live 验证读不到该字段会被误判成「映射没传过来」（本轮真踩过一次）。
+272 |                        "messageID": e.payload.messageID ?? NSNull()]
+    |                                     |                   |- note: provide a default value to avoid this warning
+    |                                     |                   |- note: force-unwrap the value to avoid this warning
+    |                                     |                   `- note: explicitly cast to 'Any' with 'as Any' to silence this warning
+    |                                     `- warning: expression implicitly coerced from 'Any?' to 'Any'
+273 |     case .thinking(let e):
+274 |         out["seq"] = e.seq
+[18/28] Compiling KernelClient EventMapping.swift
+[19/28] Compiling KernelClient CLIRunner.swift
+[20/42] Emitting module kernel_client_cli
+[21/42] Compiling kernel_client_cli main.swift
+[22/42] Compiling AgentShellCore MenuBarSummary.swift
+[22/43] Write Objects.LinkFileList
+[24/43] Compiling AgentShellCore MenuBarWindowSelection.swift
+[25/43] Compiling AgentShellCore KernelShellConfig.swift
+[26/43] Compiling AgentShellCore KernelShellSettingsStorage.swift
+[27/43] Compiling AgentShellCore SessionPersistence.swift
+[28/43] Emitting module AgentShellCore
+[29/43] Compiling AgentShellCore JSONPreview.swift
+[30/43] Compiling AgentShellCore ConversationItems.swift
+[31/43] Compiling AgentShellCore AppearanceSettings.swift
+[32/43] Compiling AgentShellCore ApprovalModels.swift
+[33/43] Compiling AgentShellCore ChatModels.swift
+[34/43] Compiling AgentShellCore ChatSessionViewModel.swift
+[34/43] Linking kernel-client-cli
+[35/43] Applying kernel-client-cli
+[37/43] Compiling AgentShellCore SessionStore.swift
+[38/67] Compiling frame_replay_tests SessionStoreInterruptTests.swift
+[39/68] Compiling frame_replay_tests SessionPersistenceTests.swift
+[40/68] Compiling frame_replay_tests SessionStoreGroupingTests.swift
+[41/68] Compiling frame_replay_tests SessionRestoreHistoryTests.swift
+[42/68] Compiling frame_replay_tests SessionStoreToolRenderingTests.swift
+[43/68] Compiling frame_replay_tests MenuBarWindowSelectionTests.swift
+[44/68] Compiling frame_replay_tests KernelShellSettingsTests.swift
+[45/68] Compiling frame_replay_tests MenuBarSummaryTests.swift
+[46/68] Compiling frame_replay_tests ApprovalFailurePathTests.swift
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/frame-replay-tests/ApprovalFailurePathTests.swift:263:26: warning: result of call to 'stop(session:)' is unused [#no-usage]
+261 |     var stopError: Error?
+262 |     do {
+263 |         try await client.stop(session: handle)
+    |                          `- warning: result of call to 'stop(session:)' is unused [#no-usage]
+264 |     } catch {
+265 |         stopError = error
+[47/68] Compiling frame_replay_tests FrameReplayTestMain.swift
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/frame-replay-tests/ApprovalFailurePathTests.swift:263:26: warning: result of call to 'stop(session:)' is unused [#no-usage]
+261 |     var stopError: Error?
+262 |     do {
+263 |         try await client.stop(session: handle)
+    |                          `- warning: result of call to 'stop(session:)' is unused [#no-usage]
+264 |     } catch {
+265 |         stopError = error
+[48/68] Compiling frame_replay_tests AppearanceSettingsTests.swift
+[49/68] Compiling frame_replay_tests ApprovalDecisionTests.swift
+[50/68] Emitting module frame_replay_tests
+[51/68] Compiling frame_replay_tests FrameReplayTests.swift
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift:1562:14: warning: instance method 'lock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+1560 | 
+1561 |     func wait() async -> T {
+1562 |         lock.lock()
+     |              `- warning: instance method 'lock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+1563 |         if let v = value {
+1564 |             lock.unlock()
+
+Foundation.NSLock.lock:2:11: note: 'lock()' declared here
+1 | class NSLock {
+2 | open func lock()}
+  |           `- note: 'lock()' declared here
+3 | 
+
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift:1564:18: warning: instance method 'unlock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+1562 |         lock.lock()
+1563 |         if let v = value {
+1564 |             lock.unlock()
+     |                  `- warning: instance method 'unlock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+1565 |             return v
+1566 |         }
+
+Foundation.NSLock.unlock:2:11: note: 'unlock()' declared here
+1 | class NSLock {
+2 | open func unlock()}
+  |           `- note: 'unlock()' declared here
+3 | 
+[52/68] Compiling frame_replay_tests InterruptTests.swift
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift:1562:14: warning: instance method 'lock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+1560 | 
+1561 |     func wait() async -> T {
+1562 |         lock.lock()
+     |              `- warning: instance method 'lock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+1563 |         if let v = value {
+1564 |             lock.unlock()
+
+Foundation.NSLock.lock:2:11: note: 'lock()' declared here
+1 | class NSLock {
+2 | open func lock()}
+  |           `- note: 'lock()' declared here
+3 | 
+
+/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift:1564:18: warning: instance method 'unlock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+1562 |         lock.lock()
+1563 |         if let v = value {
+1564 |             lock.unlock()
+     |                  `- warning: instance method 'unlock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+1565 |             return v
+1566 |         }
+
+Foundation.NSLock.unlock:2:11: note: 'unlock()' declared here
+1 | class NSLock {
+2 | open func unlock()}
+  |           `- note: 'unlock()' declared here
+3 | 
+[52/68] Write Objects.LinkFileList
+[53/68] Linking frame-replay-tests
+[54/68] Applying frame-replay-tests
+[56/68] Compiling AgentShell AppearanceEnvironment.swift
+[57/68] Emitting module AgentShell
+[58/68] Compiling AgentShell AgentShellApp.swift
+[59/68] Compiling AgentShell SessionDetailView.swift
+[60/68] Compiling AgentShell SessionListView.swift
+[61/68] Compiling AgentShell ContentView.swift
+[62/68] Compiling AgentShell BearWatermark.swift
+[63/68] Compiling AgentShell LiquidGlassSupport.swift
+[64/68] Compiling AgentShell MenuBarExtraContent.swift
+[65/68] Compiling AgentShell MenuBarIconLoader.swift
+[66/69] Compiling AgentShell SettingsView.swift
+[66/69] Write Objects.LinkFileList
+[67/69] Linking AgentShell
+[68/69] Applying AgentShell
+Build complete! (12.44s)
+FINAL_CLEAN_BUILD_EXIT_CODE=0

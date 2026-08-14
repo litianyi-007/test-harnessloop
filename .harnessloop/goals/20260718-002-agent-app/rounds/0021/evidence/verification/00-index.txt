@@ -1,0 +1,84 @@
+T-114 rework pass — verification evidence index (2026-08-14)
+
+Closing the REWORK verdict from T-114 (codex adversarial review; the review text itself was
+recovered into evidence/T-114-codex-review-recovered-from-progress-log.md because the reviewer's
+sandbox was read-only and its artifact never landed at the briefed path — see that file for the
+original 9-point verdict).
+
+FINAL STATE (see 01/02): clean build exit 0, 163/163 tests pass (158 pre-existing + 5 new added by
+this rework pass for previously-untested assertions this pass introduced).
+
+Files in this directory:
+
+01-build-clean.txt
+    `rm -rf app/.build && swift build --package-path app` from a fully clean state. Exit code
+    captured directly (not through a pipe). Read before trusting any test count, per the brief's
+    Discipline section.
+
+02-test-run-final.txt
+    Full output of app/.build/arm64-apple-macosx/debug/frame-replay-tests after the clean build.
+    163/163 PASS, 0 FAIL, exit code 0.
+
+03-counterproof-composer-glass-opacity.txt
+    Destructive counter-proof (checksum-verified inject/RED/revert/GREEN, not `git checkout --`
+    which would have discarded this round's other uncommitted work) for Finding 2's testable
+    portion: ComposerGlassLayerOpacity.resolve(intensity:), the pure strength->opacity mapping I
+    moved into AgentShellCore specifically to make it unit-testable. 1 injection site -> 3 tests
+    RED (160/163) -> byte-exact revert -> 163/163 GREEN.
+
+04-counterproof-default-slider-value.txt
+    Same method, for the KernelShellSettingsStorage.swift:191 default-value claim the reviewer
+    flagged ("0.6 restores .regularMaterial" — verified false: materialForChromeIntensity's bucket
+    is the half-open range [0.4,0.6), which does not include 0.6 itself). 1 injection site -> 2
+    tests RED (161/163) -> byte-exact revert -> 163/163 GREEN.
+
+05-probe-notification-center.swift.txt, 05b-probe-notification-center-output.txt
+    Finding 1 (accessibility notification subscribed to the wrong center) is structurally
+    unreachable from frame-replay-tests (AppearanceSettingsStore imports AppKit/SwiftUI, never
+    constructed in the test target). Instead of relying on a source-code read alone, this is a
+    standalone dynamic probe that registers the exact subscription mechanism on BOTH
+    NotificationCenter.default (pre-fix) and NSWorkspace.shared.notificationCenter (post-fix)
+    simultaneously, posts a real notification on the real Apple-documented channel, and observes
+    which one(s) actually fire. Result: only the post-fix subscription receives it — reproducing
+    the bug and confirming the fix, in one real, dynamic, side-by-side measurement.
+
+06-probe-window-census.swift.txt, 06b-live-launch-window-census-output.txt
+    Live-launch sanity check for the AgentShellApp.swift scene changes (Window instead of
+    WindowGroup, MenuBarExtra isInserted) — also structurally unreachable from frame-replay-tests.
+    Built the real .app bundle, launched it, confirmed no crash, and confirmed via
+    CGWindowListCopyWindowInfo (chosen over System Events per this repo's own documented prior
+    incident in rounds/0021/scope-lock.md) that exactly one window exists. Also documents an
+    IMPORTANT DISCOVERY: this machine's screen was locked for the whole session, which invalidated
+    a screenshot I attempted (it captured the lock screen, not the live desktop) and blocked ALL
+    further screenshot/UI-automation-based verification. Read this file for exactly what was and
+    was not verified as a result — stated plainly rather than implied.
+
+07-sdk-glass-api-research.txt
+    Ground-truth research read directly from the installed macOS 26.5 SDK's
+    SwiftUICore.swiftinterface, done before deciding how to fix Finding 2. Establishes that
+    SwiftUICore.Glass has no continuous strength/opacity parameter at all (only
+    .regular/.clear/.identity + .tint()/.interactive()) — which is why the fix renders the glass as
+    an independent background layer and varies that layer's SwiftUI `.opacity(...)` instead of
+    trying to pass intensity into an API that does not accept it.
+
+08-distinguishability-analysis.txt
+    Direct answer to the brief's question about whether "our resolver produced .opaque" is
+    distinguishable from "the system made the material opaque anyway." Separates the fully-settled
+    claim (the resolver's decision logic is correct — proven by existing unit tests, no screenshot
+    needed) from the unsettled one (whether a screenshot can attribute causation between our code
+    and Material's own OS-level Reduce-Transparency adaptation). Proposes a more diagnostic
+    experiment than the original single-measurement proof, explains why I could not run it this
+    session (screen locked), and states the open question as open rather than guessing at an
+    answer.
+
+09-scene-hardening-decision.txt
+    Apple documentation (fetched doc-JSON, quoted verbatim) backing both hardening decisions:
+    switching to MenuBarExtra(isInserted:) (the pre-fix initializer is documented by Apple to quit
+    the app on removal and explicitly documented as unsafe to combine with other scene types, which
+    the pre-fix code was doing) and switching WindowGroup -> Window (Apple documents openWindow(id:)
+    against a Window target as structurally unable to duplicate). Includes the regression-risk
+    grep checks done before making the change (SceneStorage, openWindow call sites, WindowGroup
+    references, what "new session" actually does) and the explicit reasoning for what was
+    deliberately NOT removed (MenuBarWindowSelection's existing deminiaturize/front logic, kept as
+    additive hardening rather than replaced, because Apple's docs don't explicitly confirm Window's
+    "orders to front" also un-minimizes, and I could not verify that live this session).

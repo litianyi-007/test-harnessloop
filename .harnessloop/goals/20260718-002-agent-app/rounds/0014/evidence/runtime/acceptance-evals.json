@@ -1,0 +1,12 @@
+{
+  "entries": [
+    {
+      "eval_id": "RAE-0001",
+      "attempt_id": "0014-a1",
+      "outcome": "pass",
+      "evidence": "evidence/live/raw/rae14-rec.txt",
+      "frozen_due_set": ["RAE-0001"],
+      "frozen_system": "openclaw-isolated"
+    }
+  ]
+}

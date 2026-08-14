@@ -1,0 +1,21 @@
+  [evidence] 失败形态①：RPC 抛错 -> queue_overflow=[] | evt.error=["evt.error(code=unknown, nativeCode=queue_overflow_deny_unconfirmed, message=审批 ovf-rpc-throw：等待队列已满，适配器发起的自动拒绝**未被内核确认**（approval.resolve 失败：rpc rejected [INTERNAL]: boom）——这条请求在内核侧可能仍然 pending，不要当作已被拒绝)"] | FORCE_DENY_PENDING_KERNEL_ACK=queueOverflowDeny/approval.resolve 失败：rpc rejected [INTERNAL]: boom
+  [evidence] 失败形态②：applied:false（ok:true + 终态快照，不是错误码） -> queue_overflow=[] | evt.error=["evt.error(code=unknown, nativeCode=queue_overflow_deny_unconfirmed, message=审批 ovf-applied-false：等待队列已满，适配器发起的自动拒绝**未被内核确认**（applied=false（内核未采纳本次 deny；它记录的终态是 status=allowed reason=user））——这条请求在内核侧可能仍然 pending，不要当作已被拒绝)"] | FORCE_DENY_PENDING_KERNEL_ACK=无
+  [evidence] 失败形态③：applied:true 但终态不是 denied -> queue_overflow=[] | evt.error=["evt.error(code=unknown, nativeCode=queue_overflow_deny_unconfirmed, message=审批 ovf-not-denied：等待队列已满，适配器发起的自动拒绝**未被内核确认**（applied=true 但终态 status=allowed reason=user（不是 denied））——这条请求在内核侧可能仍然 pending，不要当作已被拒绝)"] | FORCE_DENY_PENDING_KERNEL_ACK=queueOverflowDeny/applied=true 但终态 status=allowed reason=user（不是 denied）
+  [evidence] 成功对照：applied:true + status:denied -> queue_overflow=["approval_buffer_resolved(ovf-ok,queue_overflow)"] | evt.error=[] | FORCE_DENY_PENDING_KERNEL_ACK=无
+  [PASS] rounds/0016 反证① (T-096 第1项): 溢出 deny 的三种失败响应各须如实报错，且不得提前宣称已自动拒绝: 溢出 deny 的成功判据严格是 applied:true+denied；三种失败响应各产出一条如实的 evt.error 且**不**产出 queue_overflow
+  [evidence] 强制 deny 失败（applied:true 但终态 allowed）-> FORCE_DENY_PENDING_KERNEL_ACK（origin=forceDenyOnStop，observedFailure=applied=true 但终态 status=allowed（不是 denied））
+  [evidence] 该态下人工 allow-once -> 同步拒绝（FORCE_DENY_PENDING_KERNEL_ACK: 审批 approval-force-deny-ack 的强制 deny 未被内核确认（applied=true 但终态 status=allowed（不是 denied）），内核侧真实状态未知——此状态下只允许幂等 deny 重试，拒绝决策 'allow_once'），approval.resolve 调用数未变（1 -> 1）
+  [evidence] 该态下人工 deny -> 放行、恰好多发一条 approval.resolve(deny)，内核确认 denied 后持久态解除
+  [PASS] rounds/0016 反证② (T-096 第2项): 强制 deny 失败 -> FORCE_DENY_PENDING_KERNEL_ACK -> 人工 allow 必须被拒、只允许幂等 deny 重试: 强制 deny 失败后持久态存在；人工 allow 被同步拒绝且零 RPC；幂等 deny 重试被放行并在确认后解除持久态
+  [evidence][A] 桩收到 1 次 approval.resolve 且**从未返回**；有界等待 150ms 到期后 respondApproval 抛 审批 approval-bounded-wait：approval.resolve 超过有界等待上限 150ms 仍无应答——已结束该 in-flight（不永久占位），内核侧状态未知，不当作成功也不当作已拒绝（实测耗时 160ms）；in-flight 集合已清空 = []
+  [evidence][B] 桩收到 1 次 approval.resolve 且**从未返回**（有界等待设为 600000ms，不可能是它兜的底）；喂入 session.approval(phase:terminal,status:expired,reason:timeout) 后 respondApproval 立刻以 审批 approval-authoritative-terminal：决议在途期间内核给出权威终态 status=expired reason=timeout——本次决议不可能被兑现，已结束该 in-flight 结束；in-flight ["approval-authoritative-terminal"] -> []
+  [PASS] rounds/0016 反证③ (T-096 第3项): approval.resolve 有界等待到期 / 权威 timeout terminal 到达 —— in-flight 必须被结束，不得永久占位: 有界等待到期与权威 timeout terminal 两条路径各自结束了对应的 in-flight，槽位不再永久占位
+  [evidence] terminal(status:allowed) 先于 approval.resolve 响应到达（openclaw approval.ts:491-540 的真实顺序）；respondApproval 仍正常成功返回，未被误判为 approvalTerminatedByKernelWhileResolving
+  [PASS] rounds/0016 回归 (反证③ 配套): status:allowed 的 terminal 先于 RPC 响应到达时，不得打断用户自己那条在途决议: 只有 status:expired 的权威 terminal 才结束在途决议；allowed/denied 的终态由这次 RPC 自己的响应负责
+  [evidence] 事件流顺序：["error", "approval_request(ui-b)"]（第一条 code=approval_timeout nativeCode=timeout）
+  [evidence] 壳侧卡片：[ui-a] -收到 evt.error(approval_timeout)-> [] -收到 approval_request(ui-b)-> ["ui-b"]
+  [evidence] 第二道保证：旧卡仍在时直接投递 approval_request(ui-b) -> 卡片列表 ["ui-b"]（队头即提升项，不是死卡）
+  [PASS] rounds/0016 反证④ (T-096 第4项): active timeout -> 先清旧卡（evt.error/approval_timeout）再呈现提升项（#2 在 UI 上浮现）: active terminal 驱动 UI 先清旧卡再呈现提升项，顺序在事件流上可观察；壳侧对 approval_request 的替换语义提供第二道保证
+  [evidence] 适配器真实缓冲 = ["badge-b", "badge-c"]（2 条）；壳侧 pendingApprovals = ["badge-a"]；旧徽标会显示的数字 = 0 —— 与真实值不符，故删除而非「接一个拿不到的计数」
+  [PASS] rounds/0016 (T-096 第4项后半): 队列徽标不得显示编造的数字 —— 壳侧结构性拿不到真实缓冲计数: 缓冲请求从不进入壳侧状态，`count - 1` 与真实缓冲深度无关；徽标按 T-096 的两个选项之一删除
+=== 结果: 74/74 PASS ===

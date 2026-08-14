@@ -1,0 +1,67 @@
+T-114 rework — dynamic probe output for Finding 1 (accessibility notification wrong center).
+
+Why a standalone probe instead of a frame-replay-tests unit test: AppearanceSettingsStore
+(app/apps/AgentShell/Sources/AgentShell/AppearanceEnvironment.swift) imports AppKit/SwiftUI and is
+never constructed inside frame-replay-tests (that file's own header comment states this boundary
+explicitly). Rather than just re-reading the source diff and asserting it's correct, this probe
+(source: 05-probe-notification-center.swift.txt) reproduces the exact subscription mechanism
+in isolation and exercises it against a REAL NSWorkspace notification, posted on the real,
+Apple-documented channel, to get actual dynamic evidence.
+
+Apple's documentation for NSWorkspace.accessibilityDisplayOptionsDidChangeNotification (fetched
+from the docs JSON backing https://developer.apple.com/documentation/appkit/nsworkspace/accessibilitydisplayoptionsdidchangenotification,
+2026-08-14) states verbatim:
+    "The notification object is the shared NSWorkspace instance. The notification doesn't contain
+    a userInfo dictionary."
+    "To receive this notification, use NSWorkspace.notificationCenter to register for it. If you
+    use a different notification center to register, you won't receive the notification."
+
+This confirms (a) NSWorkspace.shared.notificationCenter is the only channel this notification is
+ever posted on — NotificationCenter.default structurally cannot receive it, not "might miss it
+sometimes" — and (b) `object: NSWorkspace.shared` (already correct in the pre-fix code) was never
+the problem; only the center was wrong. The fix in AppearanceEnvironment.swift changes exactly one
+thing: which center `addObserver`/`removeObserver` target.
+
+=== Compile ===
+$ swiftc -O T114-notification-center-probe.swift -o T114-probe
+COMPILE_EXIT=0
+
+=== Run ===
+$ ./T114-probe
+Posting NSWorkspace.accessibilityDisplayOptionsDidChangeNotification on NSWorkspace.shared.notificationCenter (the real, documented channel)...
+RESULT defaultCenterFired=false
+RESULT workspaceCenterFired=true
+CONFIRMED: NotificationCenter.default (the pre-fix subscription) never receives this notification — reproduces T-114 Finding 1's bug in isolation.
+CONFIRMED: NSWorkspace.shared.notificationCenter (the post-fix subscription) receives the notification — matches the fix in AppearanceEnvironment.swift.
+PROBE PASS
+RUN_EXIT_CODE=0
+
+Both observers were registered simultaneously in the SAME process, listening for the SAME
+notification, and a single real post to the real documented channel was made once. This is a
+stronger design than a sequential "before/after" measurement: there is no possibility of timing or
+environmental drift between the "old" and "new" behavior, because both were measured in the exact
+same instant under identical conditions.
+
+=== Cross-check against the real production code ===
+$ grep -n "NotificationCenter.default" app/apps/AgentShell/Sources/AgentShell/AppearanceEnvironment.swift
+108:        // 必须从注册时的同一个中心注销——`NotificationCenter.default.removeObserver(...)` 对一个
+(only remaining occurrence is inside a comment explaining why the old approach was wrong — 0 live
+code sites)
+
+$ grep -n "NSWorkspace.shared.notificationCenter" app/apps/AgentShell/Sources/AgentShell/AppearanceEnvironment.swift
+91:        self.accessibilityObserver = NSWorkspace.shared.notificationCenter.addObserver(
+112:            NSWorkspace.shared.notificationCenter.removeObserver(accessibilityObserver)
+(2 live code sites: the subscribe call and the matching deinit unsubscribe call — both fixed,
+matching what the probe exercised)
+
+Known limitation, stated plainly: this probe proves the SUBSCRIPTION MECHANISM now works — that a
+real NSWorkspace notification posted on the real channel now reaches a handler registered the same
+way AppearanceSettingsStore.init registers it. It does NOT prove that toggling the real macOS
+System Settings "Reduce Transparency" switch on this machine successfully re-renders the app's live
+UI end-to-end (that would additionally require the OS to actually post the notification when the
+setting changes — which is Apple's documented responsibility, not this app's — and a live
+screenshot of the UI updating). The machine's screen was locked for the duration of this session
+(see 06b), which blocked that last screenshot-based step. What IS fully verified: (1) the
+resolver's decision logic (ChromeTransparencyResolver.resolve) via the pre-existing red-line unit
+tests, unaffected by this rework; (2) the subscription now genuinely targets the channel Apple
+documents as authoritative, via this real dynamic probe, not just a source-code read.

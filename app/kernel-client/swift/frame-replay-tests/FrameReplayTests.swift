@@ -2534,6 +2534,84 @@ public func runFrameReplayTests() async -> Bool {
     // 条：abortedRunId==nil/超时两条路径从不产出 turn_complete，只靠 .turnComplete 清会永久卡住）。
     results.append(contentsOf: await runSessionStoreInterruptTests())
 
+    // rounds/0021（外观：可自定义透明度 + 语义色）：AppearanceSettingsTests.swift —— 透明度偏好
+    // 持久化往返（含"保存了 0"与"从未保存"的区分）、本轮红线（ChromeTransparencyResolver.resolve()
+    // 在 Reduce Transparency/Increase Contrast 任一开启时压过滑块的任意取值，含两个极值）、反面
+    // 验证（两个开关都关闭时确实允许透明，证明红线测试不是靠恒返回 .opaque 蒙混过关）、越界滑块值
+    // 夹紧、以及 ApprovalDecisionSemantics.colorRole(for:) 的 deny->danger / allow*->accent 映射。
+    results.append(testChromeTransparencyDefaultsStoreRoundTripsAndClears())
+    results.append(testChromeTransparencyDefaultsStoreDistinguishesSavedZeroFromNeverSaved())
+    // rework（2026-08-14，T-114 codex 对抗评审阻断项②附带发现）：defaultSliderValue 此前是 0.6，
+    // 落进的其实是 .thinMaterial（半开区间 [0.4,0.6) 不含 0.6 本身），与文档注释宣称的 .regularMaterial
+    // 矛盾——改成 0.5 并在这里补两条回归钉（见 AppearanceSettingsTests.swift 该函数群文档注释）。
+    results.append(testChromeTransparencyDefaultSliderValueLandsInsideRegularMaterialBucket())
+    results.append(testChromeTransparencyDefaultSliderValueIsExactlyPointFive())
+    results.append(testResolverReduceTransparencyForcesOpaqueAtEverySliderValueIncludingExtremes())
+    results.append(testResolverIncreaseContrastAloneForcesOpaqueAtEverySliderValueIncludingExtremes())
+    results.append(testResolverBothAccessibilityFlagsOnForcesOpaqueAtSliderExtremes())
+    results.append(testResolverAllowsTranslucentWithMatchingIntensityWhenAccessibilityAllowsAndSliderPositive())
+    results.append(testResolverSliderValueZeroIsOpaqueEvenWithoutAnyAccessibilityOverride())
+    results.append(testResolverClampsOutOfRangeSliderValues())
+    results.append(testApprovalDecisionSemanticsMapsDenyToDangerRoleNotAccent())
+    results.append(testApprovalDecisionSemanticsMapsAllowVariantsToAccentRole())
+
+    // 视觉/交互打磨任务（继 rounds/0021 之后，2026-08-14）：会话列表熊头水印的无障碍抑制判断
+    // ——WatermarkVisibilityResolver.resolve()。水印本身（BearWatermark.swift 的
+    // BearHeadWatermark/SessionListView 的调用点）是纯 SwiftUI 视图代码,结构性不可测（见本文件头
+    // 注释与任务报告）；这三条测试覆盖的是唯一被收成纯函数、因而可测的部分——"给定无障碍状态，
+    // 该不该画这个水印"，含它与 ChromeTransparencyResolver 刻意不对称的那一半（只看
+    // increaseContrast，不看 reduceTransparency）。
+    results.append(testWatermarkVisibilityResolverHidesWatermarkWheneverIncreaseContrastIsOn())
+    results.append(testWatermarkVisibilityResolverIgnoresReduceTransparencyAlone())
+    results.append(testWatermarkVisibilityResolverShowsWatermarkWhenNoAccessibilityOverrideIsActive())
+
+    // rework（2026-08-14，T-114 codex 对抗评审阻断项②）：ComposerGlassLayerOpacity.resolve(intensity:)
+    // ——macOS 26 composer 玻璃背景层的强度->不透明度映射,阻断项②修复里唯一被挪进 AgentShellCore、
+    // 因而可测的部分（glassEffect 调用点本身仍在视图层,结构性不可测,见 AppearanceSettingsTests.swift
+    // 该函数群文档注释）。
+    results.append(testComposerGlassLayerOpacityVariesWithIntensity())
+    results.append(testComposerGlassLayerOpacityDecreasesAsIntensityIncreases())
+    results.append(testComposerGlassLayerOpacityStaysWithinDeclaredBoundsAtExtremes())
+
+    // rounds/0021 Scope-Lock 修订 v1 -> v2（2026-08-14，最小菜单栏项）：MenuBarSummaryTests.swift ——
+    // `MenuBarSummary.connectionStatusText(_:)`/`sessionNameText(_:)` 两个纯函数，供 `MenuBarExtra`
+    // 内容视图消费（视图本身结构性不可测，见该文件头注释）。覆盖四个 ConnectionStatus case 的文案、
+    // .connected 态刻意不泄漏 scopes 列表、以及会话名 nil/非 nil 两态（含"占位文案不能是空字符串"
+    // 这条边界）。
+    results.append(testMenuBarConnectionStatusTextForNotConnected())
+    results.append(testMenuBarConnectionStatusTextForConnecting())
+    results.append(testMenuBarConnectionStatusTextForConnectedOmitsScopesList())
+    results.append(testMenuBarConnectionStatusTextForFailedIncludesMessage())
+    results.append(testMenuBarSessionNameTextForNilShowsPlaceholderNotEmptyString())
+    results.append(testMenuBarSessionNameTextForSelectedSessionReturnsItsTitleVerbatim())
+
+    // 本轮缺陷修复（2026-08-14）：MenuBarSummary 的截断行为——NSError 全文/用户自定会话名都不受
+    // 长度控制，此前会原样塞进菜单把宽度撑穿屏幕（用户实测踩到）。覆盖真实量级的长 NSError 文案、
+    // 长会话名、naive UTF-16 截断会切碎的 CJK+emoji 组合、40/41 字符两侧的边界值，以及"短字符串
+    // 完全不受影响"这条最容易漏掉的反向断言。
+    results.append(testMenuBarConnectionStatusTextForFailedTruncatesRealisticLongNSErrorMessage())
+    results.append(testMenuBarSessionNameTextTruncatesLongPastedSessionName())
+    results.append(testMenuBarSessionNameTextTruncatesCJKStringWithoutSplittingASurrogatePairEmojiAtTheBoundary())
+    results.append(testMenuBarSessionNameTextAtExactCapPassesThroughWithoutEllipsis())
+    results.append(testMenuBarSessionNameTextOneCharacterOverCapGetsTruncated())
+    results.append(testMenuBarConnectionStatusTextForFailedShortMessagePassesThroughCompletelyUnchanged())
+
+    // 缺陷修复（2026-08-14，live-repro）：MenuBarWindowSelectionTests.swift —— `MenuBarWindowSelection.
+    // findMainWindowIndex(among:mainWindowID:)`，`MenuBarWindowFocus.showMainWindow(openWindow:)`
+    // 判断"现有窗口里有没有一个是主窗口"用的纯函数（视图/AppKit 交互本身结构性不可测，见该文件头
+    // 注释）。核心覆盖：只有 Settings 窗口可见时不能被误认成主窗口（这正是本次修复要解决的缺陷本身）、
+    // 空窗口列表、真实 SwiftUI 赋值形态（"main-AppWindow-1"）、已最小化窗口、主窗口不在数组首位、
+    // nil identifier 防御、以及一条专门防止"用 contains 而不是 hasPrefix"偷懒实现的反向用例。
+    results.append(testFindMainWindowIndexReturnsNilWhenOnlyASettingsLikeWindowIsVisible())
+    results.append(testFindMainWindowIndexReturnsNilForEmptyWindowList())
+    results.append(testFindMainWindowIndexMatchesRealisticSwiftUIAssignedIdentifierWithSuffix())
+    results.append(testFindMainWindowIndexMatchesExactIdentifierEqualToMainWindowID())
+    results.append(testFindMainWindowIndexMatchesMiniaturizedMainWindow())
+    results.append(testFindMainWindowIndexReturnsCorrectIndexWhenMainWindowIsNotFirst())
+    results.append(testFindMainWindowIndexTreatsNilIdentifierAsNonMatch())
+    results.append(testFindMainWindowIndexIgnoresMatchingIdentifierThatIsNeitherVisibleNorMiniaturized())
+    results.append(testFindMainWindowIndexRejectsIdentifierThatContainsButDoesNotStartWithMainWindowID())
+
     let passCount = results.filter { $0 }.count
     let total = results.count
     print("=== 结果: \(passCount)/\(total) PASS ===")

@@ -1,0 +1,91 @@
+T-114 rework — evidence backing the hardening decisions in AgentShellApp.swift (item 3 of the
+brief: MenuBarExtra isInserted, and WindowGroup vs Window scene). Both decisions were made by
+reading Apple's actual documentation JSON (the data backing the rendered doc pages, fetched
+2026-08-14), not by trusting the reviewer's paraphrase or my own prior assumptions.
+
+=== Decision 1: MenuBarExtra(isInserted:content:label:) instead of init(content:label:) ===
+
+Fetched: https://developer.apple.com/tutorials/data/documentation/swiftui/menubarextra/init(content:label:).json
+Verbatim discussion text for the initializer the pre-fix code used:
+    "Important: When this item is removed from the system menu bar by the user, the application
+    will be automatically quit. As such, it should not be used in conjunction with other scene
+    types in your App."
+Also: this initializer's abstract states it "defines the primary scene of an App" — i.e. Apple's
+own design intent for it is a menu-bar-only app with no separate main window.
+
+The pre-fix AgentShellApp.body declared exactly this initializer ALONGSIDE a WindowGroup and a
+Settings scene — precisely the combination Apple's own documentation says not to use. This is not
+a style nitpick; a supporting web search surfaced a filed Apple Feedback report (FB11447959)
+describing an actual SwiftUI scene-composition bug in this exact combination (MenuBarExtra +
+Window-family scenes), which is consistent with "this configuration's behavior is unsupported,"
+not merely "inelegant."
+
+Fetched: https://developer.apple.com/tutorials/data/documentation/swiftui/menubarextra/init(isinserted:content:label:).json
+    Declaration: init(isInserted: Binding<Bool>, content: () -> Content, label: () -> Label)
+    Abstract: "Creates a menu bar extra. The item will be displayed in the system menu bar when the
+    specified binding is set to true. If the user removes the item from the menu bar, the binding
+    will be set to false."
+No "app auto-quits" language attached to this variant — it is designed to coexist with other
+scenes (a main window app that also happens to have a menu bar extra is exactly this initializer's
+use case).
+
+Decision: switched to `MenuBarExtra(isInserted: $isMenuBarExtraInserted) { ... } label: { ... }`,
+binding a `@State private var isMenuBarExtraInserted = true` that is never wired to any UI control
+(scope-lock's v1->v2 amendment authorizes only "give the icon a host: connection status + session
+name," not a show/hide toggle — adding one would be new, unauthorized scope). The binding's only
+write path is SwiftUI itself, if the user ever drags the item off the menu bar via the system's
+built-in menu-bar-item management gesture — and per the documented contract, that no longer quits
+the app when it happens.
+
+=== Decision 2: Window(_:id:) instead of WindowGroup(id:) for the main scene ===
+
+Fetched: https://developer.apple.com/tutorials/data/documentation/swiftui/openwindowaction.json
+    "For WindowGroup targets: the system creates a new window for the group... if you target a
+    WindowGroup with a value parameter, the system will reuse an existing window if one is already
+    presenting that value; otherwise, it creates a new window."
+    "For Window targets: the system orders it to the front (brings existing window to front rather
+    than creating a new one) — single, unique window behavior."
+Corroborated via a supporting web search summary of createwithswift.com's scenes article: "Window
+... a distinct, single-instance window ... for example, an inspector panel, a utility view, or a
+window that should only open programmatically."
+
+Why this closes the gap the reviewer named (undocumented NSWindow.identifier prefix dependency):
+`MenuBarWindowSelection.findMainWindowIndex`'s hasPrefix(mainWindowID) matching is empirically
+derived (its own doc comment says the "-AppWindow-1"-style suffix was observed by testing, not
+promised by any Apple doc) — if that suffix format ever drifts on a future macOS release, the
+lookup could fail to recognize an existing window, and the pre-fix code's fallback in that case was
+an unconditional `openWindow(id: mainWindowID)` against a WindowGroup, which — per the paragraph
+above — creates a brand new window whenever the target isn't already known to be presented,
+producing an actual duplicate. Switching the scene itself to `Window` makes that same fallback call
+structurally incapable of duplicating, by Apple's own documented contract, regardless of whether
+the identifier-matching heuristic above it succeeds or fails. This is additive hardening, not a
+replacement: `MenuBarWindowSelection`/`MenuBarWindowFocus.showMainWindow` were deliberately left
+unchanged (still deminiaturizes + fronts an existing window when the heuristic matches), because
+Apple's "orders it to the front" wording for Window targets does not explicitly confirm it also
+un-minimizes a miniaturized window, and I could not verify that behavior live this session (screen
+locked, see 06b) — removing the tested, working deminiaturize path in favor of an unverified
+assumption would trade a known-good behavior for an unknown one, so it was kept.
+
+Checked for regression risk before making this change (all confirmed via grep, not assumption):
+  $ grep -rn "SceneStorage" app/apps/AgentShell/Sources/     -> no results (no per-window state
+    restoration dependency that Window's single-instance-ness could break)
+  $ grep -rn "openWindow" app/apps/AgentShell/Sources/       -> exactly one call site
+    (MenuBarExtraContent.swift's showMainWindow) — no other code ever asks to open a second
+    instance of the main window
+  $ grep -rn "WindowGroup" app/apps/AgentShell/Sources/      -> only the one declaration being
+    changed, plus comments referencing it
+  $ grep -n "newSessionButton" app/apps/AgentShell/Sources/AgentShell/ContentView.swift -> creates
+    a new in-app SESSION (a sidebar data item, switched via selection state), not a new OS window —
+    confirmed by reading its implementation (Task { await store.createNewSession() }), not by name
+    alone
+Also relevant: MenuBarWindowSelection's own pre-existing doc comment already asserts "结构性地至多
+一个主窗口" (structurally at most one main window) as a standing invariant of this app's design —
+switching to Window turns that from an assumption the code was trusting into a guarantee the type
+system enforces, rather than introducing a new constraint.
+
+The Window scene requires an explicit title argument (WindowGroup's `id`-only initializer used
+pre-fix has no title). Used "Agent Shell" — matches the product's CFBundleName-family identity
+without needing to touch Info.plist (out of scope). Confirmed via the live launch in
+06b-live-launch-window-census-output.txt that this title renders correctly and is not blank stub
+text, and does not appear to conflict with SessionListView/SessionDetailView's existing
+`.navigationTitle(...)` calls, which remain completely untouched.

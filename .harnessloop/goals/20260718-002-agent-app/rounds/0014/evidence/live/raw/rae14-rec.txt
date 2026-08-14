@@ -1,0 +1,47 @@
+======================================================================
+RAE-0001 条件③(b)(c) 对账报告
+======================================================================
+wire trace   : /private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/rae14-wire.jsonl
+history 来源  : file:/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/rae14-hist.json
+session key  : (未提供)
+drop-one     : 关
+expect-min-assistant: 1
+
+--- wire 侧解析 ---
+  总行数                                   : 78
+  空行（跳过，非异常）                            : 0
+  JSON 解析失败（异常，计入判定）                    : 0
+  JSON 顶层非对象（异常，计入判定）                   : 0
+  无 evt.message.delta（忽略，非异常）           : 75
+  role 非 assistant 但已产出 delta（异常，计入判定，见二轮加固#6）: 0
+  delta 帧 role 分布                       : {'assistant': 3}
+  缺失或类型不合法的 messageId/messageSeq（异常，计入判定）: 0
+  匹配的 assistant delta 帧（去重前）            : 3
+  去重后 unique (id, seq)                  : 3
+  同键重复帧数（流式增量，正常语义，不计入判定）               : 0
+  wire 侧异常合计（解析失败+顶层非对象+role非assistant却有delta+缺/坏metadata）: 0
+
+--- history 侧解析 ---
+  messages 总条数                          : 6
+  role != assistant（忽略，正常语义）            : 3
+  消息 role 分布                            : {'user': 3, 'assistant': 3}
+  顶层非对象条目（异常，计入判定）                      : 0
+  缺失或类型不合法的 __openclaw.id/seq（异常，计入判定）  : 0
+  history 侧异常合计（非对象+缺metadata）          : 0
+  去重后 unique (id, seq)                  : 3
+  同一 (id,seq) 出现>=2次的key数（异常，计入判定）      : 0
+
+--- 正常模式：assistant 数量下限校验（--expect-min-assistant 1） ---
+  wire 侧 assistant 数                    : 3
+  history 侧 assistant 数                 : 3
+
+--- 正常模式：差集 ---
+  wire 有、history 没有的条数（断言① wire<=history 违反）: 0
+  history 有、wire 没有的条数（断言② history<=wire 违反 = 受控会话内有缺失）: 0
+  history 侧同键重复 key 数（视为异常）             : 0
+  wire 侧异常计数（视为异常）                      : 0
+  history 侧异常计数（视为异常）                   : 0
+
+======================================================================
+结果：PASS
+======================================================================

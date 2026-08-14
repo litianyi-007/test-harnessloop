@@ -1,0 +1,64 @@
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +10ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHttpModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNewApiModule dependencies initialized[39m[38;5;3m +20ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mModelsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNewApiManagementModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmCoreModule dependencies initialized[39m[38;5;3m +306ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTypeOrmModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSessionProxyModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTenantModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCapabilitiesModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mBillingModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mSessionTokenModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mLicenseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAppController {/api/d3/v1}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/health, GET} route[39m[38;5;3m +2ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/d3/v1}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/auth/browser/start, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/auth/browser/callback, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/auth/token/refresh, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/auth/logout, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/auth/license-key/redeem, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mLicenseController {/api/d3/v1}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/license/current, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/license/refresh, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/license/public-key, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mTenantController {/api/d3/v1}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/tenant/current, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/tenant/current/seat, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/tenant/current/invitations, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mCapabilitiesController {/api/d3/v1}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/tenant/current/feature-flags, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mBillingController {/api/d3/v1}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/billing/quota, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/billing/usage, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/tenant/current/newapi-endpoint-config, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mSessionTokenController {/api/d3/v1}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/sessions/:sessionId/billing-token, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/sessions/:sessionId/billing-token, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNewApiManagementController {/api/d3/v1}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/admin/tenants/:tenantId/newapi-tokens, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/admin/newapi-tokens/:tokenId, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/admin/newapi/usage-logs, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/admin/newapi/models, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mModelsController {/api/d3/v1}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/models/catalog, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mSessionProxyController {/api/d3/v1/session-proxy}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/d3/v1/session-proxy/*splat, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 15547  - [39m08/05/2026, 6:37:50 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +2ms[39m
+[33m[Nest] 15547  - [39m08/05/2026, 6:38:57 PM [33m   WARN[39m [38;5;3m[SessionProxyService] [39m[33msession-proxy: sessionId=0752d742-d5fe-456a-9476-4816f7106f11 未命中 session→newapi 映射，按已配置的 aggregate 兜底策略降级为聚合计费主体转发——本次调用将无法归因到具体 session。[39m

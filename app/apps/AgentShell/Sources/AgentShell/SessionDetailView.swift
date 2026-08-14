@@ -18,6 +18,9 @@ import AgentShellCore
 
 struct SessionDetailView: View {
     @Environment(SessionStore.self) private var store
+    // rounds/0021：composer 容器（chrome）+ streamErrorBanner（chrome 状态条）都要读同一份已解析的
+    // `ChromeMaterialStyle`。
+    @Environment(AppearanceSettingsStore.self) private var appearance
     let session: ChatSessionViewModel
 
     @State private var draftText = ""
@@ -38,9 +41,93 @@ struct SessionDetailView: View {
             Divider()
             composer
         }
+        .background(watermarkBackground)
         .navigationTitle(session.title)
         .onAppear { inputFocused = true }
     }
+
+    // MARK: - 熊头水印（视觉/交互打磨任务，2026-08-14 从 SessionListView 搬到这里）
+    //
+    // **为什么背景挂在整个 `VStack` 上、不需要类似旧版 `.scrollContentBackground(.hidden)` 的动作**：
+    // `messageList` 是这个 `VStack` 的一个子视图，它内部的 `ScrollView` 在自己的坐标空间里滚动
+    // 内容；`.background(...)` 挂在 `VStack`（`messageList` 的父容器）上，与 `ScrollView` 内部的
+    // 滚动偏移量完全无关——`ScrollView` 滚动改变的是它自己内部 `LazyVStack` 的可见区域，不改变
+    // `VStack` 本身的大小/位置，水印因此天然"不随消息列表滚动"，不需要手写滚动偏移量补偿。这里
+    // 甚至比 `SessionListView` 旧版更简单：`VStack` 没有系统绘制的默认内容背景（不像 `List`/
+    // `Form`），不需要先关掉什么才能让水印透出来。
+    //
+    // 背景挂在整个面板（header/消息流/审批卡/streamErrorBanner/composer 全部在内）而不是只挂在
+    // `messageList` 后面——任务书原话"put it in the right session detail panel"，取的是"panel"
+    // 最直接的读法：这一整块右侧详情区。水印锚定右下角，视觉上大部分落在消息流下半区背后；
+    // composer/审批卡/错误横幅各自有自己的标准 material 背景（`composerChromeBackground`/
+    // `contentCardBackground`/`chromeMaterialBackground`），天然盖住水印在它们那一小片区域的
+    // 部分——这正是"水印必须在内容层背后、绝不能与卡片/气泡抢注意力"这条要求在 z-order 上的自然
+    // 结果，不需要额外写任何"排除某个区域"的逻辑。
+    //
+    // **为什么用 `GeometryReader` + `.position(...)` 而不是 `alignment: .bottomTrailing` +
+    // padding**：`.rotationEffect` 只改变视觉渲染，不改变 SwiftUI 布局系统用来对齐/堆叠的那个
+    // frame——把**旋转前**的方形 frame 用 `alignment: .bottomTrailing` 对齐到容器角上，旋转之后
+    // 视觉边缘离容器角的实际距离会因为旋转角度而变化，这个距离不是能直接从 `alignment` 参数读出来
+    // 的值，所以改用显式算出中心点坐标再 `.position(x:y:)`，把这层几何换算写清楚而不是隐式依赖
+    // 堆叠对齐凑出来的近似结果。
+    //
+    // 换算本身：把一个边长 `side` 的正方形旋转 30°，视觉包围盒会变成边长
+    // `side * (|cos30°| + |sin30°|) ≈ side * 1.366` 的正方形，即每边比旋转前多出约 18.3% 的
+    // `side`。这里把水印方形 frame 的角预先朝容器角内收 `watermarkCornerInsetFraction`（12%）的
+    // `side`，与旋转多出的 18.3% 相抵之后，旋转后的视觉边缘大约还会越过容器角外沿约 6% 的
+    // `side`——一点点、左右对称的溢出，读成"贴着角摆放、边角自然出血"，不是"图形被硬生生切掉一
+    // 块"（任务书原话："read as an intentional crop, not as a shape that ran out of room"）。
+    // 熊头形状自己在这个方形 frame 内部本来就留了一圈透明边距（耳朵/下巴到 frame 边缘还有一段
+    // 距离，见 `BearHeadOutline`/`BearHeadHoles` 的设计坐标），多数窗口尺寸下这 6% 的溢出落在这
+    // 圈透明边距里，实际可见的熊形轮廓大概率完整，不会被硬切——即便被切到，也只是耳朵/下巴的
+    // 外缘一点点，不会切进眼洞/口鼻洞这些辨认度最高的地方。
+    //
+    // **尺寸——"面板的大约 1/4"落成的公式**：熊头形状在一个正方形设计画布里作画（`BearHeadOutline`/
+    // `BearHeadHoles` 内部按 `min(rect.width, rect.height)` 定标居中，非正方形 frame 只会内切出
+    // 正方形，不会拉伸变形），这里直接给水印一个正方形 frame，边长取面板短边的一半
+    // （`min(width, height) * watermarkSizeFraction`，`watermarkSizeFraction = 0.5`）。面板接近
+    // 方形时这块面积正好是面板面积的 0.5² = 1/4；这个 app 的详情面板通常是宽矩形，实际占比会比
+    // 1/4 略小——"roughly"允许的偏差，不追求对任意宽高比都精确等于 25%。用 `GeometryReader` 读
+    // 面板此刻的真实尺寸而不是写死数字，窗口/侧栏被用户拖动改变详情面板宽度时这个比例仍然成立。
+    //
+    // **不透明度——为什么比 SessionListView 旧版（0.06）更淡**：侧栏版本背后大多是空白的会话行
+    // 列表；这个面板背后是消息气泡/工具调用行/思考行/审批卡，密度高得多，且这里选的锚点（右下角）
+    // 就在输入框正上方，是用户打字时视线停留最久的区域之一。两个因素都指向"更该克制、不是更该
+    // 炫耀"：这里选 0.04（约为旧版 0.06 的三分之二）。仍然用 `.primary.opacity(...)` 而不是写死
+    // RGB——`Color.primary` 本身是随浅/深色模式变化的系统动态色，理由与旧版相同。
+    //
+    // **无障碍 + 不加玻璃**：`appearance.showsDecorativeWatermark` 复用未改动的
+    // `WatermarkVisibilityResolver`（Increase Contrast 开启时整个不渲染，不是"渲染但更透明"——
+    // 判断逻辑在 `AgentShellCore/AppearanceSettings.swift`，搬家没有改变"给定无障碍状态该不该
+    // 显示水印"这个判断本身，该文件不需要跟着改）。`.allowsHitTesting(false)`——纯装饰，不该
+    // 截获任何本该落在消息流/composer 上的点击。全程只有一次 `Color`/`.opacity` 填充，不调用
+    // `glassEffect`/`Material`——本轮红线"glass belongs to chrome, never the content layer"在
+    // 这里没有例外空间。
+    @ViewBuilder
+    private var watermarkBackground: some View {
+        if appearance.showsDecorativeWatermark {
+            GeometryReader { proxy in
+                let side = min(proxy.size.width, proxy.size.height) * SessionDetailView.watermarkSizeFraction
+                let inset = side * SessionDetailView.watermarkCornerInsetFraction
+                BearHeadWatermark(color: .primary.opacity(SessionDetailView.watermarkOpacity))
+                    .frame(width: side, height: side)
+                    .rotationEffect(.degrees(30))
+                    .position(
+                        x: proxy.size.width - inset - side / 2,
+                        y: proxy.size.height - inset - side / 2
+                    )
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    /// 水印方形 frame 的边长相对"面板短边"的比例——见 `watermarkBackground` 文档注释"尺寸"一节。
+    private static let watermarkSizeFraction: CGFloat = 0.5
+    /// 水印方形 frame 的角相对面板角的内收比例（乘的是 `side`，不是面板尺寸）——见
+    /// `watermarkBackground` 文档注释"为什么用 GeometryReader"一节的推导。
+    private static let watermarkCornerInsetFraction: CGFloat = 0.12
+    /// 水印不透明度——见 `watermarkBackground` 文档注释"不透明度"一节。
+    private static let watermarkOpacity: Double = 0.04
 
     private var header: some View {
         HStack(spacing: 8) {
@@ -151,15 +238,30 @@ struct SessionDetailView: View {
     /// 颜色的第二条信号）。这是一条贯穿整个内容区宽度的状态横幅，不是一张"嵌套在窗口里的卡片"，
     /// 所以不用 `contentCardBackground()`（那个方法专为"需要圆角、可能嵌套同心圆角"的卡片设计）——
     /// 直接铺满宽度的 material，不裁形状。
+    ///
+    /// rounds/0021：背景从固定的 `.regularMaterial` 换成 `chromeMaterialBackground(appearance
+    /// .resolvedStyle)`（用户滑块 + 无障碍红线解析结果，与 composer/侧栏各条 chrome 横幅共享同一个
+    /// 已解析状态，见 ContentView.swift 该行注释的"coherent"论证）；前景色从字面量 `.red` 换成
+    /// `.semanticDanger`（AppearanceEnvironment.swift，固定系统红，不从 accentColor 派生）。
     private func streamErrorBanner(_ message: String) -> some View {
         Label("事件流中断：\(message)", systemImage: "exclamationmark.triangle.fill")
             .font(.caption)
-            .foregroundStyle(.red)
+            .foregroundStyle(.semanticDanger)
             .padding(8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.regularMaterial)
+            .chromeMaterialBackground(appearance.resolvedStyle)
     }
 
+    /// rounds/0021：composer 容器——四个既定 chrome 表面里唯一一个"此前完全没有背景"的（见
+    /// `composerChromeBackground` 文档注释）。左右/底部各留一点 padding，让浮动圆角背景真的"浮"在
+    /// 窗口内容区里（不贴边），呼应新样式想要的"悬浮玻璃卡片"观感，而不是紧贴窗口边缘的直角通栏。
+    ///
+    /// **实测确认的缺陷（视觉/交互打磨任务）：按 Return 不发送。** `axis: .vertical` 让这个
+    /// `TextField` 变成会自动长高的多行输入框——Apple 对这个模式的文档行为是 Return 插入换行，
+    /// **不**触发提交，`.onSubmit(send)` 因此在按 Return 时结构性地不会被调用（不是概率性的偶发
+    /// bug，是这个 API 模式本身的既定行为）。这里仍然保留 `.onSubmit(send)`——它对 Return 这条
+    /// 主要路径确实是死代码，但留着零成本，且是"如果这个字段以后被改回单行"的一层免费保险；真正的
+    /// 修复是下面 `composerActionButton` 里发送按钮新增的 `⌘↩` 快捷键。
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
             TextField("输入消息…", text: $draftText, axis: .vertical)
@@ -170,6 +272,9 @@ struct SessionDetailView: View {
             composerActionButton
         }
         .padding(10)
+        .composerChromeBackground(appearance.resolvedStyle)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 10)
     }
 
     /// rounds/0020 取舍 #5（scope-lock「有 active run 时替换发送按钮，而不是并排多一个」）：这个
@@ -197,6 +302,27 @@ struct SessionDetailView: View {
     ///    进度指示、`.disabled(true)`：不接受任何点击。双保险——`SessionStore.interruptCurrentRun`
     ///    自己也有一道等价的 guard（见其文档注释），这里是 UI 层不依赖那道 guard 的独立防线，两层
     ///    任何一层单独失效都不会真的产出 `session_locked`。
+    ///
+    /// **视觉/交互打磨任务新增的三处**：
+    ///
+    ///  1. `⌘↩` 发送快捷键（`.keyboardShortcut(.return, modifiers: .command)`，只挂在"发送"分支
+    ///     上）。选 `⌘↩` 而不是"裸 Return 发送、⇧Return 换行"：这个输入框是 `axis: .vertical` 的
+    ///     多行框，裸 Return 换行是它当前的默认行为，也是 macOS 上 Messages/Mail 处理多行合成框的
+    ///     惯例（Mail 写信、Messages 输入框都是"裸 Return 换行、⌘Return 发送"），改成"裸 Return
+    ///     发送"会是一次不符合平台惯例的行为大改（用户已经在用换行组织多行消息的场景下会被打断），
+    ///     `⌘↩` 是任务书点名的"safe choice"，这里认同并采用。
+    ///  2. **快捷键只挂在"发送"这个 `Button` 上，不是挂在整个 composer 上**——`@ViewBuilder` 的
+    ///     if/else 决定了"停止"状态下这个 `Button` 根本不在视图树里，`⌘↩` 的按键等价物自然也就没有
+    ///     注册，中止在途/等待回复期间按 `⌘↩` 什么都不会发生，不需要额外一层"是否正在等待回复"的
+    ///     判断——用一个视图树结构上的事实（没有登记就不可能触发）替代一条需要手写维护的布尔条件，
+    ///     两者在这里等价，前者不会因为将来漏改一处条件而与实际按钮状态脱节。`.disabled(...)` 同理
+    ///     ——SwiftUI 对被禁用的 `Button` 自动让它关联的键盘快捷键失效，不需要另外对快捷键单独判
+    ///     disabled 条件。
+    ///  3. `.help(...)`——发送/停止此前都没有 tooltip，而工具栏新建会话（`ContentView.swift`
+    ///     `newSessionButton`）、token 可见性切换（`SettingsView.swift`）这些次要控件反而有。这里
+    ///     补齐这两个最高频控件的 tooltip，文案说的是"这个操作做什么"（"发送这条消息"/"停止当前
+    ///     生成，不会丢弃已收到的内容"），不是复述控件叫什么名字（"发送按钮"这种同义反复没有信息
+    ///     量）；发送态的 tooltip 顺带写出 `⌘↩` 快捷键，帮助这条新绑定被发现。
     @ViewBuilder
     private var composerActionButton: some View {
         if session.isWaitingForReply || session.isInterrupting {
@@ -211,11 +337,29 @@ struct SessionDetailView: View {
                 }
             }
             .disabled(session.isInterrupting)
-            .prominentActionButtonStyle()
+            // 视觉/交互打磨任务：此前这个分支和"发送"分支共用 `.prominentActionButtonStyle()`——
+            // 同一种突出玻璃/填充样式、同一个 tint,中止操作在视觉上读成了和发送同等重量的"主要
+            // 动作"。macOS 的惯例是突出/着色按钮留给肯定性的主动作,插入性/次要动作用不带强调色的
+            // 边框样式区分权重（不是颜色）——因此这里换成同一份 LiquidGlassSupport.swift 里已有的
+            // `peerActionButtonStyle()`（"平级选项"玻璃/边框样式，本文件另一处用它渲染审批卡片上
+            // 并列的决策按钮，同属"不该有默认强调色"的语境）。**刻意不使用语义危险色**——中止生成
+            // 不是破坏性操作（不丢弃已经收到的内容，`interruptCurrentRun` 的既有文档注释就是这么
+            // 写的），本轮之前刚刚确立"语义色只对应真正的成功/警告/危险状态,不能被挪作它用"
+            // （`AppearanceEnvironment.swift` `SemanticColorRole` 文档注释），把停止按钮染成
+            // `.semanticDanger` 会是对这条规则的一次新违反，不是延续。降低视觉权重（去掉 prominent/
+            // 强调色）足够传达"这不是当前的主要动作"，不需要额外借用一个本该表示"危险"的颜色语义。
+            .peerActionButtonStyle()
+            .help(
+                session.isInterrupting
+                    ? "正在停止，请稍候"
+                    : "停止当前生成（不会丢弃已经收到的内容）"
+            )
         } else {
             Button("发送", action: send)
                 .disabled(draftText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .prominentActionButtonStyle()
+                .keyboardShortcut(.return, modifiers: .command)
+                .help("发送这条消息（⌘↩）")
         }
     }
 
@@ -308,9 +452,12 @@ private struct ToolCallRow: View {
             HStack(spacing: 4) {
                 Image(systemName: isResultExpanded ? "chevron.down" : "chevron.right")
                     .font(.caption2)
+                // rounds/0021：字面量 `.red`/`.green` 换成语义色常量（AppearanceEnvironment.swift）
+                // ——视觉数值不变（两者底层都是 NSColor.systemRed/systemGreen），变化的是"这两个
+                // 颜色现在有名字、且与 accentColor 结构性独立"这件事本身。
                 Text(result.isError ? "失败" : "成功")
                     .font(.caption2)
-                    .foregroundStyle(result.isError ? .red : .green)
+                    .foregroundStyle(result.isError ? .semanticDanger : .semanticSuccess)
                 if let ms = result.durationMS {
                     Text("\(ms)ms")
                         .font(.caption2)
@@ -343,7 +490,8 @@ private struct ToolCallRow: View {
 
     private var statusColor: Color {
         guard let result = tool.result else { return .secondary }
-        return result.isError ? .red : .green
+        // rounds/0021：同上，字面量换成语义色常量。
+        return result.isError ? .semanticDanger : .semanticSuccess
     }
 }
 
@@ -399,6 +547,11 @@ private struct ThinkingRow: View {
 /// （`peerActionButtonStyle(tint:)`），卡片本身、命令预览、错误提示都不再用固定不透明度的
 /// `Color.orange`/`Color.red` 色块，换成语义色前景 + material/层级填充背景，跟随 Dark Mode/
 /// Increase Contrast 自动适配。
+///
+/// rounds/0021：字面量 `.orange`/`.red` 换成语义色常量（`.semanticWarning`/`.semanticDanger`，
+/// AppearanceEnvironment.swift）——**这张卡片是这一轮"deny 必须一眼是危险色"红线要求的直接落点**
+/// （`decisionButtons` 的 tint，见下），卡片内其它几处警示/危险文字一并对齐同一套语义色常量，不再
+/// 各自散落字面量。
 private struct ApprovalCard: View {
     @Environment(SessionStore.self) private var store
     let approval: PendingApprovalItem
@@ -412,12 +565,12 @@ private struct ApprovalCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.shield")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.semanticWarning)
                     Text(approval.headline).font(.headline)
                     Spacer()
                     Text(countdownLabel(now: context.date))
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(expired ? .red : .secondary)
+                        .foregroundStyle(expired ? .semanticDanger : .secondary)
                 }
 
                 // 要执行的东西本身——等宽字体 + 可选中，命令必须能被逐字读清、能复制出去核对。
@@ -429,7 +582,7 @@ private struct ApprovalCard: View {
                     .insetContentBackground()
 
                 if let reason = approval.reasonText {
-                    Text("原因：\(reason)").font(.caption).foregroundStyle(.orange)
+                    Text("原因：\(reason)").font(.caption).foregroundStyle(.semanticWarning)
                 }
                 if let agentID = approval.summary.agentID {
                     Text("请求方 agent=\(agentID)  reqId=\(approval.reqID)")
@@ -446,7 +599,7 @@ private struct ApprovalCard: View {
                 if let error = approval.errorMessage {
                     Label(error, systemImage: "exclamationmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.semanticDanger)
                         .padding(6)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentCardBackground(cornerRadius: 4)
@@ -469,21 +622,23 @@ private struct ApprovalCard: View {
     /// （不是 `prominentActionButtonStyle`：这几个按钮谁都不比谁更"首选"，D1 契约允许任意子集/顺序
     /// 出现，硬编码其中一个更突出是编造了一个协议没有承诺的优先级），tint 按语义区分允许/拒绝——
     /// 这正是任务书"颜色只出现在按钮背景上"的落点。
+    ///
+    /// rounds/0021：**本轮"拒绝必须一眼是危险色"红线的直接落点**。tint 此前是内联三元表达式
+    /// （`decision == .deny ? .red : .accentColor`）——改成调用
+    /// `ApprovalDecisionSemantics.colorRole(for:)`（AgentShellCore/AppearanceSettings.swift 的纯
+    /// 函数，`frame-replay-tests` 直接覆盖了"deny -> .danger，其余 -> .accent"这条映射，见该文件
+    /// 测试）。调用点写法与修前的 `approvalDecisionButtonLabel(decision)` 完全同构——`decision`
+    /// 的类型仍然只靠 `approval.offeredDecisions` 的元素类型推断得到，本文件依旧不需要（也没有）
+    /// `import D2Generated` 就能把它递给一个 `AgentShellCore` 里声明、参数类型来自 `D2Generated`
+    /// 的函数，这是这个文件里已经在用的既有能力，不是本轮新引入的限制或例外。
     @ViewBuilder
     private func decisionButtons(expired: Bool) -> some View {
         HStack(spacing: 8) {
             ForEach(approval.offeredDecisions, id: \.rawValue) { decision in
-                // tint 直接内联判断（`decision == .deny`），不拆成一个带显式类型标注的独立函数——
-                // `AgentShell` target 依赖图上只列了 `AgentShellCore`（不直接依赖 `D2Generated`，
-                // 见 app/Package.swift 该 target 定义处的注释），这个文件本来就不 `import
-                // D2Generated`，只能靠类型推断使用 `ApprovalDecisionKindElement` 的值（`decision`
-                // 参数由 `approval.offeredDecisions` 的元素类型推断得到），不能在函数签名里显式
-                // 拼出这个类型名——和本文件其它地方（`kind.rawValue`、`session.handle.kernel.
-                // rawValue`）用的是同一条既有约束，不是这里新引入的限制。
                 Button(approvalDecisionButtonLabel(decision)) {
                     Task { await store.respondToApproval(reqID: approval.reqID, decision: decision, in: sessionID) }
                 }
-                .peerActionButtonStyle(tint: decision == .deny ? .red : .accentColor)
+                .peerActionButtonStyle(tint: ApprovalDecisionSemantics.colorRole(for: decision).color)
                 .disabled(approval.isSubmitting || expired)
             }
             if approval.isSubmitting {

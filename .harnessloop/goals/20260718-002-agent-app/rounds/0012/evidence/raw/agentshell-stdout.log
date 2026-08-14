@@ -1,0 +1,1877 @@
+
+--- RECV connect.challenge ---
+{
+  "nonce" : "9fdff707-99e7-4a4f-b9bf-68a57aedeb39",
+  "ts" : 1785926303560
+}
+
+--- SEND req connect ---
+{
+  "id" : "r1",
+  "method" : "connect",
+  "params" : {
+    "auth" : "***REDACTED***",
+    "caps" : [
+
+    ],
+    "client" : {
+      "id" : "cli",
+      "mode" : "cli",
+      "platform" : "darwin",
+      "version" : "0.0.1"
+    },
+    "maxProtocol" : 4,
+    "minProtocol" : 3,
+    "role" : "operator",
+    "scopes" : [
+      "operator.admin"
+    ]
+  },
+  "type" : "req"
+}
+
+--- RECV hello-ok (connect response payload) ---
+{
+  "auth" : "***REDACTED***",
+  "features" : {
+    "capabilities" : [
+      "board-widget-put-canvas-doc",
+      "chat-send-routing-contract",
+      "openclaw-setup-model-ref"
+    ],
+    "events" : [
+      "connect.challenge",
+      "agent",
+      "chat",
+      "ui.command",
+      "session.approval",
+      "session.message",
+      "session.observer",
+      "session.operation",
+      "session.tool",
+      "sessions.changed",
+      "presence",
+      "tick",
+      "talk.mode",
+      "talk.event",
+      "shutdown",
+      "health",
+      "heartbeat",
+      "cron",
+      "task",
+      "task.suggestion",
+      "node.pair.requested",
+      "node.pair.resolved",
+      "node.presence",
+      "node.invoke.cancel",
+      "node.invoke.input",
+      "node.invoke.request",
+      "device.pair.requested",
+      "device.pair.resolved",
+      "voicewake.changed",
+      "voicewake.routing.changed",
+      "exec.approval.requested",
+      "exec.approval.resolved",
+      "question.requested",
+      "question.resolved",
+      "plugin.approval.requested",
+      "plugin.approval.resolved",
+      "openclaw.approval.requested",
+      "openclaw.approval.resolved",
+      "terminal.data",
+      "terminal.exit",
+      "update.available"
+    ],
+    "methods" : [
+      "health",
+      "diagnostics.stability",
+      "doctor.memory.status",
+      "doctor.memory.dreamDiary",
+      "doctor.memory.backfillDreamDiary",
+      "doctor.memory.resetDreamDiary",
+      "doctor.memory.resetGroundedShortTerm",
+      "doctor.memory.repairDreamingArtifacts",
+      "doctor.memory.dedupeDreamDiary",
+      "doctor.memory.remHarness",
+      "logs.tail",
+      "channels.status",
+      "channels.start",
+      "channels.stop",
+      "channels.logout",
+      "status",
+      "usage.status",
+      "usage.cost",
+      "tts.status",
+      "tts.providers",
+      "tts.personas",
+      "tts.enable",
+      "tts.disable",
+      "tts.convert",
+      "tts.setProvider",
+      "tts.setPersona",
+      "config.get",
+      "config.set",
+      "config.apply",
+      "config.patch",
+      "config.schema",
+      "config.schema.lookup",
+      "exec.approvals.get",
+      "exec.approvals.set",
+      "exec.approvals.node.get",
+      "exec.approvals.node.set",
+      "exec.approval.get",
+      "exec.approval.list",
+      "exec.approval.request",
+      "exec.approval.waitDecision",
+      "exec.approval.resolve",
+      "question.request",
+      "question.waitAnswer",
+      "question.resolve",
+      "question.get",
+      "question.list",
+      "plugin.approval.list",
+      "plugin.approval.request",
+      "plugin.approval.waitDecision",
+      "plugin.approval.resolve",
+      "plugins.uiDescriptors",
+      "plugins.sessionAction",
+      "openclaw.chat",
+      "openclaw.chat.history",
+      "openclaw.changes.list",
+      "openclaw.approval.list",
+      "openclaw.setup.detect",
+      "openclaw.setup.activate",
+      "openclaw.setup.auth.start",
+      "openclaw.setup.prepare.start",
+      "wizard.start",
+      "wizard.next",
+      "wizard.cancel",
+      "wizard.status",
+      "talk.catalog",
+      "talk.config",
+      "talk.client.create",
+      "talk.client.transcript",
+      "talk.client.close",
+      "talk.client.toolCall",
+      "talk.client.steer",
+      "talk.session.create",
+      "talk.session.join",
+      "talk.session.appendAudio",
+      "talk.session.startTurn",
+      "talk.session.endTurn",
+      "talk.session.cancelTurn",
+      "talk.session.cancelOutput",
+      "talk.session.acknowledgeMark",
+      "talk.session.submitToolResult",
+      "talk.session.steer",
+      "talk.session.close",
+      "talk.speak",
+      "talk.mode",
+      "commands.list",
+      "models.list",
+      "models.authStatus",
+      "models.authLogout",
+      "tools.catalog",
+      "tools.effective",
+      "tools.invoke",
+      "mcp.app.view",
+      "mcp.app.listTools",
+      "mcp.app.listResources",
+      "mcp.app.listResourceTemplates",
+      "mcp.app.readResource",
+      "mcp.app.callTool",
+      "mcp.app.updateModelContext",
+      "board.get",
+      "board.update",
+      "board.widget.put",
+      "board.widget.grant",
+      "board.widget.appView",
+      "board.event",
+      "audit.list",
+      "audit.activity.list",
+      "users.list",
+      "users.self",
+      "users.linkEmail",
+      "users.setDisplayName",
+      "users.setAvatar",
+      "tasks.list",
+      "tasks.get",
+      "tasks.cancel",
+      "taskSuggestions.list",
+      "taskSuggestions.create",
+      "taskSuggestions.accept",
+      "taskSuggestions.dismiss",
+      "environments.list",
+      "environments.status",
+      "worktrees.list",
+      "worktrees.branches",
+      "fs.listDir",
+      "worktrees.create",
+      "worktrees.remove",
+      "worktrees.restore",
+      "worktrees.gc",
+      "agents.list",
+      "agents.create",
+      "agents.update",
+      "agents.delete",
+      "agents.files.list",
+      "agents.files.get",
+      "agents.files.set",
+      "sessions.files.list",
+      "sessions.files.get",
+      "sessions.files.set",
+      "sessions.files.reveal",
+      "artifacts.list",
+      "artifacts.get",
+      "artifacts.download",
+      "skills.status",
+      "skills.search",
+      "skills.detail",
+      "skills.securityVerdicts",
+      "skills.skillCard",
+      "skills.bins",
+      "skills.upload.begin",
+      "skills.upload.chunk",
+      "skills.upload.commit",
+      "skills.install",
+      "skills.update",
+      "skills.curator.status",
+      "skills.curator.pin",
+      "skills.curator.unpin",
+      "skills.curator.restore",
+      "skills.proposals.list",
+      "skills.proposals.inspect",
+      "skills.proposals.historyStatus",
+      "skills.proposals.historyScan",
+      "skills.proposals.create",
+      "skills.proposals.update",
+      "skills.proposals.revise",
+      "skills.proposals.requestRevision",
+      "skills.proposals.apply",
+      "skills.proposals.reject",
+      "skills.proposals.quarantine",
+      "update.status",
+      "update.run",
+      "voicewake.get",
+      "voicewake.set",
+      "secrets.reload",
+      "secrets.resolve",
+      "voicewake.routing.get",
+      "voicewake.routing.set",
+      "sessions.list",
+      "sessions.subscribe",
+      "sessions.unsubscribe",
+      "sessions.messages.subscribe",
+      "sessions.messages.unsubscribe",
+      "sessions.preview",
+      "sessions.describe",
+      "sessions.compaction.list",
+      "sessions.compaction.get",
+      "sessions.compaction.branch",
+      "sessions.compaction.restore",
+      "sessions.branches.list",
+      "sessions.branches.switch",
+      "sessions.rewind",
+      "sessions.fork",
+      "sessions.create",
+      "sessions.send",
+      "sessions.abort",
+      "sessions.patch",
+      "sessions.pluginPatch",
+      "sessions.cleanup",
+      "sessions.reset",
+      "sessions.delete",
+      "sessions.compact",
+      "sessions.groups.list",
+      "sessions.groups.put",
+      "sessions.groups.rename",
+      "sessions.groups.delete",
+      "last-heartbeat",
+      "set-heartbeats",
+      "wake",
+      "node.pair.list",
+      "node.pair.approve",
+      "node.pair.reject",
+      "node.pair.remove",
+      "device.pair.list",
+      "device.pair.approve",
+      "device.pair.reject",
+      "device.pair.remove",
+      "device.pair.rename",
+      "device.token.rotate",
+      "device.token.revoke",
+      "node.rename",
+      "node.list",
+      "node.describe",
+      "node.pluginSurface.refresh",
+      "node.pluginTools.update",
+      "node.skills.update",
+      "node.pending.drain",
+      "node.pending.enqueue",
+      "node.invoke",
+      "node.pending.pull",
+      "node.pending.ack",
+      "node.invoke.progress",
+      "node.invoke.result",
+      "node.event",
+      "cron.get",
+      "cron.list",
+      "cron.status",
+      "cron.add",
+      "cron.update",
+      "cron.remove",
+      "cron.run",
+      "cron.runs",
+      "gateway.identity.get",
+      "gateway.restart.preflight",
+      "gateway.restart.request",
+      "system-presence",
+      "system-event",
+      "message.action",
+      "conversations.send",
+      "conversations.turn",
+      "conversations.turn.cancel",
+      "send",
+      "agent",
+      "agent.identity.get",
+      "agent.wait",
+      "chat.history",
+      "chat.startup",
+      "chat.metadata",
+      "chat.message.get",
+      "chat.abort",
+      "chat.send",
+      "terminal.open",
+      "terminal.input",
+      "terminal.resize",
+      "terminal.close",
+      "channels.pairing.list",
+      "channels.pairing.approve",
+      "channels.pairing.dismiss",
+      "attach.grant",
+      "attach.revoke",
+      "terminal.attach",
+      "terminal.list",
+      "terminal.text",
+      "controlUi.githubPreview",
+      "system.info",
+      "agents.workspace.list",
+      "agents.workspace.get",
+      "tts.speak",
+      "plugins.list",
+      "plugins.search",
+      "plugins.install",
+      "plugins.setEnabled",
+      "plugins.uninstall",
+      "plugins.refresh",
+      "controlUi.sessionPullRequests",
+      "gateway.suspend.prepare",
+      "gateway.suspend.status",
+      "gateway.suspend.resume",
+      "chat.toolTitles",
+      "sessions.diff",
+      "openclaw.setup.verify",
+      "sessions.catalog.list",
+      "sessions.catalog.read",
+      "terminal.upload",
+      "sessions.catalog.continue",
+      "sessions.catalog.archive",
+      "approval.get",
+      "approval.resolve",
+      "sessions.search",
+      "models.probe",
+      "migrations.memory.plan",
+      "migrations.memory.apply",
+      "ui.command",
+      "approval.history",
+      "plugin.surface.refresh",
+      "conversations.list",
+      "session.discussion.info",
+      "session.discussion.open",
+      "board.prompt.authorize",
+      "board.data.read",
+      "board.action",
+      "sessions.observer.ask",
+      "sessions.observer.visibility",
+      "browser.request"
+    ]
+  },
+  "pluginSurfaceUrls" : {
+    "canvas" : "http:\/\/127.0.0.1:18909\/__openclaw__\/cap\/06te3qsFDR9K5BSRCdr0OE3D"
+  },
+  "policy" : {
+    "maxBufferedBytes" : 52428800,
+    "maxPayload" : 26214400,
+    "tickIntervalMs" : 30000
+  },
+  "protocol" : 4,
+  "server" : {
+    "connId" : "bbe65670-6243-4a18-8e82-fa7430dde1f9",
+    "version" : "2026.7.2"
+  },
+  "snapshot" : {
+    "appliedConfigHash" : "J7Yv8wCkzCLKsERKjygICJEaZCzsKsEiqO7GLyNnTlA",
+    "authMode" : "***REDACTED***",
+    "configPath" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/openclaw.json",
+    "health" : {
+      "agents" : [
+        {
+          "agentId" : "main",
+          "heartbeat" : {
+            "ackMaxChars" : 300,
+            "enabled" : true,
+            "every" : "30m",
+            "everyMs" : 1800000,
+            "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+            "target" : "none"
+          },
+          "isDefault" : true,
+          "sessions" : {
+            "count" : 0,
+            "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/agents\/main\/sessions\/sessions.json",
+            "recent" : [
+
+            ]
+          }
+        }
+      ],
+      "channelLabels" : {
+
+      },
+      "channelOrder" : [
+
+      ],
+      "channels" : {
+
+      },
+      "configReload" : {
+        "hotReloadStatus" : "active"
+      },
+      "defaultAgentId" : "main",
+      "durationMs" : 312,
+      "eventLoop" : {
+        "cpuCoreRatio" : 1.026,
+        "degraded" : true,
+        "delayMaxMs" : 5695.8999999999996,
+        "delayP99Ms" : 5695.8999999999996,
+        "intervalMs" : 7123,
+        "reasons" : [
+          "event_loop_delay",
+          "event_loop_utilization",
+          "cpu"
+        ],
+        "utilization" : 0.99399999999999999
+      },
+      "heartbeatSeconds" : 1800,
+      "modelPricing" : {
+        "sources" : [
+
+        ],
+        "state" : "ok"
+      },
+      "ok" : true,
+      "plugins" : {
+        "errors" : [
+
+        ],
+        "loaded" : [
+          "acpx",
+          "anthropic",
+          "bonjour",
+          "browser",
+          "canvas",
+          "device-pair",
+          "file-transfer",
+          "linux-canvas",
+          "linux-node",
+          "memory-core",
+          "ollama",
+          "opencode",
+          "phone-control",
+          "talk-voice"
+        ],
+        "unavailable" : [
+
+        ]
+      },
+      "sessions" : {
+        "count" : 0,
+        "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/agents\/main\/sessions\/sessions.json",
+        "recent" : [
+
+        ]
+      },
+      "ts" : 1785926291177
+    },
+    "presence" : [
+      {
+        "deviceFamily" : "Mac",
+        "host" : "MacBook-Pro-2.local",
+        "instanceId" : "97758fa2-9d4f-4ee1-ae1c-d4c077cd7436",
+        "ip" : "10.242.128.116",
+        "mode" : "gateway",
+        "modelIdentifier" : "MacBookPro18,2",
+        "platform" : "macos 26.6",
+        "reason" : "self",
+        "text" : "Gateway: MacBook-Pro-2.local (10.242.128.116) · app 2026.7.2 · mode gateway · reason self",
+        "ts" : 1785926303584,
+        "version" : "2026.7.2"
+      }
+    ],
+    "sessionDefaults" : {
+      "defaultAgentId" : "main",
+      "mainKey" : "main",
+      "mainSessionKey" : "agent:main:main",
+      "scope" : "per-sender"
+    },
+    "stateDir" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state",
+    "stateVersion" : {
+      "health" : 2,
+      "presence" : 1
+    },
+    "uptimeMs" : 25070
+  },
+  "type" : "hello-ok"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 0,
+          "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+
+    },
+    "channelOrder" : [
+
+    ],
+    "channels" : {
+
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 248,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.045999999999999999,
+      "degraded" : false,
+      "delayMaxMs" : 48.100000000000001,
+      "delayP99Ms" : 25.899999999999999,
+      "intervalMs" : 12745,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.049000000000000002
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "anthropic",
+        "bonjour",
+        "browser",
+        "canvas",
+        "device-pair",
+        "file-transfer",
+        "linux-canvas",
+        "linux-node",
+        "memory-core",
+        "ollama",
+        "opencode",
+        "phone-control",
+        "talk-voice"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 0,
+      "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+
+      ]
+    },
+    "ts" : 1785926303834
+  },
+  "seq" : 1,
+  "stateVersion" : {
+    "health" : 3,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1785926320828
+  },
+  "seq" : 2,
+  "type" : "event"
+}
+
+--- SEND req sessions.create ---
+{
+  "id" : "r2",
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-kernel-client-l1"
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.create result ---
+{
+  "entry" : {
+    "label" : "sg4-kernel-client-l1",
+    "parentSessionKey" : "agent:main:main",
+    "sessionFile" : "sqlite:main:0752d742-d5fe-456a-9476-4816f7106f11:\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/agents\/main\/sessions\/sessions.json",
+    "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+    "spawnDepth" : 0,
+    "updatedAt" : 1785926324884
+  },
+  "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+  "ok" : true,
+  "resolved" : {
+    "model" : "kimi-for-coding",
+    "modelProvider" : "d3proxy"
+  },
+  "runStarted" : false,
+  "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11"
+}
+
+--- SEND req sessions.messages.subscribe ---
+{
+  "id" : "r3",
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3"
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "approvalReplay" : {
+    "approvals" : [
+
+    ],
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "truncated" : false,
+    "updatedAtMs" : 1785926324922
+  },
+  "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+  "subscribed" : true
+}
+
+--- SEND req sessions.send ---
+{
+  "id" : "r4",
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "message" : "Count from 1 to 12, one number per line, nothing else.",
+    "timeoutMs" : 0
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "b53d403a-5467-420e-a96b-6dc3598fdc3d",
+  "status" : "started"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "b53d403a-5467-420e-a96b-6dc3598fdc3d"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 200000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-kernel-client-l1",
+    "effectiveResponseUsage" : "off",
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "kind" : "direct",
+    "label" : "sg4-kernel-client-l1",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "206ca108-9cc4-4f69-bc77-ce2877e5ef66",
+        "idempotencyKey" : "b53d403a-5467-420e-a96b-6dc3598fdc3d:user",
+        "senderIsOwner" : true,
+        "seq" : 1
+      },
+      "content" : "Count from 1 to 12, one number per line, nothing else.",
+      "idempotencyKey" : "b53d403a-5467-420e-a96b-6dc3598fdc3d:user",
+      "role" : "user",
+      "timestamp" : 1785926332207
+    },
+    "messageId" : "206ca108-9cc4-4f69-bc77-ce2877e5ef66",
+    "messageSeq" : 1,
+    "model" : "kimi-for-coding",
+    "modelProvider" : "d3proxy",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "b53d403a-5467-420e-a96b-6dc3598fdc3d"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 200000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-kernel-client-l1",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+      "kind" : "direct",
+      "label" : "sg4-kernel-client-l1",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1785926332524,
+      "model" : "kimi-for-coding",
+      "modelProvider" : "d3proxy",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+      "spawnDepth" : 0,
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokensFresh" : false,
+      "unread" : false,
+      "updatedAt" : 1785926332743
+    },
+    "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "spawnDepth" : 0,
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokensFresh" : false,
+    "unread" : false,
+    "updatedAt" : 1785926332743
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "b53d403a-5467-420e-a96b-6dc3598fdc3d",
+    "seq" : 1,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 3,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "b53d403a-5467-420e-a96b-6dc3598fdc3d",
+    "seq" : 2,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 5,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "b53d403a-5467-420e-a96b-6dc3598fdc3d",
+    "seq" : 3,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 7,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "b53d403a-5467-420e-a96b-6dc3598fdc3d",
+    "seq" : 4,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 9,
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "b53d403a-5467-420e-a96b-6dc3598fdc3d"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 200000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-kernel-client-l1",
+    "effectiveResponseUsage" : "off",
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "kind" : "direct",
+    "label" : "sg4-kernel-client-l1",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "8c1e63cc",
+        "idempotencyKey" : "b53d403a-5467-420e-a96b-6dc3598fdc3d:user",
+        "senderIsOwner" : true,
+        "seq" : 1
+      },
+      "content" : "Count from 1 to 12, one number per line, nothing else.",
+      "idempotencyKey" : "b53d403a-5467-420e-a96b-6dc3598fdc3d:user",
+      "role" : "user",
+      "timestamp" : 1785926332207
+    },
+    "messageId" : "8c1e63cc",
+    "messageSeq" : 1,
+    "model" : "kimi-for-coding",
+    "modelProvider" : "d3proxy",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "b53d403a-5467-420e-a96b-6dc3598fdc3d"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 200000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-kernel-client-l1",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+      "kind" : "direct",
+      "label" : "sg4-kernel-client-l1",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1785926332524,
+      "model" : "kimi-for-coding",
+      "modelProvider" : "d3proxy",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+      "spawnDepth" : 0,
+      "startedAt" : 1785926337553,
+      "status" : "running",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokensFresh" : false,
+      "unread" : false,
+      "updatedAt" : 1785926337558
+    },
+    "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "spawnDepth" : 0,
+    "startedAt" : 1785926337553,
+    "status" : "running",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokensFresh" : false,
+    "unread" : false,
+    "updatedAt" : 1785926337558
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "starting_model",
+    "runId" : "b53d403a-5467-420e-a96b-6dc3598fdc3d",
+    "seq" : 6,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 12,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "1",
+    "message" : {
+      "content" : [
+        {
+          "text" : "1",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1785926340800
+    },
+    "runId" : "b53d403a-5467-420e-a96b-6dc3598fdc3d",
+    "seq" : 7,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "delta"
+  },
+  "seq" : 15,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "deltaText" : "\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12",
+    "message" : {
+      "content" : [
+        {
+          "text" : "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1785926341218
+    },
+    "runId" : "b53d403a-5467-420e-a96b-6dc3598fdc3d",
+    "seq" : 21,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "delta"
+  },
+  "seq" : 20,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "message" : {
+      "content" : [
+        {
+          "text" : "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12",
+          "type" : "text"
+        }
+      ],
+      "role" : "assistant",
+      "timestamp" : 1785926341218
+    },
+    "runId" : "b53d403a-5467-420e-a96b-6dc3598fdc3d",
+    "seq" : 21,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "final",
+    "stopReason" : "stop"
+  },
+  "seq" : 21,
+  "type" : "event"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 1,
+          "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 9582,
+              "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+              "updatedAt" : 1785926341250
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+
+    },
+    "channelOrder" : [
+
+    ],
+    "channels" : {
+
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 147,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.14899999999999999,
+      "degraded" : true,
+      "delayMaxMs" : 1935.7,
+      "delayP99Ms" : 26.199999999999999,
+      "intervalMs" : 47244,
+      "reasons" : [
+        "event_loop_delay"
+      ],
+      "utilization" : 0.13600000000000001
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "anthropic",
+        "bonjour",
+        "browser",
+        "canvas",
+        "device-pair",
+        "file-transfer",
+        "linux-canvas",
+        "linux-node",
+        "memory-core",
+        "ollama",
+        "opencode",
+        "phone-control",
+        "talk-voice"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 1,
+      "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+        {
+          "age" : 9582,
+          "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+          "updatedAt" : 1785926341250
+        }
+      ]
+    },
+    "ts" : 1785926350979
+  },
+  "seq" : 22,
+  "stateVersion" : {
+    "health" : 4,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1785926350980
+  },
+  "seq" : 23,
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1785926380981
+  },
+  "seq" : 24,
+  "type" : "event"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 1,
+          "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 69583,
+              "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+              "updatedAt" : 1785926341250
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+
+    },
+    "channelOrder" : [
+
+    ],
+    "channels" : {
+
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 173,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.017000000000000001,
+      "degraded" : false,
+      "delayMaxMs" : 32.5,
+      "delayP99Ms" : 25.399999999999999,
+      "intervalMs" : 60001,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.014999999999999999
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "anthropic",
+        "bonjour",
+        "browser",
+        "canvas",
+        "device-pair",
+        "file-transfer",
+        "linux-canvas",
+        "linux-node",
+        "memory-core",
+        "ollama",
+        "opencode",
+        "phone-control",
+        "talk-voice"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 1,
+      "path" : "\/Users\/litianyi\/Documents\/Code\/_ai-goods\/test-harnessloop\/scratchpad\/round0012-openclaw-iso\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+        {
+          "age" : 69583,
+          "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+          "updatedAt" : 1785926341250
+        }
+      ]
+    },
+    "ts" : 1785926411007
+  },
+  "seq" : 25,
+  "stateVersion" : {
+    "health" : 5,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1785926411008
+  },
+  "seq" : 26,
+  "type" : "event"
+}
+
+--- SEND req sessions.send ---
+{
+  "id" : "r5",
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "message" : "Say hello",
+    "timeoutMs" : 0
+  },
+  "type" : "req"
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 3,
+  "runId" : "0700f2fb-e71c-4f49-aac5-09313b1f0042",
+  "status" : "started"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "0700f2fb-e71c-4f49-aac5-09313b1f0042"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 200000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-kernel-client-l1",
+    "effectiveResponseUsage" : "off",
+    "endedAt" : 1785926341207,
+    "estimatedCostUsd" : 0,
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "inputTokens" : 9951,
+    "kind" : "direct",
+    "label" : "sg4-kernel-client-l1",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "5e061552-8b5e-4392-8661-20f0275ff215",
+        "idempotencyKey" : "0700f2fb-e71c-4f49-aac5-09313b1f0042:user",
+        "senderIsOwner" : true,
+        "seq" : 3
+      },
+      "content" : "Say hello",
+      "idempotencyKey" : "0700f2fb-e71c-4f49-aac5-09313b1f0042:user",
+      "role" : "user",
+      "timestamp" : 1785926421665
+    },
+    "messageId" : "5e061552-8b5e-4392-8661-20f0275ff215",
+    "messageSeq" : 3,
+    "model" : "kimi-for-coding",
+    "modelProvider" : "d3proxy",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "outputTokens" : 66,
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "runtimeMs" : 3654,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "0700f2fb-e71c-4f49-aac5-09313b1f0042"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 200000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-kernel-client-l1",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "endedAt" : 1785926341207,
+      "estimatedCostUsd" : 0,
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "inputTokens" : 9951,
+      "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+      "kind" : "direct",
+      "label" : "sg4-kernel-client-l1",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1785926421693,
+      "model" : "kimi-for-coding",
+      "modelProvider" : "d3proxy",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "outputTokens" : 66,
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "runtimeMs" : 3654,
+      "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+      "spawnDepth" : 0,
+      "startedAt" : 1785926337553,
+      "status" : "done",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokens" : 9966,
+      "totalTokensFresh" : true,
+      "unread" : false,
+      "updatedAt" : 1785926421693
+    },
+    "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "spawnDepth" : 0,
+    "startedAt" : 1785926337553,
+    "status" : "done",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokens" : 9966,
+    "totalTokensFresh" : true,
+    "unread" : false,
+    "updatedAt" : 1785926421693
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "0700f2fb-e71c-4f49-aac5-09313b1f0042",
+    "seq" : 1,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 27,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "0700f2fb-e71c-4f49-aac5-09313b1f0042",
+    "seq" : 2,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 29,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "0700f2fb-e71c-4f49-aac5-09313b1f0042",
+    "seq" : 3,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 31,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "0700f2fb-e71c-4f49-aac5-09313b1f0042",
+    "seq" : 4,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 33,
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "0700f2fb-e71c-4f49-aac5-09313b1f0042"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 200000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-kernel-client-l1",
+    "effectiveResponseUsage" : "off",
+    "estimatedCostUsd" : 0,
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "inputTokens" : 9951,
+    "kind" : "direct",
+    "label" : "sg4-kernel-client-l1",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "eadaf339",
+        "idempotencyKey" : "0700f2fb-e71c-4f49-aac5-09313b1f0042:user",
+        "senderIsOwner" : true,
+        "seq" : 3
+      },
+      "content" : "Say hello",
+      "idempotencyKey" : "0700f2fb-e71c-4f49-aac5-09313b1f0042:user",
+      "role" : "user",
+      "timestamp" : 1785926421665
+    },
+    "messageId" : "eadaf339",
+    "messageSeq" : 3,
+    "model" : "kimi-for-coding",
+    "modelProvider" : "d3proxy",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "outputTokens" : 66,
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "0700f2fb-e71c-4f49-aac5-09313b1f0042"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 200000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-kernel-client-l1",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "estimatedCostUsd" : 0,
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "inputTokens" : 9951,
+      "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+      "kind" : "direct",
+      "label" : "sg4-kernel-client-l1",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1785926421693,
+      "model" : "kimi-for-coding",
+      "modelProvider" : "d3proxy",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "outputTokens" : 66,
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+      "spawnDepth" : 0,
+      "startedAt" : 1785926423709,
+      "status" : "running",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokens" : 9966,
+      "totalTokensFresh" : true,
+      "unread" : false,
+      "updatedAt" : 1785926423718
+    },
+    "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "spawnDepth" : 0,
+    "startedAt" : 1785926423709,
+    "status" : "running",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokens" : 9966,
+    "totalTokensFresh" : true,
+    "unread" : false,
+    "updatedAt" : 1785926423718
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "starting_model",
+    "runId" : "0700f2fb-e71c-4f49-aac5-09313b1f0042",
+    "seq" : 6,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 36,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_workspace",
+    "runId" : "0700f2fb-e71c-4f49-aac5-09313b1f0042",
+    "seq" : 9,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 40,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "preparing_context",
+    "runId" : "0700f2fb-e71c-4f49-aac5-09313b1f0042",
+    "seq" : 10,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 42,
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "abortedLastRun" : false,
+    "activeRunIds" : [
+      "0700f2fb-e71c-4f49-aac5-09313b1f0042"
+    ],
+    "agentId" : "main",
+    "agentRuntime" : {
+      "id" : "auto",
+      "source" : "implicit"
+    },
+    "agentStatus" : null,
+    "archived" : false,
+    "archivedAt" : null,
+    "category" : null,
+    "chatType" : "direct",
+    "contextTokens" : 200000,
+    "createdBy" : null,
+    "deliveryContext" : {
+      "channel" : "webchat"
+    },
+    "displayName" : "sg4-kernel-client-l1",
+    "effectiveResponseUsage" : "off",
+    "estimatedCostUsd" : 0,
+    "goal" : null,
+    "hasActiveRun" : true,
+    "hasAutomation" : false,
+    "icon" : null,
+    "inputTokens" : 9951,
+    "kind" : "direct",
+    "label" : "sg4-kernel-client-l1",
+    "lastChannel" : "webchat",
+    "lastRunError" : null,
+    "message" : {
+      "__openclaw" : {
+        "id" : "a6c3d20d",
+        "idempotencyKey" : "0700f2fb-e71c-4f49-aac5-09313b1f0042:user",
+        "senderIsOwner" : true,
+        "seq" : 5
+      },
+      "content" : "Say hello",
+      "idempotencyKey" : "0700f2fb-e71c-4f49-aac5-09313b1f0042:user",
+      "role" : "user",
+      "timestamp" : 1785926421665
+    },
+    "messageId" : "a6c3d20d",
+    "messageSeq" : 5,
+    "model" : "kimi-for-coding",
+    "modelProvider" : "d3proxy",
+    "observerDigest" : null,
+    "origin" : {
+      "chatType" : "direct",
+      "provider" : "webchat",
+      "surface" : "webchat"
+    },
+    "outputTokens" : 66,
+    "parentSessionKey" : "agent:main:main",
+    "pinned" : false,
+    "pinnedAt" : null,
+    "senderIsOwner" : true,
+    "session" : {
+      "abortedLastRun" : false,
+      "activeRunIds" : [
+        "0700f2fb-e71c-4f49-aac5-09313b1f0042"
+      ],
+      "agentRuntime" : {
+        "id" : "auto",
+        "source" : "implicit"
+      },
+      "archived" : false,
+      "chatType" : "direct",
+      "contextTokens" : 200000,
+      "createdBy" : null,
+      "deliveryContext" : {
+        "channel" : "webchat"
+      },
+      "displayName" : "sg4-kernel-client-l1",
+      "effectiveFastMode" : false,
+      "effectiveFastModeSource" : "default",
+      "effectiveQueueMode" : "steer",
+      "effectiveResponseUsage" : "off",
+      "estimatedCostUsd" : 0,
+      "fastAutoOnSeconds" : 60,
+      "hasActiveRun" : true,
+      "inputTokens" : 9951,
+      "key" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+      "kind" : "direct",
+      "label" : "sg4-kernel-client-l1",
+      "lastChannel" : "webchat",
+      "lastInteractionAt" : 1785926421693,
+      "model" : "kimi-for-coding",
+      "modelProvider" : "d3proxy",
+      "origin" : {
+        "chatType" : "direct",
+        "provider" : "webchat",
+        "surface" : "webchat"
+      },
+      "outputTokens" : 66,
+      "parentSessionKey" : "agent:main:main",
+      "pinned" : false,
+      "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+      "spawnDepth" : 0,
+      "startedAt" : 1785926429493,
+      "status" : "running",
+      "systemSent" : true,
+      "thinkingLevel" : null,
+      "totalTokens" : 9966,
+      "totalTokensFresh" : true,
+      "unread" : false,
+      "updatedAt" : 1785926429498
+    },
+    "sessionId" : "0752d742-d5fe-456a-9476-4816f7106f11",
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "spawnDepth" : 0,
+    "startedAt" : 1785926429493,
+    "status" : "running",
+    "systemSent" : true,
+    "thinkingLevel" : null,
+    "totalTokens" : 9966,
+    "totalTokensFresh" : true,
+    "unread" : false,
+    "updatedAt" : 1785926429498
+  },
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁路事件，原样打印) ---
+{
+  "event" : "chat",
+  "payload" : {
+    "agentId" : "main",
+    "phase" : "starting_model",
+    "runId" : "0700f2fb-e71c-4f49-aac5-09313b1f0042",
+    "seq" : 12,
+    "sessionKey" : "agent:main:dashboard:a8d66484-ef6d-41d4-a0f8-6d832d90f2d3",
+    "state" : "status"
+  },
+  "seq" : 45,
+  "type" : "event"
+}
+
+--- RECV event chat (未处理的旁

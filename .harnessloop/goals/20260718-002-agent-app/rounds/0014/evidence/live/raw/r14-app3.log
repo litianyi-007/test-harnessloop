@@ -1,0 +1,1276 @@
+
+--- RECV connect.challenge ---
+{
+  "nonce" : "8870b5c3-1a47-46a9-bc56-e47a165be85b",
+  "ts" : 1786433695964
+}
+
+--- SEND req connect ---
+{
+  "id" : "r1",
+  "method" : "connect",
+  "params" : {
+    "auth" : "***REDACTED***",
+    "caps" : [
+
+    ],
+    "client" : {
+      "id" : "cli",
+      "mode" : "cli",
+      "platform" : "darwin",
+      "version" : "0.0.1"
+    },
+    "maxProtocol" : 4,
+    "minProtocol" : 3,
+    "role" : "operator",
+    "scopes" : [
+      "operator.admin"
+    ]
+  },
+  "type" : "req"
+}
+
+--- RECV hello-ok (connect response payload) ---
+{
+  "auth" : "***REDACTED***",
+  "features" : {
+    "capabilities" : [
+      "board-widget-put-canvas-doc",
+      "chat-send-routing-contract",
+      "openclaw-setup-model-ref"
+    ],
+    "events" : [
+      "connect.challenge",
+      "agent",
+      "chat",
+      "ui.command",
+      "session.approval",
+      "session.message",
+      "session.observer",
+      "session.operation",
+      "session.tool",
+      "sessions.changed",
+      "presence",
+      "tick",
+      "talk.mode",
+      "talk.event",
+      "shutdown",
+      "health",
+      "heartbeat",
+      "cron",
+      "task",
+      "task.suggestion",
+      "node.pair.requested",
+      "node.pair.resolved",
+      "node.presence",
+      "node.invoke.cancel",
+      "node.invoke.input",
+      "node.invoke.request",
+      "device.pair.requested",
+      "device.pair.resolved",
+      "voicewake.changed",
+      "voicewake.routing.changed",
+      "exec.approval.requested",
+      "exec.approval.resolved",
+      "question.requested",
+      "question.resolved",
+      "plugin.approval.requested",
+      "plugin.approval.resolved",
+      "openclaw.approval.requested",
+      "openclaw.approval.resolved",
+      "terminal.data",
+      "terminal.exit",
+      "update.available"
+    ],
+    "methods" : [
+      "health",
+      "diagnostics.stability",
+      "doctor.memory.status",
+      "doctor.memory.dreamDiary",
+      "doctor.memory.backfillDreamDiary",
+      "doctor.memory.resetDreamDiary",
+      "doctor.memory.resetGroundedShortTerm",
+      "doctor.memory.repairDreamingArtifacts",
+      "doctor.memory.dedupeDreamDiary",
+      "doctor.memory.remHarness",
+      "logs.tail",
+      "channels.status",
+      "channels.start",
+      "channels.stop",
+      "channels.logout",
+      "status",
+      "usage.status",
+      "usage.cost",
+      "tts.status",
+      "tts.providers",
+      "tts.personas",
+      "tts.enable",
+      "tts.disable",
+      "tts.convert",
+      "tts.setProvider",
+      "tts.setPersona",
+      "config.get",
+      "config.set",
+      "config.apply",
+      "config.patch",
+      "config.schema",
+      "config.schema.lookup",
+      "exec.approvals.get",
+      "exec.approvals.set",
+      "exec.approvals.node.get",
+      "exec.approvals.node.set",
+      "exec.approval.get",
+      "exec.approval.list",
+      "exec.approval.request",
+      "exec.approval.waitDecision",
+      "exec.approval.resolve",
+      "question.request",
+      "question.waitAnswer",
+      "question.resolve",
+      "question.get",
+      "question.list",
+      "plugin.approval.list",
+      "plugin.approval.request",
+      "plugin.approval.waitDecision",
+      "plugin.approval.resolve",
+      "plugins.uiDescriptors",
+      "plugins.sessionAction",
+      "openclaw.chat",
+      "openclaw.chat.history",
+      "openclaw.changes.list",
+      "openclaw.approval.list",
+      "openclaw.setup.detect",
+      "openclaw.setup.activate",
+      "openclaw.setup.auth.start",
+      "openclaw.setup.prepare.start",
+      "wizard.start",
+      "wizard.next",
+      "wizard.cancel",
+      "wizard.status",
+      "talk.catalog",
+      "talk.config",
+      "talk.client.create",
+      "talk.client.transcript",
+      "talk.client.close",
+      "talk.client.toolCall",
+      "talk.client.steer",
+      "talk.session.create",
+      "talk.session.join",
+      "talk.session.appendAudio",
+      "talk.session.startTurn",
+      "talk.session.endTurn",
+      "talk.session.cancelTurn",
+      "talk.session.cancelOutput",
+      "talk.session.acknowledgeMark",
+      "talk.session.submitToolResult",
+      "talk.session.steer",
+      "talk.session.close",
+      "talk.speak",
+      "talk.mode",
+      "commands.list",
+      "models.list",
+      "models.authStatus",
+      "models.authLogout",
+      "tools.catalog",
+      "tools.effective",
+      "tools.invoke",
+      "mcp.app.view",
+      "mcp.app.listTools",
+      "mcp.app.listResources",
+      "mcp.app.listResourceTemplates",
+      "mcp.app.readResource",
+      "mcp.app.callTool",
+      "mcp.app.updateModelContext",
+      "board.get",
+      "board.update",
+      "board.widget.put",
+      "board.widget.grant",
+      "board.widget.appView",
+      "board.event",
+      "audit.list",
+      "audit.activity.list",
+      "users.list",
+      "users.self",
+      "users.linkEmail",
+      "users.setDisplayName",
+      "users.setAvatar",
+      "tasks.list",
+      "tasks.get",
+      "tasks.cancel",
+      "taskSuggestions.list",
+      "taskSuggestions.create",
+      "taskSuggestions.accept",
+      "taskSuggestions.dismiss",
+      "environments.list",
+      "environments.status",
+      "worktrees.list",
+      "worktrees.branches",
+      "fs.listDir",
+      "worktrees.create",
+      "worktrees.remove",
+      "worktrees.restore",
+      "worktrees.gc",
+      "agents.list",
+      "agents.create",
+      "agents.update",
+      "agents.delete",
+      "agents.files.list",
+      "agents.files.get",
+      "agents.files.set",
+      "sessions.files.list",
+      "sessions.files.get",
+      "sessions.files.set",
+      "sessions.files.reveal",
+      "artifacts.list",
+      "artifacts.get",
+      "artifacts.download",
+      "skills.status",
+      "skills.search",
+      "skills.detail",
+      "skills.securityVerdicts",
+      "skills.skillCard",
+      "skills.bins",
+      "skills.upload.begin",
+      "skills.upload.chunk",
+      "skills.upload.commit",
+      "skills.install",
+      "skills.update",
+      "skills.curator.status",
+      "skills.curator.pin",
+      "skills.curator.unpin",
+      "skills.curator.restore",
+      "skills.proposals.list",
+      "skills.proposals.inspect",
+      "skills.proposals.historyStatus",
+      "skills.proposals.historyScan",
+      "skills.proposals.create",
+      "skills.proposals.update",
+      "skills.proposals.revise",
+      "skills.proposals.requestRevision",
+      "skills.proposals.apply",
+      "skills.proposals.reject",
+      "skills.proposals.quarantine",
+      "update.status",
+      "update.run",
+      "voicewake.get",
+      "voicewake.set",
+      "secrets.reload",
+      "secrets.resolve",
+      "voicewake.routing.get",
+      "voicewake.routing.set",
+      "sessions.list",
+      "sessions.subscribe",
+      "sessions.unsubscribe",
+      "sessions.messages.subscribe",
+      "sessions.messages.unsubscribe",
+      "sessions.preview",
+      "sessions.describe",
+      "sessions.compaction.list",
+      "sessions.compaction.get",
+      "sessions.compaction.branch",
+      "sessions.compaction.restore",
+      "sessions.branches.list",
+      "sessions.branches.switch",
+      "sessions.rewind",
+      "sessions.fork",
+      "sessions.create",
+      "sessions.send",
+      "sessions.abort",
+      "sessions.patch",
+      "sessions.pluginPatch",
+      "sessions.cleanup",
+      "sessions.reset",
+      "sessions.delete",
+      "sessions.compact",
+      "sessions.groups.list",
+      "sessions.groups.put",
+      "sessions.groups.rename",
+      "sessions.groups.delete",
+      "last-heartbeat",
+      "set-heartbeats",
+      "wake",
+      "node.pair.list",
+      "node.pair.approve",
+      "node.pair.reject",
+      "node.pair.remove",
+      "device.pair.list",
+      "device.pair.approve",
+      "device.pair.reject",
+      "device.pair.remove",
+      "device.pair.rename",
+      "device.token.rotate",
+      "device.token.revoke",
+      "node.rename",
+      "node.list",
+      "node.describe",
+      "node.pluginSurface.refresh",
+      "node.pluginTools.update",
+      "node.skills.update",
+      "node.pending.drain",
+      "node.pending.enqueue",
+      "node.invoke",
+      "node.pending.pull",
+      "node.pending.ack",
+      "node.invoke.progress",
+      "node.invoke.result",
+      "node.event",
+      "cron.get",
+      "cron.list",
+      "cron.status",
+      "cron.add",
+      "cron.update",
+      "cron.remove",
+      "cron.run",
+      "cron.runs",
+      "gateway.identity.get",
+      "gateway.restart.preflight",
+      "gateway.restart.request",
+      "system-presence",
+      "system-event",
+      "message.action",
+      "conversations.send",
+      "conversations.turn",
+      "conversations.turn.cancel",
+      "send",
+      "agent",
+      "agent.identity.get",
+      "agent.wait",
+      "chat.history",
+      "chat.startup",
+      "chat.metadata",
+      "chat.message.get",
+      "chat.abort",
+      "chat.send",
+      "terminal.open",
+      "terminal.input",
+      "terminal.resize",
+      "terminal.close",
+      "channels.pairing.list",
+      "channels.pairing.approve",
+      "channels.pairing.dismiss",
+      "attach.grant",
+      "attach.revoke",
+      "terminal.attach",
+      "terminal.list",
+      "terminal.text",
+      "controlUi.githubPreview",
+      "system.info",
+      "agents.workspace.list",
+      "agents.workspace.get",
+      "tts.speak",
+      "plugins.list",
+      "plugins.search",
+      "plugins.install",
+      "plugins.setEnabled",
+      "plugins.uninstall",
+      "plugins.refresh",
+      "controlUi.sessionPullRequests",
+      "gateway.suspend.prepare",
+      "gateway.suspend.status",
+      "gateway.suspend.resume",
+      "chat.toolTitles",
+      "sessions.diff",
+      "openclaw.setup.verify",
+      "sessions.catalog.list",
+      "sessions.catalog.read",
+      "terminal.upload",
+      "sessions.catalog.continue",
+      "sessions.catalog.archive",
+      "approval.get",
+      "approval.resolve",
+      "sessions.search",
+      "models.probe",
+      "migrations.memory.plan",
+      "migrations.memory.apply",
+      "ui.command",
+      "approval.history",
+      "plugin.surface.refresh",
+      "conversations.list",
+      "session.discussion.info",
+      "session.discussion.open",
+      "board.prompt.authorize",
+      "board.data.read",
+      "board.action",
+      "sessions.observer.ask",
+      "sessions.observer.visibility",
+      "browser.request"
+    ]
+  },
+  "pluginSurfaceUrls" : {
+    "canvas" : "http:\/\/127.0.0.1:50573\/__openclaw__\/cap\/4QvajjTKX2EdhfSFxeK0PLj-"
+  },
+  "policy" : {
+    "maxBufferedBytes" : 52428800,
+    "maxPayload" : 26214400,
+    "tickIntervalMs" : 30000
+  },
+  "protocol" : 4,
+  "server" : {
+    "connId" : "97a3203f-abcc-4674-820c-cbfd9f4e2f62",
+    "version" : "2026.7.2"
+  },
+  "snapshot" : {
+    "appliedConfigHash" : "w0xUjglgdwRygUqAy2RJvz0wyk6f4XxRCCpz8iekQLc",
+    "authMode" : "***REDACTED***",
+    "configPath" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state\/openclaw.json",
+    "health" : {
+      "agents" : [
+        {
+          "agentId" : "main",
+          "heartbeat" : {
+            "ackMaxChars" : 300,
+            "enabled" : true,
+            "every" : "30m",
+            "everyMs" : 1800000,
+            "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+            "target" : "none"
+          },
+          "isDefault" : true,
+          "sessions" : {
+            "count" : 2,
+            "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state\/agents\/main\/sessions\/sessions.json",
+            "recent" : [
+              {
+                "age" : 2544,
+                "key" : "agent:main:dashboard:6cc1b04c-b1cc-4b83-ba6f-37722438e3ac",
+                "updatedAt" : 1786433633816
+              },
+              {
+                "age" : 152705,
+                "key" : "agent:main:dashboard:59dd711c-8d55-4a43-b3a6-49bd3b061829",
+                "updatedAt" : 1786433483655
+              }
+            ]
+          }
+        }
+      ],
+      "channelLabels" : {
+        "qqbot" : "QQ Bot"
+      },
+      "channelOrder" : [
+        "qqbot"
+      ],
+      "channels" : {
+        "qqbot" : {
+          "accountId" : "default",
+          "accounts" : {
+            "default" : {
+              "accountId" : "default",
+              "configured" : false,
+              "connected" : false,
+              "enabled" : true,
+              "lastConnectedAt" : null,
+              "lastError" : null,
+              "lastInboundAt" : null,
+              "lastOutboundAt" : null,
+              "running" : false,
+              "tokenSource" : "***REDACTED***"
+            }
+          },
+          "configured" : false,
+          "connected" : false,
+          "enabled" : true,
+          "lastConnectedAt" : null,
+          "lastError" : null,
+          "lastInboundAt" : null,
+          "lastOutboundAt" : null,
+          "running" : false,
+          "tokenSource" : "***REDACTED***"
+        }
+      },
+      "configReload" : {
+        "hotReloadStatus" : "active"
+      },
+      "defaultAgentId" : "main",
+      "durationMs" : 136,
+      "eventLoop" : {
+        "cpuCoreRatio" : 0.076999999999999999,
+        "degraded" : true,
+        "delayMaxMs" : 1990.2,
+        "delayP99Ms" : 22.399999999999999,
+        "intervalMs" : 53861,
+        "reasons" : [
+          "event_loop_delay"
+        ],
+        "utilization" : 0.068000000000000005
+      },
+      "heartbeatSeconds" : 1800,
+      "modelPricing" : {
+        "sources" : [
+
+        ],
+        "state" : "ok"
+      },
+      "ok" : true,
+      "plugins" : {
+        "errors" : [
+
+        ],
+        "loaded" : [
+          "acpx",
+          "alibaba",
+          "amazon-bedrock",
+          "amazon-bedrock-mantle",
+          "anthropic",
+          "anthropic-vertex",
+          "arcee",
+          "azure-speech",
+          "baseten",
+          "bonjour",
+          "browser",
+          "byteplus",
+          "canvas",
+          "cerebras",
+          "chutes",
+          "clawrouter",
+          "cloudflare-ai-gateway",
+          "cohere",
+          "comfy",
+          "copilot-proxy",
+          "deepgram",
+          "deepinfra",
+          "deepseek",
+          "device-pair",
+          "document-extract",
+          "elevenlabs",
+          "fal",
+          "featherless",
+          "file-transfer",
+          "fireworks",
+          "github-copilot",
+          "gmi",
+          "google",
+          "groq",
+          "huggingface",
+          "inworld",
+          "kilocode",
+          "kimi",
+          "linux-canvas",
+          "linux-node",
+          "litellm",
+          "llama-cpp",
+          "lmstudio",
+          "longcat",
+          "memory-core",
+          "meta",
+          "microsoft",
+          "microsoft-foundry",
+          "minimax",
+          "mistral",
+          "moonshot",
+          "novita",
+          "nvidia",
+          "ollama",
+          "openai",
+          "opencode",
+          "opencode-go",
+          "openrouter",
+          "phone-control",
+          "pixverse",
+          "qianfan",
+          "qqbot",
+          "qwen",
+          "runway",
+          "senseaudio",
+          "sglang",
+          "stepfun",
+          "synthetic",
+          "talk-voice",
+          "tencent",
+          "together",
+          "tts-local-cli",
+          "venice",
+          "vercel-ai-gateway",
+          "vllm",
+          "volcengine",
+          "voyage",
+          "vydra",
+          "web-readability",
+          "xai",
+          "xiaomi",
+          "zai"
+        ],
+        "unavailable" : [
+
+        ]
+      },
+      "sessions" : {
+        "count" : 2,
+        "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state\/agents\/main\/sessions\/sessions.json",
+        "recent" : [
+          {
+            "age" : 2544,
+            "key" : "agent:main:dashboard:6cc1b04c-b1cc-4b83-ba6f-37722438e3ac",
+            "updatedAt" : 1786433633816
+          },
+          {
+            "age" : 152705,
+            "key" : "agent:main:dashboard:59dd711c-8d55-4a43-b3a6-49bd3b061829",
+            "updatedAt" : 1786433483655
+          }
+        ]
+      },
+      "ts" : 1786433636496
+    },
+    "presence" : [AgentShellCore] 会话清单解析失败，已忽略并回退到空列表（不影响继续新建会话）：/private/tmp/claude-501/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop/b39f5bf8-f328-41b3-b5fd-eb01a465a399/scratchpad/shell-state/sessions.json — DecodingError.dataCorrupted: Data was corrupted. Debug description: The given data was not valid JSON.. Underlying error: Error Domain=NSCocoaErrorDomain Code=3840 "Unexpected character 'T' around line 1, column 16." UserInfo={NSJSONSerializationErrorIndex=15, NSDebugDescription=Unexpected character 'T' around line 1, column 16.}
+[
+      {
+        "deviceFamily" : "Mac",
+        "host" : "MacBook-Pro-2.local",
+        "instanceId" : "38872a17-3dcc-4b37-942f-e1d8494c17cb",
+        "ip" : "10.242.128.116",
+        "mode" : "gateway",
+        "modelIdentifier" : "MacBookPro18,2",
+        "platform" : "macos 26.6",
+        "reason" : "self",
+        "text" : "Gateway: MacBook-Pro-2.local (10.242.128.116) · app 2026.7.2 · mode gateway · reason self",
+        "ts" : 1786433695966,
+        "version" : "2026.7.2"
+      }
+    ],
+    "sessionDefaults" : {
+      "defaultAgentId" : "main",
+      "mainKey" : "main",
+      "mainSessionKey" : "agent:main:main",
+      "scope" : "per-sender"
+    },
+    "stateDir" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state",
+    "stateVersion" : {
+      "health" : 8,
+      "presence" : 1
+    },
+    "uptimeMs" : 312995
+  },
+  "type" : "hello-ok"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 2,
+          "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 62152,
+              "key" : "agent:main:dashboard:6cc1b04c-b1cc-4b83-ba6f-37722438e3ac",
+              "updatedAt" : 1786433633816
+            },
+            {
+              "age" : 212313,
+              "key" : "agent:main:dashboard:59dd711c-8d55-4a43-b3a6-49bd3b061829",
+              "updatedAt" : 1786433483655
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+      "qqbot" : "QQ Bot"
+    },
+    "channelOrder" : [
+      "qqbot"
+    ],
+    "channels" : {
+      "qqbot" : {
+        "accountId" : "default",
+        "accounts" : {
+          "default" : {
+            "accountId" : "default",
+            "configured" : false,
+            "connected" : false,
+            "enabled" : true,
+            "lastConnectedAt" : null,
+            "lastError" : null,
+            "lastInboundAt" : null,
+            "lastOutboundAt" : null,
+            "running" : false,
+            "tokenSource" : "***REDACTED***"
+          }
+        },
+        "configured" : false,
+        "connected" : false,
+        "enabled" : true,
+        "lastConnectedAt" : null,
+        "lastError" : null,
+        "lastInboundAt" : null,
+        "lastOutboundAt" : null,
+        "running" : false,
+        "tokenSource" : "***REDACTED***"
+      }
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 202,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.02,
+      "degraded" : false,
+      "delayMaxMs" : 36.5,
+      "delayP99Ms" : 22.800000000000001,
+      "intervalMs" : 59609,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.010999999999999999
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "alibaba",
+        "amazon-bedrock",
+        "amazon-bedrock-mantle",
+        "anthropic",
+        "anthropic-vertex",
+        "arcee",
+        "azure-speech",
+        "baseten",
+        "bonjour",
+        "browser",
+        "byteplus",
+        "canvas",
+        "cerebras",
+        "chutes",
+        "clawrouter",
+        "cloudflare-ai-gateway",
+        "cohere",
+        "comfy",
+        "copilot-proxy",
+        "deepgram",
+        "deepinfra",
+        "deepseek",
+        "device-pair",
+        "document-extract",
+        "elevenlabs",
+        "fal",
+        "featherless",
+        "file-transfer",
+        "fireworks",
+        "github-copilot",
+        "gmi",
+        "google",
+        "groq",
+        "huggingface",
+        "inworld",
+        "kilocode",
+        "kimi",
+        "linux-canvas",
+        "linux-node",
+        "litellm",
+        "llama-cpp",
+        "lmstudio",
+        "longcat",
+        "memory-core",
+        "meta",
+        "microsoft",
+        "microsoft-foundry",
+        "minimax",
+        "mistral",
+        "moonshot",
+        "novita",
+        "nvidia",
+        "ollama",
+        "openai",
+        "opencode",
+        "opencode-go",
+        "openrouter",
+        "phone-control",
+        "pixverse",
+        "qianfan",
+        "qqbot",
+        "qwen",
+        "runway",
+        "senseaudio",
+        "sglang",
+        "stepfun",
+        "synthetic",
+        "talk-voice",
+        "tencent",
+        "together",
+        "tts-local-cli",
+        "venice",
+        "vercel-ai-gateway",
+        "vllm",
+        "volcengine",
+        "voyage",
+        "vydra",
+        "web-readability",
+        "xai",
+        "xiaomi",
+        "zai"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 2,
+      "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+        {
+          "age" : 62152,
+          "key" : "agent:main:dashboard:6cc1b04c-b1cc-4b83-ba6f-37722438e3ac",
+          "updatedAt" : 1786433633816
+        },
+        {
+          "age" : 212313,
+          "key" : "agent:main:dashboard:59dd711c-8d55-4a43-b3a6-49bd3b061829",
+          "updatedAt" : 1786433483655
+        }
+      ]
+    },
+    "ts" : 1786433696170
+  },
+  "seq" : 1,
+  "stateVersion" : {
+    "health" : 9,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 2,
+          "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 62543,
+              "key" : "agent:main:dashboard:6cc1b04c-b1cc-4b83-ba6f-37722438e3ac",
+              "updatedAt" : 1786433633816
+            },
+            {
+              "age" : 212704,
+              "key" : "agent:main:dashboard:59dd711c-8d55-4a43-b3a6-49bd3b061829",
+              "updatedAt" : 1786433483655
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+      "qqbot" : "QQ Bot"
+    },
+    "channelOrder" : [
+      "qqbot"
+    ],
+    "channels" : {
+      "qqbot" : {
+        "accountId" : "default",
+        "accounts" : {
+          "default" : {
+            "accountId" : "default",
+            "configured" : false,
+            "connected" : false,
+            "enabled" : true,
+            "lastConnectedAt" : null,
+            "lastError" : null,
+            "lastInboundAt" : null,
+            "lastOutboundAt" : null,
+            "running" : false,
+            "tokenSource" : "***REDACTED***"
+          }
+        },
+        "configured" : false,
+        "connected" : false,
+        "enabled" : true,
+        "lastConnectedAt" : null,
+        "lastError" : null,
+        "lastInboundAt" : null,
+        "lastOutboundAt" : null,
+        "running" : false,
+        "tokenSource" : "***REDACTED***"
+      }
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 161,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.02,
+      "degraded" : false,
+      "delayMaxMs" : 36.5,
+      "delayP99Ms" : 22.800000000000001,
+      "intervalMs" : 59609,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.010999999999999999
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "alibaba",
+        "amazon-bedrock",
+        "amazon-bedrock-mantle",
+        "anthropic",
+        "anthropic-vertex",
+        "arcee",
+        "azure-speech",
+        "baseten",
+        "bonjour",
+        "browser",
+        "byteplus",
+        "canvas",
+        "cerebras",
+        "chutes",
+        "clawrouter",
+        "cloudflare-ai-gateway",
+        "cohere",
+        "comfy",
+        "copilot-proxy",
+        "deepgram",
+        "deepinfra",
+        "deepseek",
+        "device-pair",
+        "document-extract",
+        "elevenlabs",
+        "fal",
+        "featherless",
+        "file-transfer",
+        "fireworks",
+        "github-copilot",
+        "gmi",
+        "google",
+        "groq",
+        "huggingface",
+        "inworld",
+        "kilocode",
+        "kimi",
+        "linux-canvas",
+        "linux-node",
+        "litellm",
+        "llama-cpp",
+        "lmstudio",
+        "longcat",
+        "memory-core",
+        "meta",
+        "microsoft",
+        "microsoft-foundry",
+        "minimax",
+        "mistral",
+        "moonshot",
+        "novita",
+        "nvidia",
+        "ollama",
+        "openai",
+        "opencode",
+        "opencode-go",
+        "openrouter",
+        "phone-control",
+        "pixverse",
+        "qianfan",
+        "qqbot",
+        "qwen",
+        "runway",
+        "senseaudio",
+        "sglang",
+        "stepfun",
+        "synthetic",
+        "talk-voice",
+        "tencent",
+        "together",
+        "tts-local-cli",
+        "venice",
+        "vercel-ai-gateway",
+        "vllm",
+        "volcengine",
+        "voyage",
+        "vydra",
+        "web-readability",
+        "xai",
+        "xiaomi",
+        "zai"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 2,
+      "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+        {
+          "age" : 62543,
+          "key" : "agent:main:dashboard:6cc1b04c-b1cc-4b83-ba6f-37722438e3ac",
+          "updatedAt" : 1786433633816
+        },
+        {
+          "age" : 212704,
+          "key" : "agent:main:dashboard:59dd711c-8d55-4a43-b3a6-49bd3b061829",
+          "updatedAt" : 1786433483655
+        }
+      ]
+    },
+    "ts" : 1786433696520
+  },
+  "seq" : 2,
+  "stateVersion" : {
+    "health" : 10,
+    "presence" : 1
+  },
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1786433696586
+  },
+  "seq" : 3,
+  "type" : "event"
+}
+
+--- RECV event tick (未处理的旁路事件，原样打印) ---
+{
+  "event" : "tick",
+  "payload" : {
+    "ts" : 1786433726587
+  },
+  "seq" : 4,
+  "type" : "event"
+}
+
+--- RECV event health (未处理的旁路事件，原样打印) ---
+{
+  "event" : "health",
+  "payload" : {
+    "agents" : [
+      {
+        "agentId" : "main",
+        "heartbeat" : {
+          "ackMaxChars" : 300,
+          "enabled" : true,
+          "every" : "30m",
+          "everyMs" : 1800000,
+          "prompt" : "Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.",
+          "target" : "none"
+        },
+        "isDefault" : true,
+        "sessions" : {
+          "count" : 2,
+          "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state\/agents\/main\/sessions\/sessions.json",
+          "recent" : [
+            {
+              "age" : 122549,
+              "key" : "agent:main:dashboard:6cc1b04c-b1cc-4b83-ba6f-37722438e3ac",
+              "updatedAt" : 1786433633816
+            },
+            {
+              "age" : 272710,
+              "key" : "agent:main:dashboard:59dd711c-8d55-4a43-b3a6-49bd3b061829",
+              "updatedAt" : 1786433483655
+            }
+          ]
+        }
+      }
+    ],
+    "channelLabels" : {
+      "qqbot" : "QQ Bot"
+    },
+    "channelOrder" : [
+      "qqbot"
+    ],
+    "channels" : {
+      "qqbot" : {
+        "accountId" : "default",
+        "accounts" : {
+          "default" : {
+            "accountId" : "default",
+            "configured" : false,
+            "connected" : false,
+            "enabled" : true,
+            "lastConnectedAt" : null,
+            "lastError" : null,
+            "lastInboundAt" : null,
+            "lastOutboundAt" : null,
+            "running" : false,
+            "tokenSource" : "***REDACTED***"
+          }
+        },
+        "configured" : false,
+        "connected" : false,
+        "enabled" : true,
+        "lastConnectedAt" : null,
+        "lastError" : null,
+        "lastInboundAt" : null,
+        "lastOutboundAt" : null,
+        "running" : false,
+        "tokenSource" : "***REDACTED***"
+      }
+    },
+    "configReload" : {
+      "hotReloadStatus" : "active"
+    },
+    "defaultAgentId" : "main",
+    "durationMs" : 155,
+    "eventLoop" : {
+      "cpuCoreRatio" : 0.010999999999999999,
+      "degraded" : false,
+      "delayMaxMs" : 163.30000000000001,
+      "delayP99Ms" : 22.800000000000001,
+      "intervalMs" : 60394,
+      "reasons" : [
+
+      ],
+      "utilization" : 0.012
+    },
+    "heartbeatSeconds" : 1800,
+    "modelPricing" : {
+      "sources" : [
+
+      ],
+      "state" : "ok"
+    },
+    "ok" : true,
+    "plugins" : {
+      "errors" : [
+
+      ],
+      "loaded" : [
+        "acpx",
+        "alibaba",
+        "amazon-bedrock",
+        "amazon-bedrock-mantle",
+        "anthropic",
+        "anthropic-vertex",
+        "arcee",
+        "azure-speech",
+        "baseten",
+        "bonjour",
+        "browser",
+        "byteplus",
+        "canvas",
+        "cerebras",
+        "chutes",
+        "clawrouter",
+        "cloudflare-ai-gateway",
+        "cohere",
+        "comfy",
+        "copilot-proxy",
+        "deepgram",
+        "deepinfra",
+        "deepseek",
+        "device-pair",
+        "document-extract",
+        "elevenlabs",
+        "fal",
+        "featherless",
+        "file-transfer",
+        "fireworks",
+        "github-copilot",
+        "gmi",
+        "google",
+        "groq",
+        "huggingface",
+        "inworld",
+        "kilocode",
+        "kimi",
+        "linux-canvas",
+        "linux-node",
+        "litellm",
+        "llama-cpp",
+        "lmstudio",
+        "longcat",
+        "memory-core",
+        "meta",
+        "microsoft",
+        "microsoft-foundry",
+        "minimax",
+        "mistral",
+        "moonshot",
+        "novita",
+        "nvidia",
+        "ollama",
+        "openai",
+        "opencode",
+        "opencode-go",
+        "openrouter",
+        "phone-control",
+        "pixverse",
+        "qianfan",
+        "qqbot",
+        "qwen",
+        "runway",
+        "senseaudio",
+        "sglang",
+        "stepfun",
+        "synthetic",
+        "talk-voice",
+        "tencent",
+        "together",
+        "tts-local-cli",
+        "venice",
+        "vercel-ai-gateway",
+        "vllm",
+        "volcengine",
+        "voyage",
+        "vydra",
+        "web-readability",
+        "xai",
+        "xiaomi",
+        "zai"
+      ],
+      "unavailable" : [
+
+      ]
+    },
+    "sessions" : {
+      "count" : 2,
+      "path" : "\/private\/tmp\/claude-501\/-Users-litianyi-Documents-Code--ai-goods-test-harnessloop\/b39f5bf8-f328-41b3-b5fd-eb01a465a399\/scratchpad\/l1-r14\/state\/agents\/main\/sessions\/sessions.json",
+      "recent" : [
+        {
+        

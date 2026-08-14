@@ -1,0 +1,32 @@
+// T-114 rework — window census via CGWindowListCopyWindowInfo, NOT System Events.
+//
+// This repo's own scope-lock history (rounds/0021/scope-lock.md, "Scope-Lock 修订 v2 -> v3")
+// documents a real incident where `System Events` window enumeration returned 0 for EVERY app
+// (including Finder) under a constrained screen state, and that empty result was wrongly read as
+// "the app has no window". CGWindowListCopyWindowInfo was the reliable alternative used to
+// correct that. Reusing the same technique here rather than repeating the mistake.
+
+import CoreGraphics
+import Foundation
+
+guard CommandLine.arguments.count > 1, let targetPID = Int32(CommandLine.arguments[1]) else {
+    print("usage: T114-window-census <pid>")
+    exit(2)
+}
+
+let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: AnyObject]] else {
+    print("RESULT windowCount=0 (CGWindowListCopyWindowInfo returned nil)")
+    exit(1)
+}
+
+let ownedByTarget = list.filter { ($0[kCGWindowOwnerPID as String] as? Int32) == targetPID }
+print("RESULT totalOnScreenWindows=\(list.count)")
+print("RESULT windowsOwnedByPID(\(targetPID))=\(ownedByTarget.count)")
+for w in ownedByTarget {
+    let name = (w[kCGWindowName as String] as? String) ?? "(no name)"
+    let boundsDict = w[kCGWindowBounds as String] as? [String: Any]
+    let layer = (w[kCGWindowLayer as String] as? Int) ?? -999
+    let number = (w[kCGWindowNumber as String] as? Int) ?? -1
+    print("  - windowNumber=\(number) layer=\(layer) name=\"\(name)\" bounds=\(String(describing: boundsDict))")
+}
