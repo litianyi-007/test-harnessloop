@@ -1,0 +1,10 @@
+MSBuild version 17.7.3+8ec440e68 for .NET
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  CSharpRunner -> /Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/csharp-runner/bin/Debug/net7.0/TestHarnessloop.Fixtures.CSharpRunner.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:02.15

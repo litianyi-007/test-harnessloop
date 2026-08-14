@@ -26,13 +26,35 @@
 // 短路过去。
 //
 // ============================================================================================
-// 已知的『无法翻译』边界（诚实降级，不伪造）
+// DEGRADED 判定：运行时发现，不是静态方法名单（rounds/0022 治根）
 // ============================================================================================
-// - `interrupt()`/`respondApproval()`/`capabilities()` 在 SG-5 里仍是 TODO 桩（见
-//   KernelClient.swift 头注释、OpenclawGatewayKernelClient.swift 对应方法体），调用即
-//   `throw .notImplemented`，没有任何 RPC/wire 交互可翻译。任何 timeline 用到这三个方法的 fixture，
-//   本 runner 在执行前就静态扫描发现并标记 DEGRADED（跳过，不计入 PASS/FAIL），见
-//   `degradeReason(for:)`。
+// 直到 rounds/0022 为止，这里是一份硬编码方法名单：`["interrupt", "respondApproval",
+// "capabilities"]`——任何 timeline 用到这三个方法名的 fixture，不问真实结果如何，执行前就整条静态
+// 跳过（`degradeReason(for:)`，已删除）。这份名单在 Swift 侧从 rounds/0015（`respondApproval()`
+// 落地）起就已经过期，rounds/0020（`interrupt(mode:"cancel")` 落地）后错得更彻底——五轮无人察觉，
+// 因为『名单命中』与『这个方法是不是真的桩』从写下第一行起就是两件独立的事，只是曾经恰好同步。
+//
+// rounds/0022 改法：**不查名单，直接跑。** `interrupt`/`respondApproval`/`capabilities` 现在与
+// createSession/send/subscribe/stop 走同一条翻译路径（见 `performClientCall` 对应分支）——真调用
+// `OpenclawGatewayKernelClient` 的对应方法，真实结果流回 `RunnerContext`。DEGRADED 与否只取决于一件
+// 事：这次真实调用抛出的错误，字面上是不是 `KernelClientError.notImplemented`——`RunnerContext.
+// noteRealFailure` 是唯一判定点，`onCallThrew`/`onStopShapedThrew`（服务 stop 与 interrupt 共享的
+// 『operation 通道』结算逻辑）全部经它，运行整条 timeline 结束后 `runFixtureFile` 统一读取
+// `ctx.notImplementedTrigger` 决定这一条 fixture 最终是 DEGRADED 还是走正常的 PASS/FAIL（即便
+// `notImplemented` 出现在 timeline 中途、后面还有更多 op 要执行，也是等整条跑完再判定——理由见
+// `runFixtureFile` 对应注释）。
+//
+// **这个判据只认错误的字面类型，不认『调用的是哪个方法』**——`interrupt()` 对 `mode:"steer"`/
+// `"abort_and_resend"` 抛的是 `KernelClientError.rpcRejected(code:"unsupported_interrupt_mode",…)`，
+// 语义上同样是『不支持』，但字面上不是 `notImplemented`，因此**不会**被判 DEGRADED：它是一次真实的
+// 拒绝，必须流入正常的 mismatch 累积。当前唯一使用 `interrupt` 的 fixture
+// （`operation-outcome/soft-steer-then-stop.json`，`mode:"steer"`）因此从『整条静态跳过』变成
+// 『真的跑、真的 FAIL』——不是 PASS，因为该 fixture 逐字转录自 D4 spec 的示例，假定了『`interrupt`
+// 在途时 `stop()` 排队等待，不被拒绝』的语义，而 rounds/0020 的真实实现是『`send`/`stop`/`interrupt`
+// 两两互斥，锁不是 idle 一律 `session_locked` 拒绝，不做排队仲裁』，且本轮只实现了 `mode:"cancel"`；
+// 两者本就不是同一件事，运行时发现只是让这个早已存在的落差第一次变得可观察。`capabilities()`
+// 无条件 `throw .notImplemented`（今天没有任何调用路径会绕开这一行），仍会被判 DEGRADED，但判据
+// 现在来自这次运行真实捕获到的错误，不是它的名字出现在某份名单里。
 // - `expect_outbound`（T-048 REWORK #4 收残；**T-050 REWORK #1 治根**）：先校验『真实 client 是否
 //   调用了这个 D2 方法对应的正确 openclaw RPC 方法名』（`expectOutboundMethodTable`，真实 client 的
 //   outbound wire 从来就不是 D2 req.* 形状，这一步是翻译诚实能保证的最基础粒度），方法名匹配后再对
@@ -187,6 +209,41 @@ func decodeInput(from json: [String: Any]) throws -> Input {
     return try JSONDecoder().decode(Input.self, from: data)
 }
 
+/// `InterruptRequestMessagePayload.input` 是强类型 `Input?`（`{kind,text,parts}`），但本轮唯一用到
+/// `interrupt` 的金标 fixture（`operation-outcome/soft-steer-then-stop.json`，逐字转录自 D4 §4.3
+/// 的 spec 级示例）里 `args.input` 写的是裸字符串 `"..."`——与 `normalizeNativeParams` 早就对
+/// `sessions.send` 的 `message`<->`text` 做过的同一种宽容一致：裸字符串是『纯文本输入』的简写，不是
+/// 要求 fixture 作者精确匹配 wire 结构。这里同样宽容：字符串按 `Input(kind:.text, text:<string>,
+/// parts:nil)` 展开；已经是对象就走标准 Codable 解码；不存在就是 nil——不臆造，也不让一处占位符
+/// 字符串在『还没跑到真实 client』这一步就直接让整条 fixture 判 FAIL（那会用一次翻译层解码事故掩盖
+/// 『真实 client 到底怎么响应』这个本轮真正关心的问题）。`mode` 缺失/不合法时如实拒绝，不臆造默认值。
+func decodeInterruptOptions(from json: [String: Any]) throws -> InterruptRequestMessagePayload {
+    guard let modeRaw = json["mode"] as? String, let mode = Mode(rawValue: modeRaw) else {
+        throw RunnerError.malformed(
+            "client_call(interrupt) 的 args.mode 缺失或不是合法取值：\(json["mode"] ?? "<nil>")"
+        )
+    }
+    let input: Input?
+    switch json["input"] {
+    case let s as String:
+        input = Input(kind: .text, text: s, parts: nil)
+    case let obj as [String: Any]:
+        let data = try JSONSerialization.data(withJSONObject: obj, options: [])
+        input = try JSONDecoder().decode(Input.self, from: data)
+    default:
+        input = nil
+    }
+    return InterruptRequestMessagePayload(input: input, mode: mode, runID: json["runId"] as? String)
+}
+
+/// `respondApproval` 的 `args.decision` 直接是 D2 `Decision` 的标准形状（`{outcome,updatedInput?,
+/// scope?,reason?}`）——不像 `interrupt.input` 那样存在已知的裸值简写先例，因此不额外加宽容逻辑
+/// （没有证据支持的宽容是臆造，不是诚实）。
+func decodeDecision(from json: [String: Any]) throws -> Decision {
+    let data = try JSONSerialization.data(withJSONObject: json, options: [])
+    return try JSONDecoder().decode(Decision.self, from: data)
+}
+
 // MARK: - RunnerContext：一次 fixture 执行期间的全部可变状态（actor 隔离，天然并发安全）
 
 actor RunnerContext {
@@ -241,6 +298,23 @@ actor RunnerContext {
     var pendingTasks: [Task<Void, Never>] = []
     var accumulatedMismatches: [Mismatch] = []
     var hasStopWaitingForTerminal = false
+
+    /// 运行时发现（rounds/0022 核心状态）：唯一判据是『某次真实 client 调用抛出的错误，字面上就是
+    /// `KernelClientError.notImplemented`』——不是任何静态方法名单，也不是按 `call` 名字猜测。只记
+    /// 第一次命中（先到先得，足够诊断；一旦命中即整条 fixture DEGRADED，见 `runFixtureFile`，多记
+    /// 几个没有增量价值）。`call` 从 `callKindByID` 反查，供 DEGRADED 理由文案标注是哪个方法触发的。
+    var notImplementedTrigger: (callID: String, call: String, detail: String)?
+
+    /// 全部『真实 client 调用失败』路径的共同入口——`onCallThrew`（createSession/send/subscribe/
+    /// respondApproval/capabilities）与 `onStopShapedThrew`（stop/interrupt 共享的 operation 通道
+    /// 结算）都在写入各自的失败记账**之前**先经过这里。判定逻辑与文件头「DEGRADED 判定」一节说明
+    /// 一致：只认错误的字面类型，`rpcRejected`（即便语义上也是『不支持』，如 interrupt 对
+    /// steer/abort_and_resend 的拒绝）一律不触发。
+    func noteRealFailure(id: String, error: Error) {
+        guard notImplementedTrigger == nil else { return }
+        guard case KernelClientError.notImplemented(let detail) = error else { return }
+        notImplementedTrigger = (callID: id, call: callKindByID[id] ?? "<未知>", detail: detail)
+    }
 
     init(client: OpenclawGatewayKernelClient) {
         self.client = client
@@ -309,6 +383,7 @@ actor RunnerContext {
     }
 
     func onCallThrew(id: String, error: Error) {
+        noteRealFailure(id: id, error: error)
         callOutcomes[id] = ["status": "rejected", "failure": failureDict(for: error)]
     }
 
@@ -325,23 +400,32 @@ actor RunnerContext {
         try? await Task.sleep(nanoseconds: 80_000_000)
     }
 
-    func onStopResolved(id: String, result: StopResultPayload, eventsCountAtStart: Int) async {
+    /// `stop()`/`interrupt()` 共享的『operation 通道』结算逻辑——两者在 SG-5 内部本就共享同一张
+    /// 『等待终态』表（`pendingStops`，靠 `operationKind` 区分 `.stop`/`.interrupt`，见
+    /// `OpenclawGatewayKernelClient.swift` rounds/0020 段文档注释），产出的 `OperationOutcome`
+    /// 语义完全一致，因此运行结束时怎么记账不分叉——`onStopResolved`/`onInterruptResolved` 都只是
+    /// 把各自类型化的 `result.outcome.rawValue` 传进来（`StopResultPayload.outcome` 是
+    /// `StopResultPayloadOutcome`，`InterruptResultPayload.outcome` 是 `PayloadOutcome`，两个不同
+    /// 枚举类型，`rawValue` 都是 `String`，在这一层不需要再区分）。
+    private func onStopShapedResolved(id: String, outcomeRawValue: String, eventsCountAtStart: Int) async {
         hasStopWaitingForTerminal = false
         await settleForEventDrain()
         if let outcome = firstOperationCompletedOutcome(after: eventsCountAtStart) {
             pendingOperations[id] = outcome
         } else {
-            pendingOperations[id] = result.outcome.rawValue
+            pendingOperations[id] = outcomeRawValue
         }
     }
 
-    func onStopThrew(id: String, error: Error, eventsCountAtStart: Int) async {
+    /// 见 `onStopShapedResolved` 文档注释——本函数是失败一侧的镜像，同样服务 stop()/interrupt()。
+    private func onStopShapedThrew(id: String, error: Error, eventsCountAtStart: Int) async {
+        noteRealFailure(id: id, error: error)
         hasStopWaitingForTerminal = false
-        // `session_locked` 是 stop() 顶部 `currentLock == .idle` 前置 guard 直接抛出的——发生在
-        // `operationID` 铸造之前，真实 client **绝不会**为这次调用产出任何 operation_completed
-        // 镜像事件（见 onStopThrew 下方分支的文档注释）。这个分支不用等，等了也白等，还会不必要地
-        // 拖慢『并发 stop 被拒绝』这类断言的可观察时刻——因此只对『可能真的有镜像事件在路上』的其它
-        // 错误类型才 settle。
+        // `session_locked` 是 stop()/interrupt() 顶部 `currentLock == .idle` 前置 guard 直接抛出
+        // 的——发生在 `operationID` 铸造之前，真实 client **绝不会**为这次调用产出任何
+        // operation_completed 镜像事件（见下方分支的文档注释）。这个分支不用等，等了也白等，还会
+        // 不必要地拖慢『并发 stop/interrupt 被拒绝』这类断言的可观察时刻——因此只对『可能真的有镜像
+        // 事件在路上』的其它错误类型才 settle。
         if case KernelClientError.rpcRejected(let code, _) = error, code == "session_locked" {
             callOutcomes[id] = ["status": "rejected", "failure": failureDict(for: error)]
             return
@@ -352,14 +436,33 @@ actor RunnerContext {
             // 走 pendingOperations（D1 v3.1 §9.1：这是『已经开始执行的 operation 的终态』通道）。
             pendingOperations[id] = outcome
         } else {
-            // 没有 operation_completed 镜像——说明这次 stop() 在铸造 operationId 之前就被同步拒绝
-            // （D1 v3.1 §9.1 `KernelPortRejectionCode` 层面的前置条件拒绝，例如 session_locked：
-            // stop() 顶部的 `currentLock == .idle` guard 在 `let operationID = ...` 之前就 throw），
-            // 根本没有进入 OperationOutcome 通道——不写 pendingOperations（那是 operationId 铸造
-            // 之后才有意义的字段），改记 callOutcomes，与其它不产生 operationId 的失败调用同一处理
-            // 方式一致。
+            // 没有 operation_completed 镜像——说明这次调用在铸造 operationId 之前就被同步拒绝
+            // （D1 v3.1 §9.1 `KernelPortRejectionCode` 层面的前置条件拒绝，例如 session_locked，
+            // 或 interrupt() 顶部『mode 不是 cancel』的 `unsupported_interrupt_mode` 拒绝——两者都
+            // 发生在 `let operationID = ...` 之前就 throw），根本没有进入 OperationOutcome 通道——
+            // 不写 pendingOperations（那是 operationId 铸造之后才有意义的字段），改记 callOutcomes，
+            // 与其它不产生 operationId 的失败调用同一处理方式一致。
             callOutcomes[id] = ["status": "rejected", "failure": failureDict(for: error)]
         }
+    }
+
+    func onStopResolved(id: String, result: StopResultPayload, eventsCountAtStart: Int) async {
+        await onStopShapedResolved(id: id, outcomeRawValue: result.outcome.rawValue, eventsCountAtStart: eventsCountAtStart)
+    }
+
+    func onStopThrew(id: String, error: Error, eventsCountAtStart: Int) async {
+        await onStopShapedThrew(id: id, error: error, eventsCountAtStart: eventsCountAtStart)
+    }
+
+    /// D1 §2.4 interrupt —— rounds/0022 新增：此前 `interrupt`/`respondApproval`/`capabilities`
+    /// 三个 client_call 从未被真实派发（整条 fixture 静态 DEGRADED），本轮起 interrupt 与 stop 走
+    /// 同一条『operation 通道』记账（见 `onStopShapedResolved`/`onStopShapedThrew` 文档注释）。
+    func onInterruptResolved(id: String, result: InterruptResultPayload, eventsCountAtStart: Int) async {
+        await onStopShapedResolved(id: id, outcomeRawValue: result.outcome.rawValue, eventsCountAtStart: eventsCountAtStart)
+    }
+
+    func onInterruptThrew(id: String, error: Error, eventsCountAtStart: Int) async {
+        await onStopShapedThrew(id: id, error: error, eventsCountAtStart: eventsCountAtStart)
     }
 
     private func firstOperationCompletedOutcome(after index: Int) -> String? {
@@ -556,10 +659,92 @@ func performClientCall(_ op: TimelineOp, ctx: RunnerContext) async throws {
         }
         await ctx.addPendingTask(task)
 
-    case "interrupt", "respondApproval", "capabilities":
-        // 不应该走到这里——`degradeReason(for:)` 已经在执行 timeline 之前静态扫描并整条 fixture
-        // 标记 DEGRADED。留一个明确抛错，防止未来谁绕开了那道静态检查。
-        throw RunnerError.malformed("client_call『\(call)』本应在执行前被 degradeReason 拦截，未被拦截是 runner 自身的缺陷")
+    case "interrupt":
+        // D1 §2.4——rounds/0022 起真派发（此前这里是「不应该走到这里」的哨兵抛错，见文件头「DEGRADED
+        // 判定」一节）。`mode:"cancel"` 且 session 处于 idle 锁态时，真实 `interrupt()` 会调用与
+        // `stop()` 完全相同的 `sessions.abort` RPC（见 OpenclawGatewayKernelClient.interrupt() 文档
+        // 注释「只复用 stop() 下面的部件」）——因此这里镜像 `stop` 分支注册同一套桩/gate；本轮唯一的
+        // interrupt fixture 用的是 `mode:"steer"`，会在到达那一步之前就被顶部的 mode guard 拒绝
+        // （`rpcRejected(unsupported_interrupt_mode)`，字面上不是 `notImplemented`，不会被判
+        // DEGRADED），因此这套桩今天实际上永远不会被调用到——**但 gate 本身必须注册**：
+        // `soft-steer-then-stop.json` 的 timeline 仍然含一条 `mock_response(replyTo: <这次 interrupt
+        // 调用的 id>)`（逐字转录自 D4 spec 示例，假定了一个更完整的 interrupt 实现），若不注册 gate，
+        // 这条 op 会在 `applyMockResponse` 里找不到 gate 而抛 `RunnerError.malformed`，把一次『真实
+        // client 拒绝』意外劣化成一次『runner 结构性崩溃』——这不是本轮想要的『真实 FAIL』。
+        guard let handle = await ctx.currentSessionHandle else {
+            throw RunnerError.malformed("interrupt（id=\(id)）在 createSession 之前调用")
+        }
+        let options = try decodeInterruptOptions(from: argsAny)
+        let gate = ReplyGate()
+        await ctx.setGate(id: id, gate: gate)
+        await client.testSupportStubRPC(method: "sessions.abort") { params in
+            await ctx.appendNativeCall("sessions.abort")
+            await ctx.recordOutbound(id: id, method: "sessions.abort", params: params)
+            return try await gate.wait()
+        }
+        // 同 `stop` 分支：安全的默认背景桩，只有 session 存在 pending 审批时才会被真正调用。
+        await client.testSupportStubRPC(method: "approval.resolve") { _ in
+            await ctx.appendNativeCall("approval.resolve")
+            return ["applied": true, "approval": ["status": "denied"]]
+        }
+        let eventsCountAtStart = await ctx.drainedEventsCount()
+        let task = Task<Void, Never> {
+            do {
+                let result = try await client.interrupt(session: handle, options: options)
+                await ctx.onInterruptResolved(id: id, result: result, eventsCountAtStart: eventsCountAtStart)
+            } catch {
+                await ctx.onInterruptThrew(id: id, error: error, eventsCountAtStart: eventsCountAtStart)
+            }
+        }
+        await ctx.addPendingTask(task)
+
+    case "respondApproval":
+        // D1 §2.6——rounds/0022 起真派发。真实 `respondApproval()`（rounds/0015 已实现）在到达任何
+        // RPC 之前先要求 `reqID` 在 `pendingApprovalsByReqID` 里（由一条先行的 `evt.approval_request`
+        // mock_event 登记）——本轮没有任何 fixture 提供这个前置条件，因此可预期的真实结果是
+        // `ApprovalDecisionError.approvalNotPending`（不是 `KernelClientError`，`failureDict(for:)`
+        // 落到 `unknown` 分支，如实反映，不臆造一个不存在的 code），这条 RPC 桩今天不会被真正调用到。
+        // 仍然注册 gate（理由同 `interrupt` 分支：一旦有 fixture 提供 `mock_response`，不能让它撞见
+        // 一次结构性崩溃）。
+        guard let handle = await ctx.currentSessionHandle else {
+            throw RunnerError.malformed("respondApproval（id=\(id)）在 createSession 之前调用")
+        }
+        guard let reqID = argsAny["reqId"] as? String else {
+            throw RunnerError.malformed("client_call(respondApproval id=\(id)) 缺少 args.reqId")
+        }
+        let decision = try decodeDecision(from: (argsAny["decision"] as? [String: Any]) ?? [:])
+        let gate = ReplyGate()
+        await ctx.setGate(id: id, gate: gate)
+        await client.testSupportStubRPC(method: "approval.resolve") { params in
+            await ctx.appendNativeCall("approval.resolve")
+            await ctx.recordOutbound(id: id, method: "approval.resolve", params: params)
+            return try await gate.wait()
+        }
+        let task = Task<Void, Never> {
+            do {
+                try await client.respondApproval(session: handle, reqID: reqID, decision: decision)
+                await ctx.setCallOutcomeResolved(id: id)
+            } catch {
+                await ctx.onCallThrew(id: id, error: error)
+            }
+        }
+        await ctx.addPendingTask(task)
+
+    case "capabilities":
+        // D1 §2.7——rounds/0022 起真派发。今天两端都是无条件 `throw .notImplemented`（没有任何分支
+        // 会先做别的事），因此不需要 RPC 桩：真调用即真发现。`session` 是可选的（D1 §2.7 允许不带
+        // session 查内核级能力），`ctx.currentSessionHandle` 尚未建立时如实传 nil，不臆造一个不存在
+        // 的 session。
+        let sessionArg = await ctx.currentSessionHandle
+        let task = Task<Void, Never> {
+            do {
+                _ = try await client.capabilities(session: sessionArg)
+                await ctx.setCallOutcomeResolved(id: id)
+            } catch {
+                await ctx.onCallThrew(id: id, error: error)
+            }
+        }
+        await ctx.addPendingTask(task)
 
     default:
         throw RunnerError.malformed("未知 KernelClientMethod『\(call)』")
@@ -580,8 +765,12 @@ extension RunnerContext {
 
 // MARK: - expect_outbound
 
-/// D2 req.* 方法名 → 真实 client 会调用的 openclaw 原生 RPC 方法名。只覆盖 Stage A 用到的四个方法
-/// （interrupt/respondApproval/capabilities 对应的 fixture 已被整条 DEGRADED，不会走到这里）。
+/// D2 req.* 方法名 → 真实 client 会调用的 openclaw 原生 RPC 方法名。只覆盖 createSession/send/
+/// subscribe/stop 四个——**不是**因为 interrupt/respondApproval/capabilities 的 fixture 仍被整条
+/// DEGRADED 挡在外面（rounds/0022 起不再是），而是因为这三个方法的翻译层目前不拦截/不记录它们的
+/// 出站 RPC（`performClientCall` 对应分支刻意没有注册 `testSupportStubRPC`，见那里的说明）——
+/// `expect_outbound` 若用在这三个方法上，会落进下面 `guard let expectedMethod = ... else` 分支，
+/// 如实报告『未登记』，不是误判通过。
 let expectOutboundMethodTable: [String: String] = [
     "req.createSession": "sessions.create",
     "req.send": "sessions.send",
@@ -644,7 +833,7 @@ func checkExpectOutbound(_ op: TimelineOp, ctx: RunnerContext) async throws {
     guard let expectedMethod = expectOutboundMethodTable[expectedType] else {
         await ctx.appendMismatch(
             "expect_outbound(\(matches)): swift-runner 未登记『\(expectedType)』对应的 openclaw RPC 方法名" +
-            "（该 D2 方法本轮 SG-5 未实现，或超出 Stage A 翻译范围）"
+            "（该 D2 方法尚未在本 runner 的 outbound 方法表中登记；不代表 client 未实现——rounds/0022 起实现状态由运行时发现判定，不再由此处文案声称）"
         )
         return
     }
@@ -729,6 +918,30 @@ func applyMockResponse(_ op: TimelineOp, ctx: RunnerContext) async throws {
         } else {
             await gate.resolve(.success(["abortedRunId": NSNull(), "status": "no-active-run"]))
         }
+
+    case "interrupt":
+        // interrupt(mode:"cancel") 调用的是与 stop() 完全相同的 sessions.abort RPC，响应形状因此
+        // 完全一致——复用同一套『从 ctx.currentRunIDValue 派生』的推导逻辑（见上方 `case "stop"` 的
+        // 说明，这里不重复论证）。SG-5 内部『等待终态』表按 session（不是按 operation kind）持有，
+        // stop()/interrupt() 两两互斥，同一时刻至多一个在等待，复用同一组
+        // `hasStopWaitingForTerminal`/`waitingStopCallID` 是忠实反映，不是偷懒省了一份状态。
+        let activeRunID = await ctx.currentRunIDValue
+        if let activeRunID = activeRunID {
+            await gate.resolve(.success(["abortedRunId": activeRunID, "status": "aborted"]))
+            await ctx.setHasStopWaitingForTerminal(true)
+            await ctx.setWaitingStopCallID(replyTo)
+        } else {
+            await gate.resolve(.success(["abortedRunId": NSNull(), "status": "no-active-run"]))
+        }
+
+    case "respondApproval":
+        // 真实 `approval.resolve` 响应形状是 `{applied, approval:{status,...}}`——不像 stop()/
+        // interrupt() 那样能从 canonical 内部状态无歧义派生（respondApproval 的结果本质上来自
+        // openclaw 内核侧的决策记录，runner 没有独立信息源可以替 fixture 作者算出来），因此如实
+        // 透传 fixture 声明的 `result`（同 `createSession`/`send` 两个既有先例：读 fixture 声明值，
+        // 不臆造）。今天没有任何 fixture 提供这条 mock_response（respondApproval 尚无 fixture 覆盖，
+        // 见 rounds/0022 报告的覆盖缺口），这个分支目前不可达，留给未来。
+        await gate.resolve(.success(result))
 
     default:
         throw RunnerError.malformed("mock_response(replyTo=\(replyTo)): 未知 client_call 类型『\(kind)』")
@@ -936,21 +1149,6 @@ func executeOp(_ op: TimelineOp, ctx: RunnerContext) async throws {
     }
 }
 
-// MARK: - DEGRADED 检测
-
-func degradeReason(for fixture: ParityFixture) -> String? {
-    for op in fixture.timeline where op.op == .clientCall {
-        if let call = op.call, ["interrupt", "respondApproval", "capabilities"].contains(call) {
-            return "timeline 包含 client_call『\(call)』——SG-5 OpenclawGatewayKernelClient 该方法本轮" +
-                "仍是 TODO 桩（KernelClient.swift 头注释 + OpenclawGatewayKernelClient.swift 对应方法体" +
-                "均为 `throw .notImplemented`），没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生" +
-                "有意义的状态转移。本 fixture 对 swift-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），" +
-                "不伪造一个假内核让它'通过'。"
-        }
-    }
-    return nil
-}
-
 // MARK: - 顶层：跑一个 fixture 文件
 
 public enum FixtureRunOutcome {
@@ -977,10 +1175,6 @@ public func runFixtureFile(at path: String) async -> FixtureRunResult {
         return FixtureRunResult(name: fileName, path: path, outcome: .failed(["无法解析 fixture JSON：\(error)"]))
     }
 
-    if let reason = degradeReason(for: fixture) {
-        return FixtureRunResult(name: fixture.name, path: path, outcome: .degraded(reason))
-    }
-
     if let initial = fixture.initialState?.value as? [String: Any], !initial.isEmpty {
         // 本轮三组 fixture 均不需要 `initialState`（都从 idle/干净状态起步），SG-5 也没有暴露
         // 『直接摆一个初始锁状态』的测试钩子（不同于 ts-runner 的 MockKernelClient 可以直接赋值
@@ -999,6 +1193,9 @@ public func runFixtureFile(at path: String) async -> FixtureRunResult {
     await client.testSupportSetStopTimeoutSeconds(RunnerContext.stopTimeoutSeconds)
     let ctx = RunnerContext(client: client)
 
+    // rounds/0022：不再有『执行前静态扫描方法名单』这一步——直接跑整条 timeline。DEGRADED 与否在
+    // 下面『收尾』之后，靠 `ctx.notImplementedTrigger` 是否被真实触发过来决定（见文件头「DEGRADED
+    // 判定」一节）。
     do {
         for op in fixture.timeline {
             try await executeOp(op, ctx: ctx)
@@ -1009,6 +1206,28 @@ public func runFixtureFile(at path: String) async -> FixtureRunResult {
 
     // 收尾：给所有 spawn 的 client_call/事件排空 Task 一点真实时间稳定下来，再做最终快照。
     try? await Task.sleep(nanoseconds: 150_000_000)
+
+    // rounds/0022 核心判定：`notImplementedTrigger` 只有在某次真实 client 调用抛出字面上的
+    // `KernelClientError.notImplemented` 时才会被置位（`RunnerContext.noteRealFailure`）——与『这条
+    // fixture 用到了哪个方法名』无关。**整条 timeline 跑完之后才检查**，即使 notImplemented 出现在
+    // 中途、后面还有更多 op 执行（比如断言、甚至另一个 client_call）：一旦命中就让整条 fixture
+    // DEGRADED，不做『命中点之前的部分算 PASS/FAIL、之后的不算』这种拆分。理由三条：(1) 这条 fixture
+    // 依赖的能力本身就没实现，无论后续步骤的『观察结果』如何，都不是这条 fixture 原本想验证的真实
+    // 行为；(2) 与本轮之前『整条 fixture 是 DEGRADED 的最小判定单元』的既定语义保持一致，不引入新的
+    // 『部分 DEGRADED』概念；(3) 拆分需要给每条 mismatch 打上『发生在触发点之前/之后』的时间戳再分别
+    // 判定，复杂度远超收益，且容易在边界情况上产生比『整条 DEGRADED』更难解释的结果。
+    if let trigger = await ctx.notImplementedTrigger {
+        return FixtureRunResult(
+            name: fixture.name, path: path,
+            outcome: .degraded(
+                "timeline 包含 client_call『\(trigger.call)』（id=\(trigger.callID)）——运行时真实驱动 SG-5 " +
+                "OpenclawGatewayKernelClient 后，该调用抛出 notImplemented：\(trigger.detail)。没有任何 " +
+                "RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 swift-runner " +
+                "诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'——这个结论来自" +
+                "这一次真实运行实际捕获到的错误，不是任何静态方法名单。"
+            )
+        )
+    }
 
     var mismatches = await ctx.accumulatedMismatches
     let finalState = await ctx.snapshotWithLock()

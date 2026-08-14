@@ -1,0 +1,23 @@
+=== diff: reporting section only, Swift 02 (method-name-filtered) vs 13 (outcome-based) ===
+0a1
+>   "deleted" : true
+9d9
+<   （无）
+11,12c11,12
+< --- interrupt / respondApproval / capabilities 覆盖情况（本轮唯一可能变判定方式的类别）---
+<   soft-steer-then-stop-waits-not-preempts [call=interrupt] → FAIL（真实执行，明细见上方 [FAIL] 段）
+---
+> 需要关注的 fixture（本次结果是 FAIL 或 DEGRADED 的，按结果筛选，一个不漏；PASS 的已在上方逐条打印，不重复）：
+>   - soft-steer-then-stop-waits-not-preempts [FAIL]（明细见上方 [FAIL] 段）
+
+=== diff: reporting section only, C# 03 (method-name-filtered) vs 14 (outcome-based) ===
+0a1
+>   "deleted": true
+9d9
+<   - soft-steer-then-stop-waits-not-preempts：timeline 包含 client_call『interrupt』（id=steer1）——运行时真实驱动 SG-5 OpenclawGatewayKernelClient 后，该调用抛出 NotImplemented：not implemented: interrupt() 本轮 TODO 桩——L1 闭环没有 active run 需要 interrupt。没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 csharp-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'——这个结论来自这一次真实运行实际捕获到的异常，不是任何静态方法名单。
+11,12c11,12
+< --- interrupt / respondApproval / capabilities 覆盖情况（本轮唯一可能变判定方式的类别）---
+<   soft-steer-then-stop-waits-not-preempts [call=interrupt] → DEGRADED（运行时捕获 NotImplemented，跳过；完整原因见上方 [DEGRADED] 段）
+---
+> 需要关注的 fixture（本次结果是 FAIL 或 DEGRADED 的，按结果筛选，一个不漏；PASS 的已在上方逐条打印，不重复）：
+>   - soft-steer-then-stop-waits-not-preempts [DEGRADED] timeline 包含 client_call『interrupt』（id=steer1）——运行时真实驱动 SG-5 OpenclawGatewayKernelClient 后，该调用抛出 NotImplemented：not implemented: interrupt() 本轮 TODO 桩——L1 闭环没有 active run 需要 interrupt。没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 csharp-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'——这个结论来自这一次真实运行实际捕获到的异常，不是任何静态方法名单。

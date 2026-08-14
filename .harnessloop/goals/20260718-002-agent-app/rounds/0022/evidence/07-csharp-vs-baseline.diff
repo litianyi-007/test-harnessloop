@@ -1,0 +1,55 @@
+30a31,61
+> 
+> --- SEND req sessions.create (test-stubbed, no real transport) ---
+> {
+>   "method": "sessions.create",
+>   "params": {
+>     "label": "sg4-kernel-client-l1"
+>   }
+> }
+> 
+> --- RECV sessions.create result ---
+> {
+>   "key": "openclaw-key-session-1",
+>   "sessionId": "session-1"
+> }
+> 
+> --- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+> {
+>   "method": "sessions.messages.subscribe",
+>   "params": {
+>     "key": "openclaw-key-session-1",
+>     "includeApprovals": true
+>   }
+> }
+> 
+> --- SEND req sessions.abort (test-stubbed, no real transport) ---
+> {
+>   "method": "sessions.abort",
+>   "params": {
+>     "key": "openclaw-key-session-1"
+>   }
+> }
+32c63
+<        原因: timeline 包含 client_call『interrupt』——SG-5 OpenclawGatewayKernelClient 该方法本轮仍是 TODO 桩（IKernelClient.cs 头注释 + OpenclawGatewayKernelClient.cs 对应方法体均为 throw KernelClientException(NotImplemented,...)），没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 csharp-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'。
+---
+>        原因: timeline 包含 client_call『interrupt』（id=steer1）——运行时真实驱动 SG-5 OpenclawGatewayKernelClient 后，该调用抛出 NotImplemented：not implemented: interrupt() 本轮 TODO 桩——L1 闭环没有 active run 需要 interrupt。没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 csharp-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'——这个结论来自这一次真实运行实际捕获到的异常，不是任何静态方法名单。
+494c525
+<     "updatedAtMs": 1786691185188,
+---
+>     "updatedAtMs": 1786693676020,
+503,504c534,535
+<       "createdAtMs": 1786691185188,
+<       "expiresAtMs": 1786692985188
+---
+>       "createdAtMs": 1786693676020,
+>       "expiresAtMs": 1786695476020
+596a628,635
+> 
+> --- 覆盖判定（运行时发现：DEGRADED 与否取决于这次真实运行是否捕获到 NotImplemented，不查表）---
+> 真实执行并给出 PASS/FAIL 判定：12/13
+> 运行时发现 DEGRADED（真实捕获 NotImplemented，跳过，不计入 PASS/FAIL）：1/13
+>   - soft-steer-then-stop-waits-not-preempts：timeline 包含 client_call『interrupt』（id=steer1）——运行时真实驱动 SG-5 OpenclawGatewayKernelClient 后，该调用抛出 NotImplemented：not implemented: interrupt() 本轮 TODO 桩——L1 闭环没有 active run 需要 interrupt。没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 csharp-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'——这个结论来自这一次真实运行实际捕获到的异常，不是任何静态方法名单。
+> 
+> --- interrupt / respondApproval / capabilities 覆盖情况（本轮唯一可能变判定方式的类别）---
+>   soft-steer-then-stop-waits-not-preempts [call=interrupt] → DEGRADED（运行时捕获 NotImplemented，跳过；完整原因见上方 [DEGRADED] 段）

@@ -1,0 +1,110 @@
+6c6
+<     "label" : "sg4-20260814T070610Z-2AAA6F17-DDE2-49F6-B738-7AF7BA13C7F6"
+---
+>     "label" : "sg4-20260814T074729Z-90825B46-B328-4BD8-AD25-9917004BCF5C"
+31,32d30
+< [DEGRADED] soft-steer-then-stop-waits-not-preempts (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json)
+<        原因: timeline 包含 client_call『interrupt』——SG-5 OpenclawGatewayKernelClient 该方法本轮仍是 TODO 桩（KernelClient.swift 头注释 + OpenclawGatewayKernelClient.swift 对应方法体均为 `throw .notImplemented`），没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 swift-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'。
+38c36
+<     "label" : "sg4-20260814T070610Z-5F2D31C4-4E84-483B-AA4F-895B8EDBB69B"
+---
+>     "label" : "sg4-20260814T074729Z-8E68E00F-1CB4-4B40-BADF-050CE7BEC142"
+63a62,65
+> [FAIL] soft-steer-then-stop-waits-not-preempts (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json)
+>        - expect_outbound(steer1): swift-runner 未登记『req.interrupt』对应的 openclaw RPC 方法名（该 D2 方法本轮 SG-5 未实现，或超出 Stage A 翻译范围）
+>        - assert_state@t=25.sessionLock: 期望 interrupt_in_progress，实际 stop_in_progress
+>        - expected.pendingOperations.steer1: 期望 submitted，实际 nil
+64a67,97
+> --- SEND req sessions.create (test-stubbed, no real transport) ---
+> {
+>   "method" : "sessions.create",
+>   "params" : {
+>     "label" : "sg4-20260814T074730Z-D6306665-515D-42B1-8BB0-5383BF9E214C"
+>   }
+> }
+> 
+> --- RECV sessions.create result ---
+> {
+>   "key" : "openclaw-key-session-1",
+>   "sessionId" : "session-1"
+> }
+> 
+> --- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+> {
+>   "method" : "sessions.messages.subscribe",
+>   "params" : {
+>     "includeApprovals" : true,
+>     "key" : "openclaw-key-session-1"
+>   }
+> }
+> 
+> --- SEND req sessions.abort (test-stubbed, no real transport) ---
+> {
+>   "method" : "sessions.abort",
+>   "params" : {
+>     "key" : "openclaw-key-session-1"
+>   }
+> }
+> 
+89c122
+<     "label" : "sg4-20260814T070611Z-C732ABAC-4EC7-4D9D-8E20-093C28F4029F"
+---
+>     "label" : "sg4-20260814T074730Z-98CF0ABB-F8D8-428D-8263-80ADF1A11C07"
+157c190
+<     "label" : "sg4-20260814T070612Z-2029BC3F-FD70-4F07-9BF0-D3569BA2959A"
+---
+>     "label" : "sg4-20260814T074731Z-387AEE02-E82A-4101-946F-33C5695D09D8"
+225c258
+<     "label" : "sg4-20260814T070613Z-2E44D1EE-D68B-4BF9-86A8-B4081039B671"
+---
+>     "label" : "sg4-20260814T074732Z-95D52CCF-94C6-419B-A90F-68E0AEF5DFA9"
+257c290
+<     "label" : "sg4-20260814T070614Z-C2B9CAC1-C3ED-4840-B357-0E56A2AAD3D2"
+---
+>     "label" : "sg4-20260814T074733Z-F7429B25-35EF-4702-BD2E-65A63C537A8D"
+312c345
+<     "label" : "sg4-20260814T070614Z-F1FC4E43-5513-43FB-80C1-4DFBC1FE5DEF"
+---
+>     "label" : "sg4-20260814T074733Z-B28276A6-69AE-4BC2-9CFB-4CA935313C2D"
+353c386
+<     "label" : "sg4-20260814T070615Z-1FB4226B-27B7-418F-A349-B7685967502F"
+---
+>     "label" : "sg4-20260814T074734Z-8EABF225-A5CB-4CA7-BDC6-EB2859D5E94B"
+394c427
+<     "label" : "sg4-20260814T070615Z-203C7303-2B41-4516-A92F-8745AF2734F9"
+---
+>     "label" : "sg4-20260814T074734Z-8260809A-71D5-4B57-B1E4-A14501F0F040"
+445c478
+<     "label" : "sg4-20260814T070616Z-DF888849-D735-4ACB-9F82-252A9E7A171F"
+---
+>     "label" : "sg4-20260814T074735Z-BBF29895-E334-4555-8690-057BA06CD84A"
+469c502
+<     "label" : "sg4-20260814T070616Z-24538511-1162-4465-8EBC-9C61834543B1"
+---
+>     "label" : "sg4-20260814T074735Z-9D593B64-EADB-4897-8127-36C04C37392D"
+493,494c526,527
+<       "createdAtMs" : 1786691176582,
+<       "expiresAtMs" : 1786692976582,
+---
+>       "createdAtMs" : 1786693655765,
+>       "expiresAtMs" : 1786695455765,
+504c537
+<     "updatedAtMs" : 1786691176582
+---
+>     "updatedAtMs" : 1786693655765
+514c547
+<     "label" : "sg4-20260814T070616Z-B11A0A2F-05DC-4CA3-92D2-DED417058512"
+---
+>     "label" : "sg4-20260814T074736Z-5125BFF3-A3B0-4C20-9FD3-655B47519A14"
+596c629,637
+< === 12 PASS / 0 FAIL / 1 DEGRADED （共 13 条 fixture） ===
+---
+> === 12 PASS / 1 FAIL / 0 DEGRADED （共 13 条 fixture） ===
+> 
+> --- 覆盖判定（运行时发现：DEGRADED 与否取决于这次真实运行是否捕获到 notImplemented，不查表）---
+> 真实执行并给出 PASS/FAIL 判定：13/13
+> 运行时发现 DEGRADED（真实捕获 notImplemented，跳过，不计入 PASS/FAIL）：0/13
+>   （无）
+> 
+> --- interrupt / respondApproval / capabilities 覆盖情况（本轮唯一可能变判定方式的类别）---
+>   soft-steer-then-stop-waits-not-preempts [call=interrupt] → FAIL（真实执行，明细见上方 [FAIL] 段）

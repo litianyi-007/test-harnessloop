@@ -1,0 +1,73 @@
+app/kernel-client/swift/OpenclawWire.swift:272:37: warning: expression implicitly coerced from 'Any?' to 'Any'
+270 |                        // rounds/0012 ①' 新增：分组键改用 messageID 后，trace 必须能看见它，
+271 |                        // 否则 live 验证读不到该字段会被误判成「映射没传过来」（本轮真踩过一次）。
+272 |                        "messageID": e.payload.messageID ?? NSNull()]
+    |                                     |                   |- note: provide a default value to avoid this warning
+    |                                     |                   |- note: force-unwrap the value to avoid this warning
+    |                                     |                   `- note: explicitly cast to 'Any' with 'as Any' to silence this warning
+    |                                     `- warning: expression implicitly coerced from 'Any?' to 'Any'
+273 |     case .thinking(let e):
+274 |         out["seq"] = e.seq
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:838:35: warning: no 'async' operations occur within 'await' expression
+ 836 | 
+ 837 |         Task {
+ 838 |             guard let kernelKey = await self.kernelKey(for: ourSessionID) else {
+     |                                   `- warning: no 'async' operations occur within 'await' expression
+ 839 |                 // 这条 RPC 根本不会被发起——照样标记 dispatch，否则等待中的 send()/stop() 会永久
+ 840 |                 // 卡住（它们自己紧随其后的 kernelKey 查找也会独立失败，这里只是不让它们死在屏障上）。
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:841:17: warning: no 'async' operations occur within 'await' expression
+ 839 |                 // 这条 RPC 根本不会被发起——照样标记 dispatch，否则等待中的 send()/stop() 会永久
+ 840 |                 // 卡住（它们自己紧随其后的 kernelKey 查找也会独立失败，这里只是不让它们死在屏障上）。
+ 841 |                 await self.markSubscriptionRpcDispatched(sessionID: ourSessionID)
+     |                 `- warning: no 'async' operations occur within 'await' expression
+ 842 |                 continuation.finish(throwing: KernelClientError.protocolMismatch("unknown session \(ourSessionID)"))
+ 843 |                 return
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:845:39: warning: no 'async' operations occur within 'await' expression
+ 843 |                 return
+ 844 |             }
+ 845 |             if let delayNanoseconds = await self.subscribeDispatchDelayNanosecondsForTesting() {
+     |                                       `- warning: no 'async' operations occur within 'await' expression
+ 846 |                 // Test-only（见 `testSupportSetSubscribeDispatchDelay` 文档注释）——生产路径这里
+ 847 |                 // 恒为 nil，下面这行不会被执行到。
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:850:13: warning: no 'async' operations occur within 'await' expression
+ 848 |                 try? await Task.sleep(nanoseconds: delayNanoseconds)
+ 849 |             }
+ 850 |             await self.markSubscriptionRpcDispatched(sessionID: ourSessionID)
+     |             `- warning: no 'async' operations occur within 'await' expression
+ 851 |             do {
+ 852 |                 // includeApprovals:true——不带这个 flag 收不到 session.approval 事件
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:865:21: warning: no 'async' operations occur within 'await' expression
+ 863 |                     // M1：消费 subscribe 响应里的 `approvalReplay`（authoritative 的当前 pending
+ 864 |                     // 审批快照，见下方 consumeApprovalReplay 文档注释）。
+ 865 |                     await self.consumeApprovalReplay(result, kernelKey: kernelKey)
+     |                     `- warning: no 'async' operations occur within 'await' expression
+ 866 |                 }
+ 867 |             } catch {
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:1528:17: warning: no 'async' operations occur within 'await' expression
+1526 |             do {
+1527 |                 let result = try await self.request(method: "approval.resolve", params: params)
+1528 |                 await self.settleApprovalResolve(reqID: reqID, epoch: epoch, result: .success(result))
+     |                 `- warning: no 'async' operations occur within 'await' expression
+1529 |             } catch {
+1530 |                 await self.settleApprovalResolve(reqID: reqID, epoch: epoch, result: .failure(error))
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:1530:17: warning: no 'async' operations occur within 'await' expression
+1528 |                 await self.settleApprovalResolve(reqID: reqID, epoch: epoch, result: .success(result))
+1529 |             } catch {
+1530 |                 await self.settleApprovalResolve(reqID: reqID, epoch: epoch, result: .failure(error))
+     |                 `- warning: no 'async' operations occur within 'await' expression
+1531 |             }
+1532 |         }
+
+app/kernel-client/swift/OpenclawGatewayKernelClient.swift:1965:17: warning: no 'async' operations occur within 'await' expression
+1963 |             Task {
+1964 |                 try? await Task.sleep(nanoseconds: UInt64(timeoutSeconds) * 1_000_000_000)
+1965 |                 await self.resolvePendingStopWaiter(sessionID: sessionID, outcome: .timedOut)
+     |                 `- warning: no 'async' operations occur within 'await' expression
+1966 |             }
+1967 |         }

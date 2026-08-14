@@ -1,0 +1,7 @@
+=== scope-lock verification: 两端源码中不再有 ["interrupt","respondApproval","capabilities"] 这类方法名硬编码 ===
+--- live Set/HashSet/array literal check (excludes comments) ---
+exit=1 (expect 1 = no matches = clean)
+
+--- remaining textual mentions of the 3-name list (expect: historical/explanatory comments only) ---
+app/contracts/d2/fixtures/swift-runner/SwiftRunnerMain.swift:24:// 这里也硬编码了一份 `["interrupt","respondApproval","capabilities"]`（只用于决定摘要里点名哪些
+app/contracts/d2/fixtures/csharp-runner/CSharpRunnerMain.cs:12:// 这里也硬编码了一份 `["interrupt","respondApproval","capabilities"]`（只用于决定摘要里点名哪些

@@ -1,0 +1,147 @@
+hopper-dispatch v0.58.0 — dispatching T-115-grok...
+  notice: No detailed spec section for T-115-grok in leader-tasklist.md; task content comes from queue.md Brief.
+  permission: sandbox=read-only (auto)
+  notice: model resolved from AGENTS.md Model rule (task-type 'code-review-adversarial'): verified-latest
+  notice: model sentinel 'verified-latest' → grok-4.6 (grok hopper default)
+  notice: effort resolved from AGENTS.md Effort policy (task-type 'code-review-adversarial'): high
+
+=== DISPATCH RESULT ===
+Task:     T-115-grok (code-review-adversarial)
+Vendor:   grok
+Status:   success
+Duration: 399802ms
+Usage:    {"input_tokens":183528,"cache_read_input_tokens":1177344,"cache_creation_input_tokens":0,"output_tokens":23039,"reasoning_tokens":12572,"total_tokens":1383911}
+
+--- OUTPUT ---
+I'll review the rounds/0022 runtime-discovery change myself: read the scope lock, the uncommitted runner diffs, the before/after evidence, and the kernel spec for the four questions.Scope lock is in. Next I’ll pull the T-115 spec, the runner diffs, and the evidence that should show whether interrupt actually ran.Diffs show the hardcoded list was removed. Next I’ll inspect the remaining runner paths, leftover lookup tables, and the interrupt fixture evidence.Next I’ll verify the leftover lookup tables, the interrupt fixture timeline, and the kernel spec that decides whether the Swift FAIL is an implementation deviation.The after-run logs already show `stop()` actually fired. I’ll now check the spec, the client `interrupt` implementation, and whether the reporting leftover list is really gone.Evidence is enough to write the review. I’ll put the full verdict in the hopper output file and also print it, since prior dispatches have failed to land on disk.# T-115-grok — rounds/0022 金标 parity「运行时发现」对抗评审
+
+审查对象：`app/contracts/d2/fixtures/` 当前未提交工作区（5 个文件）。只读，未改任何被审文件。产物已写入 `.hopper/handoffs/T-115-grok-output.md`。
+
+假设（一行）：`evidence/13`/`14` 是摘要改按结果筛选之后的权威运行输出；`02`/`03` 是初版摘要仍带方法名清单时的中间产物。
+
+---
+
+## Summary
+
+两端 runner 已删掉执行前硬编码方法名单（`degradeReason` / `DegradeReason`），改为跑完整条 timeline，仅当真实 client 抛出字面 `notImplemented` / `NotImplemented` 才整条 DEGRADED。Swift 上唯一的 interrupt fixture **确实被执行了**，并以 3 条 mismatch 记 FAIL（退出码受影响）；C# 上同一条仍 DEGRADED，但理由已变成运行时捕获的 `NotImplemented`（`id=steer1`），两端摘要分歧可见。`noteRealFailure` / `NoteRealFailure` **不会**把 `rpcRejected(code:"unsupported_interrupt_mode")` 洗成 DEGRADED——本次 Swift FAIL 就是这条路径的实证。残留问题不在判定主路径，而在 `expectOutboundMethodTable` 这份仍按四方法查表的翻译层、以及「整条跑完再 DEGRADED」会吞掉同 fixture 里后续真失败。
+
+## Files touched
+
+评审本身未改被审文件。工作区改动：
+
+- `app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift` — 删除静态 `degradeReason`，新增 `noteRealFailure` + 三条方法真派发
+- `app/contracts/d2/fixtures/swift-runner/SwiftRunnerMain.swift` — 摘要改为按 PASS/FAIL/DEGRADED 结果筛选
+- `app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs` — 镜像 Swift 的运行时发现
+- `app/contracts/d2/fixtures/csharp-runner/CSharpRunnerMain.cs` — 同上摘要改写
+- `app/contracts/d2/fixtures/README.md` — 记录 rounds/0022 分歧与实测 FAIL 明细
+
+`git diff --name-only -- app/contracts/d2/fixtures/` 仅上述 5 个文件；fixture JSON 与两端 kernel-client 本体未改，符合 scope-lock。
+
+## Acceptance verification (8/8)
+
+| # | 标准 | 结果 | 证据 |
+|---|---|---|---|
+| 1 | Swift runner 构建 | PASS | `evidence/04-swift-build.log` 仅既有 warning；`02`/`13` 已跑出完整 13 条 |
+| 2 | C# runner 构建 | PASS | `evidence/05-csharp-build.log:6` `Build succeeded.` |
+| 3 | 名单已消失 | PASS（可执行路径） | `evidence/18` live 字面量检查 `exit=1`（无匹配）。`command grep` 确认函数体已删，三方法数组只剩注释/README 历史叙述 |
+| 4 | Swift interrupt 不再 DEGRADED | PASS | 基线 `00` 静态 `[DEGRADED]` → 改后 `13`：`12 PASS / 1 FAIL / 0 DEGRADED`。仓内无 fixture 使用 `respondApproval` |
+| 5 | C# 仍 DEGRADED，理由来自真实 `NotImplemented` | PASS | `14`：`id=steer1 … 抛出 NotImplemented：not implemented: interrupt() 本轮 TODO 桩`。对照 `OpenclawGatewayKernelClient.cs:421` |
+| 6 | 分歧可见 | PASS | Swift `13`：`真实执行 13/13` + `[FAIL]`。C# `14`：`真实执行 12/13` + `[DEGRADED]` |
+| 7 | app 无回归 | PASS | `evidence/09-frame-replay-tests.log` 末行 `=== 结果: 163/163 PASS ===` |
+| 8 | 破坏性反证命中 > 0 | PASS | `10`：`ROUNDS-0022-COUNTER-PROOF: 静态名单命中，未执行 timeline 就整条跳过`。`12`：还原后 sha256 与注入前逐字节相同 |
+
+## 四问
+
+### ①「运行时发现」是否还有残留查表？
+
+**DEGRADED 判定主路径：没有。** 摘要路径：初版有，现已清掉。翻译层：还有一份**不决定 DEGRADED、但会污染 FAIL 理由**的查表。
+
+- `degradeReason` / `DegradeReason` 已删。
+- 唯一置位点是类型匹配：Swift `SwiftFixtureRunner.swift:313-316` 只认 `KernelClientError.notImplemented`；C# `CSharpFixtureRunner.cs:188-196` 只认 `KernelClientErrorKind.NotImplemented`。
+- 摘要：`SwiftRunnerMain.swift:99` / `CSharpRunnerMain.cs:105` 按 `outcome != passed` 筛选。`evidence/17` 证实主会话抓到的 `--- interrupt / respondApproval / capabilities 覆盖情况 ---` 已从 `02`/`03` 改成 `13`/`14` 的按结果筛选。当前源码里那段标题不存在。
+
+**仍在的查表（N1）**：`expectOutboundMethodTable` 仍只有 `req.createSession/send/subscribe/stop`。Swift `:768-779` 注释声称三个方法「刻意没有注册 `testSupportStubRPC`」——与同文件 `:680-684` 矛盾（interrupt **已经**注册 `sessions.abort` 并 `recordOutbound`）。C# `:814-816` 仍写「这些 fixture 已被整条 DEGRADED，不会走到这里」。Swift FAIL 第一条因此写成「未登记 `req.interrupt`……该 D2 方法本轮 SG-5 未实现」——对已落地 `mode:"cancel"` 的 Swift `interrupt()` 是假话。
+
+### ② interrupt fixture 是真跑了，还是换了个方式跳过？
+
+**真跑了。** 不依赖摘要文案。
+
+基线 `00` 在该条上没有任何 `sessions.create` / `subscribe` / `abort` 日志，直接 `[DEGRADED]`。改后 `13`：
+
+1. 该条之前出现了 `sessions.create` + `sessions.messages.subscribe`。
+2. 随后 **`SEND req sessions.abort` 且没有 RECV**——这是 `t=25` 的 `stop()`（fixture 没有 `mock_response(replyTo: stop1)`）。若仍整条跳过，这条 abort 不会出现。
+3. 三条 mismatch 都被跑到：`expect_outbound(steer1)`、`assert_state@t=25.sessionLock: 期望 interrupt_in_progress，实际 stop_in_progress`、`pendingOperations.steer1: 期望 submitted，实际 nil`。
+4. 没有第二条 abort、也没有 abort 的 RECV：`interrupt(mode:"steer")` 没走到 RPC，与 client 在拿锁前 throw `unsupported_interrupt_mode` 一致（`OpenclawGatewayKernelClient.swift:946-952`）。
+5. 反证 `10` 注入静态名单后，理由变回「未执行 timeline 就整条跳过」，abort 消失。
+
+C# `14` 同样先 `create`/`subscribe` 再 `SEND sessions.abort`，然后才 `[DEGRADED] … id=steer1 … NotImplemented`。DEGRADED 发生在整条跑完之后。
+
+### ③ `noteRealFailure` 会不会把真失败洗成 DEGRADED？
+
+**对 `rpcRejected(code:"unsupported_interrupt_mode")`：不会。** 本次 Swift `1 FAIL / 0 DEGRADED` 就是这条绿证。
+
+| client 抛出 | `noteRealFailure` | 最终判定 |
+|---|---|---|
+| `notImplemented` | 置位 | DEGRADED |
+| `rpcRejected("unsupported_interrupt_mode")` | 不匹配 | FAIL |
+| `rpcRejected("session_locked")` | 不匹配 | FAIL |
+| `ApprovalDecisionError.approvalNotPending` | 不匹配 | FAIL |
+
+Swift 对非 cancel 的 throw 是 **`rpcRejected`，不是 `notImplemented`**。文案里虽有 `"is not implemented this round"`，判定只认 enum case。
+
+**会洗掉真失败的反例：**
+
+- **CE-A（当前 C# 这条已踩到边缘）**：整条跑完再 DEGRADED，后续真失败被丢。C# `03:55` 已发出 `sessions.abort`（`stop()` 真跑了），锁态/pendingOperations 本应 FAIL，被 interrupt 的 `NotImplemented` 整条洗掉。
+- **CE-B（今天没有这条 fixture）**：同一 timeline 里先 `interrupt(steer)` 累积真实 mismatch，再调 `capabilities()` → 整条变 DEGRADED。谁以后顺手加一个 capabilities 探测，就会把前面的真失败吃掉。
+- **CE-C**：若 client 把 steer 拒绝写成 `throw .notImplemented(...)`，runner 会洗。当前 Swift client 没有这么写。
+
+`rpcRejected` vs `notImplemented` 的收口本身是紧的。会洗的是「同 fixture 里后出现的 `notImplemented` 覆盖先出现的真失败」——整条 DEGRADED 语义的代价，不是类型匹配写错。
+
+### ④ 新的静默失败路径
+
+- **S1（中）**：partial execution + 整条 DEGRADED。见 CE-A。
+- **S2（中）**：`expect_outbound` 未登记 `req.interrupt`。将来 `mode:"cancel"` 真发出 abort 且已 `recordOutbound`，断言仍走「未登记」并**无视已记录的 outbound**。
+- **S3（低）**：C# interrupt/respondApproval 只 `SetGate`、不注册 RPC stub。今日安全；C# 一旦落地 `cancel` 就会缺 stub。Swift interrupt 已登记 stub；随后 `stop()` 再登记会覆盖同一条 `sessions.abort`——当前 fixture 里 interrupt 不用 abort，没撞上。
+
+`capabilities` 不注册 stub、DEGRADED 不进退出码，都不是新问题。RPC 门按「今天会不会结构性崩溃」是齐的。
+
+## 主会话规格裁定核实
+
+主会话裁定：Swift 这条 FAIL 是**实现偏离 confirmed 规格，不是 fixture 过时**。
+
+**规格原文核验——条文没有读反。** `d1-kernelport-spec-v3-6.md` 为 `design_status: confirmed`。§9.3 矩阵：`interrupt_in_progress` × `stop()` = **特殊仲裁**，不是 `session_locked` reject。steer 专条与 cancel 专条均为「**等待，不抢占**」。
+
+实现（`OpenclawGatewayKernelClient.swift:931-933`，rounds/0020）明确写：三者两两互斥，非 idle 一律 `session_locked`，**不做优先级仲裁**。frame-replay 还把这个偏离锁成了绿测试。
+
+**裁定成立：fixture 没有过时。** 它编码的是 confirmed §9.3。
+
+**有一处归因混写，但不构成误读规格：** 本次 `sessionLock: 期望 interrupt_in_progress，实际 stop_in_progress` 的近因**不是** stop 抢占了在途 interrupt。steer 在**拿锁之前**就被 `unsupported_interrupt_mode` 拒绝，锁从未进入 `interrupt_in_progress`；随后 `stop()` 面对的是 `idle`。§9.3 仲裁在这次运行里没有被观察到。
+
+规格偏离有两条，本次只实证了第一条：
+
+1. **已实证**：规格要求 openclaw 支持 `steer`（§4.1/§5/§6.1(a)）。实现只做了 `cancel`。
+2. **代码里存在、本次未观察到**：即便 steer 落地，锁矩阵仍是一律 reject，与 §9.3 相反。
+
+## Decisions / deviations
+
+未重跑二进制，采信 `evidence/04,05,08,09,13,14`，并与源码、基线 diff 交叉核对。`expectOutboundMethodTable` 算作问 ① 的残留查表。CE-A 记为设计代价，不单独打 REWORK。
+
+## Open questions
+
+1. 下一轮补 `steer` 或 C# `interrupt` 时，`expectOutboundMethodTable` 怎么登记？steer 的真实 RPC 按规格是 `chat.send` 不是 `sessions.abort`。
+2. 整条 DEGRADED 是否至少应在摘要里列出被丢弃的 mismatch 条数？
+3. rounds/0020 的「不做仲裁」是持久产品决策，还是确认要对齐 §9.3？
+
+## Verdict
+
+**PASS_WITH_NOTE**
+
+运行时发现的主契约成立：名单从可执行路径消失，Swift interrupt 真跑并真实 FAIL，`rpcRejected(unsupported_interrupt_mode)` 没有被洗成 DEGRADED，C# 仍按真实 `NotImplemented` 降级，两端分歧可见。不够打 REWORK。不够打纯 PASS，是因为 `expectOutboundMethodTable` 仍用过期「未实现」文案当第一条 FAIL 理由，且整条 DEGRADED 会静默丢掉同 fixture 里已实现方法的失败。
+
+## Next recommendation
+
+1. **本轮可收**：不必为了对齐数字去实现 C# 三方法或改 fixture JSON。
+2. **收盘前建议补一刀**：修掉 `expectOutboundMethodTable` 两端过期注释；未登记时不要再写「SG-5 未实现」。
+3. **不要在本轮修 Swift FAIL**：它是实现相对 confirmed D1 的缺口第一次变得可观察。
+4. **后续轮**：C# `interrupt(cancel)` 落地时必须补 RPC stub；补 steer 时按 §5 走 `chat.send`+`queueMode:"steer"`，并单独决定锁矩阵是否改回 §9.3。在那之前不要改这条金标 fixture。
+--- END OUTPUT ---

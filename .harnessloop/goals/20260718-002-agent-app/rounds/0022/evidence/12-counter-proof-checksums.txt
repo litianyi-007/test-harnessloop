@@ -1,0 +1,14 @@
+=== pre-injection checksums (constructive, discovery-based code) ===
+85a72b84b8f853db9020edc27b8f2a846ef8657af6f209cb3ce7e2fd66a76b18  app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift
+ab8dca0224e7bf1057b92c4fe309f7177cb962b4d52b36f5e9965abbb43a4c2d  app/contracts/d2/fixtures/swift-runner/SwiftRunnerMain.swift
+7009a3d5d10a6fe7d7f459efc77dabd44d5a19cbb6f58fa898cab61e8a84d369  app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs
+2ffd33bee741ad75d326d35ef3465c7b8b9c41254cf91191665672e798db8856  app/contracts/d2/fixtures/csharp-runner/CSharpRunnerMain.cs
+
+=== post-revert checksums (after removing the injected static-list short-circuit) ===
+85a72b84b8f853db9020edc27b8f2a846ef8657af6f209cb3ce7e2fd66a76b18  app/contracts/d2/fixtures/swift-runner/SwiftFixtureRunner.swift
+ab8dca0224e7bf1057b92c4fe309f7177cb962b4d52b36f5e9965abbb43a4c2d  app/contracts/d2/fixtures/swift-runner/SwiftRunnerMain.swift
+7009a3d5d10a6fe7d7f459efc77dabd44d5a19cbb6f58fa898cab61e8a84d369  app/contracts/d2/fixtures/csharp-runner/CSharpFixtureRunner.cs
+2ffd33bee741ad75d326d35ef3465c7b8b9c41254cf91191665672e798db8856  app/contracts/d2/fixtures/csharp-runner/CSharpRunnerMain.cs
+
+=== diff (expect: empty = byte-for-byte identical) ===
+IDENTICAL — no residue from counter-proof injection

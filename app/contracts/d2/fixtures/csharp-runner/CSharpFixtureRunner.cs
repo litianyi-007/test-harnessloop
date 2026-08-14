@@ -9,8 +9,15 @@
 //   - `nativeCallOrder` 在 `approval.resolve`/`sessions.abort` 两个 stub 闭包**真正被真实 client
 //     调用的那一刻**（不是注册的时刻）append。
 //   - `advance_clock`/`disconnect` 轮询『任务已结算』（`IsCallSettled`），不是固定 sleep 猜调度。
-//   - `interrupt`/`respondApproval`/`capabilities` 三个方法本轮仍是 SG-5 TODO 桩——含它们的 fixture
-//     在执行前就被 `DegradeReason` 静态扫描标记 DEGRADED，不伪造假内核让它“通过”。
+//   - rounds/0022 起：`interrupt`/`respondApproval`/`capabilities` 三个方法与其余四个一样真派发给
+//     真实 client（`PerformClientCallAsync` 对应分支），DEGRADED 与否不再是执行前的静态方法名单
+//     判定，而是运行时『这次真实调用是否真的抛出了 `KernelClientErrorKind.NotImplemented`』——C#
+//     侧这三个方法本轮**全部**仍是 SG-5 TODO 桩（`InterruptAsync`/`RespondApprovalAsync`/
+//     `CapabilitiesAsync` 无条件 `throw new KernelClientException(NotImplemented,...)`，不像 Swift
+//     侧 `interrupt()`/`respondApproval()` 已分别在 rounds/0020/0015 落地），因此**结果不变**——含
+//     它们的 fixture 仍然 DEGRADED，但判据现在来自这一次运行真实捕获到的异常，不是任何静态名单，
+//     不伪造假内核让它”通过”（详见下方「已知的『无法翻译』边界」与 `DegradeReason` 已删除后的
+//     `NoteRealFailure`/`RunFixtureFileAsync` 说明）。
 //
 // ============================================================================================
 // C# 与 Swift 的表达差异总览（镜像 OpenclawGatewayKernelClient.cs 文件头同款差异记录）
@@ -27,10 +34,29 @@
 //     停顿/`ApplyAdvanceClockAsync` 的轮询）才是 `async`。
 //
 // ============================================================================================
-// 已知的『无法翻译』边界（诚实降级，不伪造）——与 Swift 侧完全一致
+// DEGRADED 判定：运行时发现，不是静态方法名单（rounds/0022 治根，与 Swift 侧机制完全一致）
 // ============================================================================================
-// 见 `DegradeReason`（interrupt/respondApproval/capabilities）与 `ExpectOutboundMethodTable`
-// （只覆盖 Stage A/B 用到的四个 D2 方法）的文档注释。
+// 直到 rounds/0022 为止，这里是一份硬编码方法名单：`["interrupt", "respondApproval",
+// "capabilities"]`（`DegradeReason`，已删除）——任何 timeline 用到这三个方法名的 fixture，不问真实
+// 结果如何，执行前就整条静态跳过。这份名单在 C# 侧从未过期过（interrupt/respondApproval/
+// capabilities 三者本轮**全部**仍是无条件 `throw NotImplemented` 的 SG-5 TODO 桩），但它在 Swift
+// 侧从 rounds/0015（`respondApproval()` 落地）起就已经过期——同一份名单硬编码在两端，实际状态却早已
+// 分岔，这正是本轮要修的问题：判据不该来自『名字是否出现在名单里』，而该来自『这次真实调用到底抛了
+// 什么』。
+//
+// rounds/0022 改法：**不查名单，直接跑。** `interrupt`/`respondApproval`/`capabilities` 现在与
+// createSession/send/subscribe/stop 走同一条翻译路径（`PerformClientCallAsync` 对应分支）——真调用
+// `OpenclawGatewayKernelClient` 的对应方法，真实结果流回 `RunnerContext`。DEGRADED 与否只取决于
+// 一件事：这次真实调用抛出的异常，`Kind` 是不是字面上的 `KernelClientErrorKind.NotImplemented`——
+// `RunnerContext.NoteRealFailure` 是唯一判定点，`OnCallThrew`/`OnStopShapedThrewAsync`（服务 stop
+// 与 interrupt 共享的『operation 通道』结算逻辑）全部经它，整条 timeline 跑完后
+// `RunFixtureFileAsync` 统一读取 `ctx.NotImplementedTrigger` 决定最终 DEGRADED 还是正常 PASS/FAIL
+// （即便 NotImplemented 出现在 timeline 中途，也是等整条跑完再判定——理由见 `RunFixtureFileAsync`
+// 对应注释，与 Swift 侧同一份论证）。C# 侧三个方法今天全部无条件抛 NotImplemented，因此**观察结果
+// 与改动前相同**——含它们的 fixture 仍然 DEGRADED——但这是运行时真实捕获的结果，不再是查表。
+//
+// `ExpectOutboundMethodTable` 只覆盖 createSession/send/subscribe/stop 四个方法——理由见该表自己的
+// 文档注释：不是因为另外三个仍被整条 DEGRADED 挡住，而是因为它们的翻译层目前不拦截/不记录出站 RPC。
 
 #nullable enable
 using System;
@@ -147,6 +173,31 @@ namespace CSharpRunner
         private readonly List<string> _accumulatedMismatches = new();
         private bool _hasStopWaitingForTerminal;
 
+        /// <summary>运行时发现（rounds/0022 核心状态，镜像 Swift `notImplementedTrigger`）：唯一判据
+        /// 是『某次真实 client 调用抛出的异常，`Kind` 字面上就是 NotImplemented』——不是任何静态方法
+        /// 名单，也不是按 `Call` 名字猜测。只记第一次命中（先到先得，足够诊断；一旦命中即整条 fixture
+        /// DEGRADED，见 `RunFixtureFileAsync`，多记几个没有增量价值）。</summary>
+        private (string CallId, string Call, string Detail)? _notImplementedTrigger;
+        public (string CallId, string Call, string Detail)? NotImplementedTrigger { get { lock (_sync) return _notImplementedTrigger; } }
+
+        /// <summary>全部『真实 client 调用失败』路径的共同入口——`OnCallThrew`（createSession/send/
+        /// subscribe/respondApproval/capabilities）与 `OnStopShapedThrewAsync`（stop/interrupt 共享
+        /// 的 operation 通道结算）都在写入各自的失败记账**之前**先经过这里。判定逻辑与文件头
+        /// 「DEGRADED 判定」一节说明一致：只认异常的字面 Kind，`RpcRejected`（即便语义上也是『不
+        /// 支持』，如 interrupt 对 steer/abort_and_resend 的拒绝）一律不触发。</summary>
+        public void NoteRealFailure(string id, Exception error)
+        {
+            lock (_sync)
+            {
+                if (_notImplementedTrigger != null) return;
+                if (error is KernelClientException kce && kce.Kind == KernelClientErrorKind.NotImplemented)
+                {
+                    var call = _callKindById.TryGetValue(id, out var c) ? c : "<未知>";
+                    _notImplementedTrigger = (id, call, kce.Message);
+                }
+            }
+        }
+
         public RunnerContext(OpenclawGatewayKernelClient client) => Client = client;
 
         public SessionHandle? CurrentSessionHandle { get { lock (_sync) return _currentSessionHandle; } }
@@ -235,6 +286,7 @@ namespace CSharpRunner
 
         public void OnCallThrew(string id, Exception error)
         {
+            NoteRealFailure(id, error);
             lock (_sync)
             {
                 _callOutcomes[id] = new Dictionary<string, object?>
@@ -253,24 +305,35 @@ namespace CSharpRunner
         /// 瞬间调用，如果不等待，可能在排空 Task 真正把镜像事件写进 `_drainedEvents` 之前就已经读完
         /// （同 Swift 侧文档注释复现的 flaky 结果）。
         /// </summary>
-        public async Task OnStopResolvedAsync(string id, StopResultPayload result, int eventsCountAtStart)
+        /// <summary>StopAsync/InterruptAsync 共享的『operation 通道』结算逻辑——两者在 SG-5 内部本就
+        /// 共享同一张『等待终态』表（`_pendingStops`，靠 `OperationKind` 区分 Stop/Interrupt），产出的
+        /// OperationOutcome 语义完全一致，因此运行结束时怎么记账不分叉（镜像 Swift
+        /// `onStopShapedResolved`）。`outcomeRawValue` 由调用方用 `CSharpFixtureRunner.WireEnumValue`
+        /// 从各自类型化的 `result.Outcome` 算出（`StopResultPayload.Outcome` 是
+        /// `StopResultPayloadOutcome`，`InterruptResultPayload.Outcome` 是 `PayloadOutcome`，两个不同
+        /// 枚举类型，这一层不需要再区分）。</summary>
+        private async Task OnStopShapedResolvedAsync(string id, string outcomeRawValue, int eventsCountAtStart)
         {
             lock (_sync) _hasStopWaitingForTerminal = false;
             await Task.Delay(80);
             lock (_sync)
             {
                 var outcome = FirstOperationCompletedOutcomeLocked(eventsCountAtStart);
-                _pendingOperations[id] = outcome ?? CSharpFixtureRunner.WireEnumValue(result.Outcome);
+                _pendingOperations[id] = outcome ?? outcomeRawValue;
             }
         }
 
-        public async Task OnStopThrewAsync(string id, Exception error, int eventsCountAtStart)
+        /// <summary>见 `OnStopShapedResolvedAsync` 文档注释——本方法是失败一侧的镜像，同样服务
+        /// StopAsync/InterruptAsync（镜像 Swift `onStopShapedThrew`）。</summary>
+        private async Task OnStopShapedThrewAsync(string id, Exception error, int eventsCountAtStart)
         {
+            NoteRealFailure(id, error);
             lock (_sync) _hasStopWaitingForTerminal = false;
 
-            // `session_locked` 是 StopAsync 顶部 `currentLock != Idle` 前置 guard 直接抛出的——发生在
-            // `operationId` 铸造之前，真实 client 绝不会为这次调用产出任何 operation_completed 镜像
-            // 事件。这个分支不用等，等了也白等（镜像 Swift 同名分支的文档注释）。
+            // `session_locked` 是 StopAsync/InterruptAsync 顶部 `currentLock != Idle` 前置 guard 直接
+            // 抛出的——发生在 `operationId` 铸造之前，真实 client 绝不会为这次调用产出任何
+            // operation_completed 镜像事件。这个分支不用等，等了也白等（镜像 Swift 同名分支的文档
+            // 注释）。
             if (error is KernelClientException kce && kce.Kind == KernelClientErrorKind.RpcRejected && kce.Code == "session_locked")
             {
                 lock (_sync)
@@ -296,7 +359,9 @@ namespace CSharpRunner
                 }
                 else
                 {
-                    // 没有 operation_completed 镜像——这次 stop() 在铸造 operationId 之前就被同步拒绝，
+                    // 没有 operation_completed 镜像——这次调用在铸造 operationId 之前就被同步拒绝
+                    // （例如 session_locked，或 InterruptAsync 顶部『mode 不是 cancel』的
+                    // unsupported_interrupt_mode 拒绝——两者都发生在 operationId 铸造之前 throw），
                     // 根本没有进入 OperationOutcome 通道，改记 callOutcomes。
                     _callOutcomes[id] = new Dictionary<string, object?>
                     {
@@ -306,6 +371,22 @@ namespace CSharpRunner
                 }
             }
         }
+
+        public Task OnStopResolvedAsync(string id, StopResultPayload result, int eventsCountAtStart) =>
+            OnStopShapedResolvedAsync(id, CSharpFixtureRunner.WireEnumValue(result.Outcome), eventsCountAtStart);
+
+        public Task OnStopThrewAsync(string id, Exception error, int eventsCountAtStart) =>
+            OnStopShapedThrewAsync(id, error, eventsCountAtStart);
+
+        /// <summary>D1 §2.4 interrupt —— rounds/0022 新增：此前 interrupt/respondApproval/capabilities
+        /// 三个 client_call 从未被真实派发（整条 fixture 静态 DEGRADED），本轮起 interrupt 与 stop
+        /// 走同一条『operation 通道』记账（见 `OnStopShapedResolvedAsync`/`OnStopShapedThrewAsync`
+        /// 文档注释）。</summary>
+        public Task OnInterruptResolvedAsync(string id, InterruptResultPayload result, int eventsCountAtStart) =>
+            OnStopShapedResolvedAsync(id, CSharpFixtureRunner.WireEnumValue(result.Outcome), eventsCountAtStart);
+
+        public Task OnInterruptThrewAsync(string id, Exception error, int eventsCountAtStart) =>
+            OnStopShapedThrewAsync(id, error, eventsCountAtStart);
 
         /// <summary>调用前必须持有 `_sync`（内部辅助，不单独加锁）。</summary>
         private string? FirstOperationCompletedOutcomeLocked(int index)
@@ -444,6 +525,37 @@ namespace CSharpRunner
                 };
             }
             return new Dictionary<string, object?> { ["code"] = "unknown", ["detail"] = error.Message };
+        }
+
+        /// <summary>`InterruptRequestMessagePayload.Input` 是强类型 `Input?`（`{Kind,Text,Parts}`），
+        /// 但本轮唯一用到 `interrupt` 的金标 fixture（`operation-outcome/soft-steer-then-stop.json`，
+        /// 逐字转录自 D4 §4.3 的 spec 级示例）里 `args.input` 写的是裸字符串 `"..."`——与
+        /// `NormalizeNativeParams` 早就对 `sessions.send` 的 `message`&lt;-&gt;`text` 做过的同一种
+        /// 宽容一致：裸字符串是『纯文本输入』的简写。这里同样宽容：字符串按 `{Kind:Text, Text:
+        /// &lt;string&gt;}` 展开；已经是对象就走标准反序列化；不存在就是 null——不臆造，也不让一处
+        /// 占位符字符串在『还没跑到真实 client』这一步就直接让整条 fixture 判 FAIL（镜像 Swift
+        /// `decodeInterruptOptions` 文档注释）。`mode` 缺失/不合法时如实拒绝，不臆造默认值。</summary>
+        private static InterruptRequestMessagePayload DecodeInterruptOptions(JsonElement argsEl)
+        {
+            if (!argsEl.TryGetProperty("mode", out var modeEl) || modeEl.ValueKind != JsonValueKind.String)
+                throw new RunnerException("client_call(interrupt) 的 args.mode 缺失或不是字符串");
+            var modeRaw = modeEl.GetString();
+            var mode = modeRaw switch
+            {
+                "cancel" => Mode.Cancel,
+                "steer" => Mode.Steer,
+                "abort_and_resend" => Mode.AbortAndResend,
+                _ => throw new RunnerException($"client_call(interrupt) 的 args.mode 不是合法取值：{modeRaw}"),
+            };
+            Input? input = null;
+            if (argsEl.TryGetProperty("input", out var inputEl) && inputEl.ValueKind != JsonValueKind.Null && inputEl.ValueKind != JsonValueKind.Undefined)
+            {
+                input = inputEl.ValueKind == JsonValueKind.String
+                    ? new Input { Kind = InputKind.Text, Text = inputEl.GetString() }
+                    : inputEl.Deserialize<Input>(D2.Converter.Settings);
+            }
+            var runId = argsEl.TryGetProperty("runId", out var runIdEl) && runIdEl.ValueKind == JsonValueKind.String ? runIdEl.GetString() : null;
+            return new InterruptRequestMessagePayload { Input = input, Mode = mode, RunId = runId };
         }
 
         // MARK: - client_call 翻译层
@@ -599,11 +711,94 @@ namespace CSharpRunner
                 }
 
                 case "interrupt":
+                {
+                    // D1 §2.4——rounds/0022 起真派发（此前这里是「不应该走到这里」的哨兵抛错，见文件头
+                    // 「DEGRADED 判定」一节）。C# 侧 `InterruptAsync` 本轮无条件 `throw
+                    // NotImplemented`，不读任何参数、不做任何 RPC——因此不需要像 Swift 那样为
+                    // `mode:"cancel"` 的假想成功路径注册 RPC 桩：C# 今天没有任何一条分支能走到发出
+                    // RPC 那一步。**但 gate 仍必须注册**（实测踩过这个坑）：
+                    // `soft-steer-then-stop.json` 的 timeline 仍然含一条
+                    // `mock_response(replyTo: <这次 interrupt 调用的 id>)`（逐字转录自 D4 spec 示例），
+                    // 若不注册 gate，这条 op 会在 `ApplyMockResponse` 里找不到 gate 而抛
+                    // `RunnerException`，把一次『真实 client 拒绝』意外劣化成一次『runner 结构性崩溃』
+                    // ——这不是本轮想要的『真实 FAIL』。
+                    var handle = ctx.CurrentSessionHandle ?? throw new RunnerException($"interrupt（id={id}）在 createSession 之前调用");
+                    if (op.Args is not { } interruptArgsEl)
+                        throw new RunnerException($"client_call(interrupt id={id}) 缺少 args");
+                    var options = DecodeInterruptOptions(interruptArgsEl);
+                    var gate = new ReplyGate();
+                    ctx.SetGate(id, gate);
+                    var eventsCountAtStart = ctx.DrainedEventsCount();
+                    var task = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var result = await client.InterruptAsync(handle, options);
+                            await ctx.OnInterruptResolvedAsync(id, result, eventsCountAtStart);
+                        }
+                        catch (Exception error)
+                        {
+                            await ctx.OnInterruptThrewAsync(id, error, eventsCountAtStart);
+                        }
+                    });
+                    ctx.AddPendingTask(task);
+                    break;
+                }
+
                 case "respondApproval":
+                {
+                    // D1 §2.6——rounds/0022 起真派发。C# 侧 `RespondApprovalAsync` 本轮同样无条件
+                    // `throw NotImplemented`，不需要 RPC 桩（理由同 interrupt 分支）——但同样注册
+                    // gate，避免未来任何一条 `mock_response(replyTo: <respondApproval 调用的 id>)`
+                    // 撞见结构性崩溃。
+                    var handle = ctx.CurrentSessionHandle ?? throw new RunnerException($"respondApproval（id={id}）在 createSession 之前调用");
+                    if (op.Args is not { } respondArgsEl || !respondArgsEl.TryGetProperty("reqId", out var reqIdEl) || reqIdEl.ValueKind != JsonValueKind.String)
+                        throw new RunnerException($"client_call(respondApproval id={id}) 缺少 args.reqId");
+                    var reqId = reqIdEl.GetString()!;
+                    if (!respondArgsEl.TryGetProperty("decision", out var decisionEl))
+                        throw new RunnerException($"client_call(respondApproval id={id}) 缺少 args.decision");
+                    var decision = decisionEl.Deserialize<Decision>(D2.Converter.Settings)
+                        ?? throw new RunnerException($"client_call(respondApproval id={id}) 的 decision 解码为 null");
+                    var gate = new ReplyGate();
+                    ctx.SetGate(id, gate);
+                    var task = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await client.RespondApprovalAsync(handle, reqId, decision);
+                            ctx.SetCallOutcomeResolved(id);
+                        }
+                        catch (Exception error)
+                        {
+                            ctx.OnCallThrew(id, error);
+                        }
+                    });
+                    ctx.AddPendingTask(task);
+                    break;
+                }
+
                 case "capabilities":
-                    // 不应该走到这里——`DegradeReason` 已经在执行 timeline 之前静态扫描并整条 fixture
-                    // 标记 DEGRADED。留一个明确抛错，防止未来谁绕开了那道静态检查。
-                    throw new RunnerException($"client_call『{call}』本应在执行前被 DegradeReason 拦截，未被拦截是 runner 自身的缺陷");
+                {
+                    // D1 §2.7——rounds/0022 起真派发。今天两端都是无条件 `throw NotImplemented`（没有
+                    // 任何分支会先做别的事），因此不需要 RPC 桩：真调用即真发现。`session` 是可选的
+                    // （D1 §2.7 允许不带 session 查内核级能力），`ctx.CurrentSessionHandle` 尚未建立时
+                    // 如实传 null，不臆造一个不存在的 session。
+                    var sessionArg = ctx.CurrentSessionHandle;
+                    var task = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await client.CapabilitiesAsync(sessionArg);
+                            ctx.SetCallOutcomeResolved(id);
+                        }
+                        catch (Exception error)
+                        {
+                            ctx.OnCallThrew(id, error);
+                        }
+                    });
+                    ctx.AddPendingTask(task);
+                    break;
+                }
 
                 default:
                     throw new RunnerException($"未知 KernelClientMethod『{call}』");
@@ -679,7 +874,7 @@ namespace CSharpRunner
             {
                 ctx.AppendMismatch(
                     $"expect_outbound({matches}): csharp-runner 未登记『{expectedType}』对应的 openclaw RPC 方法名" +
-                    "（该 D2 方法本轮 SG-5 未实现，或超出 Stage A/B 翻译范围）");
+                    "（该 D2 方法尚未在本 runner 的 outbound 方法表中登记；不代表 client 未实现——rounds/0022 起实现状态由运行时发现判定，不再由此处文案声称）");
                 return;
             }
 
@@ -772,6 +967,38 @@ namespace CSharpRunner
                         // `JsonNullMarker.Instance`（见 `JsonNullMarker` 文档注释的边界说明）。
                         gate.ResolveSuccess(new JSONObject { ["abortedRunId"] = null, ["status"] = "no-active-run" });
                     }
+                    break;
+                }
+                case "interrupt":
+                {
+                    // interrupt(mode:"cancel") 调用的是与 stop() 完全相同的 sessions.abort RPC，响应
+                    // 形状因此完全一致——复用同一套『从 ctx.CurrentRunId 派生』的推导逻辑（见上方
+                    // `case "stop"` 的说明，这里不重复论证）。SG-5 内部『等待终态』表按 session（不是
+                    // 按 operation kind）持有，StopAsync/InterruptAsync 两两互斥，同一时刻至多一个在
+                    // 等待，复用同一组 `HasStopWaitingForTerminal`/`WaitingStopCallId` 是忠实反映。
+                    var activeRunId = ctx.CurrentRunId;
+                    if (activeRunId != null)
+                    {
+                        gate.ResolveSuccess(new JSONObject { ["abortedRunId"] = activeRunId, ["status"] = "aborted" });
+                        ctx.SetHasStopWaitingForTerminal(true);
+                        ctx.SetWaitingStopCallId(replyTo);
+                    }
+                    else
+                    {
+                        gate.ResolveSuccess(new JSONObject { ["abortedRunId"] = null, ["status"] = "no-active-run" });
+                    }
+                    break;
+                }
+                case "respondApproval":
+                {
+                    // 真实 `approval.resolve` 响应形状是 `{applied, approval:{status,...}}`——不像
+                    // StopAsync/InterruptAsync 那样能从 canonical 内部状态无歧义派生（respondApproval
+                    // 的结果本质上来自 openclaw 内核侧的决策记录，runner 没有独立信息源可以替 fixture
+                    // 作者算出来），因此如实透传 fixture 声明的 `result`（同 createSession/send 两个
+                    // 既有先例：读 fixture 声明值，不臆造）。今天没有任何 fixture 提供这条
+                    // mock_response（respondApproval 尚无 fixture 覆盖，见 rounds/0022 报告的覆盖
+                    // 缺口），这个分支目前不可达，留给未来。
+                    gate.ResolveSuccess(result);
                     break;
                 }
                 default:
@@ -1003,25 +1230,6 @@ namespace CSharpRunner
             }
         }
 
-        // MARK: - DEGRADED 检测
-
-        public static string? DegradeReason(ParityFixture fixture)
-        {
-            foreach (var op in fixture.Timeline)
-            {
-                if (op.Op == TimelineOpKind.ClientCall && op.Call is { } call &&
-                    (call == "interrupt" || call == "respondApproval" || call == "capabilities"))
-                {
-                    return $"timeline 包含 client_call『{call}』——SG-5 OpenclawGatewayKernelClient 该方法本轮" +
-                           "仍是 TODO 桩（IKernelClient.cs 头注释 + OpenclawGatewayKernelClient.cs 对应方法体均为" +
-                           " throw KernelClientException(NotImplemented,...)），没有任何 RPC/wire 交互可翻译，" +
-                           "无法驱动真实 client 产生有意义的状态转移。本 fixture 对 csharp-runner 诚实降级为" +
-                           " DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'。";
-                }
-            }
-            return null;
-        }
-
         // MARK: - 顶层：跑一个 fixture 文件
 
         public static async Task<FixtureRunResult> RunFixtureFileAsync(string path)
@@ -1042,10 +1250,6 @@ namespace CSharpRunner
                 };
             }
 
-            var degradeReason = DegradeReason(fixture);
-            if (degradeReason != null)
-                return new FixtureRunResult { Name = fixture.Name, Path = path, Outcome = FixtureRunOutcomeKind.Degraded, DegradedReason = degradeReason };
-
             var initial = FixtureJson.ToActual(fixture.InitialState) as Dictionary<string, object?>;
             if (initial is { Count: > 0 })
             {
@@ -1064,6 +1268,9 @@ namespace CSharpRunner
             client.TestSupportSetStopTimeoutSeconds(RunnerContext.StopTimeoutSeconds);
             var ctx = new RunnerContext(client);
 
+            // rounds/0022：不再有『执行前静态扫描方法名单』这一步——直接跑整条 timeline。DEGRADED
+            // 与否在下面『收尾』之后，靠 `ctx.NotImplementedTrigger` 是否被真实触发过来决定（见文件头
+            // 「DEGRADED 判定」一节）。
             try
             {
                 foreach (var op in fixture.Timeline)
@@ -1080,6 +1287,29 @@ namespace CSharpRunner
 
             // 收尾：给所有 spawn 的 client_call/事件排空 Task 一点真实时间稳定下来，再做最终快照。
             await Task.Delay(150);
+
+            // rounds/0022 核心判定：`NotImplementedTrigger` 只有在某次真实 client 调用抛出字面上的
+            // `KernelClientErrorKind.NotImplemented` 时才会被置位（`RunnerContext.NoteRealFailure`）
+            // ——与『这条 fixture 用到了哪个方法名』无关。**整条 timeline 跑完之后才检查**，即使
+            // NotImplemented 出现在中途、后面还有更多 op 执行：一旦命中就让整条 fixture DEGRADED，不
+            // 做『命中点之前的部分算 PASS/FAIL、之后的不算』这种拆分（三条理由与 Swift 侧
+            // `runFixtureFile` 完全一致：这条 fixture 依赖的能力本身没实现，无论后续观察结果如何都不
+            // 是它原本想验证的真实行为；与既有『整条 fixture 是 DEGRADED 的最小判定单元』语义保持
+            // 一致；拆分判定的复杂度远超收益）。
+            var trigger = ctx.NotImplementedTrigger;
+            if (trigger is { } t)
+            {
+                return new FixtureRunResult
+                {
+                    Name = fixture.Name, Path = path, Outcome = FixtureRunOutcomeKind.Degraded,
+                    DegradedReason =
+                        $"timeline 包含 client_call『{t.Call}』（id={t.CallId}）——运行时真实驱动 SG-5 " +
+                        $"OpenclawGatewayKernelClient 后，该调用抛出 NotImplemented：{t.Detail}。没有任何 " +
+                        "RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 " +
+                        "csharp-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它" +
+                        "'通过'——这个结论来自这一次真实运行实际捕获到的异常，不是任何静态方法名单。",
+                };
+            }
 
             var mismatches = ctx.AccumulatedMismatches();
             var finalState = ctx.SnapshotWithLock();

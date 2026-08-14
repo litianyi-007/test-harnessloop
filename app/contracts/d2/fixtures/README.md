@@ -433,14 +433,69 @@ TS（假内核，D1/D2 spec oracle）+ Swift/C#（驱动各自真实 `OpenclawGa
 | 端 | 跑法 | 结果 |
 |---|---|---|
 | TS | `find app/contracts/d2/fixtures -name '*.json' \| sort \| xargs node app/contracts/d2/fixtures/ts-runner/runner.ts`（或 `npm --prefix ../codegen run run:fixtures`） | **13 PASS / 0 FAIL** |
-| Swift | `swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift app/kernel-client/swift/{KernelClient,OpenclawWire,EventMapping,OpenclawGatewayKernelClient}.swift app/contracts/d2/fixtures/swift-runner/{FixtureDSL,PartialMatch,SwiftFixtureRunner,SwiftRunnerMain}.swift -o /tmp/swift-fixture-runner && /tmp/swift-fixture-runner` | **12 PASS / 0 FAIL / 1 DEGRADED** |
+| Swift | `swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift app/kernel-client/swift/{KernelClient,OpenclawWire,EventMapping,OpenclawGatewayKernelClient}.swift app/contracts/d2/fixtures/swift-runner/{FixtureDSL,PartialMatch,SwiftFixtureRunner,SwiftRunnerMain}.swift -o /tmp/swift-fixture-runner && /tmp/swift-fixture-runner` | **12 PASS / 1 FAIL / 0 DEGRADED**（rounds/0022 起，见下方） |
 | C# | `cd app/contracts/d2/fixtures/csharp-runner && dotnet build && dotnet run --no-build` | **12 PASS / 0 FAIL / 1 DEGRADED** |
 
-（TS 用假内核覆盖全部 13 条，包括依赖 `interrupt()` 的 `soft-steer-then-stop.json`——D1/D2 spec 里
-`interrupt(mode:'steer')` 是已定义行为，TS oracle 按 spec 实现了它；Swift/C# 驱动的是 SG-5 交付的
-真实 client，`interrupt()`/`respondApproval()`/`capabilities()` 三个方法本轮仍是 TODO 桩，无法驱动，
-该 fixture 因此在两端都诚实 DEGRADED，不计入 PASS/FAIL，也不是三端不一致——是"两个 native 端遇到
-同一个已知产品缺口"，DEGRADED 原因完全相同。）
+（TS 用假内核覆盖全部 13 条，包括用到 `interrupt()` 的 `soft-steer-then-stop.json`——D1/D2 spec 里
+`interrupt(mode:'steer')` 是已定义行为，TS oracle 按 spec 实现了它。Swift/C# 驱动的是 SG-5 交付的
+真实 client——`capabilities()` 本轮两端仍均是 TODO 桩；`interrupt()`/`respondApproval()` **Swift 侧
+已分别在 rounds/0020/0015 落地**，只是 C# 侧仍是 TODO 桩，这正是下方 rounds/0022 一节要讲的分歧。）
+
+### rounds/0022：DEGRADED 判定改为运行时发现，Mac↔Windows 分歧首次可见
+
+此前两端 `DEGRADED` 由**逐字相同的硬编码方法名单** `["interrupt", "respondApproval",
+"capabilities"]` 决定——任何 fixture 的 timeline 用到这三个方法名，执行前就整条静态跳过，不问真实
+结果。这份名单在 Swift 侧从 rounds/0015（`respondApproval()` 落地）起就已经过期，rounds/0020
+（`interrupt(mode:"cancel")` 落地）后错得更彻底——五轮无人察觉，因为套件报的是「12 PASS / 0 FAIL /
+1 DEGRADED」，DEGRADED 不计入退出码，`SwiftRunnerMain.swift` 一直如实标注这一点，但摘要本身没有把
+「哪些 fixture 被静态挡住、挡住的理由是否还站得住」这件事说清楚。
+
+**改法**：不再查表，直接跑。`interrupt`/`respondApproval`/`capabilities` 现在与
+createSession/send/subscribe/stop 走同一条翻译路径，真调用两端各自的 `OpenclawGatewayKernelClient`。
+DEGRADED 与否只取决于一件事——这次真实调用抛出的错误，字面上是不是 `notImplemented`
+（Swift `KernelClientError.notImplemented`／C# `KernelClientException(NotImplemented,...)`）；任何
+其它错误（包括语义上也是"不支持"的 `rpcRejected`）都流入正常的 PASS/FAIL 判定，不被 DEGRADED 收编。
+
+**观察到的分歧**（两端摘要末尾新增的「覆盖判定」区块，逐字段对齐，人工对照即可看出）：
+
+| 端 | `soft-steer-then-stop-waits-not-preempts` 判定 | 为什么 |
+|---|---|---|
+| Swift | **FAIL**（真实执行，此前从未跑过） | `interrupt()` 对该 fixture 的 `mode:"steer"` 抛的是 `rpcRejected(code:"unsupported_interrupt_mode")`——字面上不是 `notImplemented`，因此不再 DEGRADED；真实执行后，`expect_outbound`/`assert_state`/`expected.pendingOperations` 三处均与 fixture 期望不符（详见下方「实测差异」） |
+| C# | 仍 DEGRADED，但理由改为运行时真实捕获 | `InterruptAsync` 本轮无条件 `throw NotImplemented`，判据来自这一次运行实际捕获到的异常，不再是查表 |
+
+**实测差异**（Swift 侧 FAIL 的完整明细）：
+
+```
+[FAIL] soft-steer-then-stop-waits-not-preempts
+       - expect_outbound(steer1): swift-runner 未登记『req.interrupt』对应的 openclaw RPC 方法名（该 D2 方法本轮 SG-5 未实现，或超出 Stage A 翻译范围）
+       - assert_state@t=25.sessionLock: 期望 interrupt_in_progress，实际 stop_in_progress
+       - expected.pendingOperations.steer1: 期望 submitted，实际 nil
+```
+
+`sessionLock` 那一条尤其说明问题：该 fixture 逐字转录自 D4 spec 的示例，假定「`interrupt` 在途时
+`stop()` 到达会排队等待，不被抢占」；而 rounds/0020 落地的真实语义是「`send`/`stop`/`interrupt`
+两两互斥，锁不是 idle 一律 `session_locked` 拒绝，不做优先级仲裁」，且本轮只实现了
+`mode:"cancel"`。两者本就不是同一件事——运行时发现只是让这个早已存在的落差第一次变得可观察，不是
+新引入的问题。**不修复它**（红线：本轮只改判定机制，不改 fixture、不改两端 kernel client）。
+
+**破坏性反证**（临时把判定改回硬编码名单式静态短路，验证后已删除，byte-for-byte 校验无残留）：两端
+各自在 `RunFixtureFileAsync`/`runFixtureFile` 里临时插入「`callsUsed` 命中三方法名单即在执行 timeline
+前直接返回 DEGRADED」，命中 **1 处**（`soft-steer-then-stop.json`，与「只有这一条 fixture 真正调用
+interrupt」的既有事实一致）；注入后两端均恢复为改动前的 `12 PASS / 0 FAIL / 1 DEGRADED`，Swift 侧的
+DEGRADED 理由文案变回注入的静态标记（证明真实机制确实在起作用，不是摆设）；还原后 `shasum -a 256`
+核对四个改动文件与注入前逐字节相同。
+
+**respondApproval 的覆盖缺口（本轮顺带发现，未修复）**：`respondApproval()` 在 Swift 侧已于
+rounds/0015 落地，但枚举全部 13 条 fixture 的 `client_call.call` 取值（`command grep -o
+'"call"[[:space:]]*:[[:space:]]*"[a-zA-Z]*"' app/contracts/d2/fixtures/**/*.json`）后确认：**没有
+任何一条 fixture 把 `respondApproval` 当作 `client_call` 使用**——三条 `approval/*` fixture 只覆盖
+了"审批请求到达、进入 `pending` 态"（事件侧），`stop-force-denies-pending-approval.json` 覆盖的是
+`stop()` 内部自动触发的强制 deny（同一条 `approval.resolve` RPC，但走的是 `forceDenyPendingApprovalsBeforeStop`
+这条内部路径，不是 D1 §2.6 `respondApproval()` 方法本身）。也就是说，D1 审批状态机的
+`RESOLVED_ALLOW`/`RESOLVED_DENY`（真实用户点了"允许"/"拒绝"）**两个终态从未被任何金标 fixture 驱动
+过**——这是一个比本节标题问题更值得关注的跨端一致性缺口：`respondApproval()` 的 Swift/C# 分歧（Swift
+已实现、C# 仍是桩）此刻完全没有 parity 测试盯着。本轮不补 fixture（写 fixture 不在 scope 内），如实
+登记。
 
 **一致性依据**：12 条可驱动 fixture 上，Swift/C# 对同一份 fixture `expected` 做逐字段子集深度匹配
 （`PartialMatch.swift`/`PartialMatch.cs`，语义与 TS `partialMatch` 等价，差异只在 C# 不需要 Swift

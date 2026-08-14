@@ -1,0 +1,596 @@
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070610Z-2AAA6F17-DDE2-49F6-B738-7AF7BA13C7F6"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "key" : "openclaw-key-session-1",
+  "subscribed" : true
+}
+[PASS] create-session-subscribe-message-delta (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/basic/create-session-subscribe-message-delta.json)
+[DEGRADED] soft-steer-then-stop-waits-not-preempts (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json)
+       原因: timeline 包含 client_call『interrupt』——SG-5 OpenclawGatewayKernelClient 该方法本轮仍是 TODO 桩（KernelClient.swift 头注释 + OpenclawGatewayKernelClient.swift 对应方法体均为 `throw .notImplemented`），没有任何 RPC/wire 交互可翻译，无法驱动真实 client 产生有意义的状态转移。本 fixture 对 swift-runner 诚实降级为 DEGRADED（跳过，不计入 PASS/FAIL），不伪造一个假内核让它'通过'。
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070610Z-5F2D31C4-4E84-483B-AA4F-895B8EDBB69B"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : null,
+  "status" : "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-no-active-run-succeeded (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-no-active-run-succeeded.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070611Z-C732ABAC-4EC7-4D9D-8E20-093C28F4029F"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "run something long",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-active-run-succeeded (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-active-run-succeeded.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070612Z-2029BC3F-FD70-4F07-9BF0-D3569BA2959A"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "run something that never confirms cancellation",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-timed-out (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-timed-out.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070613Z-2E44D1EE-D68B-4BF9-86A8-B4081039B671"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+[PASS] stop-rejected-rpc-failure (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-rejected-rpc-failure.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070614Z-C2B9CAC1-C3ED-4840-B357-0E56A2AAD3D2"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "run something interrupted by transport close",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+[PASS] stop-transport-closed-aborted-effect-unknown (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/operation-outcome/stop-transport-closed-aborted-effect-unknown.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070614Z-F1FC4E43-5513-43FB-80C1-4DFBC1FE5DEF"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "hello",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+[PASS] send-in-flight-send-pending (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-send-pending.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070615Z-1FB4226B-27B7-418F-A349-B7685967502F"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "hello",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+[PASS] send-in-flight-rejects-concurrent-stop (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/send-in-flight-rejects-concurrent-stop.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070615Z-203C7303-2B41-4516-A92F-8745AF2734F9"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : null,
+  "status" : "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-no-active-run-idle-transitions (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/session-lock/stop-no-active-run-idle-transitions.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070616Z-DF888849-D735-4ACB-9F82-252A9E7A171F"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+[PASS] pending-request-agent-first (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/pending-request-agent-first.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070616Z-24538511-1162-4465-8EBC-9C61834543B1"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV session.approval(phase:pending)（关联 agent 帧 stream:approval/lifecycle 尚未到达，缓冲等待补发） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "createdAtMs" : 1786691176582,
+      "expiresAtMs" : 1786692976582,
+      "id" : "req-session-first-1",
+      "presentation" : {
+        "commandText" : "echo req-session-first-1",
+        "kind" : "exec"
+      },
+      "status" : "pending"
+    },
+    "phase" : "pending",
+    "sessionKey" : "openclaw-key-session-1",
+    "updatedAtMs" : 1786691176582
+  },
+  "type" : "event"
+}
+[PASS] pending-request-session-first (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/pending-request-session-first.json)
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T070616Z-B11A0A2F-05DC-4CA3-92D2-DED417058512"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "openclaw-key-session-1",
+  "sessionId" : "session-1"
+}
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "openclaw-key-session-1",
+    "message" : "run with a pending approval",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-1",
+  "status" : "started"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "req-force-deny-1",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 1) ---
+{
+  "applied" : true,
+  "approval" : {
+    "status" : "denied"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-1",
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "openclaw-key-session-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+[PASS] stop-force-denies-pending-approval (/Users/litianyi/Documents/Code/_ai-goods/test-harnessloop/app/contracts/d2/fixtures/approval/stop-force-denies-pending-approval.json)
+
+=== 12 PASS / 0 FAIL / 1 DEGRADED （共 13 条 fixture） ===
