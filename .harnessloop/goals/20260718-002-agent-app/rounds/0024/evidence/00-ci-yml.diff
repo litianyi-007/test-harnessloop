@@ -1,0 +1,32 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 2f0486a..85af314 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -3,8 +3,8 @@ name: CI
+ # 全仓首个 CI（SG-8.6 主体 + SG-3 增量收口，rounds/0007）。成本审慎拆两个 job：
+ #   - ubuntu：TS/dotnet 全链（codegen 生成 + 幂等守门 + openapi 校验 + C# 判别测试/type-level
+ #     断言 + TS/C# 两端金标 parity runner + app/server 单测）。
+-#   - macos：仅 Swift 必需步骤（typecheck/判别测试/type-level 断言/金标 parity runner），且
+-#     `needs: ubuntu`——ubuntu 先红就不再烧 macOS 分钟。
++#   - macos：Swift typecheck/判别测试/type-level 断言 + SwiftPM 整包构建 + frame-replay-tests
++#     + 金标 parity runner（13/0/0），且 `needs: ubuntu`——ubuntu 先红就不再烧 macOS 分钟。
+ # 纪律：不 checkout submodules（全链不需要 kernels/）；无 secret；无 continue-on-error；无
+ # `|| true`；每个 step 失败即整个 job 红。
+ 
+@@ -140,7 +140,15 @@ jobs:
+         working-directory: app/contracts/d2/codegen
+         run: npm run verify:type-fidelity-swift
+ 
+-      - name: Swift golden parity runner (13 fixtures; 12 PASS + 1 expected DEGRADED, exit 0)
++      - name: Swift package build (AgentAppKernel, including frame-replay-tests product)
++        run: swift build --package-path app
++
++      - name: frame-replay-tests (must exit 0; currently 174/174)
++        run: |
++          swift build --package-path app --product frame-replay-tests
++          ./app/.build/debug/frame-replay-tests
++
++      - name: Swift golden parity runner (13 fixtures; 13 PASS / 0 FAIL / 0 DEGRADED, exit 0)
+         run: |
+           swiftc app/generated/swift/D2.swift app/generated/swift/DiscriminatedUnions.swift \
+                  app/kernel-client/swift/KernelClient.swift app/kernel-client/swift/OpenclawWire.swift \
