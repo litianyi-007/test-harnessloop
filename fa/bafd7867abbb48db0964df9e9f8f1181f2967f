@@ -1,0 +1,24 @@
+.harnessloop/goals/20260718-002-agent-app/rounds/0024/decision.md
+  h_f7edc9edffde80 1-49
+.harnessloop/goals/20260718-002-agent-app/rounds/0024/evidence/03-ci-run-32474519871.txt
+  h_f7edc9edffde80 1-16
+.harnessloop/goals/20260718-002-agent-app/rounds/0024/evidence/04-verify-protocol.txt
+  h_f7edc9edffde80 1-20
+.harnessloop/goals/20260718-002-agent-app/rounds/0024/round-summary.md
+  h_f7edc9edffde80 1-19
+.harnessloop/state/current.md
+  h_f7edc9edffde80 5-6,11
+docs/validation-log.md
+  h_f7edc9edffde80 20-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "fabafd7867abbb48db0964df9e9f8f1181f2967f",
+  "prompts": {},
+  "humans": {
+    "h_f7edc9edffde80": {
+      "author": "litianyi <litianyi@corp.netease.com>"
+    }
+  }
+}
