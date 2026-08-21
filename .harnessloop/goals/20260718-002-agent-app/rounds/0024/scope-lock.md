@@ -37,6 +37,7 @@ CI macos job 现在的 Swift parity 步骤注释仍写「12 PASS + 1 expected DE
 | Path | Action | Limit |
 | --- | --- | --- |
 | `.github/workflows/ci.yml` | 改 | 只加 macos Swift 构建/帧回放步骤，并改 Swift parity 步骤的注释/期望；不放水（无 `continue-on-error`、无 `\|\| true`） |
+| `app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift` | 改 | **仅** `testSubscribeReturnsBeforeServerSubscriptionAckArrives` 的等待/轮询窗口（v2）；不得改产品实现 |
 | `.harnessloop/goals/20260718-002-agent-app/rounds/0024/` | 写 | 本轮产物 |
 | `.harnessloop/state/current.md`、`docs/validation-log.md` | 改 | 收盘 |
 | `.hopper/queue.md` | 写 | 若派评审 |
@@ -61,6 +62,23 @@ CI macos job 现在的 Swift parity 步骤注释仍写「12 PASS + 1 expected DE
 - **不得为了让 CI 绿而把 174 写成软断言、或把 FAIL 洗成 DEGRADED。**
 - **不得顺手改 app 代码。** CI 是守门，不是修产品的借口。
 - **不得 checkout kernels/ 或任何 secret。**
+
+---
+
+## Scope-Lock 修订 v1 → v2（2026-08-21，CI 第一次跑就红）
+
+**扩围一处**：`app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift`
+里 `testSubscribeReturnsBeforeServerSubscriptionAckArrives` 的等待窗口。
+
+Actions run `32474120825`：ubuntu 绿、SwiftPM 整包构建绿、**frame-replay 173/174**。
+唯一红的是 rounds/0012 那条「subscribe() 在 ack 前返回」——order=`["subscribe-returned"]`，
+RPC ack 在 200ms 窗口内没被记上。测试自己的注释已经写过这个坑：不加足够等待会恒为此形，
+**不是顺序反了，是还没来得及发生**。本机 200ms 够，GitHub macos runner 不够。
+
+**扩围的硬边界**：只放宽这条测试的等待/轮询，**不得改 `subscribe()` 产品实现**，
+不得动其它测试。CI 红了才允许碰测试，不是预先改产品去迁就 CI。
+
+---
 
 ## 异构评审
 

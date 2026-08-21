@@ -1,0 +1,6 @@
+run: https://github.com/litianyi-007/test-harnessloop/actions/runs/32474120825
+macos job: failure
+frame-replay-tests: 173/174
+FAIL: rounds/0012 ② subscribe() returns BEFORE sessions.messages.subscribe RPC ack arrives — order=["subscribe-returned"] (ack never recorded)
+package build: success
+ubuntu: success (C# still 12+1 DEGRADED)

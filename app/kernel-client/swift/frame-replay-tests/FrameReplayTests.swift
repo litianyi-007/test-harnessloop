@@ -1954,13 +1954,16 @@ func testSubscribeReturnsBeforeServerSubscriptionAckArrives() async -> Bool {
     let stream = await client.subscribe(session: handle)
     await callLog.record("subscribe-returned")
 
-    // subscribe() 现在立即返回，不再像上一版那样"return 本身就意味着 ack 已到"——必须显式等过 150ms
-    // 延迟窗口（+ 余量）才能观察到"rpc-responded"这第二条记录，否则 order 会只有一条("subscribe-
-    // returned")，那不是"顺序错了"而是"还没来得及发生"，会被误判成假 FAIL（本测试改写时先撞过这个坑：
-    // 不加这段等待，`order` 恒为 `["subscribe-returned"]`，见任务报告）。
-    try? await Task.sleep(nanoseconds: 200_000_000)
-
-    let order = await callLog.entries
+    // subscribe() 现在立即返回，不再像上一版那样"return 本身就意味着 ack 已到"——必须显式等过
+    // 延迟窗口才能观察到"rpc-responded"。固定 200ms 在本机够、在 GitHub macos runner 上不够
+    // （Actions 32474120825：order 停在 ["subscribe-returned"]，173/174）。那不是顺序反了，
+    // 是还没来得及发生——本测试改写时已经撞过这个坑。改为有界轮询，上限 2s。
+    var order: [String] = []
+    for _ in 0..<40 {
+        order = await callLog.entries
+        if order.contains("rpc-responded") { break }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+    }
     guard order == ["subscribe-returned", "rpc-responded"] else {
         return fail(name, "expected subscribe() to return BEFORE the RPC ack, order=\(order) — 上一版（本轮已推翻）会等 ack 才返回，顺序会反过来")
     }
