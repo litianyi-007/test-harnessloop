@@ -88,6 +88,28 @@ actor InterruptRaceBox<T> {
     var hasReported: Bool { value != nil }
 }
 
+/// rounds/0025：采「stop 已挂起、锁仍是 interrupt_in_progress」这个短窗口。
+/// 固定 `Task.sleep(60ms)` 再采样会在 GitHub macos runner 上过冲（Actions 32474519871：
+/// 锁已经是 `stop_in_progress`）。5ms 一轮、最多 200ms，**第一次**看到窗口就返回。
+func observeStopWaitingOnInterrupt(
+    client: OpenclawGatewayKernelClient,
+    sessionID: String,
+    stopHasReported: () async -> Bool
+) async -> (sawWaitWindow: Bool, lastLock: String, stopReportedEarly: Bool) {
+    var lastLock = ""
+    for _ in 0..<40 {
+        if await stopHasReported() {
+            return (false, lastLock, true)
+        }
+        lastLock = await client.testSupportLockState(sessionID: sessionID)
+        if lastLock == "interrupt_in_progress" {
+            return (true, lastLock, false)
+        }
+        try? await Task.sleep(nanoseconds: 5_000_000)
+    }
+    return (false, lastLock, await stopHasReported())
+}
+
 // MARK: - Mode 门禁：abort_and_resend 必须显式拒绝，不静默当 cancel/steer 处理
 //
 // rounds/0023：`testInterruptUnsupportedModeSteerRejectedNotSilentlyTreatedAsCancel` 已删除——
@@ -513,17 +535,18 @@ func testSendRejectedButStopWaitsThenProceedsWhileInterruptInFlight() async -> B
             await stopBox.report(.failure(error))
         }
     }
-    try? await Task.sleep(nanoseconds: 60_000_000) // 累计 t≈100ms，interrupt 的 200ms 窗口还剩 ~100ms
-    guard await stopBox.hasReported == false else {
+    let waitWindow = await observeStopWaitingOnInterrupt(
+        client: client, sessionID: sessionID, stopHasReported: { await stopBox.hasReported }
+    )
+    if waitWindow.stopReportedEarly {
         _ = try? await interruptTask
-        return fail(name, "stop() 在 interrupt() 仍在飞行期间（t≈100ms，早于 200ms 窗口到期）就已经报告" +
+        return fail(name, "stop() 在 interrupt() 仍在飞行期间就已经报告" +
             "结果——要么被立即 reject（rounds/0020 旧行为，§9.3 要求的是等待不是拒绝），要么被立即放行" +
             "抢占了正在进行的 interrupt（同样违反『不抢占』），两者都不对")
     }
-    let lockStillDuringWait = await client.testSupportLockState(sessionID: sessionID)
-    guard lockStillDuringWait == "interrupt_in_progress" else {
+    guard waitWindow.sawWaitWindow else {
         _ = try? await interruptTask
-        return fail(name, "expected lock to remain interrupt_in_progress while stop() waits for arbitration, got \(lockStillDuringWait) — stop() 抢占了锁")
+        return fail(name, "expected lock to remain interrupt_in_progress while stop() waits for arbitration, got \(waitWindow.lastLock) — stop() 抢占了锁")
     }
 
     // 放行：interrupt() 的 sessions.abort 完成（约 t=200ms），interrupt() 应据此立即终态化——本例

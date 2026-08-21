@@ -368,15 +368,16 @@ func testStopWaitsDuringInFlightSteerThenProceedsToStopInProgressAfterSubmitted(
             await stopBox.report(.failure(error))
         }
     }
-    try? await Task.sleep(nanoseconds: 60_000_000) // 累计 t≈100ms，chat.send 的 200ms 窗口还剩 ~100ms
-    guard await stopBox.hasReported == false else {
+    let waitWindow = await observeStopWaitingOnInterrupt(
+        client: client, sessionID: sessionID, stopHasReported: { await stopBox.hasReported }
+    )
+    if waitWindow.stopReportedEarly {
         _ = try? await interruptTask
-        return fail(name, "stop() 在 interrupt(mode:\"steer\") 仍在飞行期间（t≈100ms，早于 200ms 窗口到期）就已经报告结果——应当等待，不该立即 reject（旧行为）或立即抢占成功（同样违反『不抢占』）")
+        return fail(name, "stop() 在 interrupt(mode:\"steer\") 仍在飞行期间就已经报告结果——应当等待，不该立即 reject（旧行为）或立即抢占成功（同样违反『不抢占』）")
     }
-    let lockStillDuringWait = await client.testSupportLockState(sessionID: sessionID)
-    guard lockStillDuringWait == "interrupt_in_progress" else {
+    guard waitWindow.sawWaitWindow else {
         _ = try? await interruptTask
-        return fail(name, "expected lock to remain interrupt_in_progress while stop() waits for the in-flight steer, got \(lockStillDuringWait) — stop() 抢占了锁")
+        return fail(name, "expected lock to remain interrupt_in_progress while stop() waits for the in-flight steer, got \(waitWindow.lastLock) — stop() 抢占了锁")
     }
 
     guard let interruptResult = try? await interruptTask else {
@@ -677,8 +678,21 @@ func testConcurrentSendCannotStealLockDuringAtomicInterruptToStopHandoff() async
     case .success:
         return fail(name, "FAIL2 REGRESSION: 第三方 send()（在交接运行前就已排队等待进入 actor）成功获取了锁（观察到了 idle）——它偷走了本该属于等待中 stop() 的原子交接")
     case .failure(let error):
-        guard case KernelClientError.rpcRejected(let code, _) = error, code == "session_locked" else {
-            return fail(name, "expected 第三方 send() 被 session_locked 拒绝, got \(error)")
+        // session_locked：send 在 stop 仍持锁时跑到了锁检查。
+        // protocolMismatch(unknown session)：handoff 之后 actor 邮箱 FIFO，stop 先跑完
+        // abort+delete，send 再进——Actions 32474519871 的形状。两者都不是偷锁；
+        // 偷锁的证据是下面 sessions.send#2 被 dispatch。
+        let didNotSteal: Bool
+        if case KernelClientError.rpcRejected(let code, _) = error, code == "session_locked" {
+            didNotSteal = true
+        } else if case KernelClientError.protocolMismatch(let message) = error,
+                  message.contains("unknown session") {
+            didNotSteal = true
+        } else {
+            didNotSteal = false
+        }
+        guard didNotSteal else {
+            return fail(name, "expected 第三方 send() 被 session_locked 拒绝或因 stop 已拆掉会话而 unknown session, got \(error)")
         }
     }
 
