@@ -1,0 +1,16 @@
+run: https://github.com/litianyi-007/test-harnessloop/actions/runs/32474519871
+commit: df688fe
+macos: failure
+frame-replay-tests: 171/174
+ubuntu: success (C# still 12 PASS + 1 DEGRADED)
+
+FAIL (different from run 32474120825):
+1. InterruptTests.testSendRejectedButStopWaitsThenProceedsWhileInterruptInFlight
+   expected lock interrupt_in_progress while stop waits, got stop_in_progress
+2. SteerTests.testStopWaitsDuringInFlightSteerThenProceedsToStopInProgressAfterSubmitted
+   same shape
+3. SteerTests.testConcurrentSendCannotStealLockDuringAtomicInterruptToStopHandoff
+   expected 第三方 send() session_locked, got protocol mismatch: unknown session sess-fail2-atomic-handoff
+
+Note: run 32474120825 (pre-poll-fix) had these three PASS and only the 0012 subscribe 200ms test FAIL.
+The 0012 test did not fail this run — v2 poll worked. The 0023 100ms-window tests are scheduler-flaky across the two Actions macos VMs.

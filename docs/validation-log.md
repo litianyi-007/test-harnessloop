@@ -17,6 +17,15 @@
 
 ---
 
+## 2026-08-21 rounds/0024：frame-replay 进 CI 立刻红，两次失败集合不相交
+
+- **场景**：goal 002 rounds/0024 把 `frame-replay-tests` 和 Swift 13/13 接进 GitHub Actions macos job
+- **现象**：ubuntu 绿、SwiftPM 构建绿。frame-replay 两次 macos：32474120825 = 173/174（仅 0012 固定 200ms）；32474519871 = 171/174（0012 已过，三条 0023 锁采样红）。本机 174/174
+- **预期**：一次坏提交会红；macos 稳定绿才接受。前者成立，后者不成立
+- **插件改动**：未改动
+- **复验结果**：❌ 本轮 `Accepted: no`。门有牙齿，测试窗口过紧
+- **遗留**：0025 把三条 §9.3 采样改成有界轮询
+
 ## 2026-08-21 rounds/0023 收盘：steer + 原子交接；本轮未改插件
 
 - **场景**：goal 002 rounds/0023 收盘。实现 `interrupt(mode:"steer")` 并把 `stop()` 遇 `interrupt_in_progress` 改成 confirmed D1 §9.3 的「等待，不抢占」。Claude 会话在返工完成后 `/resume` 取消，本 Grok 会话接续收盘。
