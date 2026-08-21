@@ -1,0 +1,2135 @@
+=== SG-5 rework 第二次收残（T-045 MUST-FIX）frame-replay 真 actor 级单测 ===
+  [PASS] F3 seq ordering + origin ts: seq=[1, 2] ts 均等于 message.timestamp（非 Date()）
+  [PASS] F6 no-stopReason end -> completed (not error): stopReason=completed
+  [PASS] F6 unrecognized stopReason(toolUse) -> completed: stopReason=completed
+  [PASS] M2 mapper: phase=='error' maps stopReason=.error regardless of stopReason field: stopReason=error
+  [PASS] M2 real dispatch: agent(stream:lifecycle,phase:error,aborted:false) -> turnComplete(stopReason:.error): phase:error 正确映射为 turnComplete(stopReason:.error)，未被误报为 completed
+  [PASS] M1 approval-A keeps its OWN runId (run-A) even after run-B's approval frame arrives: approval-A 正确保留 runId=run-A（未被 run-B 的到达串号），join 成功后缓存已清
+
+--- RECV session.approval(phase:pending)（关联 agent 帧 stream:approval/lifecycle 尚未到达，缓冲等待补发） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "createdAtMs" : 1784871800000,
+      "expiresAtMs" : 1784873600000,
+      "id" : "approval-pending-first-1",
+      "presentation" : {
+        "commandText" : "echo pending-first",
+        "kind" : "exec"
+      },
+      "status" : "pending"
+    },
+    "phase" : "pending",
+    "sessionKey" : "kernel-key-pending-first-1",
+    "updatedAtMs" : 1784871800000
+  },
+  "type" : "event"
+}
+  [PASS] M1 session.approval arriving BEFORE its agent(stream:approval) frame is buffered, not dropped: session.approval 先到时被正确缓冲，agent 帧补上后正确补发 approvalRequest(reqID=approval-pending-first-1)
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "kernel-key-replay-1"
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "approvalReplay" : {
+    "approvals" : [
+      {
+        "createdAtMs" : 1784871300000,
+        "expiresAtMs" : 1784873100000,
+        "id" : "approval-replay-1",
+        "presentation" : {
+          "commandText" : "echo replay",
+          "kind" : "exec"
+        },
+        "status" : "pending",
+        "urlPath" : "\/approve\/approval-replay-1"
+      }
+    ],
+    "sessionKey" : "kernel-key-replay-1",
+    "truncated" : false,
+    "updatedAtMs" : 1784871300000
+  },
+  "key" : "kernel-key-replay-1",
+  "subscribed" : true
+}
+
+--- RECV session.approval(phase:pending)（关联 agent 帧 stream:approval/lifecycle 尚未到达，缓冲等待补发） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "createdAtMs" : 1784871300000,
+      "expiresAtMs" : 1784873100000,
+      "id" : "approval-replay-1",
+      "presentation" : {
+        "commandText" : "echo replay",
+        "kind" : "exec"
+      },
+      "status" : "pending",
+      "urlPath" : "\/approve\/approval-replay-1"
+    },
+    "phase" : "pending",
+    "sessionKey" : "kernel-key-replay-1",
+    "updatedAtMs" : 1784871300000
+  },
+  "type" : "event"
+}
+  [PASS] M1 subscribe() consumes approvalReplay + joins with later agent approval frame: approvalReplay 里的 pending 审批被正确缓冲，agent 帧补上后正确 join 产出 approvalRequest(reqID=approval-replay-1)
+  [PASS] rounds/0016: exec.approval.requested alone produces evt.approval_request with the resolve-compatible reqID: 只凭 exec.approval.requested 一条帧就产出 approval_request(reqID=approval-exec-requested-1)，字段与 approval.resolve 的 id 同源，且已可被 respondApproval() 关联
+
+--- RECV session.approval(phase:pending)（关联 agent 帧 stream:approval/lifecycle 尚未到达，缓冲等待补发） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "createdAtMs" : 1784872000000,
+      "expiresAtMs" : 1784873800000,
+      "id" : "approval-exec-dedup-1",
+      "presentation" : {
+        "allowedDecisions" : [
+          "allow-once",
+          "deny"
+        ],
+        "commandText" : "echo from-session-approval",
+        "kind" : "exec"
+      },
+      "status" : "pending"
+    },
+    "phase" : "pending",
+    "sessionKey" : "kernel-key-exec-approval-dedup-1",
+    "updatedAtMs" : 1784872000000
+  },
+  "type" : "event"
+}
+
+--- RECV session.approval(phase:pending)（该 approvalId 已由 exec.approval.requested 产出过，跳过） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "createdAtMs" : 1784872000000,
+      "expiresAtMs" : 1784873800000,
+      "id" : "approval-exec-dedup-1",
+      "presentation" : {
+        "allowedDecisions" : [
+          "allow-once",
+          "deny"
+        ],
+        "commandText" : "echo from-session-approval",
+        "kind" : "exec"
+      },
+      "status" : "pending"
+    },
+    "phase" : "pending",
+    "sessionKey" : "kernel-key-exec-approval-dedup-1",
+    "updatedAtMs" : 1784872000000
+  },
+  "type" : "event"
+}
+  [PASS] rounds/0016: session.approval + exec.approval.requested + agent(approval) + 重放 三条来源只产出 1 条 approval_request: 四条帧只产出 1 条 approval_request（reqID=approval-exec-dedup-1），采用 session.approval 的权威 presentation，且无孤儿缓冲残留
+
+--- RECV session.approval(phase:pending)（关联 agent 帧 stream:approval/lifecycle 尚未到达，缓冲等待补发） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "createdAtMs" : 1786476738788,
+      "expiresAtMs" : 1786478538788,
+      "id" : "d09b3b34-874e-4c95-b363-8680c1fb6b20",
+      "presentation" : {
+        "agentId" : "main",
+        "allowedDecisions" : [
+          "allow-once",
+          "deny"
+        ],
+        "commandPreview" : null,
+        "commandText" : "echo APPROVAL_GATE_OK",
+        "host" : "gateway",
+        "kind" : "exec",
+        "nodeId" : null,
+        "warningText" : null
+      },
+      "status" : "pending",
+      "urlPath" : "\/approve\/d09b3b34-874e-4c95-b363-8680c1fb6b20"
+    },
+    "phase" : "pending",
+    "sessionKey" : "agent:main:dashboard:5f25e610-69b4-4cc6-af3b-fd2d65f0c8ff",
+    "sourceSessionKey" : "agent:main:dashboard:5f25e610-69b4-4cc6-af3b-fd2d65f0c8ff",
+    "updatedAtMs" : 1786476738788
+  },
+  "type" : "event"
+}
+  [PASS] rounds/0016 live: agent(stream:lifecycle, phase:waiting-approval) 真实帧能与 session.approval join 出 approval_request: 真实冻结帧 lifecycle/waiting-approval 正确 join 出 approval_request(reqID=d09b3b34-874e-4c95-b363-8680c1fb6b20, toolCallID=call_00_hcUZ27OoJFUsBDkJ08M47382, runID=6208dd06-d45c-4f46-b146-b1a6164f3675)，命令文本=echo APPROVAL_GATE_OK
+  [PASS] F5 non-exec tool (item stream) honest output=null: toolCallId=tool_p8yLr7taJUMG2ePajv3zPtmR isError=false durationMS=29 output=null（诚实,非编造）
+  [PASS] F5 exec tool name filtering (isOpenclawExecToolName): exec/bash 判定为 exec，update_plan/tool_call 判定为非 exec
+  [PASS] F5 seq-gap agent(stream:error) -> evt.error: code=unknown nativeCode="seq gap" message="event stream seq gap: expected 5, got 8"
+
+--- RECV event shutdown（向所有活跃 session 广播 sessionEnd(reason:kernelExited)） ---
+{
+  "event" : "shutdown",
+  "payload" : {
+    "reason" : "gateway stopping",
+    "restartExpectedMs" : null
+  },
+  "seq" : 2,
+  "type" : "event"
+}
+  [PASS] F8/M6 shutdown then REAL transport-close dedup: shutdown 后真实 transport close 未产出第二条矛盾的 sessionEnd（去重生效）
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "kernel-key-send-real-lock",
+    "message" : "first",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-real-lock-1",
+  "status" : "started"
+}
+  [PASS] M1 send() real session lock: acquire during in-flight RPC, reject concurrent, auto-release after: 真实并发下: 第一次 send() 在飞行中持锁 send_pending,第二次被拒 session_locked,完成后锁自动释放回 idle
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "kernel-key-send-fail-lock",
+    "message" : "x",
+    "timeoutMs" : 0
+  }
+}
+  [PASS] M1 send() lock released to idle after RPC throws: send() RPC 抛错后锁正确释放回 idle
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "kernel-key-stop-vs-send",
+    "message" : "x",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-x",
+  "status" : "started"
+}
+  [PASS] M1 stop() rejected with session_locked while a REAL send() is in flight: stop() 在真实 send() 飞行期间被正确 reject(session_locked)
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-noactive"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : null,
+  "ok" : true,
+  "status" : "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-stop-noactive"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [PASS] M3 stop() no active run -> operation_completed(succeeded) mirror + Promise succeeded: operationId=op-stop-C06E3D80-102B-4400-855D-AC7874B63D16 双通道 outcome 均为 succeeded,session_end(stopped) 紧随其后
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-timeout"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-timeout-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-stop-timeout"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [PASS] M3 stop() waiting for aborted-run terminal times out -> operation_completed(timed_out) mirror: 超时路径 operationId=op-stop-E4A1063C-5484-45FD-AAC9-4E249C0325D2 Promise 与 Event 均报 timed_out
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-deletefail"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-deletefail-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-stop-deletefail"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : false
+}
+
+--- WARN sessions.delete reported deleted:false after stop() otherwise succeeded ---
+{
+  "deleted" : false
+}
+  [PASS] M3 stop() active-run success + sessions.delete deleted:false must not contradict already-emitted operation_completed(succeeded): operationId=op-stop-B8AC4D33-7311-46E2-AB88-015E00A7ED6C: Promise=.succeeded, Event.outcome=.succeeded 一致,即使 sessions.delete 报告 deleted:false
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-force-deny-1",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 1) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-force-deny-1",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-force-deny"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-force-deny-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-stop-force-deny"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [PASS] M3 (D1 §6.2) stop() force-denies pending approval BEFORE sessions.abort; TurnCompleteEvent.forceResolvedApprovals lists it: approval.resolve 先于 sessions.abort 被调用(调用顺序=["approval.resolve", "sessions.abort", "sessions.delete"]),TurnCompleteEvent.forceResolvedApprovals=[approval-force-deny-1],turn_complete 先于 session_end
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-no-pending-approval"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-no-pending-approval-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-stop-no-pending-approval"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [PASS] M3 (D1 §6.2) stop() with no pending approval: no approval.resolve call, forceResolvedApprovals stays nil: 无 pending approval 时: 未触发 approval.resolve, forceResolvedApprovals 保持 nil
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-force-deny-late-A",
+    "kind" : "exec"
+  }
+}
+
+--- APPROVAL FSM 缓冲（已有 active pending，本条不呈现给调用方） ---
+{
+  "activeReqId" : "approval-force-deny-late-A",
+  "bufferDepth" : 8,
+  "bufferedCount" : 1,
+  "reqId" : "approval-force-deny-late-B",
+  "sessionId" : "sess-stop-force-deny-late-arrival"
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 1) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-force-deny-late-A",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- APPROVAL FSM 提升缓冲队列头部为新的 active pending（FORCE_DENIED_ON_STOP） ---
+{
+  "promotedReqId" : "approval-force-deny-late-B",
+  "remainingBuffered" : 0,
+  "sessionId" : "sess-stop-force-deny-late-arrival"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-force-deny-late-B",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 2) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-force-deny-late-B",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-force-deny-late-arrival"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-force-deny-late-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-stop-force-deny-late-arrival"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [PASS] NOTE-A (T-049) stop() force-deny drain closes await-window escape: approval joined WHILE approval.resolve(A) is in flight is also force-denied before sessions.abort: late-arriving approvalB（在 approval.resolve(A) 的 await 窗口内新到）也被 force-deny，调用顺序=["approval.resolve:approval-force-deny-late-A", "approval.resolve:approval-force-deny-late-B", "sessions.abort", "sessions.delete"]，forceResolvedApprovals 含两者
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-drain-cap-1",
+    "kind" : "exec"
+  }
+}
+
+--- APPROVAL FSM 缓冲（已有 active pending，本条不呈现给调用方） ---
+{
+  "activeReqId" : "approval-drain-cap-1",
+  "bufferDepth" : 8,
+  "bufferedCount" : 1,
+  "reqId" : "approval-drain-cap-2",
+  "sessionId" : "sess-stop-force-deny-drain-cap"
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 1) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-drain-cap-1",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- APPROVAL FSM 提升缓冲队列头部为新的 active pending（FORCE_DENIED_ON_STOP） ---
+{
+  "promotedReqId" : "approval-drain-cap-2",
+  "remainingBuffered" : 0,
+  "sessionId" : "sess-stop-force-deny-drain-cap"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-drain-cap-2",
+    "kind" : "exec"
+  }
+}
+
+--- APPROVAL FSM 缓冲（已有 active pending，本条不呈现给调用方） ---
+{
+  "activeReqId" : "approval-drain-cap-2",
+  "bufferDepth" : 8,
+  "bufferedCount" : 1,
+  "reqId" : "approval-drain-cap-3",
+  "sessionId" : "sess-stop-force-deny-drain-cap"
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 2) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-drain-cap-2",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- APPROVAL FSM 提升缓冲队列头部为新的 active pending（FORCE_DENIED_ON_STOP） ---
+{
+  "promotedReqId" : "approval-drain-cap-3",
+  "remainingBuffered" : 0,
+  "sessionId" : "sess-stop-force-deny-drain-cap"
+}
+  [PASS] NOTE-A (T-049) stop() force-deny drain exceeding round cap throws honestly (not a silent infinite loop); lock released + pendingStop cleaned: force-deny drain 在持续新到审批下于第 3 轮（上限=2）如实 throw，未静默死循环，session 锁/pendingStop 收尾干净
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-abort-throws"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-abort-throws"
+  }
+}
+  [PASS] M3 stop() sessions.abort throws -> lock released + pendingStop cleaned + operation_completed(rejected) mirror; second stop() not falsely session_locked: 第一次 stop() 抛错后锁正确释放为 idle + pendingStop 清理 + operation_completed(rejected) 镜像已发出;第二次 stop() 正常再次尝试(而不是被 session_locked 挡住)
+
+--- RECV session.approval(phase:pending)（关联 agent 帧 stream:approval/lifecycle 尚未到达，缓冲等待补发） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "createdAtMs" : 1784871500000,
+      "expiresAtMs" : 1784873300000,
+      "id" : "approval-orphan-1",
+      "presentation" : {
+        "commandText" : "echo orphan",
+        "kind" : "exec"
+      },
+      "status" : "pending"
+    },
+    "phase" : "pending",
+    "sessionKey" : "kernel-key-cleanup-1",
+    "updatedAtMs" : 1784871500000
+  },
+  "type" : "event"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-cleanup-1"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : null,
+  "ok" : true,
+  "status" : "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-cleanup-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [PASS] M5 stop() success cleans up pendingStop/lock/terminal flag/orphaned approval buffer: stop() 收尾后 lock/pendingStop/terminal 标记/未匹配的 approval 缓冲全部清理干净
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-transport-closed-midwait"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-transport-closed-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+  [PASS] NOTE-1 (T-047) stop() transport closes while awaiting aborted-run terminal -> no permanent hang, operation_completed(aborted_effect_unknown) mirror before session_end(transport_closed): transport 在等待窗口内关闭: stop() 未永久挂起,如实抛出 transport 错误,operation_completed(aborted_effect_unknown affectedRunID=run-transport-closed-1) 镜像先于 session_end(transport_closed) 发出,pendingStop 清理干净
+  [PASS] F2 attachment-only encodes content (not {mimeType,path}): content(base64) 正确还原原始字节，且不再携带裸 path 字段
+  [PASS] M4 redaction covers plurals + common credential variants: credentials/apiKeys/secrets(复数)、authToken/apiToken(复合)、password/token(裸字段) 全部正确脱敏
+  [PASS] M4 redaction excludes token-counting fields (contextTokens/tokenBudget/inputTokens/outputTokens): contextTokens/tokenBudget/inputTokens/outputTokens 均保持原值，未被误伤
+  [PASS] F7 regression: credential redaction (auth/token) on a realistic connect frame: auth 字段整体脱敏，非敏感字段保留，明文 token 未出现在序列化结果里
+  [PASS] M6 完整 D2 JSON encode/decode 字段断言（toolResult + operationCompleted）: toolResult(嵌套 JSONAny output)与 operationCompleted 两个变体的完整 D2 JSON encode/decode 均字段级一致
+  [PASS] rounds/0012 ①' two DIFFERENT assistant messages sharing (runId, index=0) — the old collision shape — get distinct non-nil messageID from the real session.message dispatch path: 两条共享 runId=run-dup-1、index=0（旧键会撞车的形状）的不同 assistant 消息，各自的 evt.message.delta.payload.messageID 正确透传且互异（msg-dup-A ≠ msg-dup-B)——SessionStore 按 messageID 分组不会再把它们误判成同一条
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "kernel-key-subscribe-race-1"
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "key" : "kernel-key-subscribe-race-1",
+  "subscribed" : true
+}
+  [PASS] rounds/0012 ②（二次返工）subscribe() returns BEFORE sessions.messages.subscribe RPC ack arrives — restores D1 §2.3 (subscribe is not a Promise): subscribe() 在服务端订阅 RPC ack（人为延迟 150ms）到达之前就已经返回，调用顺序=["subscribe-returned", "rpc-responded"]，返回的 stream 之后仍能正常收事件——D1 §2.3 契约恢复
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "kernel-key-subscribe-fail-1"
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "subscribed" : false
+}
+  [PASS] rounds/0012 ② subscribe() cannot throw (protocol signature has no `throws`) — RPC failure (subscribed:false) is embedded into the returned stream instead: subscribed:false 未让 subscribe() 抛错（签名不允许），而是封进 stream，for-try-await 第一次迭代即抛出 protocolMismatch
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "kernel-key-send-barrier-1"
+  }
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "kernel-key-send-barrier-1",
+    "message" : "hi",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "key" : "kernel-key-send-barrier-1",
+  "subscribed" : true
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-send-barrier-1",
+  "status" : "started"
+}
+  [PASS] rounds/0012 ② send-side barrier: send() does not dispatch sessions.send before subscribe()'s sessions.messages.subscribe has been dispatched: send() 的底层 sessions.send RPC 严格晚于 subscribe() 的底层 sessions.messages.subscribe RPC dispatch（人为 200ms 延迟窗口内未提前发出，窗口后确实发出）——send 侧屏障生效
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "kernel-key-stop-barrier-1"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-stop-barrier-1"
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "key" : "kernel-key-stop-barrier-1",
+  "subscribed" : true
+}
+
+--- RECV sessions.abort result ---
+{
+  "status" : "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-stop-barrier-1"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [PASS] rounds/0012 ② send-side barrier also covers stop(): stop() does not dispatch sessions.abort before subscribe()'s sessions.messages.subscribe has been dispatched: stop() 的底层 sessions.abort RPC 严格晚于 subscribe() 的底层 sessions.messages.subscribe RPC dispatch——send() 与 stop() 共享的屏障对 stop() 同样生效
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "kernel-key-never-subscribed-1",
+    "message" : "hi",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-never-subscribed-1",
+  "status" : "started"
+}
+  [PASS] rounds/0012 ② send-side barrier: a session that was never subscribe()'d does not hang send() forever: send() 对一个从未调用过 subscribe() 的 session 正常、及时地完成（未永久悬挂等一个永远不会来的订阅 dispatch 信号）
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "message" : {
+      "content" : "user turn #0",
+      "role" : "user",
+      "timestamp" : 1785926400000
+    },
+    "messageId" : "msg-0",
+    "messageSeq" : 1,
+    "session" : {
+      "activeRunIds" : [
+        "run-messageseq-legal-1"
+      ]
+    },
+    "sessionKey" : "kernel-key-messageseq-legal-1"
+  },
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "message" : {
+      "content" : "user turn #1",
+      "role" : "user",
+      "timestamp" : 1785926400001
+    },
+    "messageId" : "msg-1",
+    "messageSeq" : 1,
+    "session" : {
+      "activeRunIds" : [
+        "run-messageseq-legal-1"
+      ]
+    },
+    "sessionKey" : "kernel-key-messageseq-legal-1"
+  },
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "message" : {
+      "content" : "user turn #3",
+      "role" : "user",
+      "timestamp" : 1785926400003
+    },
+    "messageId" : "msg-3",
+    "messageSeq" : 3,
+    "session" : {
+      "activeRunIds" : [
+        "run-messageseq-legal-1"
+      ]
+    },
+    "sessionKey" : "kernel-key-messageseq-legal-1"
+  },
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "message" : {
+      "content" : "user turn #4",
+      "role" : "user",
+      "timestamp" : 1785926400004
+    },
+    "messageId" : "msg-4",
+    "messageSeq" : 3,
+    "session" : {
+      "activeRunIds" : [
+        "run-messageseq-legal-1"
+      ]
+    },
+    "sessionKey" : "kernel-key-messageseq-legal-1"
+  },
+  "type" : "event"
+}
+
+--- RECV session.message（未能映射到 D2 KernelEvent 11 变体之一） ---
+{
+  "event" : "session.message",
+  "payload" : {
+    "message" : {
+      "content" : "user turn #6",
+      "role" : "user",
+      "timestamp" : 1785926400006
+    },
+    "messageId" : "msg-6",
+    "messageSeq" : 5,
+    "session" : {
+      "activeRunIds" : [
+        "run-messageseq-legal-1"
+      ]
+    },
+    "sessionKey" : "kernel-key-messageseq-legal-1"
+  },
+  "type" : "event"
+}
+  [PASS] rounds/0012 ③ wire messageSeq 单调非递减断言：真实合法序列 1,1,2,3,3,4,5,6（含重复）不误报: 8 条真实序列 messageSeq=1,1,2,3,3,4,5,6（含 2 组合法重复）全部判定非递减，0 违例，观察计数=8
+  [PASS] rounds/0012 ③ wire messageSeq 单调非递减断言：人为倒退 1,2,1 必须变红: 倒退帧被正确抓到（1 处违例）：期望 messageSeq>=2（单调非递减，合法重复允许 ==），实际 messageSeq=1（第 3 次观察）
+  [PASS] B1 (rounds/0013): makeSessionLabel 产出人眼可辨认(含时间戳)且可反查(含完整 ourSessionID)的 label: label='sg4-20260808T123456Z-b1-fixed-uuid-aaaa-bbbb-cccccccccccc'：前缀 sg4- + 可读时间戳段 '20260808T123456Z' + 完整 ourSessionID 后缀，人眼可辨认且可反查
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T111059Z-CD963E64-64EB-41BA-9DAB-68DE5DF2A57D"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "kernel-key-b1-label-test",
+  "sessionId" : "kernel-session-b1-label-test"
+}
+
+--- SEND req sessions.create (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.create",
+  "params" : {
+    "label" : "sg4-20260814T111059Z-753E7B07-6483-451C-9742-9ADCE2DDC905"
+  }
+}
+
+--- RECV sessions.create result ---
+{
+  "key" : "kernel-key-b1-label-test",
+  "sessionId" : "kernel-session-b1-label-test"
+}
+  [PASS] B1 (rounds/0013): 同一 client 连续 createSession() 两次，两次的 label 不同（openclaw 侧 label 全 store 唯一，撞名即 INVALID_REQUEST）: 两次 createSession() 的 label 分别是 'sg4-20260814T111059Z-CD963E64-64EB-41BA-9DAB-68DE5DF2A57D' 与 'sg4-20260814T111059Z-753E7B07-6483-451C-9742-9ADCE2DDC905'，互不相同；SessionHandle.sessionID 分别是 CD963E64-64EB-41BA-9DAB-68DE5DF2A57D/753E7B07-6483-451C-9742-9ADCE2DDC905
+  [PASS] rounds/0013 B2: SessionStore.handle() with two DIFFERENT messageId sharing (runId, index=0) — the rounds/0011 collision shape — produces TWO separate session.messages, not one merged bubble: 两条共享 runId=run-grouping-b2-shared、index=0（rounds/0011 撞键形状）、messageID 不同的 evt.message.delta，经 SessionStore.handle() 后正确产生 2 条独立 session.messages（文本互不污染，各自的气泡 id 与 inProgressDeltaMessageID 记录一致）
+  [PASS] rounds/0017 Change 1: SessionStore.handle() with evt.tool_call produces a ToolCallItem in session.toolCalls: evt.tool_call{toolCallId:tool_abc123,name:exec} 经 handle() 后 session.toolCalls 恰好一条，字段透传正确，result 为 nil（进行中态）
+  [PASS] rounds/0017 Change 1: evt.tool_result with matching toolCallId pairs onto the existing ToolCallItem (not a new row): tool_call(tool_pair1) + tool_result(tool_pair1) 配对成功：session.toolCalls 仍为 1 条，result.isError=false, durationMS=42, full='hi\n'
+  [PASS] rounds/0017 Change 1: evt.tool_result with isError=true surfaces failure; preview is a flattened/truncated view of full: isError=true 正确透传；preview 已压平/截断（121 chars，无换行）供折叠态展示，full 保留原始多行文本（212 chars）供展开态展示
+  [PASS] rounds/0017 Change 1: evt.tool_result with NO prior matching evt.tool_call still renders (does not silently drop): 孤儿 evt.tool_result（无匹配 toolCallId 的先行 tool_call）没有被静默丢弃：产出一张占位 ToolCallItem，result 数据完整保留
+  [PASS] rounds/0017 P1 REWORK: evt.tool_call arriving AFTER an orphaned evt.tool_result fills the existing placeholder in place, does not create a duplicate ToolCallItem with the same id: evt.tool_result 先到产出占位项，随后 evt.tool_call 原地补全 name='exec'/argumentSummary（含 'sleep 1'），保留已有 result='done'；session.toolCalls 与 session.timeline 均只贡献 1 条、id 无重复
+  [PASS] rounds/0019: evt.thinking events sharing the same runId merge into ONE ThinkingItem via += append; a different runId starts a new block: 两条共享 runId=run-thinking-A 的 evt.thinking 合并成 1 个 ThinkingItem（文本='先看看目录结构，再决定下一步'，按到达顺序 += 拼接）；第三条 runId=run-thinking-B 独立开新行；共 2 个 ThinkingItem，inProgressThinkingItemID 记录一致
+  [PASS] rounds/0019 live capture replay: the exact delta fragment sequence from evidence/shots/14-tool-result.png merges into ONE ThinkingItem, not N fragment rows: 6 个逐字取自现场抓包的 thinking delta 分片（共享 runId）经 SessionStore.handle() 合并成恰好 1 个 ThinkingItem，文本='_DEMO_OK`....whatthey'd like to call me. Keep it short. The user's request is done — tellthemthe output, then do the brief bootstrap intro + name question.'，与分片按到达顺序拼接的结果逐字节一致
+  [PASS] rounds/0017 Change 1: evt.thinking with visibility=summary is preserved as-is, not silently upgraded to raw: visibility=summary 原样保留，未被升级成 raw
+  [PASS] rounds/0017 Change 1 (核心): session.timeline interleaves message/toolCall/thinking in true arrival order, not grouped by type: 5 个事件（message/toolCall/thinking/toolResult/message）经 timeline 合并后产出 4 条、顺序为 [message,toolCall(已配对结果),thinking,message]——与真实到达顺序一致
+  [PASS] rounds/0017 Change 1: evt.operation_completed appends a system ChatMessage (not a silent break): evt.operation_completed(kind=stop,outcome=succeeded,detail='aborted by user') 渲染成一条系统消息：'[操作] stop 已完成：outcome=succeeded，aborted by user'
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "kernel-key-restore-b-d-1"
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "key" : "kernel-key-restore-b-d-1",
+  "subscribed" : true
+}
+  [PASS] rounds/0014 B/D: restoreSession(sessionID:kernelKey:) seeds kernelKeyBySessionID and returns a live stream that observes new incoming frames (not a read-only snapshot): restoreSession() 播种的 kernelKey 经 currentKernelKey() 反查一致（kernel-key-restore-b-d-1），且返回的 stream 在合成事件到达后真的 yield 了对应的 messageDelta——证明 B(映射重建)与 D(重新订阅、非只读快照)都成立
+  [PASS] rounds/0014 B: restoreSession() re-seeds the kernelKey mapping without re-issuing a sessions.create RPC — it reconnects an existing kernel session, it does not mint a new one: restoreSession() 完成后 sessions.create RPC 调用次数=0，且映射仍正确播种（kernelKey=kernel-key-no-create-1）——确认它只是重新播种映射 + 重新建立订阅通道，没有意外触发铸造新内核会话的 RPC
+
+--- SEND req chat.history (test-stubbed, no real transport) ---
+{
+  "method" : "chat.history",
+  "params" : {
+    "limit" : 50,
+    "sessionKey" : "kernel-key-history-pagination-1"
+  }
+}
+
+--- RECV chat.history result (page 1) ---
+{
+  "hasMore" : true,
+  "messages" : [
+    {
+      "__openclaw" : {
+        "id" : "id-p1-u",
+        "seq" : 20
+      },
+      "content" : "page1-user",
+      "role" : "user"
+    },
+    {
+      "__openclaw" : {
+        "id" : "id-p1-a",
+        "seq" : 21
+      },
+      "content" : "page1-assistant",
+      "role" : "assistant"
+    }
+  ],
+  "nextOffset" : 5,
+  "sessionKey" : "kernel-key-history-pagination-1"
+}
+
+--- SEND req chat.history (test-stubbed, no real transport) ---
+{
+  "method" : "chat.history",
+  "params" : {
+    "limit" : 50,
+    "offset" : 5,
+    "sessionKey" : "kernel-key-history-pagination-1"
+  }
+}
+
+--- RECV chat.history result (page 2) ---
+{
+  "hasMore" : false,
+  "messages" : [
+    {
+      "__openclaw" : {
+        "id" : "id-p2-a",
+        "seq" : 10
+      },
+      "content" : "page2-older-assistant",
+      "role" : "assistant"
+    }
+  ],
+  "sessionKey" : "kernel-key-history-pagination-1"
+}
+  [反证2 evidence] chat.history 被请求的 offset 序列（证明确实翻页了，不是只取第一页）：[nil, Optional(5)]
+  [反证2 evidence] fetchFullHistory 合并两页后返回的记录数=3，按 seq 升序的 texts=["page2-older-assistant", "page1-user", "page1-assistant"]
+  [PASS] rounds/0014 C / 反证2: fetchFullHistory() follows hasMore/nextOffset across multiple chat.history pages, not just the first page: 两次真实分页请求(offset=[nil, Optional(5)])都被 fetchFullHistory 发起并合并——第 2 页的内容确实进入了最终结果，不是只取了第一页；且按 seq 升序正确排序
+
+--- SEND req chat.history (test-stubbed, no real transport) ---
+{
+  "method" : "chat.history",
+  "params" : {
+    "limit" : 50,
+    "sessionKey" : "kernel-key-history-stuck-cursor-1"
+  }
+}
+
+--- RECV chat.history result (pa[AgentShellCore] 会话清单解析失败，已忽略并回退到空列表（不影响继续新建会话）：/var/folders/xl/7sn1d3qd2s7_y2739zgq6pk40000gn/T/agent-shell-persistence-tests-corrupt-C87385D2-71C9-42D9-AF40-914167531C44/sessions.json — DecodingError.dataCorrupted: Data was corrupted. Debug description: The given data was not valid JSON.. Underlying error: Error Domain=NSCocoaErrorDomain Code=3840 "Unexpected character 't' around line 1, column 3." UserInfo={NSJSONSerializationErrorIndex=2, NSDebugDescription=Unexpected character 't' around line 1, column 3.}
+ge 1) ---
+{
+  "hasMore" : true,
+  "messages" : [
+    {
+      "__openclaw" : {
+        "id" : "id-x",
+        "seq" : 1
+      },
+      "content" : "x",
+      "role" : "assistant"
+    }
+  ],
+  "nextOffset" : 3,
+  "sessionKey" : "kernel-key-history-stuck-cursor-1"
+}
+
+--- SEND req chat.history (test-stubbed, no real transport) ---
+{
+  "method" : "chat.history",
+  "params" : {
+    "limit" : 50,
+    "offset" : 3,
+    "sessionKey" : "kernel-key-history-stuck-cursor-1"
+  }
+}
+
+--- RECV chat.history result (page 2) ---
+{
+  "hasMore" : true,
+  "messages" : [
+    {
+      "__openclaw" : {
+        "id" : "id-x",
+        "seq" : 1
+      },
+      "content" : "x",
+      "role" : "assistant"
+    }
+  ],
+  "nextOffset" : 3,
+  "sessionKey" : "kernel-key-history-stuck-cursor-1"
+}
+  [evidence] fetchFullHistory 在检测到 nextOffset 不推进后如实抛错（未静默死循环）：protocol mismatch: chat.history pagination returned a repeated nextOffset=3 (page 2) — cursor is not advancing, refusing to loop forever
+  [PASS] rounds/0014 C: fetchFullHistory() throws instead of looping forever when chat.history returns a non-advancing (repeated) nextOffset: stuck cursor（重复 nextOffset=3）被正确识别并 throw，未静默死循环：protocol mismatch: chat.history pagination returned a repeated nextOffset=3 (page 2) — cursor is not advancing, refusing to loop forever
+  [PASS] rounds/0014 C: parseHistoryRecord() extracts text from both string content and array-of-blocks content (ignoring non-text blocks), and defaults missing role to 'unknown': 字符串 content / 数组 block content（正确忽略 toolCall block，只拼接 text）/ 缺失 role 退化为 unknown / 非对象输入返回 nil，四种情况全部符合预期
+  [PASS] rounds/0014 A: SessionPersistenceStore.save() then .load() round-trips sessionID/kernelKey/title correctly: save() 后 load() 正确取回 sessionID/kernelKey/title（文件路径=/var/folders/xl/7sn1d3qd2s7_y2739zgq6pk40000gn/T/agent-shell-persistence-tests-roundtrip-DC4B545F-84F9-4FB7-9B48-DBA8BE370434/sessions.json）
+  [反证1 evidence] 写入的坏字节内容：{this is not valid JSON at all, and not even close: [[[
+  [反证1 evidence] load() 观察到的行为：返回 0 条记录（未 throw、未 crash）
+  [PASS] rounds/0014 反证1: a corrupted sessions.json makes load() fall back to an empty list (not a crash), and the shell can keep creating/persisting sessions afterward: 写坏 sessions.json 后 load() 安全回退到空列表（未 crash/未 throw），且随后仍可正常新建并持久化会话（1 条，sessionID=sess-after-corruption）
+  [PASS] rounds/0014 A: SessionPersistenceStore.reset() deletes the persisted file; load() afterward is empty and does not error: reset() 删除了持久化文件（/var/folders/xl/7sn1d3qd2s7_y2739zgq6pk40000gn/T/agent-shell-persistence-tests-reset-3CF5B76A-AB13-48D8-B3F5-E50FF142C34B/sessions.json），之后 load() 安全返回空列表
+  [PASS] rounds/0014 A: load() on a directory that has never been written to returns an empty list without creating the file/directory as a side effect: 从未写过的目录上 load() 安全返回空列表，且没有产生任何副作用文件
+  [PASS] rounds/0015 B: openclaw wire decision literals are exactly [allow-once, allow-always, deny]（连字符，逐字对齐内核 schema）: 四值 <-> 三值双向映射逐个 case 对齐内核 schema 字面量；下划线/session 写法均被正确判为不可映射
+  [evidence] allow_session 的处置：unsupported_approval_decision: 决策 'allow_session' 在 openclaw 侧没有对应档位（内核仅支持 allow-once/allow-always/deny）——按 D1 §2.6 同步拒绝，不静默降级
+  [PASS] rounds/0015 B: allow_session 被同步拒绝为 unsupported_approval_decision，不静默降级: 如实抛 unsupported_approval_decision，未降级为 allow_once/allow_always
+  [PASS] rounds/0015 B: allowedDecisions 逐请求判定——同一个 allow_always 在 ask=always 下非法、在默认配置下合法: 同一决策在两种真实内核配置下分别被拒/被放行——证明判定确实取自每条请求自带的集合，不是固定集合
+  [PASS] rounds/0015 B: approval.resolve params 恰好是 {id,kind,decision}（closedObject，多一个键就会被服务端判 malformed）: 恰好三个键，且 kind 透传的是这条请求真实的 openclaw kind（plugin，而不是 D2 收窄后的 .tool）；scope/reason 被安全忽略未混入 params
+  [PASS] rounds/0015 B: Decision.updatedInput 无处承载时如实拒绝，不静默丢弃（否则等于原样放行原命令）: 如实拒绝：审批 req-ui：openclaw approval.resolve 无法承载 Decision.updatedInput（params schema 是 closedObject{id,kind,decision}），拒绝静默丢弃改写内容
+  [反证① evidence] 客户端拦截信息：决策 'allow-always' 不在审批 approval-guard-1 自带的 allowedDecisions ["allow-once", "deny"] 内——已在客户端拦截；若发给服务端会被 forceMalformedDeny 静默改写成 deny
+  [反证① evidence] 发出的 approval.resolve RPC 数：0（期望 0）；审批仍处于 pending，可改选重试
+  [PASS] rounds/0015 反证①: 决策不在该请求 allowedDecisions 内时，客户端拦下并报错，且一个 approval.resolve RPC 都不发出: 客户端拦截生效：0 次 RPC、抛 decisionNotAllowedForThisRequest、审批保持 pending 可重试
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "allow-once",
+    "id" : "approval-wire-0",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (D1 §2.6 respondApproval) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "allow-once",
+    "id" : "approval-wire-0",
+    "reason" : "user",
+    "status" : "allowed"
+  }
+}
+  [反证② evidence] D2 allow_once -> wire params ["kind": "exec", "id": "approval-wire-0", "decision": "allow-once"]
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "allow-always",
+    "id" : "approval-wire-1",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (D1 §2.6 respondApproval) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "allow-always",
+    "id" : "approval-wire-1",
+    "reason" : "user",
+    "status" : "allowed"
+  }
+}
+  [反证② evidence] D2 allow_always -> wire params ["decision": "allow-always", "id": "approval-wire-1", "kind": "exec"]
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-wire-2",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (D1 §2.6 respondApproval) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-wire-2",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+  [反证② evidence] D2 deny -> wire params ["kind": "exec", "id": "approval-wire-2", "decision": "deny"]
+  [PASS] rounds/0015 A/反证②: respondApproval 对每个合法决策发出逐字正确的 wire 值（allow_once->allow-once / allow_always->allow-always / deny->deny）: 三个合法决策各自发出逐字正确的 wire 值，且成功后 reqId 从 pending 表摘除
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "allow-once",
+    "id" : "approval-not-honored-1",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (D1 §2.6 respondApproval) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-not-honored-1",
+    "reason" : "malformed-verdict",
+    "status" : "denied"
+  }
+}
+  [evidence] 静默改写被识破：审批 approval-not-honored-1：请求决策 'allow-once'，但内核记录的终态是 status=denied decision=deny reason=malformed-verdict applied=true——决策未被兑现，不当作成功
+  [PASS] rounds/0015 A: approval.resolve 回 ok:true 但终态不是我们请求的决策时，如实报错（不凭 ok:true 采信）: 识别出 status=denied/reason=malformed-verdict 与请求的 allow-once 不符，如实抛错
+  [PASS] rounds/0015 A: respondApproval 拒绝未知 reqId 与跨会话回应: 未知 reqId -> approval_not_pending；跨会话 -> approvalBelongsToAnotherSession；均在发 RPC 前拦下，pending 表未被误改
+  [evidence] UI 卡片：headline=exec @ gateway 按钮=["允许一次", "拒绝"] 剩余=1800s 不支持的选项=["allow-until-restart"]
+  [PASS] rounds/0015 C: summarizeApprovalPresentation 提炼命令/告警/host/agent 与 allowedDecisions（含不可识别取值如实保留）: 命令/告警/host/agent 提炼正确；allowedDecisions 翻译为 [allow_once, deny] 且认不出的取值如实保留；UI 只渲染这两个按钮、结构性不含 allow_session
+  [evidence] 卡片生命周期：approval_request x2 -> 1 张卡片（去重）；turn_complete(forceResolvedApprovals=[approval-ui-1]) -> 0 张
+  [PASS] rounds/0015 C: SessionStore 收到 approval_request 显示卡片（重复 reqId 不重复插），turn_complete.forceResolvedApprovals 清除卡片: 卡片按 reqId 去重出现，并在 stop() 强制终态化后被清除，不留点不动的僵尸卡片
+
+--- APPROVAL FSM 缓冲（已有 active pending，本条不呈现给调用方） ---
+{
+  "activeReqId" : "fsm-a",
+  "bufferDepth" : 2,
+  "bufferedCount" : 1,
+  "reqId" : "fsm-b",
+  "sessionId" : "sess-approval-fsm"
+}
+
+--- APPROVAL FSM 缓冲（已有 active pending，本条不呈现给调用方） ---
+{
+  "activeReqId" : "fsm-a",
+  "bufferDepth" : 2,
+  "bufferedCount" : 2,
+  "reqId" : "fsm-c",
+  "sessionId" : "sess-approval-fsm"
+}
+
+--- APPROVAL FSM 缓冲溢出（深度 2 已满，直接强制 deny，等内核确认后才宣称已拒绝） ---
+{
+  "activeReqId" : "fsm-a",
+  "reqId" : "fsm-d",
+  "sessionId" : "sess-approval-fsm"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "fsm-d",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result（D1 §6.2 缓冲溢出 fail-closed deny） ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "fsm-d",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- APPROVAL FSM 缓冲溢出 deny 已被内核确认（applied:true + status:denied），产出 queue_overflow ---
+{
+  "reqId" : "fsm-d",
+  "sessionId" : "sess-approval-fsm"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "allow-once",
+    "id" : "fsm-a",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (D1 §2.6 respondApproval) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "allow-once",
+    "id" : "fsm-a",
+    "reason" : "user",
+    "status" : "allowed"
+  }
+}
+
+--- APPROVAL FSM 提升缓冲队列头部为新的 active pending（人工决策终态化） ---
+{
+  "promotedReqId" : "fsm-b",
+  "remainingBuffered" : 1,
+  "sessionId" : "sess-approval-fsm"
+}
+
+--- RECV session.approval（phase:terminal，不映射成 D2 事件，仅驱动审批 FSM） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "id" : "fsm-c",
+      "reason" : "timeout",
+      "resolvedAtMs" : 1784873900000,
+      "status" : "expired"
+    },
+    "phase" : "terminal",
+    "sessionKey" : "kernel-key-approval-fsm",
+    "updatedAtMs" : 1784873900000
+  },
+  "type" : "event"
+}
+  [evidence] FSM: 喂 4 条审批(深度=2) -> 事件流只有 approval_request(fsm-a) + approval_buffer_resolved(fsm-d,queue_overflow)；active=fsm-a，缓冲=[fsm-b,fsm-c]；fsm-d 收到唯一一条强制 deny
+  [evidence] FSM: 人工 allow-once(fsm-a) -> 提升 fsm-b（ts/timeoutMs 逐字沿用内核时间戳，未重置计时）；缓冲中的 fsm-c 收到内核 expired/timeout -> approval_buffer_resolved(fsm-c,buffered_timeout) 且不再提升
+  [PASS] rounds/0015 返工 反证A (D1 §6.2): 单 active pending + 有限深度 FIFO + 溢出 queue_overflow + 提升/buffered_timeout: D1 §6.2 四条规则（单 active 串行呈现 / 有限深度 FIFO 不呈现 / 溢出 fail-closed deny + queue_overflow / 提升 + buffered_timeout）逐条成立
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-race-stop-first",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 1) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-race-stop-first",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-race-stop-first"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-race-stop-first",
+  "ok" : true,
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-race-stop-first"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [evidence] 竞态①(stop 先抢到槽位)：approval.resolve 调用 1 次（decision=deny）；人工 allow-once -> ApprovalDecisionError.approvalNotPending；forceResolvedApprovals=[approval-race-stop-first]
+  [PASS] rounds/0015 返工 反证B①: stop 强制 deny 在途时人工响应同一 reqId —— 只发一条 approval.resolve，人工侧拿到 approval_not_pending: 两条路径撞同一 reqId 时只发出一条 approval.resolve，结果确定，落败方拿到明确错误而非静默成功
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "allow-once",
+    "id" : "approval-race-manual-first",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (D1 §2.6 respondApproval) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "allow-once",
+    "id" : "approval-race-manual-first",
+    "reason" : "user",
+    "status" : "allowed"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-race-manual-first"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : "run-race-manual-first",
+  "ok" : true,
+  "status" : "aborted"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-race-manual-first"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [evidence] 竞态②(人工先抢到槽位)：sessions.abort 被 in-flight 收敛条件挡住直到人工决议落地；approval.resolve 调用 1 次（decision=allow-once）；forceResolvedApprovals=[]（不含 approval-race-manual-first）
+  [PASS] rounds/0015 返工 反证B②: 人工决议在途时 stop 必须等它落地（D1 §6.2 分支3）—— 只发一条 resolve，且不计入 forceResolvedApprovals: 在途人工决议阻塞 sessions.abort 直至落地；只发一条决议；D1 §6.2 分支 3 的『不计入 forceResolvedApprovals』成立
+  [evidence] 缓冲可见性：[审批] 一条未及呈现的请求已被自动拒绝：等待队列已满，按 fail-closed 策略自动拒绝（reqId=buf-overflow-1） | [审批] 一条未及呈现的请求已被自动拒绝：在等待队列中超时（内核侧计时器不因排队而暂停）（reqId=buf-timeout-1）
+  [PASS] rounds/0015 返工 (D1 §6.2 可见性): SessionStore 把 approval_buffer_resolved 呈现为系统行，不再静默丢弃: queue_overflow / buffered_timeout 各自留下一条点明 reqId 与真实原因的系统行，不再静默丢弃
+
+--- APPROVAL FSM 缓冲溢出（深度 0 已满，直接强制 deny，等内核确认后才宣称已拒绝） ---
+{
+  "activeReqId" : "ovf-rpc-throw-active",
+  "reqId" : "ovf-rpc-throw",
+  "sessionId" : "sess-ovf-rpc-throw"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "ovf-rpc-throw",
+    "kind" : "exec"
+  }
+}
+
+--- APPROVAL FSM 缓冲溢出 deny **未被内核确认**（不产出 queue_overflow，如实上报 evt.error） ---
+{
+  "observedFailure" : "approval.resolve 失败：rpc rejected [INTERNAL]: boom",
+  "reqId" : "ovf-rpc-throw",
+  "sessionId" : "sess-ovf-rpc-throw"
+}
+
+--- APPROVAL FSM 进入 FORCE_DENY_PENDING_KERNEL_ACK（此后只允许幂等 deny 重试） ---
+{
+  "observedFailure" : "approval.resolve 失败：rpc rejected [INTERNAL]: boom",
+  "origin" : "queueOverflowDeny",
+  "reqId" : "ovf-rpc-throw",
+  "retryCount" : "0",
+  "sessionId" : "sess-ovf-rpc-throw"
+}
+  [evidence] 失败形态①：RPC 抛错 -> queue_overflow=[] | evt.error=["evt.error(code=unknown, nativeCode=queue_overflow_deny_unconfirmed, message=审批 ovf-rpc-throw：等待队列已满，适配器发起的自动拒绝**未被内核确认**（approval.resolve 失败：rpc rejected [INTERNAL]: boom）——这条请求在内核侧可能仍然 pending，不要当作已被拒绝)"] | FORCE_DENY_PENDING_KERNEL_ACK=queueOverflowDeny/approval.resolve 失败：rpc rejected [INTERNAL]: boom
+
+--- APPROVAL FSM 缓冲溢出（深度 0 已满，直接强制 deny，等内核确认后才宣称已拒绝） ---
+{
+  "activeReqId" : "ovf-applied-false-active",
+  "reqId" : "ovf-applied-false",
+  "sessionId" : "sess-ovf-applied-false"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "ovf-applied-false",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result（D1 §6.2 缓冲溢出 fail-closed deny） ---
+{
+  "applied" : false,
+  "approval" : {
+    "decision" : "allow-once",
+    "id" : "ovf-applied-false",
+    "reason" : "user",
+    "status" : "allowed"
+  }
+}
+
+--- APPROVAL FSM 缓冲溢出 deny **未被内核确认**（不产出 queue_overflow，如实上报 evt.error） ---
+{
+  "observedFailure" : "applied=false（内核未采纳本次 deny；它记录的终态是 status=allowed reason=user）",
+  "reqId" : "ovf-applied-false",
+  "sessionId" : "sess-ovf-applied-false"
+}
+  [evidence] 失败形态②：applied:false（ok:true + 终态快照，不是错误码） -> queue_overflow=[] | evt.error=["evt.error(code=unknown, nativeCode=queue_overflow_deny_unconfirmed, message=审批 ovf-applied-false：等待队列已满，适配器发起的自动拒绝**未被内核确认**（applied=false（内核未采纳本次 deny；它记录的终态是 status=allowed reason=user））——这条请求在内核侧可能仍然 pending，不要当作已被拒绝)"] | FORCE_DENY_PENDING_KERNEL_ACK=无
+
+--- APPROVAL FSM 缓冲溢出（深度 0 已满，直接强制 deny，等内核确认后才宣称已拒绝） ---
+{
+  "activeReqId" : "ovf-not-denied-active",
+  "reqId" : "ovf-not-denied",
+  "sessionId" : "sess-ovf-not-denied"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "ovf-not-denied",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result（D1 §6.2 缓冲溢出 fail-closed deny） ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "allow-once",
+    "id" : "ovf-not-denied",
+    "reason" : "user",
+    "status" : "allowed"
+  }
+}
+
+--- APPROVAL FSM 缓冲溢出 deny **未被内核确认**（不产出 queue_overflow，如实上报 evt.error） ---
+{
+  "observedFailure" : "applied=true 但终态 status=allowed reason=user（不是 denied）",
+  "reqId" : "ovf-not-denied",
+  "sessionId" : "sess-ovf-not-denied"
+}
+
+--- APPROVAL FSM 进入 FORCE_DENY_PENDING_KERNEL_ACK（此后只允许幂等 deny 重试） ---
+{
+  "observedFailure" : "applied=true 但终态 status=allowed reason=user（不是 denied）",
+  "origin" : "queueOverflowDeny",
+  "reqId" : "ovf-not-denied",
+  "retryCount" : "0",
+  "sessionId" : "sess-ovf-not-denied"
+}
+  [evidence] 失败形态③：applied:true 但终态不是 denied -> queue_overflow=[] | evt.error=["evt.error(code=unknown, nativeCode=queue_overflow_deny_unconfirmed, message=审批 ovf-not-denied：等待队列已满，适配器发起的自动拒绝**未被内核确认**（applied=true 但终态 status=allowed reason=user（不是 denied））——这条请求在内核侧可能仍然 pending，不要当作已被拒绝)"] | FORCE_DENY_PENDING_KERNEL_ACK=queueOverflowDeny/applied=true 但终态 status=allowed reason=user（不是 denied）
+
+--- APPROVAL FSM 缓冲溢出（深度 0 已满，直接强制 deny，等内核确认后才宣称已拒绝） ---
+{
+  "activeReqId" : "ovf-ok-active",
+  "reqId" : "ovf-ok",
+  "sessionId" : "sess-ovf-ok"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "ovf-ok",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result（D1 §6.2 缓冲溢出 fail-closed deny） ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "ovf-ok",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- APPROVAL FSM 缓冲溢出 deny 已被内核确认（applied:true + status:denied），产出 queue_overflow ---
+{
+  "reqId" : "ovf-ok",
+  "sessionId" : "sess-ovf-ok"
+}
+  [evidence] 成功对照：applied:true + status:denied -> queue_overflow=["approval_buffer_resolved(ovf-ok,queue_overflow)"] | evt.error=[] | FORCE_DENY_PENDING_KERNEL_ACK=无
+  [PASS] rounds/0016 反证① (T-096 第1项): 溢出 deny 的三种失败响应各须如实报错，且不得提前宣称已自动拒绝: 溢出 deny 的成功判据严格是 applied:true+denied；三种失败响应各产出一条如实的 evt.error 且**不**产出 queue_overflow
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-force-deny-ack",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 1) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "allow-once",
+    "id" : "approval-force-deny-ack",
+    "reason" : "user",
+    "status" : "allowed"
+  }
+}
+
+--- APPROVAL FSM 进入 FORCE_DENY_PENDING_KERNEL_ACK（此后只允许幂等 deny 重试） ---
+{
+  "observedFailure" : "applied=true 但终态 status=allowed（不是 denied）",
+  "origin" : "forceDenyOnStop",
+  "reqId" : "approval-force-deny-ack",
+  "retryCount" : "0",
+  "sessionId" : "sess-force-deny-ack"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-force-deny-ack",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (D1 §2.6 respondApproval) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-force-deny-ack",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- APPROVAL FSM 解除 FORCE_DENY_PENDING_KERNEL_ACK ---
+{
+  "reason" : "deny 重试拿到内核确认的 denied 终态（applied=true）",
+  "reqId" : "approval-force-deny-ack"
+}
+  [evidence] 强制 deny 失败（applied:true 但终态 allowed）-> FORCE_DENY_PENDING_KERNEL_ACK（origin=forceDenyOnStop，observedFailure=applied=true 但终态 status=allowed（不是 denied））
+  [evidence] 该态下人工 allow-once -> 同步拒绝（FORCE_DENY_PENDING_KERNEL_ACK: 审批 approval-force-deny-ack 的强制 deny 未被内核确认（applied=true 但终态 status=allowed（不是 denied）），内核侧真实状态未知——此状态下只允许幂等 deny 重试，拒绝决策 'allow_once'），approval.resolve 调用数未变（1 -> 1）
+  [evidence] 该态下人工 deny -> 放行、恰好多发一条 approval.resolve(deny)，内核确认 denied 后持久态解除
+  [PASS] rounds/0016 反证② (T-096 第2项): 强制 deny 失败 -> FORCE_DENY_PENDING_KERNEL_ACK -> 人工 allow 必须被拒、只允许幂等 deny 重试: 强制 deny 失败后持久态存在；人工 allow 被同步拒绝且零 RPC；幂等 deny 重试被放行并在确认后解除持久态
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-bounded-wait",
+    "kind" : "exec"
+  }
+}
+  [evidence][A] 桩收到 1 次 approval.resolve 且**从未返回**；有界等待 150ms 到期后 respondApproval 抛 审批 approval-bounded-wait：approval.resolve 超过有界等待上限 150ms 仍无应答——已结束该 in-flight（不永久占位），内核侧状态未知，不当作成功也不当作已拒绝（实测耗时 157ms）；in-flight 集合已清空 = []
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-authoritative-terminal",
+    "kind" : "exec"
+  }
+}
+
+--- RECV session.approval（phase:terminal，不映射成 D2 事件，仅驱动审批 FSM） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "id" : "approval-authoritative-terminal",
+      "reason" : "timeout",
+      "resolvedAtMs" : 1784873900000,
+      "status" : "expired"
+    },
+    "phase" : "terminal",
+    "sessionKey" : "kernel-key-authoritative-terminal",
+    "updatedAtMs" : 1784873900000
+  },
+  "type" : "event"
+}
+
+--- 权威 terminal 到达，结束对应的在途 approval.resolve（T-096 第 3 项） ---
+{
+  "origin" : "manual",
+  "reason" : "timeout",
+  "reqId" : "approval-authoritative-terminal",
+  "status" : "expired"
+}
+
+--- APPROVAL FSM active pending 被内核判超时 -> evt.error(approval_timeout) 先行清卡 ---
+{
+  "reason" : "timeout",
+  "reqId" : "approval-authoritative-terminal",
+  "sessionId" : "sess-authoritative-terminal"
+}
+  [evidence][B] 桩收到 1 次 approval.resolve 且**从未返回**（有界等待设为 600000ms，不可能是它兜的底）；喂入 session.approval(phase:terminal,status:expired,reason:timeout) 后 respondApproval 立刻以 审批 approval-authoritative-terminal：决议在途期间内核给出权威终态 status=expired reason=timeout——本次决议不可能被兑现，已结束该 in-flight 结束；in-flight ["approval-authoritative-terminal"] -> []
+  [PASS] rounds/0016 反证③ (T-096 第3项): approval.resolve 有界等待到期 / 权威 timeout terminal 到达 —— in-flight 必须被结束，不得永久占位: 有界等待到期与权威 timeout terminal 两条路径各自结束了对应的 in-flight，槽位不再永久占位
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "allow-once",
+    "id" : "approval-allowed-terminal-race",
+    "kind" : "exec"
+  }
+}
+
+--- RECV session.approval（phase:terminal，不映射成 D2 事件，仅驱动审批 FSM） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "decision" : "allow-once",
+      "id" : "approval-allowed-terminal-race",
+      "reason" : "user",
+      "resolvedAtMs" : 1784873000000,
+      "status" : "allowed"
+    },
+    "phase" : "terminal",
+    "sessionKey" : "kernel-key-allowed-terminal-race",
+    "updatedAtMs" : 1784873000000
+  },
+  "type" : "event"
+}
+
+--- RECV approval.resolve result (D1 §2.6 respondApproval) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "allow-once",
+    "id" : "approval-allowed-terminal-race",
+    "reason" : "user",
+    "status" : "allowed"
+  }
+}
+  [evidence] terminal(status:allowed) 先于 approval.resolve 响应到达（openclaw approval.ts:491-540 的真实顺序）；respondApproval 仍正常成功返回，未被误判为 approvalTerminatedByKernelWhileResolving
+  [PASS] rounds/0016 回归 (反证③ 配套): status:allowed 的 terminal 先于 RPC 响应到达时，不得打断用户自己那条在途决议: 只有 status:expired 的权威 terminal 才结束在途决议；allowed/denied 的终态由这次 RPC 自己的响应负责
+
+--- APPROVAL FSM 缓冲（已有 active pending，本条不呈现给调用方） ---
+{
+  "activeReqId" : "ui-a",
+  "bufferDepth" : 2,
+  "bufferedCount" : 1,
+  "reqId" : "ui-b",
+  "sessionId" : "sess-active-timeout-ui"
+}
+
+--- RECV session.approval（phase:terminal，不映射成 D2 事件，仅驱动审批 FSM） ---
+{
+  "event" : "session.approval",
+  "payload" : {
+    "approval" : {
+      "id" : "ui-a",
+      "reason" : "timeout",
+      "resolvedAtMs" : 1784873900000,
+      "status" : "expired"
+    },
+    "phase" : "terminal",
+    "sessionKey" : "kernel-key-active-timeout-ui",
+    "updatedAtMs" : 1784873900000
+  },
+  "type" : "event"
+}
+
+--- APPROVAL FSM active pending 被内核判超时 -> evt.error(approval_timeout) 先行清卡 ---
+{
+  "reason" : "timeout",
+  "reqId" : "ui-a",
+  "sessionId" : "sess-active-timeout-ui"
+}
+
+--- APPROVAL FSM 提升缓冲队列头部为新的 active pending（active pending 被内核终态化 status=expired） ---
+{
+  "promotedReqId" : "ui-b",
+  "remainingBuffered" : 0,
+  "sessionId" : "sess-active-timeout-ui"
+}
+  [evidence] 事件流顺序：["error", "approval_request(ui-b)"]（第一条 code=approval_timeout nativeCode=timeout）
+  [evidence] 壳侧卡片：[ui-a] -收到 evt.error(approval_timeout)-> [] -收到 approval_request(ui-b)-> ["ui-b"]
+  [evidence] 第二道保证：旧卡仍在时直接投递 approval_request(ui-b) -> 卡片列表 ["ui-b"]（队头即提升项，不是死卡）
+  [PASS] rounds/0016 反证④ (T-096 第4项): active timeout -> 先清旧卡（evt.error/approval_timeout）再呈现提升项（#2 在 UI 上浮现）: active terminal 驱动 UI 先清旧卡再呈现提升项，顺序在事件流上可观察；壳侧对 approval_request 的替换语义提供第二道保证
+
+--- APPROVAL FSM 缓冲（已有 active pending，本条不呈现给调用方） ---
+{
+  "activeReqId" : "badge-a",
+  "bufferDepth" : 4,
+  "bufferedCount" : 1,
+  "reqId" : "badge-b",
+  "sessionId" : "sess-badge"
+}
+
+--- APPROVAL FSM 缓冲（已有 active pending，本条不呈现给调用方） ---
+{
+  "activeReqId" : "badge-a",
+  "bufferDepth" : 4,
+  "bufferedCount" : 2,
+  "reqId" : "badge-c",
+  "sessionId" : "sess-badge"
+}
+  [evidence] 适配器真实缓冲 = ["badge-b", "badge-c"]（2 条）；壳侧 pendingApprovals = ["badge-a"]；旧徽标会显示的数字 = 0 —— 与真实值不符，故删除而非「接一个拿不到的计数」
+  [PASS] rounds/0016 (T-096 第4项后半): 队列徽标不得显示编造的数字 —— 壳侧结构性拿不到真实缓冲计数: 缓冲请求从不进入壳侧状态，`count - 1` 与真实缓冲深度无关；徽标按 T-096 的两个选项之一删除
+  [PASS] Settings UI: KernelShellConfig.resolved() 的 endpoint 精度——env 设置时优先于已保存设置与内建默认值: env 值 ws://env-should-win:1111 生效，source=.environmentVariable（已保存设置 ws://stored-should-lose:2222 被正确忽略）
+  [PASS] Settings UI: KernelShellConfig.resolved() 的 endpoint 精度——env 未设置时已保存设置优先于内建默认值: 已保存设置 ws://stored-should-win:3333 生效，source=.savedSetting
+  [PASS] Settings UI: KernelShellConfig.resolved() 的 endpoint 精度——env 与已保存设置均缺席时回退到内建默认值: 回退到内建默认值 ws://127.0.0.1:18889，source=.builtInDefault
+  [PASS] rounds/0019 评审 Q3: env URL 非法但存在已保存设置时，resolved() 必须级联采用已保存设置，且 endpointSource 必须如实标注 .savedSetting（不能继续谎称 .environmentVariable）: env URL 'ht!tp://' 非法，正确级联到已保存设置 'ws://saved.example:18889'，source=.savedSetting（未继续谎称来自环境变量），且 configWarning 仍提示了 env 值非法：AGENT_SHELL_KERNEL_URL 不是合法 URL（ht!tp://），已忽略并继续按精度链尝试已保存设置/内建默认值
+  [PASS] rounds/0019 评审 Q3 补充: env URL 非法且没有已保存设置时，resolved() 级联到内建默认值，source=.builtInDefault: env URL 非法且无已保存设置，正确落到内建默认值 ws://127.0.0.1:18889，source=.builtInDefault，且 configWarning 提示了 env 值非法：AGENT_SHELL_KERNEL_URL 不是合法 URL（ht!tp://），已忽略并继续按精度链尝试已保存设置/内建默认值
+  [PASS] Settings UI: KernelShellConfig.resolved() 的 token 精度——env 设置时优先于 Keychain 已保存设置与内建默认值: env token 'env-token-should-win' 生效，source=.environmentVariable（Keychain 中的 'stored-token-should-lose' 被正确忽略）
+  [PASS] Settings UI: KernelShellConfig.resolved() 的 token 精度——env 未设置时 Keychain 已保存设置优先于内建默认值: Keychain 已保存 token 'stored-token-should-win' 生效，source=.savedSetting
+  [PASS] Settings UI: KernelShellConfig.resolved() 的 token 精度——env 与 Keychain 均缺席时回退到内建占位符默认值: 回退到内建占位符 token，source=.builtInDefault，isTokenPlaceholder=true
+  [PASS] Settings UI: KernelShellConfig.resolved() 的 endpoint/token 精度链彼此独立解析（一个来自已保存设置、另一个来自 env，互不影响）: endpoint 独立地从已保存设置解析（ws://only-endpoint-is-stored:4444），token 独立地从 env 解析（only-token-is-env），两者互不干扰
+  [PASS] Settings UI: KernelShellConfig.isTokenPlaceholder 精确匹配内建占位符字符串，真实 token 与空字符串均判 false: 占位符字面量 -> true；真实 token 'sk-EXAMPLE-not-a-real-token-abc123' -> false；空字符串 -> false（既定 scope 边界）
+  [PASS] Settings UI 回归锁: fromEnvironment() 在两个 env 变量都设置时，endpoint/token/configWarning 与加入 source 标注之前逐字节一致: endpoint/token/configWarning 三个既有字段逐字节未变；新增的两个 source 字段正确标为 .environmentVariable
+  [PASS] Settings UI 回归锁: fromEnvironment() 在两个 env 变量都未设置时，回退到与加入 source 标注之前逐字节一致的内建默认值: 回退到内建默认值逐字节未变（ws://127.0.0.1:18889 / agentshell-local-placeholder-token）；新增 source 字段正确标为 .builtInDefault
+  [PASS] Settings UI 回归锁: fromEnvironment() 在 env URL 非法时，configWarning 文案与加入 source 标注之前逐字节一致: 非法 URL 告警文案逐字节未变：'AGENT_SHELL_KERNEL_URL 不是合法 URL（ht!tp://），已回退到 ws://127.0.0.1:18889'
+  [PASS] Settings UI: KernelTokenKeychainStore 完整往返——save（新增）-> read -> save（更新，走 add-vs-update 的 update 分支）-> read -> delete -> read: 新增 -> 读回一致 -> 更新（覆盖同一 service/account）-> 读回新值 -> 删除 -> 读回 nil，全部符合预期
+  [PASS] Settings UI: KernelTokenKeychainStore.read() 对从未写过的 service/account 返回 nil（不是抛错）: 从未写过的 service/account 上 read() 安全返回 nil，未抛错
+  [PASS] Settings UI: KernelTokenKeychainStore.delete() 在条目本不存在时是幂等的（不抛错）——「清除已保存 token」不应该因为本来就没有条目而向用户报错: 对不存在的条目连续 delete() 两次均未抛错
+  [PASS] Settings UI: KernelEndpointDefaultsStore save/load/clear 往返正确，且 load() 对从未写过的 suite 返回 nil: save() 前 load()==nil -> save() 后 load() 取回原值 -> clear() 后 load() 再次为 nil
+  [PASS] Settings UI: SessionStore.reconnect(with:) 用新 config 更新展示态并清空旧会话列表: reconnect() 后展示态全部更新为新 config 的值，旧会话列表被清空，connectionStatus 已推进到 .failed（新地址确实连不上，这是预期结果，不是测试环境问题）
+  [PASS] rounds/0020 interrupt() mode:"abort_and_resend" rejected with unsupported_interrupt_mode, not silently treated as cancel: mode:"abort_and_resend" 被正确拒绝 unsupported_interrupt_mode，且全程未 dispatch 任何 RPC
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-survive"
+  }
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "abortedRunId" : "run-interrupt-survive-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "kernel-key-interrupt-survive",
+    "message" : "still alive",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-interrupt-survive-2",
+  "status" : "started"
+}
+  [PASS] RED LINE rounds/0020: interrupt(mode:"cancel") aborts the run but the session survives — no session_end, stream not finished, send() works afterward: interrupt() 成功中止 run=run-interrupt-survive-1（outcome=.succeeded），全程未 dispatch sessions.delete、未发 session_end、事件流未 finish；同一 session 后续 send() 成功返回新 runId=run-interrupt-survive-2
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-cache-vs-authoritative"
+  }
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "abortedRunId" : null,
+  "ok" : true,
+  "status" : "no-active-run"
+}
+  [PASS] rounds/0020 interrupt(): whether to wait is decided by sessions.abort's own abortedRunId, not the local lastRunIDBySessionID cache: interrupt() 正确按 sessions.abort 的权威 abortedRunId:null 立即返回 succeeded（0.000s），没有被本地缓存的陈旧 runId=run-already-finished-naturally 误导去等待一个不存在的终态
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-noactive"
+  }
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "abortedRunId" : null,
+  "ok" : true,
+  "status" : "no-active-run"
+}
+  [PASS] rounds/0020 interrupt() no active run -> operation_completed(succeeded, operationKind:.interrupt) mirror, no session_end: operationId=op-interrupt-E5D68C64-5F85-400A-965A-D0610737548B 双通道 outcome 均为 succeeded，operationKind 正确标注为 interrupt（不是 stop），没有紧跟 session_end（红线：会话存活），sessions.delete 从未被调用
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-timeout"
+  }
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "abortedRunId" : "run-interrupt-timeout-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+  [PASS] rounds/0020 interrupt() waiting for aborted-run terminal times out -> operation_completed(timed_out) mirror, no session_end: 超时路径 operationId=op-interrupt-7CE1BF44-6EA0-4D9F-A7B6-885BFDE073B3 Promise 与 Event 均报 timed_out，operationKind=interrupt，未发 session_end，sessions.delete 从未被调用，锁与 pendingStop 均已清理
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-transport-closed"
+  }
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "abortedRunId" : "run-interrupt-transport-closed-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+  [PASS] rounds/0020 interrupt(): transport closes while awaiting aborted-run terminal -> no permanent hang, throws honestly (does not fake success), operation_completed(aborted_effect_unknown) mirror + lock/pendingStop cleaned: transport 在等待窗口内关闭：interrupt() 未永久挂起，如实抛出 transport 错误（未伪装成功），operation_completed(aborted_effect_unknown, operationKind:interrupt) 镜像先于 session_end(transport_closed) 发出（后者是既有的整链路 transport 关闭机制，与本轮红线无关），pendingStop 清理干净
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "kernel-key-interrupt-vs-send",
+    "message" : "x",
+    "timeoutMs" : 0
+  }
+}
+
+--- RECV sessions.send result ---
+{
+  "messageSeq" : 1,
+  "runId" : "run-x",
+  "status" : "started"
+}
+  [PASS] rounds/0020 mutual exclusion: interrupt() rejected with session_locked while a REAL send() is in flight: interrupt() 在真实 send() 飞行期间被正确 reject(session_locked)
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-send-stop-vs-interrupt"
+  }
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "abortedRunId" : null,
+  "ok" : true,
+  "status" : "no-active-run"
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-send-stop-vs-interrupt"
+  }
+}
+
+--- RECV sessions.abort result ---
+{
+  "abortedRunId" : null,
+  "ok" : true,
+  "status" : "no-active-run"
+}
+
+--- SEND req sessions.delete (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.delete",
+  "params" : {
+    "key" : "kernel-key-send-stop-vs-interrupt"
+  }
+}
+
+--- RECV sessions.delete result ---
+{
+  "deleted" : true
+}
+  [PASS] rounds/0023 §9.3 arbitration: send() still rejected(session_locked), but stop() WAITS (not rejected) while a REAL interrupt(mode:"cancel") is in flight, then proceeds to stop_in_progress once interrupt resolves: send() 仍被正确 reject(session_locked)（红线未松动）；stop() 在 interrupt() 飞行期间真实等待（lock 全程保持 interrupt_in_progress、stop() 未提前报告结果，t≈100ms 时仍在途），interrupt() 完成（outcome=.succeeded）后锁立即转 stop_in_progress，stop() 随后正常推进并成功完成（RPC 顺序=["sessions.abort", "sessions.abort", "sessions.delete"]）
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-forcedeny-fail-1",
+    "kind" : "exec"
+  }
+}
+
+--- APPROVAL FSM 进入 FORCE_DENY_PENDING_KERNEL_ACK（此后只允许幂等 deny 重试） ---
+{
+  "observedFailure" : "approval.resolve 失败：transport error: simulated approval.resolve failure",
+  "origin" : "forceDenyOnStop",
+  "reqId" : "approval-forcedeny-fail-1",
+  "retryCount" : "0",
+  "sessionId" : "sess-interrupt-forcedeny-fail"
+}
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-forcedeny-fail-1",
+    "kind" : "exec"
+  }
+}
+
+--- APPROVAL FSM 进入 FORCE_DENY_PENDING_KERNEL_ACK（此后只允许幂等 deny 重试） ---
+{
+  "observedFailure" : "approval.resolve 失败：transport error: simulated approval.resolve failure",
+  "origin" : "forceDenyOnStop",
+  "reqId" : "approval-forcedeny-fail-1",
+  "retryCount" : "1",
+  "sessionId" : "sess-interrupt-forcedeny-fail"
+}
+  [PASS] rounds/0020 interrupt(): forceDenyPendingApprovalsBeforeStop throwing releases the lock + cleans pendingStop (and never reaches sessions.abort); second interrupt() is not falsely session_locked: 第一次 interrupt() 因 approval.resolve 失败而抛错（sessions.abort 从未被调用），锁正确释放为 idle + pendingStop 清理；第二次 interrupt() 正常再次尝试（而不是被 session_locked 挡住）
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-abort-throws"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-abort-throws"
+  }
+}
+  [PASS] rounds/0020 interrupt(): sessions.abort throws -> lock released + pendingStop cleaned + operation_completed(rejected, operationKind:.interrupt) mirror; second interrupt() not falsely session_locked: 第一次 interrupt() 抛错后锁正确释放为 idle + pendingStop 清理 + operation_completed(rejected, operationKind:interrupt) 镜像已发出；第二次 interrupt() 正常再次尝试（而不是被 session_locked 挡住）
+
+--- SEND req approval.resolve (test-stubbed, no real transport) ---
+{
+  "method" : "approval.resolve",
+  "params" : {
+    "decision" : "deny",
+    "id" : "approval-interrupt-force-deny-1",
+    "kind" : "exec"
+  }
+}
+
+--- RECV approval.resolve result (M3 stop-path force-deny, drain round 1) ---
+{
+  "applied" : true,
+  "approval" : {
+    "decision" : "deny",
+    "id" : "approval-interrupt-force-deny-1",
+    "reason" : "user",
+    "status" : "denied"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-force-deny"
+  }
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "abortedRunId" : "run-interrupt-force-deny-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+  [PASS] rounds/0020 (D1 §6.2) interrupt() force-denies pending approval BEFORE sessions.abort; sessions.delete never dispatched; TurnCompleteEvent.forceResolvedApprovals lists it; no session_end: approval.resolve 先于 sessions.abort 被调用（调用顺序=["approval.resolve", "sessions.abort"]，sessions.delete 全程未出现），TurnCompleteEvent.forceResolvedApprovals=[approval-interrupt-force-deny-1]，会话未终结（无 session_end）
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-late-second-frame"
+  }
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "abortedRunId" : "run-interrupt-late-second-frame-1",
+  "ok" : true,
+  "status" : "aborted"
+}
+  [PASS] T-113 item 1/4: a second (late) aborted lifecycle frame arriving AFTER interrupt()'s own defer has cleared the pendingStop entry must NOT fabricate an operation_completed(operationKind:.stop) system line — only an honest turn_complete(cancelled) may follow: 迟到的第二条 aborted 帧（pendingStop 已被 interrupt() 的 defer 摘空之后到达）未产出任何 operation_completed（更未伪造 operationKind:.stop），只产出一条诚实的 turn_complete(cancelled)；sessions.delete 全程未被调用
+
+--- SEND req sessions.messages.subscribe (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.messages.subscribe",
+  "params" : {
+    "includeApprovals" : true,
+    "key" : "kernel-key-interrupt-barrier-1"
+  }
+}
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-barrier-1"
+  }
+}
+
+--- RECV sessions.messages.subscribe result ---
+{
+  "key" : "kernel-key-interrupt-barrier-1",
+  "subscribed" : true
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "status" : "no-active-run"
+}
+  [PASS] rounds/0020 subscription barrier also covers interrupt(): interrupt() does not dispatch sessions.abort before subscribe()'s sessions.messages.subscribe has been dispatched: interrupt() 的底层 sessions.abort RPC 严格晚于 subscribe() 的底层 sessions.messages.subscribe RPC dispatch（人为 200ms 延迟窗口内未提前发出，窗口后确实发出）——send()/stop() 共享的屏障对 interrupt() 同样生效
+  [PASS] rounds/0020 (task item 4, core): evt.operation_completed(operationKind:.interrupt, outcome:.succeeded, affectedRunId:nil) — the abortedRunId==nil path, which never emits turn_complete — clears session.isWaitingForReply: operation_completed(operationKind:.interrupt, outcome:.succeeded, affectedRunId:nil) correctly clears isWaitingForReply even though no turn_complete was ever emitted for this operation
+  [PASS] T-113 item 2 (inverted): evt.operation_completed(operationKind:.interrupt, outcome:.timedOut) does NOT clear session.isWaitingForReply — sessions.abort was accepted (real abortedRunId) but we never confirmed the run actually stopped, so the UI must not claim it isn't waiting anymore: operation_completed(operationKind:.interrupt, outcome:.timedOut) correctly leaves isWaitingForReply untouched — only a confirmed outcome:.succeeded may clear it; the 停止 button remains available for the user to retry
+  [PASS] T-113 item 2 (inverted — see comment for why the original test pinned the wrong behaviour): evt.operation_completed(operationKind:.interrupt, outcome:.rejected) does NOT clear session.isWaitingForReply — a failed abort attempt gives zero confirmation the run stopped; clearing it would make the UI lie and strand the user unable to retry 停止: operation_completed(operationKind:.interrupt, outcome:.rejected) correctly leaves isWaitingForReply untouched, matching interruptCurrentRun's documented rationale — the 停止 button remains available so the user can retry
+  [PASS] rounds/0020 regression guard: evt.operation_completed(operationKind:.stop) does NOT trigger the interrupt-specific isWaitingForReply clearing (stop()'s own session_end handler already owns that job): operation_completed(operationKind:.stop) leaves isWaitingForReply untouched, confirming the rounds/0020 fix is precisely scoped to interrupt (not an unconditional clear)
+  [PASS] rounds/0020: interruptCurrentRun(in:) on a sessionID absent from store.sessions is a no-op — does not touch any OTHER registered session's state: interruptCurrentRun(in: <unknown id>) left the only registered session (a different id) entirely untouched — session(for:) matches by id, not 'any session'
+  [PASS] rounds/0020 (task item 3, model-layer half of the defense): interruptCurrentRun(in:) never calls client.interrupt() when session.isInterrupting is already true: a second interruptCurrentRun() call while one was already in flight (isInterrupting==true) dispatched zero RPCs and left isInterrupting untouched — the model-layer guard short-circuits before ever reaching client.interrupt()
+  [PASS] rounds/0020 (task item 1): interruptCurrentRun(in:) surfaces a REAL thrown error from client.interrupt() as a '[停止失败]' system message — does not swallow it — and resets isInterrupting back to false afterward: a real thrown KernelClientError.protocolMismatch from client.interrupt() (unknown session — no kernelKey registered) was honestly surfaced as a system message ('[停止失败] protocol mismatch: unknown session sess-interrupt-fail-1'), not swallowed; isInterrupting correctly reset to false
+
+--- SEND req sessions.abort (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.abort",
+  "params" : {
+    "key" : "kernel-key-interrupt-e2e-1"
+  }
+}
+
+--- RECV sessions.abort result (interrupt cancel) ---
+{
+  "abortedRunId" : null,
+  "ok" : true,
+  "status" : "no-active-run"
+}
+  [PASS] rounds/0020: interruptCurrentRun(in:) end-to-end — dispatches a real client.interrupt(mode:.cancel) call, produces a real operation_completed event, and once that event is drained through SessionStore.handle, isWaitingForReply is cleared with no failure message appended: interruptCurrentRun(in:) dispatched a real client.interrupt(mode:.cancel) call (1 real sessions.abort RPC, order=["sessions.abort"]), produced a real operation_completed(interrupt,succeeded) event, and processing it through handle() correctly cleared isWaitingForReply end-to-end
+  [PASS] 外观设置: ChromeTransparencyDefaultsStore save/load/clear 往返正确，且 load() 对从未写过的 suite 返回 nil: save() 前 load()==nil -> save(0.42) 后 load() 取回原值 -> clear() 后 load() 再次为 nil
+  [PASS] 外观设置: ChromeTransparencyDefaultsStore.load() 能区分「保存了 0.0」与「从未保存过」（不能用 double(forKey:) 的零值默认返回值当判据）: 保存 0.0 后 load() 正确返回 Optional(0.0)（不是 nil），证明判据用的是 object(forKey:) != nil 而不是零值猜测
+  [PASS] 外观设置: ChromeTransparencyDefaultsStore.defaultSliderValue 落在 materialForChromeIntensity 的 .regularMaterial 半开区间 [0.4, 0.6) 内（T-114 阻断项②：此前的 0.6 不满足这一点）: defaultSliderValue=0.5 ∈ [0.4, 0.6)，稳稳落在 .regularMaterial 分档内
+  [PASS] 外观设置: ChromeTransparencyDefaultsStore.defaultSliderValue 精确等于 0.5: defaultSliderValue == 0.5
+  [PASS] 外观设置 红线①: ChromeTransparencyResolver.resolve() 在 reduceTransparency=true 时，滑块任意取值（含 0.0/1.0 两个极值）均解析为 .opaque: sliderValue ∈ [0.0, 0.001, 0.25, 0.5, 0.75, 0.999, 1.0]（含两个极值 0.0/1.0）在 reduceTransparency=true 下全部解析为 .opaque
+  [PASS] 外观设置 红线②: ChromeTransparencyResolver.resolve() 在 increaseContrast=true（reduceTransparency=false）时，滑块任意取值（含 0.0/1.0 两个极值）均解析为 .opaque: sliderValue ∈ [0.0, 0.001, 0.5, 0.999, 1.0]（含两个极值）在 increaseContrast=true 下全部解析为 .opaque，即便 reduceTransparency 本身是 false
+  [PASS] 外观设置 红线③: reduceTransparency 与 increaseContrast 同时为 true 时，滑块两个极值均解析为 .opaque: 两个无障碍开关同时开启时，滑块两个极值（0.0/1.0）均正确解析为 .opaque
+  [PASS] 外观设置: ChromeTransparencyResolver.resolve() 在两个无障碍开关都为 false 且滑块 > 0 时，正确解析为 .translucent(intensity: 滑块值本身): 两个无障碍开关都关闭时，滑块值 ∈ [0.01, 0.3, 0.5, 0.7, 1.0] 均正确解析为 .translucent(intensity: 原值)，证明红线测试不是靠恒返回 .opaque 蒙混过关
+  [PASS] 外观设置: ChromeTransparencyResolver.resolve() 在滑块=0.0 且两个无障碍开关都为 false 时，仍解析为 .opaque（用户自己选择不透明）: sliderValue=0.0、无无障碍覆盖时，resolve() 正确解析为 .opaque
+  [PASS] 外观设置: ChromeTransparencyResolver.resolve() 把越界滑块值夹到 [0,1] 再判断（负数落到 .opaque，大于 1 的值夹到 intensity=1.0）: sliderValue=-0.5 -> .opaque（夹到 0）；sliderValue=1.7 -> .translucent(intensity: 1.0)（夹到上限）
+  [PASS] 外观设置: ApprovalDecisionSemantics.colorRole(for: .deny) == .danger（不是 .accent）——审批卡「拒绝」必须读成危险色，不能被主题强调色吃掉: colorRole(for: .deny) == .danger，且与 .accent 明确不相等
+  [PASS] 外观设置: ApprovalDecisionSemantics.colorRole(for:) 对 allow_once/allow_always/allow_session 均返回 .accent（不是 .danger，也不是 success/warning）: allow_once/allow_always/allow_session 三种决策的 colorRole 均为 .accent
+  [PASS] 外观设置 水印: WatermarkVisibilityResolver.resolve() 在 increaseContrast=true 时返回 false（隐藏），不论 reduceTransparency 取值: increaseContrast=true 时，reduceTransparency 取 false/true 均正确返回 false（隐藏水印）
+  [PASS] 外观设置 水印: WatermarkVisibilityResolver.resolve() 在 reduceTransparency=true 但 increaseContrast=false 时仍返回 true（不隐藏）——与 ChromeTransparencyResolver 刻意不对称: 单独开启 reduceTransparency 时 resolve() 仍返回 true，证明判断只看 increaseContrast
+  [PASS] 外观设置 水印: WatermarkVisibilityResolver.resolve() 在两个无障碍开关都为 false 时返回 true（显示），证明不是靠恒返回 false 蒙混过关: 两个无障碍开关都关闭时，resolve() 正确返回 true（显示水印）
+  [PASS] 外观设置 composer 玻璃: ComposerGlassLayerOpacity.resolve(intensity:) 对不同 intensity 返回不同的不透明度（不是修前那种恒定值）: intensity=0.1 -> 0.935，0.5 -> 0.675，1.0 -> 0.35，三者互不相同，证明不透明度确实随 intensity 变化
+  [PASS] 外观设置 composer 玻璃: ComposerGlassLayerOpacity.resolve(intensity:) 随 intensity 增大单调递减（intensity 越大越透明，玻璃层不透明度应越低）: intensity ∈ [0.01, 0.2, 0.4, 0.6, 0.8, 1.0] 时，resolve() 的返回值严格单调递减
+  [PASS] 外观设置 composer 玻璃: ComposerGlassLayerOpacity.resolve(intensity:) 在 intensity 两个极值附近，返回值落在 [minOpacity, maxOpacity] 内: intensity≈0 -> 0.999935（贴近 maxOpacity），intensity=1.0 -> 0.35（约等于 minOpacity），两端都在声明的范围内
+  [PASS] 菜单栏摘要: connectionStatusText(.notConnected) == "未连接": connectionStatusText(.notConnected) == "未连接"
+  [PASS] 菜单栏摘要: connectionStatusText(.connecting) == "连接中…": connectionStatusText(.connecting) == "连接中…"
+  [PASS] 菜单栏摘要: connectionStatusText(.connected(scopes:)) == "已连接"（不泄漏 scopes 列表）: connectionStatusText(.connected(scopes: [3 项])) == "已连接"，scopes 明细未泄漏进菜单栏文案
+  [PASS] 菜单栏摘要: connectionStatusText(.failed(message)) == "连接失败：\(message)": connectionStatusText(.failed("timeout")) == "连接失败：timeout"
+  [PASS] 菜单栏摘要: sessionNameText(nil) 返回非空占位文案（不是空字符串）: sessionNameText(nil) == "无活动会话"，非空
+  [PASS] 菜单栏摘要: sessionNameText(某会话标题) 原样返回该标题（不加任何前后缀）: sessionNameText("会话 3") == "会话 3"，原样透传
+  [PASS] 菜单栏摘要: connectionStatusText(.failed(超长 NSError 文案)) 截断到上限并加省略号,不把整段错误塞进菜单: 234 字符的 NSError 文案截到含前缀共 46 字符: "连接失败：transport error: Error Domain=NSURLError…"
+  [PASS] 菜单栏摘要: sessionNameText(超长会话名) 截断到上限并加省略号,不把整段粘贴内容塞进菜单: 105 字符的会话名截到含省略号共 41 字符: "这是一个用户随手粘贴进来的超长会话标题片段这是一个用户随手粘贴进来的超长会话标题…"
+  [PASS] 菜单栏摘要: sessionNameText 在 Character 边界截断,不切碎横跨 UTF-16 代理对的 emoji（naive UTF-16 截断会切在这里）: 39 个中文字符 + 1 个占 2 UTF-16 code unit 的 emoji + 10 个中文字符，截断结果完整保留了 emoji、未产生 U+FFFD: "中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中😀…"
+  [PASS] 菜单栏摘要: sessionNameText 输入长度恰好等于截断上限（40 字符）时原样透传,不加省略号: 长度恰好 40 字符时原样透传，未误加省略号
+  [PASS] 菜单栏摘要: sessionNameText 输入比截断上限多 1 个字符（41 字符）时才开始截断: 41 字符输入被截到 40 字符 + 省略号: "字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字…"
+  [PASS] 菜单栏摘要: connectionStatusText(.failed(短消息)) 短消息原样透传,截断器不应该动它一个字符: 短消息「网络不可达」原样透传，未被截断器误伤
+  [PASS] 菜单栏窗口选择: findMainWindowIndex 在只有一个 identifier 不匹配的可见窗口（模拟 Settings）时返回 nil: 唯一可见窗口的 identifier 不匹配 "main" 前缀时，正确返回 nil，不会误把 Settings 当成主窗口
+  [PASS] 菜单栏窗口选择: findMainWindowIndex 在窗口列表为空时返回 nil: 空窗口列表正确返回 nil
+  [PASS] 菜单栏窗口选择: findMainWindowIndex 匹配 SwiftUI 实际赋值的 "main-AppWindow-1" 这类带后缀 identifier: identifier "main-AppWindow-1" 通过 hasPrefix("main") 正确匹配到主窗口
+  [PASS] 菜单栏窗口选择: findMainWindowIndex 匹配 identifier 恰好等于 mainWindowID（无后缀）的窗口: identifier 精确等于 "main" 时同样正确匹配
+  [PASS] 菜单栏窗口选择: findMainWindowIndex 匹配已最小化（不在 Dock 之外可见）的主窗口: 已最小化（isVisible=false, isMiniaturized=true）的主窗口正确被选中
+  [PASS] 菜单栏窗口选择: findMainWindowIndex 在主窗口不是数组第一个元素时仍返回正确下标: Settings 窗口排在前面时，正确跳过它、返回主窗口的真实下标 1
+  [PASS] 菜单栏窗口选择: findMainWindowIndex 把 identifier == nil 的窗口当成不匹配（不崩溃、不误判）: identifier 为 nil 时安全返回 nil，未强解包崩溃
+  [PASS] 菜单栏窗口选择: findMainWindowIndex 忽略 identifier 匹配但既不可见也未最小化的窗口: identifier 匹配但 isVisible=false 且 isMiniaturized=false 时正确返回 nil
+  [PASS] 菜单栏窗口选择: findMainWindowIndex 拒绝仅仅"包含"而非"以…开头"mainWindowID 的 identifier（防 contains 误实现）: identifier 只包含 "main" 子串但不以它开头时正确返回 nil，证明用的是 hasPrefix 不是 contains
+  [PASS] rounds/0023 interrupt(mode:"steer") with no locally observed active run -> synchronous no_active_run_for_steer reject BEFORE operationId minting, no OperationOutcome, zero RPC dispatched: interrupt(mode:"steer") 在无本地可观察 active run 时同步 reject(no_active_run_for_steer)：零 RPC 派发、锁保持 idle、零事件（未铸 operationId，不产生 OperationOutcome）
+
+--- SEND req sessions.send (test-stubbed, no real transport) ---
+{
+  "method" : "sessions.send",
+  "params" : {
+    "key" : "kernel-key-steer-succeeds",
+    "me

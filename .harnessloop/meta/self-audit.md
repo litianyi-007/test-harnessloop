@@ -1353,3 +1353,35 @@ Status values: `pass`, `warn`, `fail`, `unknown`.
 - Redaction notes: 无涉密内容。评审全文 `T-080-output-full.txt`（494KB）已过 `check-secrets.sh`。
 - **不适用「处方级收残不 gate」先例**（T-030 / T-060）：那两次 MUST-FIX 是引用精度、行号漂移一类机械问题；本轮是两处真实代码缺陷 + 一处空断言 + 一次自我放水，性质不同。
 - 遗留（多轮未决，仍待用户）：`control-contract.md` 的 `Model/effort mismatch`、`Missing evidence`、`Contract cannot be evaluated`；`cost-context-policy.md` 的 `Acceptance testing`。**本轮 aggregate 那次真实模型调用正好落在最后这项的空白里**，是它第一次真的咬人。
+
+## AUDIT-20260821-ROUND0023-CLOSE
+
+- Audited at: 2026-08-21
+- Trigger: rounds/0023 收盘（interrupt steer + §9.3 锁仲裁）；会话从 Claude 切到 Grok 接续
+- Scope: 环境模型不符致谢、T-116 REWORK 验收、机械门、账本
+
+### 环境不符（须显式致谢，user-confirmed 2026-08-04 停条件）
+
+- `state/environment.md` Expected model: `claude-opus-5[1m]` / Expected effort: `max`
+- 本会话实际: **grok-4.6**
+- 用户 2026-08-21 裁：**接受本次 Grok 4.6 接续，不改期望值**
+- 不得把期望值改成实际值当作已解决——未改 `environment.md`
+
+### Deterministic Signals
+
+- `check_setup.py`: complete=True / gate_blocking=False / field_todo=10 / selfcheck_todo=0
+- `loop_autocontinue_anomaly`: 开轮/收盘前见 verify 输出
+- `loop_anomaly_skipped_unparsable`: **2**（非 anomaly，可见「有两轮判定不了」；不要求致谢）
+- T-116: verdict **REWORK**；三条 FAIL 返工后主会话复跑 174/174、13/0/0，源 SHA 与返工收尾一致
+- Failed review acceptance: 用户 2026-08-21 授权收盘（与 rounds/0020 同形：REWORK + 主会话独立复核，无第二轮 hopper 确认审）。已在 `decision.md` 留痕
+
+### 账本
+
+- T-116 queue 行 `pending` → `done`（本轮自己的评审；T-110–T-115 仍 pending 属既有账本滞后，本轮不顺手改）
+- `current.md` Last accepted 0016 → 0023（TH-0018：该字段必须指向本 goal 下真实 `Accepted: yes` 的轮）
+
+### 判断
+
+- Create upstream evolution issue: no —— 本轮是 app 实现向 confirmed 规格靠拢，不是框架缺陷
+- Redaction notes: 无涉密内容
+- 下一动作：rounds/0024 接 CI（0023 scope-lock 禁止 `.github/`）

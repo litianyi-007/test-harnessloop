@@ -1,4 +1,22 @@
-// rounds/0020：`interrupt()`（D1 §2.4）真 actor 级单测——本轮只实现 `mode:"cancel"`。
+// rounds/0020：`interrupt()`（D1 §2.4）真 actor 级单测——`mode:"cancel"` 的完整覆盖。
+//
+// rounds/0023：`mode:"steer"` 落地 + §9.3 仲裁修正后，两处相应更新（详细推理见改动点自身的文档
+// 注释，这里只记账）：
+//   - `testInterruptUnsupportedModeSteerRejectedNotSilentlyTreatedAsCancel` 已删除——它的全部前提
+//     （"steer 一律 unsupported_interrupt_mode"）本轮起不再成立，覆盖它的新断言（steer 不再被无条件
+//     拒绝、真的会走 chat.send）搬到了 SteerTests.swift。`abort_and_resend` 仍未实现，其"显式拒绝、
+//     不静默当 cancel/steer 处理"这一半覆盖原样保留在本文件
+//     （testInterruptUnsupportedModeAbortAndResendRejectedNotSilentlyTreatedAsCancel）。
+//   - `testSendAndStopRejectedWhileInterruptInFlight` 重命名为
+//     `testSendRejectedButStopWaitsThenProceedsWhileInterruptInFlight`——旧名字断言"send()/stop()
+//     在 interrupt() 飞行期间均被 session_locked 拒绝"，但 D1 v3.6 §9.3 矩阵对 `interrupt_in_progress`
+//     遇 `stop()` 明写的是"特殊仲裁"（等待，不抢占），不是 reject；旧断言的 stop() 那一半是对实现
+//     偏离规格的记录，不是对规格本身的记录。scope-lock 取舍 3 明文要求"保留 send 那一半，把 stop
+//     那一半改成断言『等待而非拒绝』——不许整条删掉了事"，因此改名而不是新开一条：send() 侧的断言
+//     一字未改（仍是同一个 `guard`），stop() 侧从"期望 throw session_locked"改成"期望等待、interrupt
+//     完成后正常继续、最终成功"。这条测试同时是 rounds/0023 取舍 4 点名的"必须专门构造用例暴露第 2
+//     条偏离"——用的是 cancel mode（取舍 4 原文"steer 或 cancel 均可"），构造方式与本文件其余互斥矩阵
+//     测试一致（真实驱动，不摆拍）；SteerTests.swift 另有一条独立的 steer 版本，两条互不替代。
 //
 // 覆盖 scope-lock rounds/0020 与任务书列出的全部 9 条必须行为，逐条对应下面的测试：
 //   1. 会话存活（红线）—— testInterruptCancelSucceedsSessionSurvivesAndSendWorksAfterward
@@ -14,13 +32,13 @@
 //   6. 超时 -> timed_out + 镜像 —— testInterruptTimeoutEmitsOperationCompletedMirror
 //   7. transport 关闭时如实抛错，不伪装成功 —— testInterruptTransportClosedWhileWaitingDoesNotHangAndEmitsMirror
 //   8. 互斥矩阵 + 失败路径释放锁 —— testInterruptRejectedWhileSendInFlight /
-//      testSendAndStopRejectedWhileInterruptInFlight /
+//      testSendRejectedButStopWaitsThenProceedsWhileInterruptInFlight（rounds/0023 重命名，见上） /
 //      testInterruptForceDenyFailureReleasesLockAndCleansPendingEntry /
 //      testInterruptAbortRpcThrowReleasesLockAndEmitsRejectedMirror
 //   9. 订阅屏障 —— testInterruptWaitsForPendingSubscriptionDispatchBeforeItsOwnRpc
-//   + mode 门禁（steer/abort_and_resend 显式拒绝，不静默当 cancel）——
-//     testInterruptUnsupportedModeSteerRejectedNotSilentlyTreatedAsCancel /
-//     testInterruptUnsupportedModeAbortAndResendRejectedNotSilentlyTreatedAsCancel
+//   + mode 门禁（`abort_and_resend` 显式拒绝，不静默当 cancel/steer）——
+//     testInterruptUnsupportedModeAbortAndResendRejectedNotSilentlyTreatedAsCancel（`steer` 的
+//     对应覆盖见上方 rounds/0023 记账段落）
 //   + T-113 item 1/4（grok 对抗评审，rework）：迟到的第二条 aborted 帧（pendingStop 已被 interrupt()
 //     自己的 defer 摘掉之后到达）不得冒充 operationKind:.stop 的 operation_completed——
 //     testInterruptLateSecondAbortedFrameAfterPendingStopClearedDoesNotFakeStopOperation。这是修前
@@ -64,39 +82,17 @@ actor InterruptRaceBox<T> {
             waiter = cont
         }
     }
+
+    /// rounds/0023：非阻塞探测——供需要断言"此刻尚未报告"的测试使用（例如"stop() 在 interrupt() 仍
+    /// 在飞行期间不得提前报告结果"），不像 `wait()` 那样会挂起等待。
+    var hasReported: Bool { value != nil }
 }
 
-// MARK: - Mode 门禁：steer / abort_and_resend 必须显式拒绝，不静默当 cancel 处理
-
-func testInterruptUnsupportedModeSteerRejectedNotSilentlyTreatedAsCancel() async -> Bool {
-    let name = "rounds/0020 interrupt() mode:\"steer\" rejected with unsupported_interrupt_mode, not silently treated as cancel"
-    let client = freshClient()
-    let sessionID = "sess-interrupt-steer"
-    let kernelKey = "kernel-key-interrupt-steer"
-    _ = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
-    let callLog = CallOrderLog()
-    await client.testSupportStubRPC(method: "sessions.abort") { _ in
-        await callLog.record("sessions.abort")
-        return ["ok": true, "abortedRunId": NSNull(), "status": "no-active-run"] as JSONObject
-    }
-    let handle = testHandle(sessionID: sessionID, kernelKey: kernelKey)
-
-    let options = InterruptRequestMessagePayload(input: nil, mode: .steer, runID: nil)
-    do {
-        _ = try await client.interrupt(session: handle, options: options)
-        return fail(name, "expected interrupt(mode:\"steer\") to throw unsupported_interrupt_mode")
-    } catch KernelClientError.rpcRejected(let code, _) where code == "unsupported_interrupt_mode" {
-        // 期望路径
-    } catch {
-        return fail(name, "expected KernelClientError.rpcRejected(code:\"unsupported_interrupt_mode\"), got \(error)")
-    }
-
-    let order = await callLog.entries
-    guard order.isEmpty else {
-        return fail(name, "expected zero RPC dispatch for an unsupported mode (must not silently treat steer as cancel), got \(order)")
-    }
-    return pass(name, "mode:\"steer\" 被正确拒绝 unsupported_interrupt_mode，且全程未 dispatch 任何 RPC（未被静默当 cancel 处理）")
-}
+// MARK: - Mode 门禁：abort_and_resend 必须显式拒绝，不静默当 cancel/steer 处理
+//
+// rounds/0023：`testInterruptUnsupportedModeSteerRejectedNotSilentlyTreatedAsCancel` 已删除——
+// steer 本轮起是受支持的 mode，"steer 一律 unsupported_interrupt_mode"这条断言的前提已经不成立。
+// steer 现在的门禁覆盖（不再无条件拒绝、真的会走 chat.send、二态收敛等）搬到了 SteerTests.swift。
 
 func testInterruptUnsupportedModeAbortAndResendRejectedNotSilentlyTreatedAsCancel() async -> Bool {
     let name = "rounds/0020 interrupt() mode:\"abort_and_resend\" rejected with unsupported_interrupt_mode, not silently treated as cancel"
@@ -453,15 +449,33 @@ func testInterruptRejectedWhileSendInFlight() async -> Bool {
     }
 }
 
-func testSendAndStopRejectedWhileInterruptInFlight() async -> Bool {
-    let name = "rounds/0020 mutual exclusion: send() and stop() are both rejected with session_locked while a REAL interrupt() is in flight"
+/// rounds/0023 重命名（见文件头注释"记账"一节）——修前叫 `testSendAndStopRejectedWhileInterruptInFlight`,
+/// 断言 send()/stop() 在 interrupt() 飞行期间均被 session_locked 拒绝。D1 v3.6 §9.3 矩阵明写
+/// `interrupt_in_progress` 遇 `stop()` 是"特殊仲裁"（等待，不抢占），不是 reject——旧断言的 stop()
+/// 那一半记录的是"实现相对规格的偏离"，不是规格本身，本轮据 scope-lock 取舍 3 改正。
+///
+/// **这条测试同时是 rounds/0023 取舍 4 点名的"必须专门构造用例暴露第 2 条偏离"**——为什么这次真的
+/// 会进入 `interrupt_in_progress`：mode guard（`options.mode == .cancel || .steer`）与
+/// `no_active_run_for_steer` 前置校验都在**拿锁之前**完成，cancel 模式两者都不适用，函数体会
+/// 一路走到 `lockStateBySessionID[...] = .interruptInProgress` 这一行——这与 T-115 评审指出的旧
+/// FAIL 近因（"steer 在拿锁之前就被 mode guard 拒了，压根没进过 interrupt_in_progress"）完全不同：
+/// 这里用 cancel（本就受支持的 mode），从一开始就没有任何前置拒绝路径可以让它绕过锁获取，是真实、
+/// 无可辩驳地进入了 `interrupt_in_progress`，而不是"看起来在测但其实被短路了"。
+func testSendRejectedButStopWaitsThenProceedsWhileInterruptInFlight() async -> Bool {
+    let name = "rounds/0023 §9.3 arbitration: send() still rejected(session_locked), but stop() WAITS (not rejected) while a REAL interrupt(mode:\"cancel\") is in flight, then proceeds to stop_in_progress once interrupt resolves"
     let client = freshClient()
     let sessionID = "sess-send-stop-vs-interrupt"
     let kernelKey = "kernel-key-send-stop-vs-interrupt"
     _ = await client.testSupportRegisterSession(ourSessionID: sessionID, kernelKey: kernelKey)
+    let callLog = CallOrderLog()
     await client.testSupportStubRPC(method: "sessions.abort") { _ in
+        await callLog.record("sessions.abort")
         try? await Task.sleep(nanoseconds: 200_000_000)
         return ["ok": true, "abortedRunId": NSNull(), "status": "no-active-run"] as JSONObject
+    }
+    await client.testSupportStubRPC(method: "sessions.delete") { _ in
+        await callLog.record("sessions.delete")
+        return ["deleted": true] as JSONObject
     }
     let handle = testHandle(sessionID: sessionID, kernelKey: kernelKey)
 
@@ -474,30 +488,77 @@ func testSendAndStopRejectedWhileInterruptInFlight() async -> Bool {
         return fail(name, "expected lock=interrupt_in_progress while interrupt() RPC in flight, got \(lockDuringFlight) — 说明锁没有被真实获取")
     }
 
+    // send() 侧未松动（红线，取舍 3"保留 send 那一半"）：矩阵明写 interrupt_in_progress 遇 send() 是
+    // reject，本轮范围只改 stop()，这里的断言与 rounds/0020 逐字相同。
     do {
         _ = try await client.send(session: handle, input: Input(kind: .text, text: "x", parts: nil))
         _ = try? await interruptTask
         return fail(name, "expected send() to be rejected while interrupt() is in flight")
     } catch KernelClientError.rpcRejected(let code, _) where code == "session_locked" {
-        // 期望路径
+        // 期望路径。
     } catch {
         _ = try? await interruptTask
         return fail(name, "unexpected error from send(): \(error)")
     }
 
-    do {
-        _ = try await client.stop(session: handle)
+    // rounds/0023 核心断言：stop() 到达时锁仍是 interrupt_in_progress——按 §9.3"等待，不抢占"，stop()
+    // 必须挂起等待，既不能立即 reject（旧行为），也不能立即抢占成功（同样违反"不抢占"）。用一个真实
+    // 并发 Task（不用 `async let`——需要能在它完成之前先非阻塞探测"还没完成"）驱动 stop()。
+    let stopBox = InterruptRaceBox<Result<StopResultPayload, Error>>()
+    let stopTask = Task<Void, Never> {
+        do {
+            let result = try await client.stop(session: handle)
+            await stopBox.report(.success(result))
+        } catch {
+            await stopBox.report(.failure(error))
+        }
+    }
+    try? await Task.sleep(nanoseconds: 60_000_000) // 累计 t≈100ms，interrupt 的 200ms 窗口还剩 ~100ms
+    guard await stopBox.hasReported == false else {
         _ = try? await interruptTask
-        return fail(name, "expected stop() to be rejected while interrupt() is in flight")
-    } catch KernelClientError.rpcRejected(let code, _) where code == "session_locked" {
-        // 期望路径
-    } catch {
+        return fail(name, "stop() 在 interrupt() 仍在飞行期间（t≈100ms，早于 200ms 窗口到期）就已经报告" +
+            "结果——要么被立即 reject（rounds/0020 旧行为，§9.3 要求的是等待不是拒绝），要么被立即放行" +
+            "抢占了正在进行的 interrupt（同样违反『不抢占』），两者都不对")
+    }
+    let lockStillDuringWait = await client.testSupportLockState(sessionID: sessionID)
+    guard lockStillDuringWait == "interrupt_in_progress" else {
         _ = try? await interruptTask
-        return fail(name, "unexpected error from stop(): \(error)")
+        return fail(name, "expected lock to remain interrupt_in_progress while stop() waits for arbitration, got \(lockStillDuringWait) — stop() 抢占了锁")
     }
 
-    _ = try? await interruptTask
-    return pass(name, "interrupt() 飞行期间锁态真实为 interrupt_in_progress；send()/stop() 均被正确 reject(session_locked)")
+    // 放行：interrupt() 的 sessions.abort 完成（约 t=200ms），interrupt() 应据此立即终态化——本例
+    // abortedRunId:null（无 active run），succeeded 分支不需要额外等待任何 lifecycle 帧。
+    guard let interruptResult = try? await interruptTask else {
+        return fail(name, "interrupt() unexpectedly threw")
+    }
+    guard interruptResult.outcome == .succeeded else {
+        return fail(name, "expected interrupt() outcome=.succeeded (no active run), got \(interruptResult.outcome) — 仲裁等待不应该影响 interrupt() 自己的终态")
+    }
+
+    // interrupt() Promise 一返回，stop() 应该几乎立刻把锁转成 stop_in_progress——这是"等待，不抢占"
+    // 仲裁成功后的既定下一步，不需要再等 stop() 自己那次 sessions.abort（它还要再等 200ms）才发生。
+    try? await Task.sleep(nanoseconds: 20_000_000)
+    let lockAfterInterruptResolved = await client.testSupportLockState(sessionID: sessionID)
+    guard lockAfterInterruptResolved == "stop_in_progress" else {
+        return fail(name, "expected lock=stop_in_progress shortly after the in-flight interrupt() resolved, got \(lockAfterInterruptResolved) — stop() 没有在仲裁成功后正常推进")
+    }
+
+    let stopOutcome = await stopBox.wait()
+    switch stopOutcome {
+    case .success(let stopResult):
+        guard stopResult.outcome == .succeeded else {
+            return fail(name, "expected stop() outcome=.succeeded once it proceeded normally, got \(stopResult.outcome)")
+        }
+    case .failure(let error):
+        return fail(name, "expected stop() to eventually SUCCEED (waited, then proceeded normally) — not throw \(error). §9.3 仲裁的整个意义就是『等待之后正常执行 stop 序列』，不是『等待之后仍然失败』")
+    }
+
+    let finalOrder = await callLog.entries
+    guard finalOrder == ["sessions.abort", "sessions.abort", "sessions.delete"] else {
+        return fail(name, "expected RPC call order [sessions.abort(interrupt), sessions.abort(stop), sessions.delete(stop)], got \(finalOrder) — 两次 sessions.abort 分别来自 interrupt() 自己的 cancel 与 stop() 仲裁成功后重新发起的那次，不是同一次调用被复用/跳过")
+    }
+
+    return pass(name, "send() 仍被正确 reject(session_locked)（红线未松动）；stop() 在 interrupt() 飞行期间真实等待（lock 全程保持 interrupt_in_progress、stop() 未提前报告结果，t≈100ms 时仍在途），interrupt() 完成（outcome=.succeeded）后锁立即转 stop_in_progress，stop() 随后正常推进并成功完成（RPC 顺序=\(finalOrder)）")
 }
 
 func testInterruptForceDenyFailureReleasesLockAndCleansPendingEntry() async -> Bool {
@@ -905,7 +966,6 @@ func testInterruptWaitsForPendingSubscriptionDispatchBeforeItsOwnRpc() async -> 
 
 func runInterruptTests() async -> [Bool] {
     var results: [Bool] = []
-    results.append(await testInterruptUnsupportedModeSteerRejectedNotSilentlyTreatedAsCancel())
     results.append(await testInterruptUnsupportedModeAbortAndResendRejectedNotSilentlyTreatedAsCancel())
     results.append(await testInterruptCancelSucceedsSessionSurvivesAndSendWorksAfterward())
     results.append(await testInterruptUsesAuthoritativeAbortedRunIdNotLocalRunIDCache())
@@ -913,7 +973,7 @@ func runInterruptTests() async -> [Bool] {
     results.append(await testInterruptTimeoutEmitsOperationCompletedMirror())
     results.append(await testInterruptTransportClosedWhileWaitingDoesNotHangAndEmitsMirror())
     results.append(await testInterruptRejectedWhileSendInFlight())
-    results.append(await testSendAndStopRejectedWhileInterruptInFlight())
+    results.append(await testSendRejectedButStopWaitsThenProceedsWhileInterruptInFlight())
     results.append(await testInterruptForceDenyFailureReleasesLockAndCleansPendingEntry())
     results.append(await testInterruptAbortRpcThrowReleasesLockAndEmitsRejectedMirror())
     results.append(await testInterruptForceDeniesPendingApprovalBeforeAbort())

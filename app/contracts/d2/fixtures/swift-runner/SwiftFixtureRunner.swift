@@ -273,6 +273,14 @@ actor RunnerContext {
     var waitingStopCallID: String?
 
     var callKindByID: [String: String] = [:]
+    /// rounds/0023 REWORK（T-116 codex 对抗评审 FAIL 5）：`interrupt` client_call 的 id →
+    /// `InterruptRequestMessagePayload.mode` 的 `rawValue`（`"cancel"`/`"steer"`/
+    /// `"abort_and_resend"`）——`callKindByID` 只记『这是一次 interrupt 调用』，不记『用的是哪个
+    /// mode』，而 `applyMockResponse` 的 `case "interrupt":` 分支需要按 mode 分叉合成不同形状的原生
+    /// RPC 响应（cancel→sessions.abort 风格，steer→chat.send 风格，见该分支文档注释），因此单独开
+    /// 一张按 id 索引的表——与 `expectOutboundInterruptMethodByMode`/`performClientCall` 里按 mode
+    /// 分叉注册 stub 的既有先例同构，不是新发明一种记账方式。
+    var interruptModeByID: [String: String] = [:]
     var replyGates: [String: ReplyGate] = [:]
     /// 真实捕获到的原生 RPC 调用——`(method, params)`，`params` 是 `testSupportStubRPC` 闭包收到的
     /// 原始入参（真实 client 同步传入，不是 fixture 声明值）。**T-050 REWORK #1**：不再在捕获时就
@@ -350,6 +358,8 @@ actor RunnerContext {
 
     func gate(for id: String) -> ReplyGate? { replyGates[id] }
     func callKind(for id: String) -> String? { callKindByID[id] }
+    func setInterruptMode(id: String, mode: String) { interruptModeByID[id] = mode }
+    func interruptMode(for id: String) -> String? { interruptModeByID[id] }
     func setCurrentKernelKey(_ key: String) { currentKernelKey = key }
     func setHasStopWaitingForTerminal(_ value: Bool) { hasStopWaitingForTerminal = value }
     func setWaitingStopCallID(_ id: String?) { waitingStopCallID = id }
@@ -663,26 +673,58 @@ func performClientCall(_ op: TimelineOp, ctx: RunnerContext) async throws {
         // D1 §2.4——rounds/0022 起真派发（此前这里是「不应该走到这里」的哨兵抛错，见文件头「DEGRADED
         // 判定」一节）。`mode:"cancel"` 且 session 处于 idle 锁态时，真实 `interrupt()` 会调用与
         // `stop()` 完全相同的 `sessions.abort` RPC（见 OpenclawGatewayKernelClient.interrupt() 文档
-        // 注释「只复用 stop() 下面的部件」）——因此这里镜像 `stop` 分支注册同一套桩/gate；本轮唯一的
-        // interrupt fixture 用的是 `mode:"steer"`，会在到达那一步之前就被顶部的 mode guard 拒绝
-        // （`rpcRejected(unsupported_interrupt_mode)`，字面上不是 `notImplemented`，不会被判
-        // DEGRADED），因此这套桩今天实际上永远不会被调用到——**但 gate 本身必须注册**：
-        // `soft-steer-then-stop.json` 的 timeline 仍然含一条 `mock_response(replyTo: <这次 interrupt
-        // 调用的 id>)`（逐字转录自 D4 spec 示例，假定了一个更完整的 interrupt 实现），若不注册 gate，
-        // 这条 op 会在 `applyMockResponse` 里找不到 gate 而抛 `RunnerError.malformed`，把一次『真实
-        // client 拒绝』意外劣化成一次『runner 结构性崩溃』——这不是本轮想要的『真实 FAIL』。
+        // 注释「只复用 stop() 下面的部件」）——因此这里镜像 `stop` 分支注册同一套桩/gate。
+        //
+        // **rounds/0023 Scope-Lock v1→v2 扩围**：`mode:"steer"` 落地前，本轮唯一的 interrupt
+        // fixture 用的是 `mode:"steer"`，会在到达任何 RPC 之前就被顶部的 mode guard 拒绝
+        // （`rpcRejected(unsupported_interrupt_mode)`），所以下面这套桩此前实际上从未被真正调用
+        // 到——**但 gate 本身必须注册**：`soft-steer-then-stop.json` 的 timeline 仍然含一条
+        // `mock_response(replyTo: <这次 interrupt 调用的 id>)`（逐字转录自 D4 spec 示例，假定了一个
+        // 更完整的 interrupt 实现），若不注册 gate，这条 op 会在 `applyMockResponse` 里找不到 gate
+        // 而抛 `RunnerError.malformed`，把一次『真实 client 拒绝』意外劣化成一次『runner 结构性
+        // 崩溃』——这不是本轮想要的『真实 FAIL』。
+        //
+        // steer 落地后这套桩**必须真的按 mode 分叉**注册（不能只镜像 stop 分支继续假设 cancel 是
+        // 唯一会被真实驱动到的 mode）：steer 的底层 RPC 是 `chat.send`，不是 `sessions.abort`
+        // （见 `OpenclawGatewayKernelClient.performSoftSteerInterrupt` 与
+        // `expectOutboundInterruptMethodByMode` 两处文档注释里的完整源码依据）。若继续无条件只注册
+        // `sessions.abort`，真实 steer 调用的 `request(method:"chat.send",...)` 会找不到任何
+        // `testSupportRPCResponders` 条目、也没有真实 WebSocket 连接，直接同步抛
+        // `KernelClientError.notConnected`——这正是 scope-lock v2 明文警告的『只登记一种而让另一种
+        // 静默失配』，只是发生在 stub 注册这一层，而不是 `expectOutboundMethodTable` 那一层；两处
+        // 需要同时改对，只改比对表、不改 stub 注册，fixture 依然到不了 PASS（chat.send 从未被真正
+        // dispatch，`expect_outbound(steer1)` 会报『实际捕获到 <none>』，不是方法名不匹配）。
         guard let handle = await ctx.currentSessionHandle else {
             throw RunnerError.malformed("interrupt（id=\(id)）在 createSession 之前调用")
         }
         let options = try decodeInterruptOptions(from: argsAny)
+        // rounds/0023 REWORK（FAIL 5）：登记这次 interrupt 调用的 mode，供 `applyMockResponse` 的
+        // `case "interrupt":` 分支按 mode 分叉合成响应形状（见 `interruptModeByID` 文档注释）。
+        await ctx.setInterruptMode(id: id, mode: options.mode.rawValue)
         let gate = ReplyGate()
         await ctx.setGate(id: id, gate: gate)
-        await client.testSupportStubRPC(method: "sessions.abort") { params in
-            await ctx.appendNativeCall("sessions.abort")
-            await ctx.recordOutbound(id: id, method: "sessions.abort", params: params)
-            return try await gate.wait()
+        switch options.mode {
+        case .cancel:
+            await client.testSupportStubRPC(method: "sessions.abort") { params in
+                await ctx.appendNativeCall("sessions.abort")
+                await ctx.recordOutbound(id: id, method: "sessions.abort", params: params)
+                return try await gate.wait()
+            }
+        case .steer:
+            await client.testSupportStubRPC(method: "chat.send") { params in
+                await ctx.appendNativeCall("chat.send")
+                await ctx.recordOutbound(id: id, method: "chat.send", params: params)
+                return try await gate.wait()
+            }
+        case .abortAndResend:
+            // 本轮未实现（scope-lock 明文排除）：真实 client 会在 mode guard 处同步拒绝
+            // `unsupported_interrupt_mode`，从不会走到任何 RPC dispatch，不需要、也不应该为它注册
+            // 一个永远用不到的 stub（那会制造『看起来支持其实没有』的假象）。
+            break
         }
-        // 同 `stop` 分支：安全的默认背景桩，只有 session 存在 pending 审批时才会被真正调用。
+        // 同 `stop` 分支：安全的默认背景桩，只有 session 存在 pending 审批时才会被真正调用——对
+        // steer 而言这条桩恒是安全的死代码（steer 不做强制 deny，见 kernel-client 侧
+        // `performSoftSteerInterrupt` 文档注释），保留它不影响 steer 场景，只是不会被触发。
         await client.testSupportStubRPC(method: "approval.resolve") { _ in
             await ctx.appendNativeCall("approval.resolve")
             return ["applied": true, "approval": ["status": "denied"]]
@@ -765,17 +807,42 @@ extension RunnerContext {
 
 // MARK: - expect_outbound
 
-/// D2 req.* 方法名 → 真实 client 会调用的 openclaw 原生 RPC 方法名。只覆盖 createSession/send/
-/// subscribe/stop 四个——**不是**因为 interrupt/respondApproval/capabilities 的 fixture 仍被整条
-/// DEGRADED 挡在外面（rounds/0022 起不再是），而是因为这三个方法的翻译层目前不拦截/不记录它们的
-/// 出站 RPC（`performClientCall` 对应分支刻意没有注册 `testSupportStubRPC`，见那里的说明）——
-/// `expect_outbound` 若用在这三个方法上，会落进下面 `guard let expectedMethod = ... else` 分支，
-/// 如实报告『未登记』，不是误判通过。
+/// D2 req.* 方法名 → 真实 client 会调用的 openclaw 原生 RPC 方法名。覆盖 createSession/send/
+/// subscribe/stop 四个——**不是**因为 respondApproval/capabilities 的 fixture 仍被整条 DEGRADED
+/// 挡在外面（rounds/0022 起不再是），而是因为这两个方法的翻译层目前不拦截/不记录它们的出站 RPC
+/// （`performClientCall` 对应分支刻意没有注册 `testSupportStubRPC`，见那里的说明）——`expect_outbound`
+/// 若用在这两个方法上，会落进 `checkExpectOutbound` 里对应的『未登记』分支，如实报告，不是误判通过。
+///
+/// **`req.interrupt` 不在这张表里（rounds/0023 Scope-Lock v1→v2 扩围新增）**：这张表是『D2 方法名 ->
+/// 唯一底层方法名』的一对一映射，但 `interrupt()` 的底层 RPC 随调用参数的 `mode` 分叉——同一个 D2
+/// 方法名对应不止一个底层方法，塞进这张一对一的表会丢失这个分叉（要么覆盖 cancel、要么覆盖 steer，
+/// 覆盖不到的那一种会被静默判错——scope-lock v2 明文点名不许这样）。改用独立的
+/// `expectOutboundInterruptMethodByMode` + `checkExpectOutbound` 里的专门分支表达，见两者各自的
+/// 文档注释。
 let expectOutboundMethodTable: [String: String] = [
     "req.createSession": "sessions.create",
     "req.send": "sessions.send",
     "req.subscribe": "sessions.messages.subscribe",
     "req.stop": "sessions.abort",
+]
+
+/// rounds/0023 Scope-Lock v1→v2 扩围新增：`req.interrupt` 专用的『`payload.mode` -> 底层 openclaw
+/// RPC 方法名』映射——`interrupt()` 的底层实现按 mode 分派到结构、语义都不同的 RPC（完整推理见
+/// `OpenclawGatewayKernelClient.swift` `interrupt()`/`performSoftSteerInterrupt` 的文档注释，
+/// 本表只是翻译层这一侧的对应登记，不重复论证）：
+///   - `"cancel"` -> `"sessions.abort"`——与 stop() 共用同一条 RPC，语义是"中止当前 run，保留会话"。
+///   - `"steer"`  -> `"chat.send"`——D1 v3.6 §6.1(a) soft inject（`queueMode:"steer"`+
+///     `deliver:false`）。**不是** `sessions.send`/`sessions.abort`/`sessions.steer` 中的任何
+///     一个——`sessions.steer` 这个名字具有迷惑性，源码级核验（`kernels/openclaw/src/gateway/
+///     server-methods/sessions-messaging.ts:212-431`）证实它与 `sessions.send` 共用同一个 handler
+///     `handleSessionSend`，只是 `interruptIfActive` 参数不同，真实行为是"硬中止当前 run + 总是
+///     发一条新消息"，对应 D1 的 `abort_and_resend`（本轮未实现），不是软注入语义。
+///   - `"abort_and_resend"` 本轮未实现（scope-lock 明文排除），**刻意不登记**——命中时
+///     `checkExpectOutbound` 报告『未登记该 mode』，不是静默套用 cancel 或 steer 的答案（那会把
+///     一个『我们还不知道』的状态伪装成『我们查过、答案是 X』）。
+let expectOutboundInterruptMethodByMode: [String: String] = [
+    "cancel": "sessions.abort",
+    "steer": "chat.send",
 ]
 
 /// T-050 REWORK #1（治根）：把真实捕获到的 openclaw 原生 RPC `params`（`performClientCall` 的
@@ -789,16 +856,24 @@ let expectOutboundMethodTable: [String: String] = [
 ///   或发了一个从未声明过的 key）就显式置 `NSNull()`——不 fallback 到任何 fixture 声明值，让 pattern
 ///   里的 `sessionId` 断言在这种情况下真的失败。
 /// - `payload`：`params` 去掉 `key`（原生寻址字段，不是 D2 payload 概念）之后剩下的全部字段，原样
-///   保留原生字段名（`label`/`model`/`timeoutMs`/`attachments`/`includeApprovals` 等）——**仅
-///   `sessions.send` 一项**例外：把原生 `message` 反向映射回 D1 `Input.text` 概念（对应
-///   `resolveSendMessageText` 在 Stage A fixture 唯一用到的 `kind:"text"` 场景，不覆盖
-///   structured/parts），只为了让这个字段能与 TS 端 `payload.text`（直接来自 client_call 的 D1
-///   `args`）做跨语言一致的深度匹配；其余字段不改名，如实反映原生协议。**T-052 REWORK 治根**：
-///   `message`→`text` 重映射前必须无条件先剥掉 payload 拷贝里预存的 `message` 和 `text` 两个键——
-///   否则若真实 client 把 native 层错发成不该存在的 `text` 字段（正确形状应是 `message`），该字段
-///   会原样留在 payload 里、自证满足 `payload.text` 断言，形成假绿。剥掉之后只有真的捕获到
-///   `message` 才重新写回 `text`；`message` 不存在则 `payload` 里不含 `text`，pattern 的
-///   `payload.text` 断言必然失败。
+///   保留原生字段名（`label`/`model`/`timeoutMs`/`attachments`/`includeApprovals` 等）——**`sessions.send`
+///   与 rounds/0023 新增的 `chat.send`（steer 专属）两项**例外：
+///   - `sessions.send`：把原生 `message` 反向映射回 D1 `Input.text` 概念（对应 `resolveSendMessageText`
+///     在 Stage A fixture 唯一用到的 `kind:"text"` 场景，不覆盖 structured/parts），只为了让这个
+///     字段能与 TS 端 `payload.text`（直接来自 client_call 的 D1 `args`）做跨语言一致的深度匹配；
+///   - `chat.send`（rounds/0023 v1→v2 扩围新增）：把原生 `queueMode` 反向映射回 D1
+///     `InterruptRequestMessagePayload.mode` 概念（D2 wire 字段名就是 `mode`，见 D2.swift
+///     `InterruptRequestMessagePayload.CodingKeys`），理由同构——`chat.send` 自己的原生字段叫
+///     `queueMode`（openclaw `ChatSendParamsSchema`，见 kernel-client 侧文档注释的源码引用），但
+///     fixture 的 `expect_outbound` pattern 是在 D2 抽象层面写的（`payload.mode`），两者字段名不同、
+///     语义相同，需要同一种"跨语言/跨抽象层级"重映射，不是巧合地复用同一段代码路径。
+///
+///   其余字段不改名，如实反映原生协议。**T-052 REWORK 治根（`sessions.send`）+ rounds/0023 沿用同一
+///   纪律（`chat.send`）**：重映射前必须无条件先剥掉 payload 拷贝里预存的『目标字段名』与『源字段名』
+///   两个键——否则若真实 client 把 native 层错发成不该存在的目标字段（`text`/`mode`，正确形状应是
+///   `message`/`queueMode`），该字段会原样留在 payload 里、自证满足断言，形成假绿。剥掉之后只有真的
+///   捕获到源字段才重新写回目标字段；源字段不存在则 payload 里不含目标字段，pattern 的对应断言必然
+///   失败——两项重映射逐字遵循同一条纪律，不是各写各的。
 func normalizeNativeParams(
     method: String, params: JSONObject, expectedType: String, ctx: RunnerContext
 ) async -> [String: Any] {
@@ -818,6 +893,14 @@ func normalizeNativeParams(
             payload["text"] = message
         }
     }
+    if method == "chat.send" {
+        // rounds/0023 v1→v2 扩围新增——见上方文档注释"chat.send（rounds/0023 v1→v2 扩围新增）"一节。
+        let queueMode = payload.removeValue(forKey: "queueMode")
+        payload.removeValue(forKey: "mode")
+        if let queueMode {
+            payload["mode"] = queueMode
+        }
+    }
     out["payload"] = payload
     return out
 }
@@ -830,13 +913,43 @@ func checkExpectOutbound(_ op: TimelineOp, ctx: RunnerContext) async throws {
     guard let expectedType = patternAny["type"] as? String else {
         throw RunnerError.malformed("expect_outbound(\(matches)) 的 pattern 缺少 'type'")
     }
-    guard let expectedMethod = expectOutboundMethodTable[expectedType] else {
-        await ctx.appendMismatch(
-            "expect_outbound(\(matches)): swift-runner 未登记『\(expectedType)』对应的 openclaw RPC 方法名" +
-            "（该 D2 方法尚未在本 runner 的 outbound 方法表中登记；不代表 client 未实现——rounds/0022 起实现状态由运行时发现判定，不再由此处文案声称）"
-        )
-        return
+
+    let expectedMethod: String
+    if expectedType == "req.interrupt" {
+        // rounds/0023 Scope-Lock v1→v2 扩围：`req.interrupt` 的底层方法随 `payload.mode` 分叉，
+        // 不能走下面『一个 D2 类型 -> 一个底层方法』的平表查找——那张表要是硬塞一个 `req.interrupt`
+        // 条目，无论选 cancel 还是 steer 的答案，另一种 mode 都会被静默判错，scope-lock v2 明文
+        // 禁止这样图省事。改成先取出 `payload.mode`，再查专门的
+        // `expectOutboundInterruptMethodByMode`（见该表文档注释）。
+        let payloadAny = (patternAny["payload"] as? [String: Any]) ?? [:]
+        guard let mode = payloadAny["mode"] as? String else {
+            await ctx.appendMismatch(
+                "expect_outbound(\(matches)): pattern.type 是『req.interrupt』但 pattern.payload.mode 缺失" +
+                "——interrupt 的底层 RPC 随 mode 分叉（cancel->sessions.abort, steer->chat.send），" +
+                "无法在不知道 mode 的情况下判定期望的底层方法名，fixture 必须显式声明 payload.mode"
+            )
+            return
+        }
+        guard let resolvedMethod = expectOutboundInterruptMethodByMode[mode] else {
+            await ctx.appendMismatch(
+                "expect_outbound(\(matches)): swift-runner 未登记 mode『\(mode)』对应的 openclaw RPC 方法名" +
+                "（当前只登记了 cancel/steer 两种；abort_and_resend 本轮未实现，不代表 client 已支持——" +
+                "见 expectOutboundInterruptMethodByMode，不静默套用另一种 mode 的答案）"
+            )
+            return
+        }
+        expectedMethod = resolvedMethod
+    } else {
+        guard let flatMethod = expectOutboundMethodTable[expectedType] else {
+            await ctx.appendMismatch(
+                "expect_outbound(\(matches)): swift-runner 未登记『\(expectedType)』对应的 openclaw RPC 方法名" +
+                "（该 D2 方法尚未在本 runner 的 outbound 方法表中登记；不代表 client 未实现——rounds/0022 起实现状态由运行时发现判定，不再由此处文案声称）"
+            )
+            return
+        }
+        expectedMethod = flatMethod
     }
+
     let captured = await ctx.capturedOutboundMethod(for: matches)
     guard captured == expectedMethod else {
         await ctx.appendMismatch(
@@ -920,18 +1033,48 @@ func applyMockResponse(_ op: TimelineOp, ctx: RunnerContext) async throws {
         }
 
     case "interrupt":
-        // interrupt(mode:"cancel") 调用的是与 stop() 完全相同的 sessions.abort RPC，响应形状因此
-        // 完全一致——复用同一套『从 ctx.currentRunIDValue 派生』的推导逻辑（见上方 `case "stop"` 的
-        // 说明，这里不重复论证）。SG-5 内部『等待终态』表按 session（不是按 operation kind）持有，
-        // stop()/interrupt() 两两互斥，同一时刻至多一个在等待，复用同一组
-        // `hasStopWaitingForTerminal`/`waitingStopCallID` 是忠实反映，不是偷懒省了一份状态。
-        let activeRunID = await ctx.currentRunIDValue
-        if let activeRunID = activeRunID {
-            await gate.resolve(.success(["abortedRunId": activeRunID, "status": "aborted"]))
-            await ctx.setHasStopWaitingForTerminal(true)
-            await ctx.setWaitingStopCallID(replyTo)
+        // rounds/0023 REWORK（T-116 codex 对抗评审 FAIL 5——"registered one [mode], let the other
+        // silently mismatch" 这个形状在本轮已经被撞见过两次（outbound stub 注册、`queueMode`->
+        // `mode` 的 `normalizeNativeParams` 重映射，均已按 mode 分叉），inbound 响应合成此前是
+        // 第三处仍然一律套用 cancel 语义的地方：无论这次 interrupt 调用的真实 mode 是什么，都无条件
+        // 合成 `sessions.abort` 风格的 `abortedRunId`/`status:"aborted"`——对 steer 而言，这是在
+        // 编造一个『`chat.send` 的响应体却携带 `abortedRunId`』的不可能形状（真实 `chat.send` 响应
+        // 从不产出这个字段），且会把这次 steer 错误标记成"在等待 aborted lifecycle 终态"
+        // （`setHasStopWaitingForTerminal`/`setWaitingStopCallID`）——steer 从不使用这套等待机制
+        // （`performSoftSteerInterrupt` 是单个 fire-and-return RPC，不建立 `pendingStops` 条目，
+        // 见其文档注释"不复用 stop()/interrupt(mode:'cancel') 的 pendingStops/等待终态机制"一节）。
+        // 此前这条路径能"通过"纯粹是因为当前判定只认 transport 层面是否成功——不是因为这份模拟响应
+        // 是可信的 native-wire 回放（金标 fixture `operation-outcome/soft-steer-then-stop.json` 的
+        // 运行日志能看到不可能出现的『chat.send result 里带 abortedRunId』，见反证记录）。
+        let mode = await ctx.interruptMode(for: replyTo)
+        if mode == "steer" {
+            // `chat.send`（steer 专属）的真实成功响应——`runId`/`status`，不是 `abortedRunId`；
+            // 生产代码 `performSoftSteerInterrupt` 只读 `result["status"]`（塞进
+            // `InterruptResultPayload.status`，不参与 outcome 判定，见 D1 §6.1(a) 严格二态规则），
+            // 不需要、也不该读 `abortedRunId`。steer 不建立 `pendingStops` 等待，因此这里不调用
+            // `setHasStopWaitingForTerminal`/`setWaitingStopCallID`——沿用与 `case "send":` 一致的
+            // 派生优先级（fixture 声明值优先，缺失时退回已知 runId/一个合理默认值），不臆造一个
+            // fixture 从未声明过的字段。
+            let fallbackRunID = await ctx.currentRunIDValue
+            let runId = (result["runId"] as? String) ?? fallbackRunID ?? "run-\(UUID().uuidString.prefix(8))"
+            let status = (result["status"] as? String) ?? "queued"
+            await gate.resolve(.success(["runId": runId, "status": status]))
         } else {
-            await gate.resolve(.success(["abortedRunId": NSNull(), "status": "no-active-run"]))
+            // cancel（或 mode 未登记时的既有默认——理论不可达：`decodeInterruptOptions` 要求
+            // fixture 显式声明合法 mode，`interruptModeByID` 在这条路径命中之前必然已经由
+            // `performClientCall` 写入）：与 stop() 完全相同的 sessions.abort RPC，响应形状因此
+            // 完全一致——复用同一套『从 ctx.currentRunIDValue 派生』的推导逻辑（见上方 `case "stop"`
+            // 的说明，这里不重复论证）。SG-5 内部『等待终态』表按 session（不是按 operation kind）
+            // 持有，stop()/interrupt() 两两互斥，同一时刻至多一个在等待，复用同一组
+            // `hasStopWaitingForTerminal`/`waitingStopCallID` 是忠实反映，不是偷懒省了一份状态。
+            let activeRunID = await ctx.currentRunIDValue
+            if let activeRunID = activeRunID {
+                await gate.resolve(.success(["abortedRunId": activeRunID, "status": "aborted"]))
+                await ctx.setHasStopWaitingForTerminal(true)
+                await ctx.setWaitingStopCallID(replyTo)
+            } else {
+                await gate.resolve(.success(["abortedRunId": NSNull(), "status": "no-active-run"]))
+            }
         }
 
     case "respondApproval":

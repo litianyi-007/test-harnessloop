@@ -1,0 +1,20 @@
+diff --git a/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json b/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json
+index 1fe243e..c773537 100644
+--- a/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json
++++ b/app/contracts/d2/fixtures/operation-outcome/soft-steer-then-stop.json
+@@ -1,11 +1,14 @@
+ {
+   "name": "soft-steer-then-stop-waits-not-preempts",
+-  "description": "interrupt(mode:'steer') 在途时 stop() 到达——适配器必须等待 steer RPC 返回，不得截断；steer 按二态收敛后锁转 stop_in_progress。逐字转录自 D4 跨平台架构 v2.2 §4.3 的既定金标示例（该 fixture 已在 D4 定稿评审中通过，是 D1 §9.3 session 锁互斥矩阵 + D2 v3 §3.4 interrupt 二态判定的代表性并发场景），展示 DSL 的并发表达方式：两个 client_call 落在同一条『在途窗口』内、assert_state 中途断言。**T-048 REWORK #6（codex 复现的独立缺陷）**：此前 timeline 从未 `createSession` 就直接调用 `interrupt`/`stop`——`interrupt()`/`respondApproval()`/`capabilities()` 三个方法本轮仍是 TODO 桩，本 fixture 因此在 swift-runner 上被 `degradeReason(for:)` 静态扫描整条标记 DEGRADED（不计入 PASS/FAIL），这个独立错误此前一直被 DEGRADED 掩盖，未真正暴露；`stop()` 真实实现明确要求已有 `currentSessionHandle`（`performClientCall` 的 `stop` 分支：`guard let handle = await ctx.currentSessionHandle else { throw ... }`），`session-lock/OPEN.md` 此前『interrupt() 落地后本 fixture 无需修改即可通过』的声称并不成立——本轮已补上 `createSession`/`subscribe` 前置步骤，让声称重新成立（该 OPEN.md 段落已同步更正）。",
++  "description": "interrupt(mode:'steer') 在途时 stop() 到达——适配器必须等待 steer RPC 返回，不得截断；steer 按二态收敛后锁转 stop_in_progress。逐字转录自 D4 跨平台架构 v2.2 §4.3 的既定金标示例（该 fixture 已在 D4 定稿评审中通过，是 D1 §9.3 session 锁互斥矩阵 + D2 v3 §3.4 interrupt 二态判定的代表性并发场景），展示 DSL 的并发表达方式：两个 client_call 落在同一条『在途窗口』内、assert_state 中途断言。**T-048 REWORK #6（codex 复现的独立缺陷）**：此前 timeline 从未 `createSession` 就直接调用 `interrupt`/`stop`——`interrupt()`/`respondApproval()`/`capabilities()` 三个方法本轮仍是 TODO 桩，本 fixture 因此在 swift-runner 上被 `degradeReason(for:)` 静态扫描整条标记 DEGRADED（不计入 PASS/FAIL），这个独立错误此前一直被 DEGRADED 掩盖，未真正暴露；`stop()` 真实实现明确要求已有 `currentSessionHandle`（`performClientCall` 的 `stop` 分支：`guard let handle = await ctx.currentSessionHandle else { throw ... }`），`session-lock/OPEN.md` 此前『interrupt() 落地后本 fixture 无需修改即可通过』的声称并不成立——本轮已补上 `createSession`/`subscribe` 前置步骤，让声称重新成立（该 OPEN.md 段落已同步更正）。**rounds/0023 Scope-Lock v1→v2 补前置步骤**：D1 v3.6 §6.1(a) 把 `interrupt(mode:'steer')` 的『无 active run 时同步前置 reject `no_active_run_for_steer`』钉成了强制要求——这条规则是 v3.2 才新增的，晚于本 fixture 转录自的 D4 v2.2，转录时的 timeline 因此从未建立过 active run（`createSession`→`subscribe` 之后直接 `interrupt`，中间没有 `send()`）。这不是本 fixture 想验证的语义的一部分（它验的是 §9.3 锁仲裁时序，不是 §6.1(a) 前置校验），只是转录时规格还没长出这条前置要求；`send1` 这一步据实补上，让 fixture 满足它自己被验证对象所属规格的前置条件——`steer1`/`stop1` 之后的全部既有 op 与 `expected` 断言逐字未动，验证的仍是同一件事：steer 在途时 stop 等待而非抢占。",
+   "timeline": [
+     { "t": 0, "op": "client_call", "id": "c1", "call": "createSession", "args": { "config": { "cwd": "/workspace/swift-runner-fixture", "newapiEndpoint": { "baseUrl": "https://newapi.example.local" } } } },
+     { "t": 0, "op": "expect_outbound", "matches": "c1", "pattern": { "type": "req.createSession" } },
+     { "t": 5, "op": "mock_response", "replyTo": "c1", "message": { "type": "res.createSession", "result": { "sessionHandle": { "sessionId": "session-1", "kernel": "openclaw", "createdAt": "2026-07-24T00:00:00Z", "billing": { "tokenRef": "token-session-1" } } } } },
+     { "t": 10, "op": "client_call", "id": "sub1", "call": "subscribe", "args": {} },
++    { "t": 12, "op": "client_call", "id": "send1", "call": "send", "args": { "kind": "text", "text": "start a long-running task" } },
++    { "t": 12, "op": "expect_outbound", "matches": "send1", "pattern": { "type": "req.send", "payload": { "text": "start a long-running task" } } },
++    { "t": 13, "op": "mock_response", "replyTo": "send1", "message": { "type": "res.send", "result": { "runId": "run-steer-1" } } },
+     { "t": 15, "op": "client_call", "id": "steer1", "call": "interrupt", "args": { "mode": "steer", "input": "..." } },
+     { "t": 15, "op": "expect_outbound", "matches": "steer1", "pattern": { "type": "req.interrupt", "payload": { "mode": "steer" } } },
+     { "t": 25, "op": "client_call", "id": "stop1", "call": "stop", "args": {} },

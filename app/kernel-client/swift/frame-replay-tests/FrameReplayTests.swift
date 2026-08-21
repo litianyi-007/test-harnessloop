@@ -2612,6 +2612,18 @@ public func runFrameReplayTests() async -> Bool {
     results.append(testFindMainWindowIndexIgnoresMatchingIdentifierThatIsNeitherVisibleNorMiniaturized())
     results.append(testFindMainWindowIndexRejectsIdentifierThatContainsButDoesNotStartWithMainWindowID())
 
+    // rounds/0023（D1 v3.6 §6.1(a) + §9.3 仲裁修正）：SteerTests.swift —— interrupt(mode:"steer")
+    // 完整实现（chat.send+queueMode:"steer"+deliver:false，严格二态 submitted/rejected，无 active
+    // run 的同步前置 reject，不做强制 deny）+ stop() 遇 interrupt_in_progress 的"等待，不抢占"仲裁
+    // 修正（steer 侧构造；cancel 侧构造见 InterruptTests.swift 重命名后的
+    // testSendRejectedButStopWaitsThenProceedsWhileInterruptInFlight）。
+    results.append(contentsOf: await runSteerTests())
+
+    // rounds/0023 REWORK（T-116 codex 对抗评审 FAIL 7）：ActiveRunSnapshotTests.swift ——
+    // `activeRunIDsBySessionID` 快照维护补齐"既有 session-restore/由本 client 之外的方式启动的
+    // run"这条此前完全没有信号来源的路径，外加全量同步（不是并集追加）与自我一致性检查。
+    results.append(contentsOf: await runActiveRunSnapshotTests())
+
     let passCount = results.filter { $0 }.count
     let total = results.count
     print("=== 结果: \(passCount)/\(total) PASS ===")

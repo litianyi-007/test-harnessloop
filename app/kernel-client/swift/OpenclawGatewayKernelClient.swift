@@ -148,6 +148,165 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// interrupt() 也生效"。生产默认同为 5 秒（D1 v3 §9.3 的等待预算对 interrupt/stop 没有区分）。
     private var testSupportInterruptTimeoutSecondsOverride: Int?
 
+    // MARK: - rounds/0023（D1 v3.6 §9.3 仲裁修正）：`stop()` 遇 `interrupt_in_progress` 的「等待，
+    // 不抢占」仲裁等待
+    //
+    // 这是一个**纯 actor 内部信号**——不涉及任何 RPC/wire 事件，与上面的 `pendingStops`/
+    // `waitForPendingStopTerminal`（等待『内核侧某个 run 的 aborted lifecycle 帧』，stop()/
+    // interrupt(mode:'cancel') 共用）是两件不同的事：那套机制等的是**内核**几时确认一个 run 已中止；
+    // 这里等的是**同一个 actor 内、另一次尚未返回的 `interrupt()` 调用**几时释放它持有的锁——不需要
+    // 也不应该复用 `pendingStops`，因为 `interrupt(mode:'steer')` 根本不使用 `pendingStops`（它是
+    // 单个 RPC、fire-and-return，见 `performSoftSteerInterrupt` 文档注释），若仲裁等待绑死在
+    // `pendingStops` 上，steer 在途时的仲裁就无从谈起。
+    //
+    // 支持**多个 stop() 同时等待同一个 in-flight interrupt()**（防御性设计，理论场景——按 D1 §9.3
+    // 矩阵，第一个抢到 idle 的 stop() 会把锁转成 `stop_in_progress`，第二个等待者醒来后会看到
+    // `stop_in_progress` 而不是 `idle`，正确落进"不支持 stop 重入"的 `session_locked` 分支，不是
+    // bug）——因此每个等待者持有**独立**的 waiterID + 独立的超时定时器，不能像 `pendingStops.waiter`
+    // 那样只留一个 Optional 槽位（那个设计成立的前提是"同一 session 同一时刻至多一个 stop()/
+    // interrupt() 在等待"，仲裁场景不满足这个前提）。
+    /// rounds/0023 REWORK（T-116 codex 对抗评审 FAIL 2 —— "wait, don't preempt" 缺少原子交接）：
+    /// **原设计的漏洞**：旧版 `notifyInterruptLockReleaseWaiters` 先把锁写成 `.idle`，再唤醒等待中的
+    /// `stop()`；`stop()` 的续体醒来后**才**重新检查锁、自己去抢 `.stopInProgress`。这两步之间存在
+    /// 一个锁真实为 `.idle` 的窗口——`continuation.resume(...)` 只是把等待者标记为"可以恢复执行"，
+    /// **不保证**它比其它已经在排队等待同一个 actor 的 job（例如一个新到达的 `send()`/`interrupt()`
+    /// 调用）更早被调度执行（Swift 语言本身不承诺这种跨 job 的调度优先级）。T-116 独立构造的交错：
+    /// stop 已挂起等待 → interrupt 的 defer 写 `.idle` 并 resume stop 的续体 → 一个**已经在排队等待
+    /// 进入 actor** 的 send()/interrupt() job 先被调度、看到 `.idle`、抢走了锁 → stop 的续体终于被
+    /// 调度时重新检查锁，看到的已经不是 `.idle`，只能诚实抛 `session_locked`——一个被规格许诺"会等到
+    /// 交接"的 `stop()`，却在临门一脚时把锁弄丢了。
+    ///
+    /// **修法与其依赖的不变量**：Swift actor 只在 `await`（真正的挂起点）让出独占执行权——一段
+    /// 完全不含 `await` 的 actor-isolated 同步代码，从开始执行到结束，不会被任何其它 job（无论是一次
+    /// 全新的方法调用尝试进入 actor，还是另一个被 resume 的 continuation）打断或插入。`interrupt()`
+    /// 顶部的 `defer` 本身不含 `await`；下面新增的 `performAtomicInterruptLockHandoff` 同样不含
+    /// `await`。因此从 `defer` 开始执行到它结束（进而 `interrupt()` 这次调用彻底返回、actor 才会真的
+    /// 把执行权交给下一个排队的 job）之间，是一段不可分割的连续执行：锁只会被这段代码写入**一次**，
+    /// 写入的要么是 `.idle`（没有任何 stop() 在等）要么直接是 `.stopInProgress`（代某个 stop() 持有，
+    /// 见下）——**锁从未在任何可被外部观察到的时刻呈现"空闲、任何人都可以来抢"的状态**，因为压根不存在
+    /// 「先写 idle、再唤醒」这两步；被交接的 `stop()` 也不需要、不允许重新检查锁是否空闲——它被直接
+    /// 告知"锁已经是你的了"（`.acquired`），检查这件事本身已经在这段原子代码里被做过、被回答过。这就是
+    /// "原子"在这个 actor 语境下的准确含义：不是没有数据竞争（actor 隔离本来就不允许数据竞争），而是
+    /// 不存在一个 check-then-act 被切成两半、中间可以被别的 job 插进来的窗口。
+    private enum InterruptLockArbitrationOutcome {
+        /// 防御性回退分支专用（见 `arbitrateAgainstInFlightInterrupt` 开头的 guard）：调用本函数时
+        /// 锁实际上已经不是 `interruptInProgress`——理论上不可达（调用方在同一段无 `await` 的同步
+        /// 代码里刚判断过是这个态），仅保留兜底行为：视同"没有需要仲裁的对象"，落回下方与旧版
+        /// 「拿到 idle 就正常走」等价的路径（调用方据此走既有的 idle 判断/acquire 分支）。
+        case notInFlight
+        /// **原子交接成功**：`performAtomicInterruptLockHandoff` 已经在同一段无 `await` 的同步代码里
+        /// 把锁直接从 `interruptInProgress` 写成 `stopInProgress`——代这次等待的 `stop()` 持有，从未
+        /// 经过、也从未短暂呈现过 `.idle`。收到这个结果的 `stop()` **不得**重新检查/重新获取锁（它已
+        /// 经是最终归属者），直接跳过 idle 判断分支、进入共享的 stop 执行序列即可。
+        case acquired
+        /// 同一 session 有**多个** stop() 同时等待同一个 in-flight interrupt()（防御性设计，理论
+        /// 场景，见 `interruptLockReleaseWaiterIDsBySessionID` 文档注释）——原子交接只能挑一个赢家
+        /// （`.acquired`），其余等待者被直接告知"锁已经被另一个正在等待的 stop() 拿走了"，这是在同一
+        /// 段原子代码里已经确定性算出的结果，**不需要、也不应该**重新检查锁——重新检查只会重新打开
+        /// 刚刚被这段原子代码关闭的那类窗口。落到这个结果的 `stop()` 应直接以 `session_locked` 收场
+        /// （D1 v3.6 §9.3"不支持 stop 重入"），语义上与旧版"醒来发现非 idle"殊途同归，但不再依赖任何
+        /// 调度顺序的巧合。
+        case lockClaimedByAnotherWaiter
+        /// 等待窗口耗尽，in-flight `interrupt()` 仍未释放锁。**这是 `stop()` 自己的 `timed_out`**
+        /// （v3.4 明确的超时归属规则，见 `stop()` 调用点），绝不合成 interrupt() 的第三个终态——
+        /// interrupt() 完全不知道有谁在等它，它自己的 `OperationOutcome` 计算从始至终只看它自己那次
+        /// RPC 是否成功返回，本等待的结果对它不可见、不施加任何影响，它会继续独立跑到自己的终态。
+        case timedOut
+    }
+    private var interruptLockReleaseWaiters: [String: CheckedContinuation<InterruptLockArbitrationOutcome, Never>] = [:]
+    private var interruptLockReleaseWaiterIDsBySessionID: [String: Set<String>] = [:]
+    /// 有界等待上限（取舍 2：不得因为等待而变成忙等/无限等）。生产默认 5 秒，与
+    /// `testSupportStopTimeoutSecondsOverride`/`testSupportInterruptTimeoutSecondsOverride` 同一
+    /// 量级（D1 v3 §9.3 的等待预算对 interrupt/stop 没有区分）——测试用
+    /// `testSupportSetStopArbitrationTimeoutSeconds` 覆盖成一个更小的值，验证"超过上限"这条路径不用
+    /// 真的等 5 秒。
+    private var testSupportStopArbitrationTimeoutSecondsOverride: Int?
+
+    /// Test-only（rounds/0023 REWORK，FAIL 2 反证专用）：让 `interrupt()` 的 `defer` 在调用
+    /// `performAtomicInterruptLockHandoff` **之前**先做一段**真正阻塞**（`Thread.sleep`，不是
+    /// `Task.sleep`/`await`）的等待。生产路径恒为 nil，不生效。
+    ///
+    /// **为什么必须是阻塞而不是挂起**：`Task.sleep` 会在这里让出 actor（这是一次真正的挂起点），
+    /// 让其它排队的 job 立即被调度——那样只会让第三方 contender 提前在"锁仍然真实是
+    /// `interruptInProgress`"的窗口里被正确拒绝，反而验证不到本反证要验的东西：FAIL 2 的漏洞窗口是
+    /// `interrupt()` 那段**不含 await 的同步收尾代码**本身的执行时长，正常情况下只有微秒级，无法用
+    /// 真实调度时序可靠、确定性地命中。`Thread.sleep` 不是 Swift 并发的挂起点——它只是让当前正在
+    /// 执行的这个 job 占着执行权限"原地不动"更久，不会把 actor 让给任何其它 job。用它人为拉宽这段
+    /// 窗口，可以确定性地构造"第三方 job 在原子交接运行前就已经排队等待进入 actor"这个场景，同时不
+    /// 改变、不污染原子交接本身的逻辑（`performAtomicInterruptLockHandoff` 自己一个 `await` 都没有，
+    /// 这个测试钩子只是在调用它之前插入一段静默等待）。
+    private var testSupportInterruptPreHandoffBlockingDelayNanoseconds: UInt64?
+
+    /// `stop()` 遇 `interrupt_in_progress` 时调用——见上方 MARK 小节文档注释与 `stop()` 调用点。
+    private func arbitrateAgainstInFlightInterrupt(sessionID: String) async -> InterruptLockArbitrationOutcome {
+        guard lockStateBySessionID[sessionID] == .interruptInProgress else { return .notInFlight }
+        let waiterID = UUID().uuidString
+        let timeoutSeconds = testSupportStopArbitrationTimeoutSecondsOverride ?? 5
+        return await withCheckedContinuation { (continuation: CheckedContinuation<InterruptLockArbitrationOutcome, Never>) in
+            interruptLockReleaseWaiters[waiterID] = continuation
+            interruptLockReleaseWaiterIDsBySessionID[sessionID, default: []].insert(waiterID)
+            Task {
+                try? await Task.sleep(nanoseconds: UInt64(timeoutSeconds) * 1_000_000_000)
+                await self.settleInterruptLockReleaseWaiter(sessionID: sessionID, waiterID: waiterID, outcome: .timedOut)
+            }
+        }
+    }
+
+    /// 唯一的兑现入口——`removeValue` 保证同一个 waiterID 只会被 resume 恰好一次（不论是
+    /// `performAtomicInterruptLockHandoff` 先到还是超时定时器先到，后到者在这里安全 no-op），同款
+    /// "谁先到谁兑现"纪律见本文件 `settleApprovalResolve`。
+    private func settleInterruptLockReleaseWaiter(sessionID: String, waiterID: String, outcome: InterruptLockArbitrationOutcome) {
+        guard let continuation = interruptLockReleaseWaiters.removeValue(forKey: waiterID) else { return }
+        interruptLockReleaseWaiterIDsBySessionID[sessionID]?.remove(waiterID)
+        if interruptLockReleaseWaiterIDsBySessionID[sessionID]?.isEmpty == true {
+            interruptLockReleaseWaiterIDsBySessionID.removeValue(forKey: sessionID)
+        }
+        continuation.resume(returning: outcome)
+    }
+
+    /// `interrupt()` 顶部 `defer` 释放锁时调用——**FAIL 2 修复的核心**，取代旧版
+    /// `notifyInterruptLockReleaseWaiters`（先写 idle、再唤醒，两步之间留了一个可被抢的窗口）。
+    /// 本函数从头到尾没有一个 `await`：查有没有等待者、决定锁的最终状态、resume 对应的续体，这三件
+    /// 事在同一段不可分割的同步代码里完成——见 `InterruptLockArbitrationOutcome` 上方的完整不变量
+    /// 说明。
+    ///
+    /// **没有任何 stop() 在等**（绝大多数调用）：锁如常释放回 `.idle`——这与旧版行为逐字节相同，
+    /// 未受影响。
+    ///
+    /// **恰好一个 stop() 在等**：锁**直接**从 `interruptInProgress` 写成 `stopInProgress`，代这个
+    /// 等待者持有，从未经过、也从未呈现过 `.idle`；该等待者被 resume 为 `.acquired`。
+    ///
+    /// **多个 stop() 同时在等**（防御性设计，理论场景——两个并发 `stop()` Task 都在同一个
+    /// `interrupt()` 飞行期间到达，都会各自注册为等待者；`Set` 本身不提供顺序保证，规格也没有规定
+    /// "该是哪一个"，因此任选其一）：选中的那个得到 `.acquired`（锁写成 `stopInProgress`），其余
+    /// 全部直接得到 `.lockClaimedByAnotherWaiter`——结果在这里已经确定性算出，不需要、也不允许它们
+    /// 再去重新检查一次锁（那样只会重新打开这段代码刚刚关闭的窗口）。
+    ///
+    /// **已知边界（如实标注，未处理，非本轮验证范围）**：若 transport 在仲裁等待期间关闭，本机制不会
+    /// 被 `handleTransportClosed` 提前唤醒——等待者会老老实实等到自己的有界超时（生产 5 秒）才诚实报
+    /// `timed_out`，不是永久挂起，只是不如 `pendingStops` 那条路径唤醒得及时；这与"不得无限等"的红线
+    /// 不冲突（超时上限依然生效），只是比理论最优慢至多一个超时窗口，本轮未将
+    /// `clearSessionDerivedCaches` 接入这个机制，避免在未充分审计的收尾路径上引入新的交互面。
+    private func performAtomicInterruptLockHandoff(sessionID: String) {
+        let waiterIDs = interruptLockReleaseWaiterIDsBySessionID.removeValue(forKey: sessionID) ?? []
+        // Test-only（见 `testSupportInterruptPreHandoffBlockingDelayNanoseconds` 文档注释）：
+        // 生产路径恒为 nil，这里的真阻塞不改变、不污染下面的原子交接逻辑本身，只是人为拉宽这段
+        // 同步代码的真实执行时长，供 FAIL 2 反证测试可靠地构造"第三方 job 已经排队等待进入 actor"
+        // 的场景。
+        if let blockingNanoseconds = testSupportInterruptPreHandoffBlockingDelayNanoseconds {
+            Thread.sleep(forTimeInterval: Double(blockingNanoseconds) / 1_000_000_000)
+        }
+        guard let winnerWaiterID = waiterIDs.first else {
+            lockStateBySessionID[sessionID] = .idle
+            return
+        }
+        lockStateBySessionID[sessionID] = .stopInProgress
+        settleInterruptLockReleaseWaiter(sessionID: sessionID, waiterID: winnerWaiterID, outcome: .acquired)
+        for loserWaiterID in waiterIDs.dropFirst() {
+            settleInterruptLockReleaseWaiter(sessionID: sessionID, waiterID: loserWaiterID, outcome: .lockClaimedByAnotherWaiter)
+        }
+    }
+
     /// NOTE-A（T-049 grok 对抗审复核揪出的中等竞态，本轮修复）：`forceDenyPendingApprovalsBeforeStop`
     /// 现在是一个 drain 循环（见该函数文档注释）——每轮结束后重新检查该 session 是否有新到的 pending
     /// 审批，直到某轮检查为空才允许 stop() 继续发 sessions.abort。为防止（理论上不该出现，但不能假装
@@ -232,6 +391,55 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     // T-044 F1 复现场景），per-run 键天然避免这个问题：新 run 开始时缓存自然是空的。
     private var lastRunIDBySessionID: [String: String] = [:]
     private var runIDsBySessionID: [String: Set<String>] = [:] // 供 session 结束时批量清理 per-run 缓存
+
+    /// rounds/0023（D1 v3.6 §6.1(a) soft steer 前置同步校验）：**当前真正处于活跃状态**的 runId
+    /// 集合，按 session 分桶。**刻意与 `lastRunIDBySessionID` 分开、不能合并**——后者是"最近一次见到
+    /// 的 runId"，一个 run 正常 turnComplete 之后这个缓存不会被清空（`stop()` 文档注释"M3"一节已经
+    /// 现场实证过这一点），拿它去判断"现在是否有 active run"会把早已自然结束的 run 误判成活跃。
+    ///
+    /// **rounds/0023 REWORK（T-116 codex 对抗评审 FAIL 7，全部更新点，逐一列出这个 client 能观察到
+    /// 的『一个 run 变得活跃』的每一种方式，不是只顾自己发起的那一种）**：
+    ///   1. **本 client 自己的 `send()`** 拿到 RPC ack 的 runId 时插入——本 client 亲自启动的 run。
+    ///   2. **`session.message` 携带的 `session.activeRunIds` 权威快照**（`handleSessionMessageEvent`）
+    ///      ——openclaw 在这个字段上报的是**当前整个 session**的活跃 run 全集，与是谁启动的无关
+    ///      （既有 session-restore 之后、既有恢复的历史会话，也覆盖由其它 client/入口启动的 run）。
+    ///      每次这个字段出现（哪怕是空数组）都做**全量同步**（`activeRunIDsBySessionID[sid] =
+    ///      Set(...)`），不是并集追加——空数组是"现在真的没有任何 active run 了"这个事实本身，必须
+    ///      能够清掉本地陈旧记录，不能被只加不减的逻辑悄悄绕过。
+    ///   3. **任意携带 runId 的 `agent` 流事件**（`handleAgentEvent`，thinking/tool-call/approval 等
+    ///      ——不局限于 `session.message`）——一个尚未产出任何 assistant 文本（因此从未触发过
+    ///      `session.message`）、仍在 tool-call/thinking 中的 run，只能从这条流观察到它的存在。
+    ///   移除只有一处：`handleAgentEvent` 观察到该 runId 的 lifecycle 终态帧
+    ///   （`phase:"end"`/`"error"`，无论 aborted 与否）时移除（run 结束，不再算活跃）——加上上面
+    ///   #2 的全量同步语义（会清掉一个已经从权威快照消失、但因故没有走到这条终态帧摘除路径的 runId）。
+    ///   这些更新点与"这个 run 是否被我们的 pendingStop 机制追踪"完全无关，纯粹反映"适配器本地观察
+    ///   到的、这个 session 当前有几个 run 尚未终态化"。
+    ///
+    /// **仍然诚实存在、本轮未闭合的盲区（如实标注，不是被这次修复顺带解决的）**：一个刚被
+    /// `restoreSession(sessionID:kernelKey:)` 恢复、且恢复后**一条新的 `session.message`/`agent`
+    /// 事件都还没到达**的 session——如果它在恢复之前就已经有一个 active run（例如 App 重启前用户
+    /// 正在跑一个长任务），这张表在收到第一条限定事件之前会是空的，`interrupt(mode:'steer')` 的前置
+    /// 校验会（正确地，就"本地快照目前观察到的信息"而言）同步 reject `no_active_run_for_steer`——
+    /// 但这其实是一次假阴性。已确认查过（只读源码核验，未改 `kernels/openclaw`）：
+    /// `sessions.messages.subscribe` 的 RPC 响应体只有 `subscribed`/`key`/`approvalReplay` 三个
+    /// 字段（`kernels/openclaw/src/gateway/server-methods/sessions-subscriptions.ts:125-137`），
+    /// **不**携带任何 active-run 快照——`restoreSession` 复用的正是这条 RPC（见其文档注释），因此
+    /// 恢复本身不提供任何可以提前播种这张表的信号。openclaw 确实存在能报告 per-session
+    /// `activeRunIds` 的信号（`sessions.list` 的每行结果，见 `resolveVisibleActiveSessionRunState`，
+    /// `kernels/openclaw/src/gateway/server-methods/sessions-read.ts:250-266`），但那是一条批量
+    /// 查询所有 session 的 RPC，本适配器从未调用过它，把它接进 `restoreSession` 是一次新增的、需要
+    /// 独立验证 wire 契约与调用时机的能力扩张，不是"修好现有快照维护"这件事本身——**本轮刻意不做**
+    /// （不为图省事新增一个未经验证的 RPC 依赖），如实把这个缺口挂在这里：`no_active_run_for_steer`
+    /// 在这一种场景下保持**保守拒绝**（而不是猜测性地放行——那会让一次真正没有 active run 的 steer
+    /// 也被静默接受，用一个更严重的假阳性换掉一个假阴性），后续若要闭合，应作为独立一轮，给
+    /// `restoreSession` 加一次可验证的主动查询。
+    ///
+    /// `interrupt(mode:'steer')` 用它做 spec 要求的本地快照校验（"调用前先查本地快照的
+    /// `activeRunIds`——若为空，同步 reject"）——见该方法文档注释。`cancel`/`stop()` 不读这张表：
+    /// 它们的"无 active run"场景由 `sessions.abort` 自己的权威返回值 `abortedRunId:null` 判断，不
+    /// 需要、也不应该依赖本地快照（本地快照可能因为竞态而落后于内核真实状态几毫秒，cancel/stop 的
+    /// RPC 本身就是去问内核"现在到底有没有"，没有理由在问之前先用一个可能过时的本地判断去抢答）。
+    private var activeRunIDsBySessionID: [String: Set<String>] = [:]
     private var lastToolCallIDByRunID: [String: String] = [:]
     private var lastUsageByRunID: [String: (input: Int, output: Int)] = [:]
 
@@ -762,6 +970,10 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         }
         lastRunIDBySessionID[session.sessionID] = runID
         runIDsBySessionID[session.sessionID, default: []].insert(runID)
+        // rounds/0023：这是唯一让"这个 run 现在真的活跃"这件事变得可观察的时刻（`sessions.send`
+        // 的 ack 本身就是"内核已经接受并开始跑这个 run"的权威确认）——见 `activeRunIDsBySessionID`
+        // 文档注释，为什么不能直接复用上面那行的 `lastRunIDBySessionID`。
+        activeRunIDsBySessionID[session.sessionID, default: []].insert(runID)
         return SendResultPayload(runID: runID)
     }
 
@@ -872,8 +1084,11 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         return stream
     }
 
-    /// D1 §2.4 interrupt —— rounds/0020 起完整实现 `mode:"cancel"`（`steer`/`abort_and_resend` 显式
-    /// 拒绝 `unsupported_interrupt_mode`，不静默当 cancel 处理，见下方"支持的 mode"一节）。
+    /// D1 §2.4 interrupt —— rounds/0020 起完整实现 `mode:"cancel"`；**rounds/0023 补齐
+    /// `mode:"steer"`**（D1 v3.6 §6.1(a) soft inject，见下方"支持的 mode"一节与
+    /// `performSoftSteerInterrupt` 的完整推理）。`"abort_and_resend"` 仍显式拒绝
+    /// `unsupported_interrupt_mode`，不静默当 cancel/steer 处理——本轮范围见 scope-lock
+    /// rounds/0023「本轮不做」。
     ///
     /// **语义（scope-lock rounds/0020 §Round Objective/红线）**：中止当前 active run，**保留会话**。
     /// 这与 `stop()` 唯一的本质区别——`stop()` 是 `sessions.abort` **+** `sessions.delete`，还会发
@@ -911,11 +1126,20 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// `lastRunIDBySessionID`**——现场证据见 `stop()` 同一段文档注释，这里逐字沿用同一条判定，不重新
     /// 论证一遍。
     ///
-    /// **支持的 mode（scope-lock §Scope for this round）**：本轮只实现 `mode:"cancel"`。`"steer"` 与
-    /// `"abort_and_resend"` 必须显式拒绝 `unsupported_interrupt_mode`（D2 interrupt.schema.json 失败
-    /// 通道点名的取值）——不静默当 cancel 处理，那正是本项目一直在修的"看起来支持、其实做了别的事"。
-    /// 这个检查刻意放在**拿锁之前**：它是纯粹的输入校验，与"这个 session 此刻是否忙"无关，客户端传了
-    /// 一个本轮压根不支持的 mode，不该逼它等到 session 恰好空闲才收到这个"你传的 mode 不支持"的答复。
+    /// **支持的 mode（rounds/0023 更新）**：`"cancel"`（rounds/0020）与 `"steer"`（本轮）。
+    /// `"abort_and_resend"` 仍必须显式拒绝 `unsupported_interrupt_mode`（D2 interrupt.schema.json
+    /// 失败通道点名的取值）——不静默当 cancel/steer 处理，那正是本项目一直在修的"看起来支持、其实做了
+    /// 别的事"。这个检查刻意放在**拿锁之前**：它是纯粹的输入校验，与"这个 session 此刻是否忙"无关，
+    /// 客户端传了一个本轮压根不支持的 mode，不该逼它等到 session 恰好空闲才收到这个"你传的 mode
+    /// 不支持"的答复。
+    ///
+    /// **steer 专属前置校验（rounds/0023，D1 v3.6 §6.1(a)）**：`mode:"steer"` 额外要求本地快照
+    /// （`activeRunIDsBySessionID`）里存在至少一个活跃 run，否则同步 reject
+    /// （`no_active_run_for_steer`）——见下方函数体紧邻锁检查之后的那段代码，与
+    /// `performSoftSteerInterrupt` 文档注释"结果态判定"一节。这条检查刻意放在**拿锁之后、真正拿锁
+    /// （置 `interruptInProgress`）之前**：与 mode 校验不同，它依赖的是"当前会话是否有活跃 run"这一
+    /// session 状态，而不是纯粹的入参形状——但它仍然必须在锁转移之前完成，因为一旦判定失败就不能有
+    /// 任何副作用（不铸 operationId、不进 `interrupt_in_progress`，锁必须保持原样为 idle）。
     ///
     /// **订阅屏障（scope-lock §取舍 ⑨，`stop()` 文档注释原来"interrupt 因为是桩所以不需要"的理由
     /// 已随本轮失效，需要重新推导，不能直接继承结论）**：**需要**，且理由与 `stop()` 完全相同（不是
@@ -943,12 +1167,12 @@ public actor OpenclawGatewayKernelClient: KernelClient {
             throw KernelClientError.protocolMismatch("unknown session \(session.sessionID)")
         }
 
-        guard options.mode == .cancel else {
+        guard options.mode == .cancel || options.mode == .steer else {
             throw KernelClientError.rpcRejected(
                 code: "unsupported_interrupt_mode",
                 message: "interrupt() rejected: mode '\(options.mode.rawValue)' is not implemented this round " +
-                    "(scope-lock rounds/0020 — only mode:\"cancel\" is supported this round); steer/" +
-                    "abort_and_resend must not be silently treated as cancel"
+                    "(scope-lock rounds/0023 — abort_and_resend remains out of scope); abort_and_resend " +
+                    "must not be silently treated as cancel/steer"
             )
         }
 
@@ -959,21 +1183,51 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                 message: "interrupt() rejected: session \(session.sessionID) lock state is \(currentLock), expected idle (D1 v3.1 §9.3)"
             )
         }
+
+        // rounds/0023（D1 v3.6 §6.1(a) 前置同步校验，见函数文档注释"steer 专属前置校验"一节）：
+        // steer 专属，发生在锁转移/operationId 铸造之前——没有任何副作用地同步 reject，不发 RPC。
+        // cancel 无此前置要求（见 `activeRunIDsBySessionID` 文档注释——cancel 的"无 active run"场景
+        // 由 sessions.abort 自己的权威返回值处理，不读这张本地快照）。
+        if options.mode == .steer, (activeRunIDsBySessionID[session.sessionID] ?? []).isEmpty {
+            throw KernelClientError.rpcRejected(
+                code: "no_active_run_for_steer",
+                message: "interrupt(mode:\"steer\") rejected: session \(session.sessionID) has no locally " +
+                    "observed active run (D1 v3.6 §6.1(a) precondition — synchronous reject before " +
+                    "operationId minting, no OperationOutcome produced)"
+            )
+        }
+
         lockStateBySessionID[session.sessionID] = .interruptInProgress
 
         let operationID = "op-interrupt-\(UUID().uuidString)"
         let affectedRunIDBeforeAbort = lastRunIDBySessionID[session.sessionID]
-        pendingStops[session.sessionID] = PendingStop(
-            operationID: operationID, affectedRunID: affectedRunIDBeforeAbort, operationKind: .interrupt
-        )
+        // rounds/0023：`pendingStops`（等待『内核侧 aborted lifecycle 帧』的机制）只服务 cancel——
+        // steer 是单个 fire-and-return 的 RPC，没有对应的等待需求，见 `performSoftSteerInterrupt`
+        // 文档注释"不复用 stop()/interrupt(cancel) 的 pendingStop/等待终态机制"一节。不为 steer 建
+        // 这个条目，不是遗漏。
+        if options.mode == .cancel {
+            pendingStops[session.sessionID] = PendingStop(
+                operationID: operationID, affectedRunID: affectedRunIDBeforeAbort, operationKind: .interrupt
+            )
+        }
         // 覆盖每一条出路（正常 return、任意一种 throw）——见函数文档注释"互斥"一节：为什么这里用
         // 单个 defer，而不是像 stop() 那样在成功尾声与 catch 块分别手写一遍锁/pendingStop 清理。
+        // rounds/0023 REWORK（FAIL 2）：`performAtomicInterruptLockHandoff` 取代旧版
+        // `notifyInterruptLockReleaseWaiters`——不再是"先写 idle、再唤醒"两步，而是在同一段无 await
+        // 的同步代码里原子地决定锁的最终归属（cancel/steer 两种 mode 走到这里都必须调用，见该函数
+        // 文档注释与 `InterruptLockArbitrationOutcome` 上方的不变量说明）。
         defer {
             pendingStops.removeValue(forKey: session.sessionID)
-            lockStateBySessionID[session.sessionID] = .idle
+            performAtomicInterruptLockHandoff(sessionID: session.sessionID)
         }
 
         do {
+            if options.mode == .steer {
+                return try await performSoftSteerInterrupt(
+                    session: session, kernelKey: kernelKey, operationID: operationID, input: options.input
+                )
+            }
+
             let forceResolvedApprovalReqIDs = try await forceDenyPendingApprovalsBeforeStop(sessionID: session.sessionID)
             pendingStops[session.sessionID]?.forceResolvedApprovalReqIDs = forceResolvedApprovalReqIDs
 
@@ -1032,22 +1286,133 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                 status: makeJSONAny(abortResult["status"] ?? NSNull())
             )
         } catch {
-            // 与 stop() 同款收尾（见其文档注释"M3 ③"一节）：sessions.abort 或
-            // forceDenyPendingApprovalsBeforeStop 抛错——补一条 operation_completed(rejected) 镜像
-            // （除非某条路径已经先发过别的终态镜像，例如上面 transportClosed 分支——那种情况下
-            // pendingStops[session.sessionID] 早已被清空，`?? true` 会让这里正确判定"已经发过了"，
-            // 不再重复），再把原始错误重新抛给调用方。锁与 pendingStop 的释放交给函数顶部的
-            // defer，不在这里重复处理。
-            let alreadyTerminalEmitted = pendingStops[session.sessionID]?.terminalEmitted ?? true
-            let affectedRunID = pendingStops[session.sessionID]?.affectedRunID ?? affectedRunIDBeforeAbort
+            // rounds/0023：cancel 与 steer 的"是否已经有别的路径替我发过终态镜像"判据不同，不能共用
+            // 同一条 `pendingStops[...]?.terminalEmitted ?? true`——那条默认值对 cancel 是对的（见
+            // 下方分支注释），但对 steer 是错的：steer 从不使用 `pendingStops`，`?? true` 会让 steer
+            // 的每一次 RPC 失败都被误判成"已经有人发过镜像了"，从而漏发本该发的
+            // operation_completed(rejected)，双通道从此不再同步——这正是 D1 §6.1a 明文要求避免的。
+            let alreadyTerminalEmitted: Bool
+            let affectedRunIDForMirror: String?
+            if options.mode == .cancel {
+                // 与 stop() 同款收尾（见其文档注释"M3 ③"一节）：sessions.abort 或
+                // forceDenyPendingApprovalsBeforeStop 抛错——补一条 operation_completed(rejected)
+                // 镜像（除非某条路径已经先发过别的终态镜像，例如上面 transportClosed 分支——那种
+                // 情况下 pendingStops[session.sessionID] 早已被清空，`?? true` 会让这里正确判定
+                // "已经发过了"，不再重复）。
+                alreadyTerminalEmitted = pendingStops[session.sessionID]?.terminalEmitted ?? true
+                affectedRunIDForMirror = pendingStops[session.sessionID]?.affectedRunID ?? affectedRunIDBeforeAbort
+            } else {
+                // steer：唯一的挂起点就是它自己那次 `request(method:"chat.send",...)`，没有任何
+                // 其它路径可能已经替它发过镜像——`alreadyTerminalEmitted` 恒为 false。`affectedRunID`
+                // 恒为 nil（见 `performSoftSteerInterrupt` 文档注释"affectedRunID 恒为 nil"一节：
+                // steer 不 abort 任何 run，失败时同样不该暗示"某个 run 受到了影响"）。
+                alreadyTerminalEmitted = false
+                affectedRunIDForMirror = nil
+            }
             if !alreadyTerminalEmitted {
                 emitOperationCompletedMirror(
                     sessionID: session.sessionID, operationID: operationID,
-                    affectedRunID: affectedRunID, outcome: .rejected, operationKind: .interrupt
+                    affectedRunID: affectedRunIDForMirror, outcome: .rejected, operationKind: .interrupt
                 )
             }
             throw error
         }
+    }
+
+    /// rounds/0023：`interrupt(mode:"steer")` 的 RPC 派发——D1 v3.6 §6.1(a) "soft inject"。
+    ///
+    /// **RPC 选择（scope-lock 取舍 1，逐行读 openclaw 源码坐实，见交付报告的完整依据引用）**：
+    /// openclaw 独立注册了三个相关方法——`sessions.send`（`send()` 已用）、`sessions.steer`
+    /// （`gateway/methods/core-descriptors.ts:334`）、`chat.send`
+    /// （`gateway/methods/core-descriptors.ts:310`）。`gateway/server-methods/sessions-messaging.ts:
+    /// 212-431` 证实：`sessions.send`/`sessions.steer` 共用同一个 handler `handleSessionSend`
+    /// （`:407-431` 两个 registry 条目分别以 `interruptIfActive:false`/`true` 调用它），
+    /// `interruptIfActive:true`（即 `sessions.steer`）会先调用 `interruptSessionRunIfActive`——内部
+    /// 真正调用的是 `chatHandlers["chat.abort"]`（`:162-178`）——中止活跃 run，然后**总是**继续走
+    /// `dispatchChatSend`（`:267-287`，内部调用 `chatHandlers["chat.send"]`）发一条新消息。也就是说
+    /// `sessions.steer` 是"硬中止 + 重发"，语义与命名相反——它对应的是 D1 的 `abort_and_resend`
+    /// （§6.1(b) 已明确"openclaw：直接映射到原生 RPC `sessions.steer`"，本轮不实现该 mode），**不是**
+    /// "软注入、不打断当前 run"的 steer 语义。
+    ///
+    /// 真正的软注入路径是 `handleSessionSend` 内部委派的 `chat.send` **本身**——但 `sessions.send`/
+    /// `sessions.steer` 转发给它的参数（`:271-286` 逐字段列出：`sessionKey`/`agentId`/`message`/
+    /// `thinking`/`attachments`/`timeoutMs`/`idempotencyKey`）**不包含** `queueMode`/`deliver`。这
+    /// 两个字段只存在于 `chat.send` 自己独立的 wire schema（`ChatSendParamsSchema`，
+    /// `packages/gateway-protocol/src/schema/logs-chat.ts:97-115`：
+    /// `queueMode: Type.Optional(Type.String({enum:["steer","followup","collect","interrupt"]}))`，
+    /// `deliver: Type.Optional(Type.Boolean())`）——经由 `sessions.send`/`sessions.steer` 这两个包装
+    /// 发起的请求，无论客户端在自己的请求体里塞不塞这两个字段，`handleSessionSend` 都不会把它们透传
+    /// 给底层 `chat.send`（`:271-286` 的对象字面量没有这两个键）。因此"软注入"**只能**通过**直接
+    /// 调用 `chat.send`**（不经由 `sessions.send`/`sessions.steer` 任一包装）才能传达
+    /// `queueMode:"steer"`+`deliver:false`——这与 D1 §5/§6.1(a) 原文逐字一致，两者不是同一件事的
+    /// 两种叫法，是两条结构上不同的路径，选错了在 wire 层面根本传不到目标参数。
+    ///
+    /// **`sessionKey` 而非 `key`**：`chat.send` 的寻址字段名与 `sessions.*` 系列不同（那些用
+    /// `key`，见 `send()`/`stop()`/`interrupt(mode:'cancel')` 现有代码）。两者语义等价（都是这次
+    /// 调用要寻址的会话），值同源——`handleSessionSend` 内部把客户端传入的 `key` resolve 成
+    /// `canonicalKey`（`:243-245`）后，就是原样转发给 `chat.send` 的 `sessionKey`（`:274`）；本
+    /// 适配器唯一持有的会话地址锚点是 `kernelKeyBySessionID` 里的这个值（`sessions.create` 响应的
+    /// `key` 字段），因此直接复用它是唯一自洽的选择。
+    ///
+    /// **不复用 `stop()`/`interrupt(mode:'cancel')` 的 `pendingStops`/等待终态机制**：steer 是单个
+    /// RPC、fire-and-return——结果只由这次 `chat.send` 调用本身是否成功返回决定（D1 §6.1(a)"结果只由
+    /// 该 RPC 调用本身是否成功返回这一 transport 层面事实分流，响应体内任何字段均不参与判定"），不
+    /// 等待任何后续 lifecycle 事件确认。`PendingStop`/`waitForPendingStopTerminal` 那套机制是为
+    /// cancel/stop"发起 abort 之后还要等内核确认这个 run 真的终止了"这一步存在的，steer 根本没有
+    /// 对应的等待需求，硬套上去只会凭空引入一个永远等不到（steer 不产生 aborted lifecycle 帧）的
+    /// 挂起风险。
+    ///
+    /// **不做强制 deny pending 审批**：`forceDenyPendingApprovalsBeforeStop`（D1 §6.2 M3）的前提是
+    /// "即将 abort 这个 run"——审批还 pending 时 abort 会留下"run 已中止、审批却还挂着"的不一致。
+    /// steer 不 abort 任何东西，run 与其挂起的审批都原样继续，不存在这个不一致场景，因此不适用。
+    ///
+    /// **结果态判定（严格二态，D1 §6.1(a)，v3.4 明确不产生第三态）**：
+    /// 1. `chat.send` 调用本身成功返回 → `outcome:'submitted'`——**唯一**依据是这次调用是否成功
+    ///    返回，响应体里任何字段（`runId`/`messageSeq`/`queued`/`reason` 等）取值均不参与判定，
+    ///    本实现从一开始就不读这些字段，不会重蹈 v3.3 "queued:false 改判 rejected"那个已被删除的
+    ///    重叠分支的覆辙。
+    /// 2. `chat.send` 调用本身失败（网络/连接层错误，或内核在 RPC 层面直接拒绝）→ 抛出原始错误，
+    ///    交给 `interrupt()` 顶部共享的 `catch` 块统一处理：emit
+    ///    `operation_completed(outcome:.rejected)` 镜像 + 重新抛给调用方（与 cancel 现有的失败处理
+    ///    完全同构——"RPC 失败在 Swift 里表现为 throw，Promise 一侧的『rejected』由调用方 catch 到
+    ///    的错误本身承载"是本文件贯穿 send()/stop()/interrupt(cancel) 的既有约定，steer 沿用同一
+    ///    约定，不另立新规则）。**无论走 1 还是 2，都不存在第三条路径**——没有任何等待，没有超时
+    ///    这个概念（steer 唯一的挂起点是这次 RPC 调用本身，`await` 要么等到响应、要么被传输层错误
+    ///    唤醒，不存在"响应到了但内容不确定"这种需要额外等待裁决的中间态）。
+    ///
+    /// **`affectedRunID` 恒为 nil（不是遗漏）**：D1 `InterruptResult.affectedRunId` 字段文档"仅当
+    /// 确有 active run 被 abort（即 `interruptedActiveRun:true`）时出现"——steer 不 abort 任何 run，
+    /// 不满足这个条件，无论成功还是失败都不该填这个字段（填了会暗示"这次操作影响了某个 run 的生死"，
+    /// 但 steer 恰恰是"不打断"）。`interruptedActiveRun`/`newRunID` 同理恒为 nil——两者都是
+    /// `abort_and_resend` 专属字段（D1 §2.4 类型注释），steer 从未产生、也不需要它们。
+    private func performSoftSteerInterrupt(
+        session: SessionHandle, kernelKey: String, operationID: String, input: Input?
+    ) async throws -> InterruptResultPayload {
+        // 无 input 时退化为空字符串而不是抛错——与 `resolveSendMessageText` 对 `send()` 空文本的既有
+        // 处理方式一致（openclaw `chat.send` 的 `message` 字段是必填 `Type.String()`，允许空串），
+        // 不主观拒绝一个 D1 类型层面本就允许省略的可选字段。
+        let messageText = input.map { self.resolveSendMessageText(from: $0) } ?? ""
+        let params: JSONObject = [
+            "sessionKey": kernelKey,
+            "message": messageText,
+            "queueMode": "steer",
+            "deliver": false,
+            // chat.send 的 idempotencyKey 是必填字段（ChatSendParamsSchema，非 Optional）——复用本次
+            // 操作已经铸造好的 operationID 作为幂等键，天然唯一，不需要再单独铸一个 UUID。
+            "idempotencyKey": operationID,
+        ]
+        let result = try await request(method: "chat.send", params: params)
+        prettyPrint("RECV chat.send result (interrupt steer)", result)
+
+        emitOperationCompletedMirror(
+            sessionID: session.sessionID, operationID: operationID,
+            affectedRunID: nil, outcome: .submitted, operationKind: .interrupt
+        )
+        return InterruptResultPayload(
+            affectedRunID: nil, detail: nil, interruptedActiveRun: nil, newRunID: nil,
+            operationID: operationID, outcome: .submitted,
+            status: makeJSONAny(result["status"] ?? NSNull())
+        )
     }
 
     /// D1 §2.5 stop()。**M3 rework（收 T-045 codex 确认性再审 MUST-FIX，在 F6 基础上第二次收残）**：
@@ -1087,20 +1452,70 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// `respondApproval()`（rounds/0015 已实现）同样不需要这道屏障，但理由不同、不是"因为它是桩"：
     /// 它只有在**已经收到过** `approval_request` 事件之后才可能被调用，而那条事件只能经由已经建立
     /// 的订阅到达——"订阅已就绪"是它被调用的前提条件，不是需要它自己去等的东西。
+    ///
+    /// **rounds/0023（D1 v3.6 §9.3 仲裁修正）**：`interrupt_in_progress` 遇 `stop()` **不再**一律
+    /// `session_locked` 拒绝——规格矩阵把这一格明写成"特殊仲裁"，steer/cancel 两种 mode 的专条规则
+    /// 相同："等待，不抢占"：适配器等待这次 interrupt 的 RPC 返回（无法从中截断），返回后 interrupt
+    /// 按自己的规则终态化，锁转 `stop_in_progress`，`stop()` 序列正常执行——见
+    /// `arbitrateAgainstInFlightInterrupt` 完整推理。**`send_pending`/`stop_in_progress` 两态不受
+    /// 影响，仍然一律 `session_locked`**（矩阵没有要求为它们仲裁：`send_pending` 是"极短的 ack 等待
+    /// 窗口"，`stop_in_progress` 是"不支持 stop 重入"，都与 interrupt 无关）——这是本轮红线：不得把
+    /// `send()` 遇 `interrupt_in_progress` 也改成等待（矩阵明写 reject，且改动范围仅限本函数）。
     public func stop(session: SessionHandle) async throws -> StopResultPayload {
         await awaitSubscriptionRpcDispatchIfPending(sessionID: session.sessionID)
         guard let kernelKey = kernelKeyBySessionID[session.sessionID] else {
             throw KernelClientError.protocolMismatch("unknown session \(session.sessionID)")
         }
 
-        let currentLock = lockStateBySessionID[session.sessionID] ?? .idle
-        guard currentLock == .idle else {
-            throw KernelClientError.rpcRejected(
-                code: "session_locked",
-                message: "stop() rejected: session \(session.sessionID) lock state is \(currentLock), expected idle (D1 v3.1 §9.3)"
-            )
+        // rounds/0023 §9.3 仲裁："等待，不抢占"——只在锁恰好是 interrupt_in_progress 时才进入这段
+        // 等待；send_pending/stop_in_progress 两态径直落进下面既有的 session_locked 分支，未受影响。
+        // rounds/0023 REWORK（FAIL 2）：三个仲裁结果现在都是**确定性**的，没有一个要求这里重新去
+        // 检查/竞争锁——`.acquired` 时锁已经被 `performAtomicInterruptLockHandoff` 原子地写成
+        // `stopInProgress`，下面跳过既有的 idle 判断/acquire（那段代码此刻会看到非 idle 而误判失败）；
+        // `.lockClaimedByAnotherWaiter` 时结果已经在同一段原子代码里确定性算出，直接以
+        // `session_locked` 收场，不重新检查；`.notInFlight` 是理论不可达的防御性分支，行为等价于
+        // "没有仲裁发生"，落到下面既有的 idle 判断（与旧版行为一致）。
+        var lockAlreadyAcquiredViaAtomicHandoff = false
+        if lockStateBySessionID[session.sessionID] == .interruptInProgress {
+            switch await arbitrateAgainstInFlightInterrupt(sessionID: session.sessionID) {
+            case .timedOut:
+                // 取舍 2/超时归属：这是 stop() 自己这次 operation 的 timed_out（v3.4 明确的归属
+                // 规则），不是 interrupt() 的第三个终态——interrupt() 完全不知道有这次等待存在，
+                // 它会继续独立跑到自己的终态。这里现铸一个全新的 operationId：等待阶段本身还没有
+                // 任何 operationId 可复用（真正进入 sessions.abort/sessions.delete 序列、铸自己的
+                // operationId 是下面『拿到 idle』之后才会发生的事，这次调用连那一步都没走到）。
+                let operationID = "op-stop-\(UUID().uuidString)"
+                emitOperationCompletedMirror(
+                    sessionID: session.sessionID, operationID: operationID,
+                    affectedRunID: nil, outcome: .timedOut, operationKind: .stop
+                )
+                return StopResultPayload(operationID: operationID, outcome: .timedOut)
+            case .lockClaimedByAnotherWaiter:
+                throw KernelClientError.rpcRejected(
+                    code: "session_locked",
+                    message: "stop() rejected: session \(session.sessionID) — the atomic handoff from " +
+                        "the in-flight interrupt() went to a different concurrently-waiting stop() " +
+                        "first (D1 v3.6 §9.3, stop reentry unsupported)"
+                )
+            case .acquired:
+                // `performAtomicInterruptLockHandoff` 已经把锁代持为 `stopInProgress`——不重新走
+                // 下面的 idle 判断/acquire，直接落入共享的 stop 执行序列。
+                lockAlreadyAcquiredViaAtomicHandoff = true
+            case .notInFlight:
+                break // 防御性分支，理论不可达；按"未发生仲裁"处理，落入下面既有的 idle 判断。
+            }
         }
-        lockStateBySessionID[session.sessionID] = .stopInProgress
+
+        if !lockAlreadyAcquiredViaAtomicHandoff {
+            let currentLock = lockStateBySessionID[session.sessionID] ?? .idle
+            guard currentLock == .idle else {
+                throw KernelClientError.rpcRejected(
+                    code: "session_locked",
+                    message: "stop() rejected: session \(session.sessionID) lock state is \(currentLock), expected idle (D1 v3.1 §9.3)"
+                )
+            }
+            lockStateBySessionID[session.sessionID] = .stopInProgress
+        }
 
         let operationID = "op-stop-\(UUID().uuidString)"
         let affectedRunIDBeforeAbort = lastRunIDBySessionID[session.sessionID]
@@ -2235,6 +2650,9 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         }
         runIDsBySessionID.removeValue(forKey: sessionID)
         lastRunIDBySessionID.removeValue(forKey: sessionID)
+        // rounds/0023：与上面两张表同一批次的 per-session 派生状态，session 结束时一起清，避免
+        // 长期存活进程里为已经不存在的 session 累积残留 runId。
+        activeRunIDsBySessionID.removeValue(forKey: sessionID)
         seqFallbackBySessionID.removeValue(forKey: sessionID)
 
         for approvalID in approvalIDsBySessionID[sessionID] ?? [] {
@@ -2631,11 +3049,28 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         // per-session，避免上一个 run 的残留 usage 串给下一个 run 的 turn_complete。
         var currentRunID = lastRunIDBySessionID[ourSessionID]
         if let sessionSnapshot = payload["session"] as? JSONObject,
-           let activeRunIDs = sessionSnapshot["activeRunIds"] as? [Any],
-           let firstRunID = activeRunIDs.first as? String {
-            lastRunIDBySessionID[ourSessionID] = firstRunID
-            runIDsBySessionID[ourSessionID, default: []].insert(firstRunID)
-            currentRunID = firstRunID
+           let activeRunIDsRaw = sessionSnapshot["activeRunIds"] as? [Any] {
+            // rounds/0023 REWORK（T-116 codex 对抗评审 FAIL 7）：这是内核权威快照——每次这个字段
+            // 出现（哪怕是空数组）都据实**全量同步** `activeRunIDsBySessionID`，不是只加不减的
+            // union。旧版只在数组非空时才更新 `lastRunIDBySessionID`/`runIDsBySessionID`
+            // （用 `.first` 取"最近一次见到的 runId"这个不同语义的缓存），却完全不碰
+            // `activeRunIDsBySessionID`——`interrupt(mode:'steer')` 的前置校验因此对"由既有
+            // session-restore 路径或本 client 之外的方式启动的 active run"永远视而不见（这张表
+            // 此前只在本 client 自己的 `send()` 拿到 ack 时才会被插入），会把一次合法的 steer
+            // 错误地同步前置 reject 成 `no_active_run_for_steer`。
+            //
+            // 全量覆盖（而不是并集追加）同时闭合了对称的反向问题："这个快照如实报告现在没有任何
+            // active run 了（`activeRunIds:[]`）"必须能够清除本地陈旧的 active 记录——否则一个早已
+            // 结束、只是没有触发到 `handleAgentEvent` 那条 lifecycle-end 摘除路径（例如该 run 从始
+            // 至终没有产生过 agent 事件、只有 session.message）的 run，会永远留在
+            // `activeRunIDsBySessionID` 里，让后续的 steer 前置校验对着一个不存在的 run 误判"有"。
+            let activeRunIDStrings = activeRunIDsRaw.compactMap { $0 as? String }
+            activeRunIDsBySessionID[ourSessionID] = Set(activeRunIDStrings)
+            if let firstRunID = activeRunIDStrings.first {
+                lastRunIDBySessionID[ourSessionID] = firstRunID
+                runIDsBySessionID[ourSessionID, default: []].insert(firstRunID)
+                currentRunID = firstRunID
+            }
         }
         if let message = payload["message"] as? JSONObject, let usage = message["usage"] as? JSONObject,
            let input = jsonInt(usage["input"]), let output = jsonInt(usage["output"]),
@@ -2679,9 +3114,20 @@ public actor OpenclawGatewayKernelClient: KernelClient {
 
         // agent 事件的 payload.runId 是本轮拿到 runIDHint 最可靠的现场来源之一（session.create
         // 之后、真正 send() 之前也可能已经有别的 run 在跑），顺带刷新缓存。
+        //
+        // rounds/0023 REWORK（T-116 codex 对抗评审 FAIL 7）：**任何**携带 runId 的 agent 事件都是
+        // "这个 run 此刻确实存在、内核仍在为它产出事件"的直接一手证据——不局限于 `session.message`
+        // 携带的 `session.activeRunIds` 快照。这补齐了另一条"run 如何变得活跃却从未被本地快照捕捉"
+        // 的路径：一个尚未产出任何 assistant 文本（因此从未触发 `session.message`）、正深入一连串
+        // tool-call/thinking 的 run——它的存在只能从 `agent` 流本身观察到。终态帧（`lifecycle` +
+        // `phase:"end"/"error"`）会在本函数下方把对应 runId 摘除，摘除发生在**同一次**函数调用的
+        // 后半段（两者之间没有任何 `await`，actor 不会被其它 job 打断）——因此终态帧命中时，这里的
+        // 插入与下方的摘除会在同一段不可分割的执行里相互抵消，不会留下"run 早已结束却仍被标记活跃"
+        // 的可观察窗口。
         if let runID = payload["runId"] as? String {
             lastRunIDBySessionID[ourSessionID] = runID
             runIDsBySessionID[ourSessionID, default: []].insert(runID)
+            activeRunIDsBySessionID[ourSessionID, default: []].insert(runID)
         }
 
         guard let stream = payload["stream"] as? String, let data = payload["data"] as? JSONObject else {
@@ -2773,6 +3219,11 @@ public actor OpenclawGatewayKernelClient: KernelClient {
                 // （lifecycle 事件本身携带真实 runId），真缺失时诚实跳过，不拿编造值填充。
                 break
             }
+            // rounds/0023：这个 run 已经到达终态（不论 aborted true/false，也不论下面走哪条子分支）
+            // ——从"当前活跃 run"快照里摘掉，供 `interrupt(mode:'steer')` 的前置校验使用（见
+            // `activeRunIDsBySessionID` 文档注释）。对迟到的第二条收尾帧（T-113 item 1/4，该 runId
+            // 早已被第一条帧摘掉）这是安全的 no-op（`Set.remove` 对不存在的成员无副作用）。
+            activeRunIDsBySessionID[ourSessionID]?.remove(runID)
             let aborted = jsonBool(data["aborted"]) ?? false
             if aborted {
                 if var pendingForRun = pendingStops[ourSessionID], pendingForRun.affectedRunID == runID, !pendingForRun.terminalEmitted {
@@ -3332,6 +3783,14 @@ public actor OpenclawGatewayKernelClient: KernelClient {
         sessionTerminalEmitted.contains(sessionID)
     }
 
+    /// rounds/0023 REWORK（FAIL 7 反证专用）：读取 `activeRunIDsBySessionID` 这张本地快照当前对
+    /// 某个 session 的取值——供测试直接断言"这个 runId 是否被记为活跃"，而不是只能通过
+    /// `interrupt(mode:'steer')` 是否被前置拒绝去间接推断。没有条目时返回空集合（与生产代码里
+    /// `activeRunIDsBySessionID[sessionID] ?? []` 的既有读取习惯一致）。
+    func testSupportActiveRunIDs(sessionID: String) -> Set<String> {
+        activeRunIDsBySessionID[sessionID] ?? []
+    }
+
     /// rounds/0015 返工①（D1 §6.2 FSM）：读取该 session 当前唯一的 active pending reqId
     /// （没有则 nil）——"同一时刻只暴露一个"这条约束的直接观测点。
     func testSupportActiveApprovalReqID(sessionID: String) -> String? {
@@ -3405,6 +3864,20 @@ public actor OpenclawGatewayKernelClient: KernelClient {
     /// `testSupportInterruptTimeoutSecondsOverride` 文档注释，为什么这是一个独立于 stop() 的变量）。
     func testSupportSetInterruptTimeoutSeconds(_ seconds: Int) {
         testSupportInterruptTimeoutSecondsOverride = seconds
+    }
+
+    /// rounds/0023：缩短 `stop()` 遇 `interrupt_in_progress` 时的仲裁等待上限（生产默认 5 秒），供
+    /// "等待超出上限 -> stop() 自己的 timed_out"这条路径的测试使用，不用真的等 5 秒。见
+    /// `arbitrateAgainstInFlightInterrupt` 文档注释。
+    func testSupportSetStopArbitrationTimeoutSeconds(_ seconds: Int) {
+        testSupportStopArbitrationTimeoutSecondsOverride = seconds
+    }
+
+    /// rounds/0023 REWORK（FAIL 2 反证专用）：见
+    /// `testSupportInterruptPreHandoffBlockingDelayNanoseconds` 文档注释——供构造"第三方 job 在原子
+    /// 交接运行前就已经排队等待进入 actor"这个场景的测试使用。
+    func testSupportSetInterruptPreHandoffBlockingDelay(nanoseconds: UInt64) {
+        testSupportInterruptPreHandoffBlockingDelayNanoseconds = nanoseconds
     }
 
     /// NOTE-A：缩短 force-deny drain 循环的迭代轮次上限（生产默认 50），供"超过上限如实 throw、不

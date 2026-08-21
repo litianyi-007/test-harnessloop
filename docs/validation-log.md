@@ -17,6 +17,15 @@
 
 ---
 
+## 2026-08-21 rounds/0023 收盘：steer + 原子交接；本轮未改插件
+
+- **场景**：goal 002 rounds/0023 收盘。实现 `interrupt(mode:"steer")` 并把 `stop()` 遇 `interrupt_in_progress` 改成 confirmed D1 §9.3 的「等待，不抢占」。Claude 会话在返工完成后 `/resume` 取消，本 Grok 会话接续收盘。
+- **现象**：T-116（codex）判 REWORK 三条——交接窗非原子、active-run 快照不完整、runner 入站仍按 cancel 翻译。返工后主会话复跑 `swift build` exit 0、帧回放 174/174、Swift 金标 13/0/0。`sessions.steer` 被源码坐实为 abort+resend，不是软 steer。
+- **预期**：对抗审 REWORK 后主会话独立复核可收盘（rounds/0020 先例）；控制契约「Failed review acceptance: 仅用户」——用户 2026-08-21 授权。环境期望 claude-opus-5[1m]、实际 grok-4.6，用户接受本次不符且不改期望值。
+- **插件改动**：未改动。hopper 0.59.0 idle false-kill 属于 rounds/0022。本轮范围明确禁止三个插件 submodule。
+- **复验结果**：源文件 SHA 与返工收尾一致；C# diff 空；fixture 4 增 1 删（删 description）。已知缺口：会话恢复路径没有 active-run 信号，保持保守拒绝。
+- **遗留**：CI 仍不跑 174 条帧回放、仍按「12 PASS + 1 DEGRADED」描述 Swift parity——0023 禁止改 `.github/`，结转 rounds/0024。
+
 ## 2026-08-13 kata 2.16.3 闭环：两个缺陷一起修，第二个是复核这件事本身挖出来的
 
 - **场景**：修上一条记的 `wiki-lint` 假发现。**修完复核时，跑测试套件的动作本身炸出了第二个缺陷**
