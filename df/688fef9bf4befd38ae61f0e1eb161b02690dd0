@@ -1,0 +1,20 @@
+.harnessloop/goals/20260718-002-agent-app/rounds/0024/evidence/01-ci-run-32474120825.txt
+  h_f7edc9edffde80 1-6
+.harnessloop/goals/20260718-002-agent-app/rounds/0024/evidence/02-frame-replay-after-subscribe-poll.log
+  h_f7edc9edffde80 1-2500
+.harnessloop/goals/20260718-002-agent-app/rounds/0024/scope-lock.md
+  h_f7edc9edffde80 40,66-82
+app/kernel-client/swift/frame-replay-tests/FrameReplayTests.swift
+  h_f7edc9edffde80 1957-1966
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "df688fef9bf4befd38ae61f0e1eb161b02690dd0",
+  "prompts": {},
+  "humans": {
+    "h_f7edc9edffde80": {
+      "author": "litianyi <litianyi@corp.netease.com>"
+    }
+  }
+}
