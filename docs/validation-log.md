@@ -17,6 +17,15 @@
 
 ---
 
+## 2026-08-22 rounds/0025：锁采样改轮询，macos frame-replay CI 绿
+
+- **场景**：goal 002 rounds/0025，接 0024 negative。三条 §9.3 测试从固定 sleep 改为有界轮询；FAIL2 接受 unknown session 作为没偷锁
+- **现象**：本机 174/174。Actions 32503486999 ubuntu+macos 全绿，含 frame-replay 与 Swift 13/0/0。产品实现 diff 空
+- **预期**：macos 上 frame-replay 稳定绿，且不 skip、不改产品
+- **插件改动**：未改动
+- **复验结果**：✅ `Accepted: yes`
+- **遗留**：SG-10 下一件产品工作待选；hopper 测试进 CI 仍另轮
+
 ## 2026-08-21 rounds/0024：frame-replay 进 CI 立刻红，两次失败集合不相交
 
 - **场景**：goal 002 rounds/0024 把 `frame-replay-tests` 和 Swift 13/13 接进 GitHub Actions macos job

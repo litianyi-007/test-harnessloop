@@ -1,0 +1,10 @@
+run: https://github.com/litianyi-007/test-harnessloop/actions/runs/32503486999
+commit: 1a136b1
+conclusion: success
+ubuntu (TS + dotnet): success
+macos (Swift): success
+  - Swift package build: success
+  - frame-replay-tests (must exit 0; currently 174/174): success
+  - Swift golden parity runner (13/0/0): success
+local: 174/174, evidence/00-local-frame-replay.log
+product diff OpenclawGatewayKernelClient.swift: empty
