@@ -1,0 +1,22 @@
+.harnessloop/goals/20260718-002-agent-app/rounds/0025/evidence/00-local-frame-replay.log
+  h_f7edc9edffde80 1-2500
+.harnessloop/goals/20260718-002-agent-app/rounds/0025/scope-lock.md
+  h_f7edc9edffde80 1-70
+.harnessloop/state/current.md
+  h_f7edc9edffde80 5
+app/kernel-client/swift/frame-replay-tests/InterruptTests.swift
+  h_f7edc9edffde80 91-112,538-541,543,547,549
+app/kernel-client/swift/frame-replay-tests/SteerTests.swift
+  h_f7edc9edffde80 371-374,376,378,380,681-695
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "1a136b1f554ee679a1397a3ed1fe950335404089",
+  "prompts": {},
+  "humans": {
+    "h_f7edc9edffde80": {
+      "author": "litianyi <litianyi@corp.netease.com>"
+    }
+  }
+}
